@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Profile - TourPilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ecece9;
+      --paper: #f6f5f2;
+      --card: #ffffff;
+      --ink: #111111;
+      --muted: #6b6b6a;
+      --line: #d8d6d1;
+      --chip: #f0efe9;
+      --accent: #121212;
+      --accent-soft: #f1f1f1;
+      --green: #1f8f58;
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow: 0 18px 45px rgba(24, 24, 24, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Manrope", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 0%, #f8f8f4 0%, transparent 42%),
+        linear-gradient(135deg, #ecece9 0%, #f3f3f0 35%, #ecebe7 100%);
+      min-height: 100vh;
+      line-height: 1.45;
+    }
+
+    .page-wrapper {
+      width: min(1200px, 100% - 40px);
+      margin: 0 auto;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+      background: rgba(236, 236, 233, 0.84);
+      border-bottom: 1px solid rgba(130, 130, 130, 0.15);
+    }
+
+    .header-inner {
+      width: min(1200px, 100% - 40px);
+      min-height: 74px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-family: "Manrope", sans-serif;
+      letter-spacing: -0.03em;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .brand span {
+      color: var(--green);
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      min-height: 44px;
+      padding: 0 18px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: var(--chip);
+      color: var(--ink);
+      border-color: var(--line);
+    }
+
+    .btn-ghost:hover {
+      background: #e8e8e5;
+    }
+
+    .btn-black {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-black:hover {
+      background: #262626;
+    }
+
+    .hero {
+      padding: 48px 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: var(--chip);
+      color: #2a2a2a;
+      border-radius: 999px;
+      min-height: 32px;
+      padding: 0 14px;
+      font-size: 0.82rem;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      font-family: "Manrope", sans-serif;
+      font-size: clamp(2rem, 4vw, 3.45rem);
+      line-height: 1.03;
+      letter-spacing: -0.045em;
+      max-width: 660px;
+    }
+
+    .section {
+      padding: 20px 0 72px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-family: "Manrope", sans-serif;
+      font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+      letter-spacing: -0.03em;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    .packages-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .package-card {
+      position: relative;
+      min-height: 390px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      cursor: pointer;
+      isolation: isolate;
+      box-shadow: var(--shadow);
+      animation: fadeUp 0.55s ease both;
+    }
+
+    .package-card:nth-child(2) {
+      animation-delay: 0.08s;
+    }
+
+    .package-card:nth-child(3) {
+      animation-delay: 0.16s;
+    }
+
+    .package-card:nth-child(4) {
+      animation-delay: 0.24s;
+    }
+
+    .package-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .package-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(8, 8, 8, 0.9) 10%, rgba(10, 10, 10, 0.06) 65%);
+      z-index: 1;
+    }
+
+    .package-card:hover .package-image {
+      transform: scale(1.05);
+    }
+
+    .package-fly {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 2;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 0;
+      background: rgba(255, 255, 255, 0.92);
+      color: #1a1a1a;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .package-info {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      color: #fff;
+      z-index: 2;
+    }
+
+    .package-title {
+      font-size: 1.75rem;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+      font-family: "Manrope", sans-serif;
+    }
+
+    .package-meta {
+      opacity: 0.88;
+      font-size: 0.92rem;
+      margin-bottom: 10px;
+    }
+
+    .package-price {
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .package-price small {
+      font-size: 0.95rem;
+      font-weight: 600;
+      opacity: 0.86;
+    }
+
+    .testimonials-wrap {
+      display: grid;
+      grid-template-columns: 1.2fr 1.5fr 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .panel {
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.74);
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-panel {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 540px;
+    }
+
+    .summary-score {
+      font-family: "Manrope", sans-serif;
+      font-size: 3.1rem;
+      letter-spacing: -0.05em;
+      margin-bottom: 14px;
+    }
+
+    .summary-score span {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+
+    .summary-points {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      color: #2e2e2e;
+    }
+
+    .summary-points li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+
+    .quote-feature {
+      position: relative;
+      overflow: hidden;
+      min-height: 540px;
+      box-shadow: var(--shadow);
+    }
+
+    .quote-feature img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .quote-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.76), rgba(0, 0, 0, 0.04));
+      display: flex;
+      align-items: flex-end;
+      padding: 24px;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .testimonial-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .testimonial-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.84);
+    }
+
+    .stars {
+      color: var(--green);
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .testimonial-text {
+      color: #262626;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+
+    .testimonial-author {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-auto-rows: 74px;
+      grid-auto-flow: dense;
+      gap: 12px;
+    }
+
+    .gallery-item {
+      position: relative;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transform: translateY(10px);
+      opacity: 0;
+      animation: fadeUp 0.55s ease forwards;
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.38s ease;
+    }
+
+    .gallery-item:hover img {
+      transform: scale(1.08);
+    }
+
+    .gallery-item::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(5, 5, 5, 0.62), transparent 62%);
+    }
+
+    .gallery-caption {
+      position: absolute;
+      left: 14px;
+      bottom: 12px;
+      right: 12px;
+      z-index: 1;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .asym-a { grid-column: span 6; grid-row: span 4; }
+    .asym-b { grid-column: span 3; grid-row: span 4; }
+    .asym-c { grid-column: span 3; grid-row: span 2; }
+    .asym-d { grid-column: span 3; grid-row: span 3; }
+    .asym-e { grid-column: span 6; grid-row: span 3; }
+    .asym-f { grid-column: span 3; grid-row: span 5; }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 30;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(820px, 100%);
+      border-radius: 20px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-close {
+      border: 0;
+      background: #f5f5f5;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .gallery-modal-image {
+      width: 100%;
+      max-height: 62vh;
+      object-fit: cover;
+      border-radius: 14px;
+      margin-bottom: 10px;
+    }
+
+    .footer {
+      padding: 34px 0 42px;
+      border-top: 1px solid rgba(120, 120, 120, 0.2);
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .article-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease;
+    }
+
+    .article-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .article-cover {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+
+    .article-body {
+      padding: 16px;
+    }
+
+    .article-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .article-desc {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .article-video {
+      font-size: 0.85rem;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .calendar-wrap {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      background: var(--card);
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .calendar-grid-wrap {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .cal-header {
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 8px 4px;
+      color: var(--muted);
+    }
+
+    .cal-day-display {
+      text-align: center;
+      padding: 8px 4px;
+      border-radius: 6px;
+      background: #e8f5ee;
+      font-size: 0.9rem;
+    }
+
+    .cal-day-tour {
+      background: #d4e8f7;
+      border: 1px solid #4a90e2;
+      color: #1a5490;
+      font-weight: 600;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .packages-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .testimonials-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-panel,
+      .quote-feature {
+        min-height: 350px;
+      }
+
+      .gallery-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .asym-a,
+      .asym-e { grid-column: span 6; }
+
+      .asym-b,
+      .asym-c,
+      .asym-d,
+      .asym-f { grid-column: span 3; }
+
+      .articles-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .calendar-grid-wrap {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .header-inner,
+      .page-wrapper {
+        width: calc(100% - 24px);
+      }
+
+      .hero {
+        padding-top: 26px;
+      }
+
+      .hero h1 {
+        font-size: 2.05rem;
+      }
+
+      .packages-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .gallery-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-rows: 110px;
+      }
+
+      .asym-a,
+      .asym-b,
+      .asym-c,
+      .asym-d,
+      .asym-e,
+      .asym-f {
+        grid-column: span 1;
+        grid-row: span 2;
+      }
+
+      .articles-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .calendar-grid-wrap {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .cal-day-display {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <h1 class="brand">Tour<span>Pilot</span> Driver</h1>
+      <a href="driverdashboard.html" class="btn btn-ghost">Back to Dashboard</a>
+    </div>
+  </header>
+
+  <main class="page-wrapper">
+    <section class="hero">
+      <div>
+        <div class="chip">My Tours</div>
+        <h1>Expert driving and memorable journeys.</h1>
+      </div>
+      <button class="btn btn-black" id="massExploreBtn">
+        See All Tours
+      </button>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">My Specialty Routes</h2>
+          <p class="section-sub">Curated routes with local insights, comfort transport, and professional service included.</p>
+        </div>
+      </div>
+      <div class="packages-grid" id="packagesGrid"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">What travelers say about my service</h2>
+          <p class="section-sub">Built on safety, professionalism, and exceptional experiences.</p>
+        </div>
+      </div>
+
+      <div class="testimonials-wrap">
+        <article class="panel summary-panel">
+          <div>
+            <div class="summary-score">4.8<span>/5</span></div>
+            <ul class="summary-points">
+              <li>120+ successful tours completed</li>
+              <li>100% safety record with certified routes</li>
+              <li>8+ years professional driving experience</li>
+            </ul>
+          </div>
+          <button class="btn btn-black" id="bookTourBtn">Book a tour</button>
+        </article>
+
+        <article class="panel quote-feature">
+          <img src="https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1000&q=80" alt="Driver at scenic location">
+          <div class="quote-overlay">"Safety first, comfort always, stories forever. That's how I drive."</div>
+        </article>
+
+        <div class="testimonial-list" id="testimonialsGrid"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Gallery</h2>
+          <p class="section-sub">Moments captured from my journeys and routes.</p>
+        </div>
+      </div>
+      <div class="gallery-grid" id="galleryGrid"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">My Articles</h2>
+          <p class="section-sub">Stories, experiences, and insights from the road.</p>
+        </div>
+      </div>
+      <div class="articles-grid" id="articlesGrid"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Availability Calendar</h2>
+          <p class="section-sub">My scheduled tours and availability.</p>
+        </div>
+      </div>
+      <div class="calendar-wrap">
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <button id="displayPrevMonth" style="border: 1px solid var(--line); background: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 700;">◀</button>
+            <span id="displayCalendarMonth" style="min-width: 160px; text-align: center; font-weight: 700;"></span>
+            <button id="displayNextMonth" style="border: 1px solid var(--line); background: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 700;">▶</button>
+          </div>
+        </div>
+        <div class="calendar-grid-wrap" id="displayCalendarGrid"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="galleryModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Gallery</h3>
+        <button class="modal-close" id="closeModalBtn" aria-label="Close modal">x</button>
+      </div>
+      <div class="modal-body">
+        <img id="modalImage" class="gallery-modal-image" src="" alt="Gallery image">
+        <p id="modalDescription" style="color:#666;"></p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>2026 TourPilot Driver. Driven by passion for safe, unforgettable journeys.</p>
+  </footer>
+
+  <script>
+    let packages = [
+      {
+        id: 1,
+        title: "Ella Loop",
+        location: "Sri Lanka Central Highlands",
+        price: "$35",
+        image: "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?auto=format&fit=crop&w=1200&q=80"
+      },
+      {
+        id: 2,
+        title: "Tea Estate Trail",
+        location: "Nuwara Eliya, Sri Lanka",
+        price: "$40",
+        image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80"
+      },
+      {
+        id: 3,
+        title: "Mountain Adventure",
+        location: "Adam's Peak Region",
+        price: "$50",
+        image: "https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1200&q=80"
+      },
+      {
+        id: 4,
+        title: "Scenic Sunset Drive",
+        location: "South Coast, Sri Lanka",
+        price: "$45",
+        image: "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1200&q=80"
+      }
+    ];
+
+    let testimonials = [
+      {
+        name: "Michael B.",
+        text: "Professional, knowledgeable, and safe. Every turn felt planned, every stop was meaningful."
+      },
+      {
+        name: "Elena K.",
+        text: "Smooth drives, great music, and a driver who genuinely cares about passenger comfort."
+      },
+      {
+        name: "Deepak M.",
+        text: "25+ years of family travel, and this was the most relaxed journey we've had. Highly recommended."
+      }
+    ];
+
+    let galleryImages = [
+      {
+        title: "Dawn Light",
+        description: "Early morning mountain views.",
+        image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-a"
+      },
+      {
+        title: "Route Check",
+        description: "Preparing for a day's journey.",
+        image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-b"
+      },
+      {
+        title: "Warm Greeting",
+        description: "Welcome to the tour.",
+        image: "https://images.unsplash.com/photo-1477414348463-c0eb7f1359b6?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-c"
+      },
+      {
+        title: "Valley View",
+        description: "Scenic overlook moment.",
+        image: "https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-d"
+      },
+      {
+        title: "Evening Park",
+        description: "Rest stop during drive.",
+        image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-e"
+      },
+      {
+        title: "Safe Return",
+        description: "End of a perfect day.",
+        image: "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-f"
+      },
+      {
+        title: "Mountain Path",
+        description: "Winding roads through nature.",
+        image: "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-c"
+      },
+      {
+        title: "Sunset Moment",
+        description: "Golden hour drive.",
+        image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1000&q=80",
+        shape: "asym-d"
+      }
+    ];
+
+    function renderPackages() {
+      const packagesGrid = document.getElementById("packagesGrid");
+      packagesGrid.innerHTML = packages.map((pkg) => `
+        <article class="package-card" data-package-id="${pkg.id}">
+          <img src="${pkg.image}" alt="${pkg.title}" class="package-image">
+          <button class="package-fly" aria-label="View ${pkg.title}">↗</button>
+          <div class="package-info">
+            <h3 class="package-title">${pkg.title}</h3>
+            <p class="package-meta">${pkg.location}</p>
+            <p class="package-price">${pkg.price}<small>/ per person</small></p>
+          </div>
+        </article>
+      `).join("");
+
+      document.querySelectorAll(".package-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const pkg = packages.find((item) => String(item.id) === card.dataset.packageId);
+          if (pkg) {
+            alert(`${pkg.title}\n${pkg.location}\nStarting at ${pkg.price} per person`);
+          }
+        });
+      });
+    }
+
+    function renderTestimonials() {
+      const testimonialsGrid = document.getElementById("testimonialsGrid");
+      testimonialsGrid.innerHTML = testimonials.map((testimonial) => `
+        <article class="testimonial-card">
+          <div class="stars">★★★★★</div>
+          <p class="testimonial-text">"${testimonial.text}"</p>
+          <p class="testimonial-author">— ${testimonial.name}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderGallery() {
+      const galleryGrid = document.getElementById("galleryGrid");
+      galleryGrid.innerHTML = galleryImages.map((img) => `
+        <article class="gallery-item ${img.shape}" data-image-url="${img.image}" data-image-title="${img.title}" data-image-desc="${img.description}">
+          <img src="${img.image}" alt="${img.title}">
+          <div class="gallery-caption">${img.title}</div>
+        </article>
+      `).join("");
+
+      document.querySelectorAll(".gallery-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          const modal = document.getElementById("galleryModal");
+          document.getElementById("modalTitle").textContent = item.dataset.imageTitle;
+          document.getElementById("modalImage").src = item.dataset.imageUrl;
+          document.getElementById("modalDescription").textContent = item.dataset.imageDesc;
+          modal.classList.add("open");
+        });
+      });
+    }
+
+    function closeModal() {
+      document.getElementById("galleryModal").classList.remove("open");
+    }
+
+    document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+    document.getElementById("galleryModal").addEventListener("click", (e) => {
+      if (e.target.id === "galleryModal") closeModal();
+    });
+
+    document.getElementById("massExploreBtn").addEventListener("click", () => {
+      document.querySelector(".packages-grid").scrollIntoView({ behavior: "smooth" });
+    });
+
+    document.getElementById("bookTourBtn").addEventListener("click", () => {
+      alert("Book tour functionality coming soon. Contact the driver directly.");
+    });
+
+    // Load and display articles from localStorage
+    const articles = JSON.parse(localStorage.getItem("driverArticles") || "[]");
+    const assignedTours = [
+      { date: "2026-05-05", route: "Ella Loop" },
+      { date: "2026-05-08", route: "Nine Arches + Tea Estate" },
+      { date: "2026-05-12", route: "Sunset Viewpoint" }
+    ];
+
+    function renderArticles() {
+      const articlesGrid = document.getElementById("articlesGrid");
+      if (articles.length === 0) {
+        articlesGrid.innerHTML = '<p style="color: #6b6b6a; grid-column: 1/-1; text-align: center; padding: 40px 20px;">No articles yet.</p>';
+        return;
+      }
+
+      articlesGrid.innerHTML = articles.map((article) => `
+        <article class="article-card">
+          <img src="${article.coverImage}" alt="${article.title}" class="article-cover">
+          <div class="article-body">
+            <h3 class="article-title">${article.title}</h3>
+            <p class="article-desc">${article.description}</p>
+            ${article.videoLink ? `<p class="article-video">▶ Video included</p>` : ''}
+          </div>
+        </article>
+      `).join("");
+    }
+
+    // Calendar display
+    let displayCalendarDate = new Date();
+
+    function formatDateKey(d) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function renderDisplayCalendar() {
+      const calendarGrid = document.getElementById("displayCalendarGrid");
+      calendarGrid.innerHTML = "";
+      const year = displayCalendarDate.getFullYear();
+      const month = displayCalendarDate.getMonth();
+      const first = new Date(year, month, 1);
+      const startDay = first.getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      document.getElementById("displayCalendarMonth").textContent = displayCalendarDate.toLocaleString(undefined, { month: "long", year: "numeric" });
+
+      // weekday headers
+      const weekdays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+      weekdays.forEach((wd) => {
+        const cell = document.createElement("div");
+        cell.className = "cal-header";
+        cell.textContent = wd;
+        calendarGrid.appendChild(cell);
+      });
+
+      // leading blanks
+      for (let i = 0; i < startDay; i++) {
+        const blank = document.createElement("div");
+        calendarGrid.appendChild(blank);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, month, d);
+        const key = formatDateKey(dateObj);
+        const cell = document.createElement("div");
+        cell.className = "cal-day-display";
+        cell.textContent = String(d);
+
+        // Check if this date has an assigned tour
+        const tourOnDate = assignedTours.find((t) => t.date === key);
+        if (tourOnDate) {
+          cell.classList.add("cal-day-tour");
+          cell.title = `Tour: ${tourOnDate.route}`;
+        }
+
+        calendarGrid.appendChild(cell);
+      }
+    }
+
+    document.getElementById("displayPrevMonth").addEventListener("click", () => {
+      displayCalendarDate = new Date(displayCalendarDate.getFullYear(), displayCalendarDate.getMonth() - 1, 1);
+      renderDisplayCalendar();
+    });
+
+    document.getElementById("displayNextMonth").addEventListener("click", () => {
+      displayCalendarDate = new Date(displayCalendarDate.getFullYear(), displayCalendarDate.getMonth() + 1, 1);
+      renderDisplayCalendar();
+    });
+
+    renderPackages();
+    renderTestimonials();
+    renderGallery();
+    renderArticles();
+    renderDisplayCalendar();
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "TourPilot",
+    "slug": "tourpilot",
+    "version": "1.0.0",
+    "scheme": "tourpilot",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1f8f58"
+    },
+    "ios": { "supportsTablet": true },
+    "android": { "adaptiveIcon": { "backgroundColor": "#1f8f58" } }
+  }
+}

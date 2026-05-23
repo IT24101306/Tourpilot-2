@@ -1,0 +1,497 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  TOURIST
+  AGENCY
+  INFLUENCER
+  DRIVER
+  ADMIN
+}
+
+enum AgencyStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+enum InquiryStatus {
+  NEW
+  AGENCY_REVIEWING
+  ITINERARY_DRAFT
+  SENT_TO_TOURIST
+  TOURIST_VIEWED
+  REVISION_REQUESTED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum InquiryType {
+  READY_MADE
+  CUSTOM
+}
+
+enum EntityType {
+  HOTEL
+  VIEWPOINT
+  ACTIVITY
+  RESTAURANT
+  TRANSPORT
+  FREE_TIME
+  OTHER
+}
+
+enum LineItemKind {
+  REQUIRED
+  OPTIONAL
+  UPGRADE
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+enum WalletTxnType {
+  LOGIN_FEE
+  TOPUP
+  COMMISSION
+  REFUND
+  ADJUSTMENT
+}
+
+model User {
+  id                   String                @id @default(cuid())
+  phone                String                @unique @db.VarChar(15)
+  name                 String
+  role                 UserRole              @default(TOURIST)
+  email                String?
+  avatarUrl            String?               @db.Text
+  district             String?
+  country              String?               @default("LK")
+  walletBalance        Decimal               @default(0) @db.Decimal(12, 2)
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  agency               Agency?
+  agencyStaff          AgencyStaff[]
+  touristProfile       TouristProfile?
+  influencerProfile    InfluencerProfile?
+  driverProfile        DriverProfile?
+  inquiries            Inquiry[]             @relation("TouristInquiries")
+  offerRegistrations   OfferRegistration[]
+  savedTours           SavedTour[]
+  walletLedger         WalletLedger[]
+  refreshTokens        RefreshToken[]
+  referralAttributions ReferralAttribution[]
+}
+
+model TouristProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interests       Json?
+  mobilityNotes   String?  @db.Text
+  dietaryNotes    String?  @db.Text
+  loyaltyPoints   Int      @default(0)
+  followedAgencies Json?
+}
+
+model InfluencerProfile {
+  id          String         @id @default(cuid())
+  userId      String         @unique
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio         String?        @db.Text
+  socialLinks Json?
+  codes       ReferralCode[]
+  commissions Commission[]
+}
+
+model DriverProfile {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseNo String?
+  vehicle   String?
+  status    String  @default("available")
+  bio       String? @db.Text
+  articles  Json?
+}
+
+model Agency {
+  id              String        @id @default(cuid())
+  ownerId         String        @unique
+  owner           User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String        @unique
+  tagline         String?       @db.Text
+  description     String?       @db.Text
+  logoUrl         String?       @db.Text
+  coverUrl        String?       @db.Text
+  district        String?
+  status          AgencyStatus  @default(PENDING)
+  avgRating       Decimal       @default(0) @db.Decimal(3, 2)
+  reviewCount     Int           @default(0)
+  pageConfig      Json?
+  gallery         Json?
+  contactPhone    String?
+  contactEmail    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  staff           AgencyStaff[]
+  entities        Entity[]
+  entityGroups    EntityGroup[]
+  tours           Tour[]
+  reviews         Review[]
+  inquiries       Inquiry[]
+  displaySettings DisplaySettings?
+}
+
+model AgencyStaff {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime @default(now())
+
+  @@unique([agencyId, userId])
+}
+
+model Entity {
+  id          String       @id @default(cuid())
+  agencyId    String
+  agency      Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name        String
+  type        EntityType
+  city        String?
+  district    String?
+  description String?      @db.Text
+  durationMin Int?
+  priceHint   Decimal?     @db.Decimal(12, 2)
+  contact     String?
+  lat         Decimal?     @db.Decimal(10, 7)
+  lng         Decimal?     @db.Decimal(10, 7)
+  media       Json?
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  groupItems  EntityGroupItem[]
+  tourItems   TourDayItem[]
+  lineItems   ItineraryLineItem[]
+}
+
+model EntityGroup {
+  id          String            @id @default(cuid())
+  agencyId    String
+  agency      Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name        String
+  description String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  items       EntityGroupItem[]
+  tourItems   TourDayItem[]
+}
+
+model EntityGroupItem {
+  id        String      @id @default(cuid())
+  groupId   String
+  group     EntityGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  entityId  String
+  entity    Entity      @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  sortOrder Int         @default(0)
+
+  @@unique([groupId, entityId])
+}
+
+model Tour {
+  id            String      @id @default(cuid())
+  agencyId      String
+  agency        Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  title         String
+  slug          String
+  summary       String?     @db.Text
+  description   String?     @db.Text
+  days          Int         @default(1)
+  basePriceLkr  Decimal     @db.Decimal(12, 2)
+  seasonTag     String?
+  districtTags  Json?
+  coverUrl      String?     @db.Text
+  media         Json?
+  isPublished   Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  tourDays      TourDay[]
+  inquiries     Inquiry[]
+  savedBy       SavedTour[]
+  referralCodes ReferralCode[]
+  offerTours    OfferTour[]
+
+  @@unique([agencyId, slug])
+}
+
+model TourDay {
+  id        String        @id @default(cuid())
+  tourId    String
+  tour      Tour          @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  dayNumber Int
+  title     String?
+  items     TourDayItem[]
+
+  @@unique([tourId, dayNumber])
+}
+
+model TourDayItem {
+  id        String       @id @default(cuid())
+  tourDayId String
+  tourDay   TourDay      @relation(fields: [tourDayId], references: [id], onDelete: Cascade)
+  entityId  String?
+  entity    Entity?      @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  groupId   String?
+  group     EntityGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  kind      LineItemKind @default(REQUIRED)
+  label     String?
+  priceLkr  Decimal?     @db.Decimal(12, 2)
+  sortOrder Int          @default(0)
+  notes     String?      @db.Text
+}
+
+model Inquiry {
+  id              String            @id @default(cuid())
+  touristId       String
+  tourist         User              @relation("TouristInquiries", fields: [touristId], references: [id])
+  agencyId        String
+  agency          Agency            @relation(fields: [agencyId], references: [id])
+  tourId          String?
+  tour            Tour?             @relation(fields: [tourId], references: [id], onDelete: SetNull)
+  type            InquiryType
+  status          InquiryStatus     @default(NEW)
+  pax             Int               @default(2)
+  startDate       DateTime?
+  endDate         DateTime?
+  budgetBand      String?
+  interests       Json?
+  message         String?           @db.Text
+  referralCodeId  String?
+  referralCode    ReferralCode?     @relation(fields: [referralCodeId], references: [id], onDelete: SetNull)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  itineraries     Itinerary[]
+  statusHistory   InquiryStatusLog[]
+  commission      Commission?
+}
+
+model InquiryStatusLog {
+  id        String        @id @default(cuid())
+  inquiryId String
+  inquiry   Inquiry       @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  status    InquiryStatus
+  note      String?       @db.Text
+  actorId   String?
+  createdAt DateTime      @default(now())
+}
+
+model Itinerary {
+  id          String              @id @default(cuid())
+  inquiryId   String
+  inquiry     Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  version     Int                 @default(1)
+  title       String?
+  notes       String?             @db.Text
+  baseTotal   Decimal             @default(0) @db.Decimal(12, 2)
+  optionalTotal Decimal           @default(0) @db.Decimal(12, 2)
+  grandMax    Decimal             @default(0) @db.Decimal(12, 2)
+  isSent      Boolean             @default(false)
+  sentAt      DateTime?
+  shareToken  String?             @unique
+  createdAt   DateTime            @default(now())
+  days        ItineraryDay[]
+  lineItems   ItineraryLineItem[]
+}
+
+model ItineraryDay {
+  id          String              @id @default(cuid())
+  itineraryId String
+  itinerary   Itinerary           @relation(fields: [itineraryId], references: [id], onDelete: Cascade)
+  dayNumber   Int
+  title       String?
+  lineItems   ItineraryLineItem[]
+
+  @@unique([itineraryId, dayNumber])
+}
+
+model ItineraryLineItem {
+  id            String        @id @default(cuid())
+  itineraryId   String
+  itinerary     Itinerary     @relation(fields: [itineraryId], references: [id], onDelete: Cascade)
+  dayId         String?
+  day           ItineraryDay? @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  entityId      String?
+  entity        Entity?       @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  label         String
+  kind          LineItemKind  @default(REQUIRED)
+  priceLkr      Decimal?      @db.Decimal(12, 2)
+  priceOnRequest Boolean      @default(false)
+  sortOrder     Int           @default(0)
+  notes         String?       @db.Text
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  authorName String
+  rating    Int
+  body      String?  @db.Text
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Offer {
+  id              String              @id @default(cuid())
+  title           String
+  description     String?             @db.Text
+  rewardText      String
+  registrationCap Int
+  validFrom       DateTime
+  validUntil      DateTime
+  tourPriceLkr    Decimal             @db.Decimal(12, 2)
+  discountedLkr   Decimal?            @db.Decimal(12, 2)
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  registrations   OfferRegistration[]
+  tours           OfferTour[]
+}
+
+model OfferTour {
+  id      String @id @default(cuid())
+  offerId String
+  offer   Offer  @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  tourId  String
+  tour    Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, tourId])
+}
+
+model OfferRegistration {
+  id        String   @id @default(cuid())
+  offerId   String
+  offer     Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([offerId, userId])
+}
+
+model ReferralCode {
+  id           String                @id @default(cuid())
+  influencerId String
+  influencer   InfluencerProfile     @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  code         String                @unique
+  tourId       String?
+  tour         Tour?                 @relation(fields: [tourId], references: [id], onDelete: SetNull)
+  commissionPct Decimal              @default(5) @db.Decimal(5, 2)
+  clickCount   Int                   @default(0)
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  inquiries    Inquiry[]
+  attributions ReferralAttribution[]
+  commissions  Commission[]
+}
+
+model ReferralAttribution {
+  id             String       @id @default(cuid())
+  referralCodeId String
+  referralCode   ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId      String?
+  createdAt      DateTime     @default(now())
+}
+
+model Commission {
+  id             String           @id @default(cuid())
+  referralCodeId String
+  referralCode   ReferralCode     @relation(fields: [referralCodeId], references: [id])
+  influencerId   String
+  influencer     InfluencerProfile @relation(fields: [influencerId], references: [id])
+  inquiryId      String           @unique
+  inquiry        Inquiry          @relation(fields: [inquiryId], references: [id])
+  amountLkr      Decimal          @db.Decimal(12, 2)
+  status         CommissionStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model CmsPage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  blocks    Json
+  isPublished Boolean @default(true)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model DisplaySettings {
+  id        String   @id @default(cuid())
+  agencyId  String   @unique
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  sections  Json
+  theme     Json?
+  updatedAt DateTime @updatedAt
+}
+
+model SavedTour {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tourId    String
+  tour      Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tourId])
+}
+
+model WalletLedger {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      WalletTxnType
+  amountLkr Decimal       @db.Decimal(12, 2)
+  balanceAfter Decimal    @db.Decimal(12, 2)
+  note      String?
+  createdAt DateTime      @default(now())
+}
+
+model OtpChallenge {
+  id        String   @id @default(cuid())
+  phone     String
+  otpHash   String
+  purpose   String
+  payload   Json?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

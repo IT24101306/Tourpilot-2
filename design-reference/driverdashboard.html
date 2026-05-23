@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Dashboard - TourPilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f8f6;
+      --white: #ffffff;
+      --ink: #111a17;
+      --muted: #5c6b65;
+      --line: #d7e2dc;
+      --green: #1f8f58;
+      --green-dark: #156a41;
+      --green-soft: #e4f5ec;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --shadow: 0 14px 28px rgba(15, 39, 29, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Manrope", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .dashboard {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--white);
+      overflow: hidden;
+    }
+
+    .topbar {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-family: "Syne", sans-serif;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      color: var(--green);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      min-height: 38px;
+      padding: 0 16px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--green-dark);
+    }
+
+    .btn-ghost {
+      background: #eef3f1;
+      color: #20312a;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #20312a;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .icon-dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 20px;
+      min-height: 58px;
+      border-bottom: 1px solid var(--line);
+      overflow-x: auto;
+      background: #ffffff;
+    }
+
+    .tab-btn {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #4b5563;
+      min-height: 58px;
+      padding: 0 16px;
+      margin-right: 2px;
+      font-family: inherit;
+      font-size: 0.87rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: #1f2937;
+      background: #f8fafc;
+    }
+
+    .tab-btn.active {
+      color: var(--green-dark);
+      background: #f4faf7;
+    }
+
+    .tab-btn.active::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      background: var(--green);
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+      animation: fadeIn 200ms ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-head {
+      margin-bottom: 16px;
+    }
+
+    .panel-head h2 {
+      font-family: "Syne", sans-serif;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .panel-head p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fff;
+      padding: 14px;
+    }
+
+    .card h3 {
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+      color: #2a3a34;
+    }
+
+    .value {
+      font-family: "Syne", sans-serif;
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .status {
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .ok { background: #e7f7ee; color: #156a41; }
+    .warn { background: #fff3df; color: #8b5e00; }
+    .late { background: #fde8e8; color: #9b1c1c; }
+
+    .table-tools {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .table-filter {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: #1f2937;
+      font-family: inherit;
+      font-size: 0.86rem;
+      padding: 0 10px;
+      outline: 0;
+    }
+
+    .table-filter:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(31, 143, 88, 0.12);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .data-table th,
+    .data-table td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    .data-table thead th {
+      background: #f8fafc;
+      color: #334155;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .data-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .inline-select {
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 0.84rem;
+      padding: 0 8px;
+      outline: 0;
+    }
+
+    .inline-select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(31, 143, 88, 0.12);
+    }
+
+    .empty-text {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(7, 14, 28, 0.58);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 60;
+    }
+
+    .modal.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .dialog {
+      width: min(460px, 100%);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--white);
+      box-shadow: 0 22px 40px rgba(8, 20, 45, 0.24);
+      padding: 18px;
+      transform: translateY(10px);
+      transition: transform 0.2s ease;
+    }
+
+    .modal.open .dialog {
+      transform: translateY(0);
+    }
+
+    .dialog-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .dialog-head h3 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .dialog-sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .close-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #344054;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .field input,
+    .field select {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      min-height: 40px;
+      padding: 9px 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: #0f172a;
+      background: #fff;
+      outline: 0;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(31, 143, 88, 0.12);
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .btn-lite {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #1f2937;
+    }
+
+    .status-text {
+      margin-top: 8px;
+      min-height: 18px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #156a41;
+    }
+
+    @media (max-width: 980px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .kpi-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="dashboard">
+    <header class="topbar">
+      <h1 class="brand">Tour<span>Pilot</span> DriverDashboard</h1>
+      <div class="top-actions">
+        <button class="icon-btn" type="button" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M15 17H5C5.95 16.1 6.5 14.9 6.5 13.6V10.5C6.5 7.46 8.96 5 12 5C15.04 5 17.5 7.46 17.5 10.5V13.6C17.5 14.9 18.05 16.1 19 17H15Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 19C10.35 19.6 11.12 20 12 20C12.88 20 13.65 19.6 14 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span class="icon-dot" aria-hidden="true"></span>
+        </button>
+        <a href="agentdashboard.html" class="btn btn-ghost">Agent Dashboard</a>
+        <a href="tourism-landing (1).html" class="btn btn-ghost">Back to Site</a>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Driver Dashboard Tabs">
+      <button class="tab-btn active" data-tab="overview" type="button">Overview</button>
+      <button class="tab-btn" data-tab="assigned" type="button">Assigned Tours</button>
+      <button class="tab-btn" data-tab="schedule" type="button">Today Schedule</button>
+      <button class="tab-btn" data-tab="vehicle" type="button">Vehicle</button>
+      <button class="tab-btn" data-tab="earnings" type="button">Earnings</button>
+      <button class="tab-btn" data-tab="profile" type="button">Profile</button>
+      <button class="tab-btn" data-tab="calendar" type="button">Calendar</button>
+      <button class="tab-btn" id="displayTabBtn" data-tab="display" type="button">Display</button>
+    </nav>
+
+    <section class="content">
+      <article class="tab-panel active" id="overview">
+        <div class="panel-head">
+          <h2>Driver Overview</h2>
+          <p>Live duty summary, active assignments, and service quality indicators.</p>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h3>Today Trips</h3>
+            <p class="value" id="todayTripsCount">3</p>
+            <p class="sub">2 completed, 1 upcoming</p>
+          </div>
+          <div class="card">
+            <h3>Current Status</h3>
+            <p class="value" id="currentStatusView">Available</p>
+            <p class="sub">Ready for immediate assignment</p>
+          </div>
+          <div class="card">
+            <h3>Distance Today</h3>
+            <p class="value">146 km</p>
+            <p class="sub">Fuel efficiency: 12.8 km/l</p>
+          </div>
+          <div class="card">
+            <h3>Rating</h3>
+            <p class="value">4.9</p>
+            <p class="sub">Based on last 40 trips</p>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="card">
+            <h3>Upcoming Pickup</h3>
+            <p class="sub">09:30 AM - Ella City Hotel</p>
+          </div>
+          <div class="card">
+            <h3>Next Drop</h3>
+            <p class="sub">11:00 AM - Little Adam's Peak</p>
+          </div>
+          <div class="card">
+            <h3>Dispatcher Note</h3>
+            <p class="sub">Guest prefers short scenic stop.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="tab-panel" id="assigned">
+        <div class="panel-head">
+          <h2>Assigned Tours</h2>
+          <p>Trips currently assigned to your profile.</p>
+        </div>
+        <div class="table-tools">
+          <select id="tourStateFilter" class="table-filter" aria-label="Filter assigned tours">
+            <option value="all">All Status</option>
+            <option value="Scheduled">Scheduled</option>
+            <option value="On Route">On Route</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tour Code</th>
+                <th>Route</th>
+                <th>Time</th>
+                <th>Guests</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="assignedToursBody"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="tab-panel" id="schedule">
+        <div class="panel-head">
+          <h2>Today Schedule</h2>
+          <p>Checklist for each ride segment.</p>
+        </div>
+        <div class="list" id="scheduleList"></div>
+      </article>
+
+      <article class="tab-panel" id="vehicle">
+        <div class="panel-head">
+          <h2>Vehicle Details</h2>
+          <p>Vehicle assignment, compliance, and readiness checks.</p>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+          <div class="card">
+            <h3>Vehicle Model</h3>
+            <p class="value">Toyota KDH</p>
+            <p class="sub">Plate: CAR-4862</p>
+          </div>
+          <div class="card">
+            <h3>Maintenance</h3>
+            <p class="value">In Date</p>
+            <p class="sub">Next service: 08 May 2026</p>
+          </div>
+          <div class="card">
+            <h3>Insurance</h3>
+            <p class="value">Valid</p>
+            <p class="sub">Expires: 19 Dec 2026</p>
+          </div>
+          <div class="card">
+            <h3>Fuel Card</h3>
+            <p class="value">Active</p>
+            <p class="sub">Monthly limit: LKR 140,000</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="tab-panel" id="earnings">
+        <div class="panel-head">
+          <h2>Earnings</h2>
+          <p>Trip income and incentives overview.</p>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          <div class="card">
+            <h3>This Week</h3>
+            <p class="value">LKR 28,500</p>
+            <p class="sub">6 completed rides</p>
+          </div>
+          <div class="card">
+            <h3>Incentive</h3>
+            <p class="value">LKR 4,000</p>
+            <p class="sub">On-time completion bonus</p>
+          </div>
+          <div class="card">
+            <h3>Pending Payout</h3>
+            <p class="value">LKR 9,600</p>
+            <p class="sub">Releases on Monday</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="tab-panel" id="profile">
+        <div class="panel-head">
+          <h2>Driver Profile</h2>
+          <p>Keep your availability and contact details up to date.</p>
+        </div>
+        <div class="table-tools">
+          <select id="driverStatusSelect" class="table-filter" aria-label="Update driver status">
+            <option value="Available">Available</option>
+            <option value="On Tour">On Tour</option>
+            <option value="Off Duty">Off Duty</option>
+          </select>
+          <button class="btn btn-primary" id="profileTopupBtn" type="button">Topup</button>
+          <button class="btn btn-primary" id="openProfileModal" type="button">Edit Profile</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <tbody>
+              <tr><th style="width: 220px;">Driver Name</th><td id="driverNameView">Nimal Perera</td></tr>
+              <tr><th>Phone</th><td id="driverPhoneView">+94 77 245 9032</td></tr>
+              <tr><th>License</th><td id="driverLicenseView">B321-9845</td></tr>
+              <tr><th>Experience</th><td id="driverExperienceView">5 Years</td></tr>
+              <tr><th>Languages</th><td id="driverLanguagesView">English, Sinhala</td></tr>
+              <tr><th>Availability Notes</th><td id="driverAvailabilityNotesView">No notes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      
+      <article class="tab-panel" id="calendar">
+        <div class="panel-head">
+          <h2>Availability Calendar</h2>
+          <p>Mark unavailable dates by clicking a day.</p>
+        </div>
+        <div style="padding: 0 20px 20px;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+            <button class="mini-btn" id="prevMonth" type="button">◀</button>
+            <div style="font-weight:700;"> <span id="calendarMonthLabel"></span> </div>
+            <button class="mini-btn" id="nextMonth" type="button">▶</button>
+            <div style="margin-left:auto; font-size:0.9rem; color:var(--muted);">Click dates to toggle availability</div>
+          </div>
+          <div id="calendarGrid" style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px;
+            background:#fff; padding:12px; border-radius:8px; border:1px solid var(--line);
+            "></div>
+          <div style="margin-top:10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; gap:6px; align-items:center;"><span style="width:14px; height:14px; display:inline-block; background:#e8f5ee; border-radius:3px; border:1px solid var(--green);"></span> Available</div>
+            <div style="display:flex; gap:6px; align-items:center;"><span style="width:14px; height:14px; display:inline-block; background:#fde8e8; border-radius:3px; border:1px solid #f5a4a4;"></span> Unavailable</div>
+            <div style="display:flex; gap:6px; align-items:center;"><span style="width:14px; height:14px; display:inline-block; background:#d4e8f7; border-radius:3px; border:2px solid #4a90e2;"></span> Assigned Tour</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <article class="tab-panel" id="display">
+      <div class="panel-head">
+        <h2>My Driver Display</h2>
+        <p>Manage articles, images, and your public driver profile.</p>
+      </div>
+      <div class="table-tools">
+        <button class="btn btn-primary" id="addArticleBtn" type="button">+ Add Article</button>
+      </div>
+
+      <div id="articlesContainer" style="display: grid; gap: 14px; margin-top: 16px;">
+        <p style="color: #6b6b6a; font-size: 0.95rem;">No articles yet. Click "Add Article" to create one.</p>
+      </div>
+    </article>
+  </main>
+
+  <div class="modal" id="profileModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="profileDialogTitle">
+      <div class="dialog-head">
+        <h3 id="profileDialogTitle">Update Driver Profile</h3>
+        <button class="close-btn" id="closeProfileModal" type="button" aria-label="Close">x</button>
+      </div>
+      <p class="dialog-sub">Edit your profile and keep the operations team informed.</p>
+      <form id="profileForm">
+        <div class="field">
+          <label for="profileName">Driver Name</label>
+          <input id="profileName" type="text" required>
+        </div>
+        <div class="field">
+          <label for="profilePhone">Phone</label>
+          <input id="profilePhone" type="tel" required>
+        </div>
+        <div class="field">
+          <label for="profileLicense">License</label>
+          <input id="profileLicense" type="text" required>
+        </div>
+        <div class="field">
+          <label for="profileExperience">Experience</label>
+          <input id="profileExperience" type="text" placeholder="5 Years" required>
+        </div>
+        <div class="field">
+          <label for="profileLanguages">Languages</label>
+          <input id="profileLanguages" type="text" placeholder="English, Sinhala" required>
+        </div>
+        <div class="field">
+          <label for="profileAvailabilityNotes">Availability Notes</label>
+          <input id="profileAvailabilityNotes" type="text" placeholder="e.g., Weekends unavailable">
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-lite" id="cancelProfileModal" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save Changes</button>
+        </div>
+        <p id="profileStatus" class="status-text" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Topup Modal -->
+  <div class="modal" id="topupModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="topupDialogTitle">
+      <div class="dialog-head">
+        <h3 id="topupDialogTitle">Topup Account</h3>
+        <button class="close-btn" id="closeTopupModal" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="dialog-sub">Add funds to your account. Select a quick amount or enter a custom value.</p>
+
+      <div class="field">
+        <label>Quick Amounts (LKR)</label>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-lite topup-quick" data-amount="100">100</button>
+          <button class="btn btn-lite topup-quick" data-amount="500">500</button>
+          <button class="btn btn-lite topup-quick" data-amount="1000">1000</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="topupCustomAmount">Custom Amount (LKR)</label>
+        <input id="topupCustomAmount" type="number" min="1" placeholder="Enter amount">
+      </div>
+
+      <div class="dialog-actions">
+        <button class="btn btn-lite" id="cancelTopup" type="button">Cancel</button>
+        <button class="btn btn-primary" id="confirmTopup" type="button">Topup</button>
+      </div>
+      <p class="status-text" id="topupStatus" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div class="modal" id="articleModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="articleDialogTitle">
+      <div class="dialog-head">
+        <h3 id="articleDialogTitle">Add Article</h3>
+        <button class="close-btn" id="closeArticleModal" type="button" aria-label="Close">x</button>
+      </div>
+      <p class="dialog-sub">Create an article for your public driver profile.</p>
+      <form id="articleForm">
+        <div class="field">
+          <label for="articleTitle">Article Title</label>
+          <input id="articleTitle" type="text" placeholder="e.g., My First Journey" required>
+        </div>
+        <div class="field">
+          <label for="articleDescription">Description</label>
+          <textarea id="articleDescription" placeholder="Tell your story..." style="min-height: 80px;" required></textarea>
+        </div>
+        <div class="field">
+          <label for="articleCoverImage">Cover Image URL</label>
+          <input id="articleCoverImage" type="url" placeholder="https://..." required>
+        </div>
+        <div class="field">
+          <label for="articleVideoLink">Video Link (YouTube/Vimeo)</label>
+          <input id="articleVideoLink" type="url" placeholder="https://youtube.com/...">
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-lite" id="cancelArticleModal" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save Article</button>
+        </div>
+        <p id="articleStatus" class="status-text" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const tabPanels = document.querySelectorAll(".tab-panel");
+
+    const tourStateFilter = document.getElementById("tourStateFilter");
+    const assignedToursBody = document.getElementById("assignedToursBody");
+    const scheduleList = document.getElementById("scheduleList");
+
+    const driverStatusSelect = document.getElementById("driverStatusSelect");
+    const currentStatusView = document.getElementById("currentStatusView");
+
+    const profileModal = document.getElementById("profileModal");
+    const openProfileModal = document.getElementById("openProfileModal");
+    const closeProfileModal = document.getElementById("closeProfileModal");
+    const cancelProfileModal = document.getElementById("cancelProfileModal");
+    const profileForm = document.getElementById("profileForm");
+    const profileStatus = document.getElementById("profileStatus");
+
+    const driverNameView = document.getElementById("driverNameView");
+    const driverPhoneView = document.getElementById("driverPhoneView");
+    const driverLicenseView = document.getElementById("driverLicenseView");
+    const driverExperienceView = document.getElementById("driverExperienceView");
+    const driverLanguagesView = document.getElementById("driverLanguagesView");
+    const driverAvailabilityNotesView = document.getElementById("driverAvailabilityNotesView");
+
+    const profileName = document.getElementById("profileName");
+    const profilePhone = document.getElementById("profilePhone");
+    const profileLicense = document.getElementById("profileLicense");
+    const profileExperience = document.getElementById("profileExperience");
+    const profileLanguages = document.getElementById("profileLanguages");
+    const profileAvailabilityNotes = document.getElementById("profileAvailabilityNotes");
+
+    const assignedTours = [
+      { code: "TR-4820", route: "Ella Loop", date: "2026-05-05", time: "09:30 - 12:15", guests: 4, status: "Scheduled" },
+      { code: "TR-4827", route: "Nine Arches + Tea Estate", date: "2026-05-08", time: "13:30 - 16:00", guests: 2, status: "Scheduled" },
+      { code: "TR-4811", route: "Sunset Viewpoint", date: "2026-05-12", time: "17:00 - 19:00", guests: 3, status: "Scheduled" }
+    ];
+
+    const daySchedule = [
+      { time: "08:45", task: "Vehicle pre-check and fuel confirmation", status: "Done" },
+      { time: "09:20", task: "Pickup from Ella City Hotel", status: "Upcoming" },
+      { time: "11:15", task: "Drop at Little Adam's Peak gate", status: "Upcoming" },
+      { time: "13:00", task: "Lunch break + dispatch sync", status: "Upcoming" }
+    ];
+
+    function activateTab(tabId) {
+      tabButtons.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tabId);
+      });
+
+      tabPanels.forEach((panel) => {
+        panel.classList.toggle("active", panel.id === tabId);
+      });
+    }
+
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => activateTab(button.dataset.tab));
+    });
+
+    function renderAssignedTours() {
+      const selected = tourStateFilter.value;
+      const rows = selected === "all"
+        ? assignedTours
+        : assignedTours.filter((tour) => tour.status === selected);
+
+      if (rows.length === 0) {
+        assignedToursBody.innerHTML = '<tr><td class="empty-text" colspan="5">No tours in this filter.</td></tr>';
+        return;
+      }
+
+      assignedToursBody.innerHTML = rows.map((tour) => {
+        const statusClass = tour.status === "Completed" ? "ok" : (tour.status === "On Route" ? "warn" : "late");
+        return `
+          <tr>
+            <td>${tour.code}</td>
+            <td>${tour.route}</td>
+            <td>${tour.time}</td>
+            <td>${tour.guests}</td>
+            <td><span class="status ${statusClass}">${tour.status}</span></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderSchedule() {
+      scheduleList.innerHTML = daySchedule.map((entry) => {
+        const statusClass = entry.status === "Done" ? "ok" : "warn";
+        return `<div class="item"><span>${entry.time} - ${entry.task}</span><span class="status ${statusClass}">${entry.status}</span></div>`;
+      }).join("");
+    }
+
+    function openProfileEditor() {
+      profileName.value = driverNameView.textContent;
+      profilePhone.value = driverPhoneView.textContent;
+      profileLicense.value = driverLicenseView.textContent;
+      profileExperience.value = driverExperienceView.textContent;
+      profileLanguages.value = driverLanguagesView.textContent;
+      profileAvailabilityNotes.value = driverAvailabilityNotesView.textContent === "No notes" ? "" : driverAvailabilityNotesView.textContent;
+      profileStatus.textContent = "";
+
+      profileModal.classList.add("open");
+      profileModal.setAttribute("aria-hidden", "false");
+      profileName.focus();
+    }
+
+    function closeProfileEditor() {
+      profileModal.classList.remove("open");
+      profileModal.setAttribute("aria-hidden", "true");
+      profileForm.reset();
+      profileStatus.textContent = "";
+    }
+
+    tourStateFilter.addEventListener("change", renderAssignedTours);
+
+    driverStatusSelect.addEventListener("change", () => {
+      currentStatusView.textContent = driverStatusSelect.value;
+    });
+
+    openProfileModal.addEventListener("click", openProfileEditor);
+    closeProfileModal.addEventListener("click", closeProfileEditor);
+    cancelProfileModal.addEventListener("click", closeProfileEditor);
+
+    profileModal.addEventListener("click", (event) => {
+      if (event.target === profileModal) {
+        closeProfileEditor();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && profileModal.classList.contains("open")) {
+        closeProfileEditor();
+      }
+    });
+
+    profileForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      driverNameView.textContent = profileName.value.trim();
+      driverPhoneView.textContent = profilePhone.value.trim();
+      driverLicenseView.textContent = profileLicense.value.trim();
+      driverExperienceView.textContent = profileExperience.value.trim();
+      driverLanguagesView.textContent = profileLanguages.value.trim();
+      driverAvailabilityNotesView.textContent = profileAvailabilityNotes.value.trim() || "No notes";
+
+      profileStatus.textContent = "Profile updated successfully.";
+      setTimeout(closeProfileEditor, 650);
+    });
+
+    // Topup modal logic
+    const topupBtn = document.getElementById("topupBtn");
+    const profileTopupBtn = document.getElementById("profileTopupBtn");
+    const topupModal = document.getElementById("topupModal");
+    const closeTopupModal = document.getElementById("closeTopupModal");
+    const cancelTopup = document.getElementById("cancelTopup");
+    const confirmTopup = document.getElementById("confirmTopup");
+    const topupStatus = document.getElementById("topupStatus");
+    const topupCustomAmount = document.getElementById("topupCustomAmount");
+    const quickTopupButtons = Array.from(document.querySelectorAll(".topup-quick"));
+
+    function openTopupModal() {
+      topupModal.classList.add("open");
+      topupModal.setAttribute("aria-hidden", "false");
+      topupCustomAmount.value = "";
+      topupStatus.textContent = "";
+      topupCustomAmount.focus();
+    }
+
+    function closeTopup() {
+      topupModal.classList.remove("open");
+      topupModal.setAttribute("aria-hidden", "true");
+      topupStatus.textContent = "";
+    }
+
+    topupBtn && topupBtn.addEventListener("click", openTopupModal);
+    profileTopupBtn && profileTopupBtn.addEventListener("click", openTopupModal);
+    closeTopupModal && closeTopupModal.addEventListener("click", closeTopup);
+    cancelTopup && cancelTopup.addEventListener("click", closeTopup);
+
+    topupModal.addEventListener("click", (event) => {
+      if (event.target === topupModal) {
+        closeTopup();
+      }
+    });
+
+    quickTopupButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        topupCustomAmount.value = btn.dataset.amount || "";
+      });
+    });
+
+    async function performTopup(amount) {
+      topupStatus.textContent = "Processing...";
+      try {
+        const token = localStorage.tourpilotAuthToken;
+        const res = await fetch("/api/account/topup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : ""
+          },
+          body: JSON.stringify({ amount: Number(amount) })
+        });
+
+        const json = await res.json();
+        if (!res.ok) {
+          topupStatus.textContent = json.message || "Topup failed.";
+          return;
+        }
+
+        topupStatus.textContent = "Topup successful. New balance: " + (json.balance != null ? json.balance : "-");
+        setTimeout(closeTopup, 900);
+      } catch (err) {
+        topupStatus.textContent = "Network error. Try again.";
+      }
+    }
+
+    confirmTopup && confirmTopup.addEventListener("click", () => {
+      const val = Number(topupCustomAmount.value || 0);
+      if (!val || val <= 0) {
+        topupStatus.textContent = "Enter a valid amount.";
+        return;
+      }
+      performTopup(val);
+    });
+
+    // Simple calendar for marking availability
+    const calendarGrid = document.getElementById("calendarGrid");
+    const calendarMonthLabel = document.getElementById("calendarMonthLabel");
+    const prevMonthBtn = document.getElementById("prevMonth");
+    const nextMonthBtn = document.getElementById("nextMonth");
+
+    let calendarDate = new Date(); // current month shown
+    const unavailableDates = new Set();
+
+    function formatDateKey(d) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function renderCalendar() {
+      calendarGrid.innerHTML = "";
+      const year = calendarDate.getFullYear();
+      const month = calendarDate.getMonth();
+      const first = new Date(year, month, 1);
+      const startDay = first.getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      calendarMonthLabel.textContent = calendarDate.toLocaleString(undefined, { month: "long", year: "numeric" });
+
+      // weekday headers
+      const weekdays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+      weekdays.forEach((wd) => {
+        const cell = document.createElement("div");
+        cell.style.fontSize = "0.85rem";
+        cell.style.fontWeight = "700";
+        cell.style.padding = "6px 4px";
+        cell.style.textAlign = "center";
+        cell.textContent = wd;
+        calendarGrid.appendChild(cell);
+      });
+
+      // leading blanks
+      for (let i = 0; i < startDay; i++) {
+        const blank = document.createElement("div");
+        calendarGrid.appendChild(blank);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, month, d);
+        const key = formatDateKey(dateObj);
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "cal-day";
+        cell.innerHTML = String(d);
+        cell.setAttribute("data-date", key);
+        cell.style.padding = "8px";
+        cell.style.border = "1px solid transparent";
+        cell.style.borderRadius = "6px";
+        cell.style.background = "#e8f5ee";
+        cell.style.cursor = "pointer";
+        cell.style.minHeight = "44px";
+        cell.style.display = "flex";
+        cell.style.alignItems = "center";
+        cell.style.justifyContent = "center";
+        cell.style.position = "relative";
+        cell.style.fontSize = "0.95rem";
+        cell.style.fontWeight = "500";
+
+        // Check if this date has an assigned tour
+        const tourOnDate = assignedTours.find((t) => t.date === key);
+        if (tourOnDate) {
+          cell.style.background = "#d4e8f7";
+          cell.style.border = "2px solid #4a90e2";
+          cell.style.color = "#1a5490";
+          cell.title = `Tour: ${tourOnDate.route}`;
+          cell.style.position = "relative";
+          cell.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;"><span>${d}</span><span style="font-size:0.6rem; margin-top:1px;">●</span></div>`;
+        }
+
+        if (unavailableDates.has(key)) {
+          cell.style.background = "#fde8e8";
+          cell.style.border = "1px solid #f5a4a4";
+          cell.style.color = "#8b1a1a";
+          cell.innerHTML = String(d);
+        }
+
+        cell.addEventListener("click", () => {
+          // Don't allow toggling tour dates (assigned tours)
+          if (tourOnDate) {
+            return;
+          }
+
+          if (unavailableDates.has(key)) {
+            unavailableDates.delete(key);
+            cell.style.background = "#e8f5ee";
+            cell.style.border = "1px solid transparent";
+            cell.style.color = "#000";
+            cell.innerHTML = String(d);
+          } else {
+            unavailableDates.add(key);
+            cell.style.background = "#fde8e8";
+            cell.style.border = "1px solid #f5a4a4";
+            cell.style.color = "#8b1a1a";
+            cell.innerHTML = String(d);
+          }
+        });
+
+        calendarGrid.appendChild(cell);
+      }
+    }
+
+    prevMonthBtn.addEventListener("click", () => {
+      calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1);
+      renderCalendar();
+    });
+
+    nextMonthBtn.addEventListener("click", () => {
+      calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1);
+      renderCalendar();
+    });
+
+    renderCalendar();
+
+    renderAssignedTours();
+    renderSchedule();
+    
+    // Article management
+    const articleModal = document.getElementById("articleModal");
+    const addArticleBtn = document.getElementById("addArticleBtn");
+    const closeArticleModal = document.getElementById("closeArticleModal");
+    const cancelArticleModal = document.getElementById("cancelArticleModal");
+    const articleForm = document.getElementById("articleForm");
+    const articleStatus = document.getElementById("articleStatus");
+    const articlesContainer = document.getElementById("articlesContainer");
+
+    let articles = JSON.parse(localStorage.getItem("driverArticles") || "[]");
+    let editingArticleIndex = null;
+
+    function saveArticles() {
+      localStorage.setItem("driverArticles", JSON.stringify(articles));
+    }
+
+    function renderArticles() {
+      if (articles.length === 0) {
+        articlesContainer.innerHTML = '<p style="color: #6b6b6a; font-size: 0.95rem;">No articles yet. Click "Add Article" to create one.</p>';
+        return;
+      }
+
+      articlesContainer.innerHTML = articles.map((article, idx) => `
+        <div style="border: 1px solid #d8d6d1; border-radius: 12px; padding: 16px; background: #fff; display: flex; gap: 12px;">
+          <img src="${article.coverImage}" alt="${article.title}" style="width: 120px; height: 90px; object-fit: cover; border-radius: 8px;">
+          <div style="flex: 1;">
+            <h4 style="font-size: 1rem; margin-bottom: 4px;">${article.title}</h4>
+            <p style="font-size: 0.85rem; color: #6b6b6a; margin-bottom: 8px;">${article.description.substring(0, 80)}...</p>
+            ${article.videoLink ? `<p style="font-size: 0.8rem; color: #1f8f58;">▶ Video link included</p>` : ''}
+          </div>
+          <div style="display: flex; gap: 8px; flex-direction: column; justify-content: center;">
+            <button class="btn btn-lite edit-article-btn" data-idx="${idx}" type="button" style="min-height: 32px; padding: 0 12px; font-size: 0.85rem;">Edit</button>
+            <button class="btn btn-lite delete-article-btn" data-idx="${idx}" type="button" style="min-height: 32px; padding: 0 12px; font-size: 0.85rem; color: #9b1c1c;">Delete</button>
+          </div>
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".edit-article-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.idx);
+          const article = articles[idx];
+          if (article) {
+            editingArticleIndex = idx;
+            document.getElementById("articleDialogTitle").textContent = "Edit Article";
+            document.getElementById("articleTitle").value = article.title;
+            document.getElementById("articleDescription").value = article.description;
+            document.getElementById("articleCoverImage").value = article.coverImage;
+            document.getElementById("articleVideoLink").value = article.videoLink || "";
+            articleStatus.textContent = "";
+            articleModal.classList.add("open");
+            articleModal.setAttribute("aria-hidden", "false");
+          }
+        });
+      });
+
+      document.querySelectorAll(".delete-article-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.idx);
+          if (confirm("Delete this article?")) {
+            articles.splice(idx, 1);
+            saveArticles();
+            renderArticles();
+          }
+        });
+      });
+    }
+
+    function openArticleModal() {
+      editingArticleIndex = null;
+      document.getElementById("articleDialogTitle").textContent = "Add Article";
+      articleForm.reset();
+      articleStatus.textContent = "";
+      articleModal.classList.add("open");
+      articleModal.setAttribute("aria-hidden", "false");
+      document.getElementById("articleTitle").focus();
+    }
+
+    function closeArticle() {
+      articleModal.classList.remove("open");
+      articleModal.setAttribute("aria-hidden", "true");
+      editingArticleIndex = null;
+    }
+
+    addArticleBtn.addEventListener("click", openArticleModal);
+    closeArticleModal.addEventListener("click", closeArticle);
+    cancelArticleModal.addEventListener("click", closeArticle);
+
+    articleModal.addEventListener("click", (event) => {
+      if (event.target === articleModal) {
+        closeArticle();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && articleModal.classList.contains("open")) {
+        closeArticle();
+      }
+    });
+
+    articleForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const articleData = {
+        title: document.getElementById("articleTitle").value.trim(),
+        description: document.getElementById("articleDescription").value.trim(),
+        coverImage: document.getElementById("articleCoverImage").value.trim(),
+        videoLink: document.getElementById("articleVideoLink").value.trim()
+      };
+
+      if (!articleData.title || !articleData.description || !articleData.coverImage) {
+        articleStatus.textContent = "Please fill in all required fields.";
+        return;
+      }
+
+      if (editingArticleIndex !== null) {
+        articles[editingArticleIndex] = articleData;
+      } else {
+        articles.push(articleData);
+      }
+
+      saveArticles();
+      renderArticles();
+      articleStatus.textContent = "Article saved successfully.";
+      setTimeout(closeArticle, 700);
+    });
+
+    renderArticles();
+  </script>
+</body>
+</html>
