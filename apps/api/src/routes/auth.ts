@@ -5,8 +5,9 @@ import { dashboardPathForRole } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, signAccessToken } from "../middleware/auth.js";
 import { createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
+import { verifyPassword } from "../services/password.js";
 import { chargeLoginFee } from "../services/wallet.js";
-import { isValidSriLankaPhone, toStoredPhone } from "../utils/phone.js";
+import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 import { slugify } from "../utils/slug.js";
 
 export const authRouter = Router();
@@ -25,8 +26,14 @@ authRouter.post("/register-request", async (req, res, next) => {
       .parse(req.body);
 
     const phone = toStoredPhone(body.phone);
-    if (!isValidSriLankaPhone(phone)) {
-      return res.status(400).json({ error: "Invalid Sri Lanka mobile number" });
+    if (!isValidInternationalPhone(phone)) {
+      return res.status(400).json({
+        error: "Invalid phone number. Include country code (e.g. +94771234567 or +14155552671).",
+      });
+    }
+
+    if (body.role === "ADMIN") {
+      return res.status(403).json({ error: "Admin accounts cannot be created via registration" });
     }
 
     const exists = await prisma.user.findUnique({ where: { phone } });
@@ -122,16 +129,67 @@ authRouter.post("/send-otp", async (req, res, next) => {
 
     const user = await prisma.user.findUnique({ where: { phone } });
     if (!user) {
-      return res.status(404).json({ error: "No account found for this phone" });
+      return res.status(404).json({
+        error: "No account found for this phone. Create a tourist account to get started.",
+        code: "USER_NOT_FOUND",
+      });
+    }
+
+    if (user.role === "ADMIN") {
+      if (!user.passwordHash) {
+        return res.status(503).json({ error: "Admin password is not configured" });
+      }
+      return res.json({
+        authMethod: "password",
+        role: user.role,
+        redirectTo: dashboardPathForRole(user.role),
+      });
     }
 
     const result = await createOtpChallenge(phone, "login");
     res.json({
+      authMethod: "otp",
       challengeId: result.challengeId,
       otp: result.otp,
       bypassOtp: result.bypassOtp,
       role: user.role,
       walletBalance: Number(user.walletBalance),
+      redirectTo: dashboardPathForRole(user.role),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+authRouter.post("/login-password", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        phone: z.string(),
+        password: z.string().min(1),
+      })
+      .parse(req.body);
+
+    const phone = toStoredPhone(body.phone);
+    const user = await prisma.user.findUnique({ where: { phone } });
+
+    if (!user || user.role !== "ADMIN") {
+      return res.status(401).json({ error: "Invalid phone or password" });
+    }
+    if (!user.passwordHash) {
+      return res.status(503).json({ error: "Admin password is not configured" });
+    }
+
+    const valid = await verifyPassword(body.password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: "Invalid phone or password" });
+    }
+
+    const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
+
+    res.json({
+      token,
+      user: serializeUser(user),
       redirectTo: dashboardPathForRole(user.role),
     });
   } catch (e) {
@@ -153,6 +211,10 @@ authRouter.post("/verify-otp", async (req, res, next) => {
     await verifyOtpChallenge(body.challengeId, phone, body.otp, "login");
 
     const user = await prisma.user.findUniqueOrThrow({ where: { phone } });
+    if (user.role === "ADMIN") {
+      return res.status(403).json({ error: "Admin accounts must log in with a password" });
+    }
+
     const feeResult = await chargeLoginFee(user.id, user.role);
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });

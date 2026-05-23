@@ -42,10 +42,13 @@ npm run dev
 
 | Role | Phone | Notes |
 |------|-------|-------|
-| Admin | 0779998888 | CMS, approvals |
-| Agency | 0771234567 | Wallet LKR 500, agency `ceylon-trails` |
-| Tourist | 0771112233 | Inquiries, offers |
-| Influencer | 0774445566 | Ref code `ISLAND10` |
+| Admin | +94779998888 | Password login (default seed password: `admin123`) |
+| Agency | +94771234567 | Wallet LKR 500, agency `ceylon-trails` |
+| Tourist | +94771112233 | Inquiries, offers |
+| Influencer | +94774445566 | Ref code `ISLAND10` |
+| Driver | +94776655443 | Driver dashboard (OTP login) |
+
+Phones are stored in international format (E.164, e.g. `+94771234567`). Use the same country code and number when logging in.
 
 ### OTP in local dev
 
@@ -57,6 +60,8 @@ npm run dev
 Bypass only works when `NODE_ENV` is not `production`.
 
 With `LOG_OTP_TO_CONSOLE=true` (default in dev), each OTP is printed in the **API terminal** when you click Send OTP.
+
+Admin password can be set via `ADMIN_SEED_PASSWORD` when running `npm run db:seed` (default `admin123`).
 
 ## Project structure
 

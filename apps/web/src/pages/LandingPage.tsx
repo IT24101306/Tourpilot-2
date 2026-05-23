@@ -48,6 +48,9 @@ export function LandingPage() {
         <Link to="/agencies" className="btn btn-teal">
           Explore agencies
         </Link>
+        <Link to="/register" className="btn btn-ghost" style={{ marginLeft: 12 }}>
+          Sign up free
+        </Link>
       </section>
 
       {offers[0] && (

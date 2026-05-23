@@ -17,6 +17,7 @@ export function PublicLayout() {
             <>
               <Link to="/profile">Profile</Link>
               {user.role === "AGENCY" && <Link to="/dashboard/agency">Dashboard</Link>}
+              {user.role === "DRIVER" && <Link to="/dashboard/driver">Dashboard</Link>}
               {user.role === "INFLUENCER" && <Link to="/dashboard/influencer">Dashboard</Link>}
               {user.role === "ADMIN" && <Link to="/dashboard/admin">Admin</Link>}
               <button type="button" className="btn btn-ghost" onClick={logout}>
@@ -24,9 +25,12 @@ export function PublicLayout() {
               </button>
             </>
           ) : (
-            <Link to="/login" className="btn btn-teal">
-              Login
-            </Link>
+            <>
+              <Link to="/register">Sign up</Link>
+              <Link to="/login" className="btn btn-teal">
+                Login
+              </Link>
+            </>
           )}
         </nav>
       </header>

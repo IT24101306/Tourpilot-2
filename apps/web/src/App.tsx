@@ -3,12 +3,28 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DashboardLayout, PublicLayout } from "./components/Layout";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { RegisterProPage } from "./pages/RegisterProPage";
 import { AgenciesPage } from "./pages/AgenciesPage";
 import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
 import { OffersPage } from "./pages/OffersPage";
 import { ProfilePage } from "./pages/ProfilePage";
-import { AgencyDashboard } from "./pages/AgencyDashboard";
+import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
+import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
+import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
+import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
+import { AgencyDriversPage } from "./pages/agency/AgencyDriversPage";
+import { AgencyTravelersPage } from "./pages/agency/AgencyTravelersPage";
+import { AgencyAllEntitiesPage } from "./pages/agency/AgencyAllEntitiesPage";
+import { AgencyGroupsPage } from "./pages/agency/AgencyGroupsPage";
+import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
+import { DriverOverviewPage } from "./pages/driver/DriverOverviewPage";
+import { DriverAssignedToursPage } from "./pages/driver/DriverAssignedToursPage";
+import { DriverSchedulePage } from "./pages/driver/DriverSchedulePage";
+import { DriverVehiclePage } from "./pages/driver/DriverVehiclePage";
+import { DriverEarningsPage } from "./pages/driver/DriverEarningsPage";
+import { DriverProfilePage } from "./pages/driver/DriverProfilePage";
 import { InfluencerDashboard } from "./pages/InfluencerDashboard";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { ItinerarySharePage } from "./pages/ItinerarySharePage";
@@ -22,11 +38,6 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
-
-const agencyLinks = [
-  { to: "/dashboard/agency", label: "Overview" },
-  { to: "/profile", label: "Profile" },
-];
 
 const influencerLinks = [
   { to: "/dashboard/influencer", label: "Referrals" },
@@ -58,6 +69,8 @@ export default function App() {
           </Route>
 
           <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          <Route path="register/pro" element={<RegisterProPage />} />
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
           <Route path="tours/:agencySlug/:tourSlug" element={<TourDetailPage />} />
           <Route path="itinerary/:shareToken" element={<ItinerarySharePage />} />
@@ -66,11 +79,33 @@ export default function App() {
             path="dashboard/agency"
             element={
               <Protected roles={["AGENCY"]}>
-                <DashboardLayout links={agencyLinks} />
+                <AgencyDashboardLayout />
               </Protected>
             }
           >
-            <Route index element={<AgencyDashboard />} />
+            <Route index element={<AgencyOverviewPage />} />
+            <Route path="bookings" element={<AgencyBookingsPage />} />
+            <Route path="tours" element={<AgencyToursPage />} />
+            <Route path="drivers" element={<AgencyDriversPage />} />
+            <Route path="travelers" element={<AgencyTravelersPage />} />
+            <Route path="all" element={<AgencyAllEntitiesPage />} />
+            <Route path="groups" element={<AgencyGroupsPage />} />
+          </Route>
+
+          <Route
+            path="dashboard/driver"
+            element={
+              <Protected roles={["DRIVER"]}>
+                <DriverDashboardLayout />
+              </Protected>
+            }
+          >
+            <Route index element={<DriverOverviewPage />} />
+            <Route path="assigned" element={<DriverAssignedToursPage />} />
+            <Route path="schedule" element={<DriverSchedulePage />} />
+            <Route path="vehicle" element={<DriverVehiclePage />} />
+            <Route path="earnings" element={<DriverEarningsPage />} />
+            <Route path="profile" element={<DriverProfilePage />} />
           </Route>
 
           <Route

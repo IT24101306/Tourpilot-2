@@ -1,21 +1,41 @@
 import { PrismaClient } from "@prisma/client";
+import { toStoredPhone } from "@tourpilot/shared";
+import { hashPassword } from "../src/services/password.js";
 
 const prisma = new PrismaClient();
 
+async function migrateLegacyPhones() {
+  const users = await prisma.user.findMany({
+    where: { NOT: { phone: { startsWith: "+" } } },
+  });
+  for (const user of users) {
+    const next = toStoredPhone(user.phone);
+    if (next !== user.phone) {
+      await prisma.user.update({ where: { id: user.id }, data: { phone: next } });
+    }
+  }
+}
+
 async function main() {
-  const adminPhone = "0779998888";
-  const agencyPhone = "0771234567";
-  const touristPhone = "0771112233";
-  const influencerPhone = "0774445566";
+  await migrateLegacyPhones();
+
+  const adminPhone = "+94779998888";
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD || "admin123";
+  const adminPasswordHash = await hashPassword(adminPassword);
+  const agencyPhone = "+94771234567";
+  const touristPhone = "+94771112233";
+  const influencerPhone = "+94774445566";
+  const driverPhone = "+94776655443";
 
   const admin = await prisma.user.upsert({
     where: { phone: adminPhone },
-    update: {},
+    update: { passwordHash: adminPasswordHash },
     create: {
       phone: adminPhone,
       name: "TourPilot Admin",
       role: "ADMIN",
       walletBalance: 0,
+      passwordHash: adminPasswordHash,
     },
   });
 
@@ -83,6 +103,25 @@ async function main() {
       role: "TOURIST",
       walletBalance: 0,
       touristProfile: { create: { interests: ["wildlife", "tea", "beach"], loyaltyPoints: 120 } },
+    },
+  });
+
+  const driverUser = await prisma.user.upsert({
+    where: { phone: driverPhone },
+    update: {},
+    create: {
+      phone: driverPhone,
+      name: "Nimal Perera",
+      role: "DRIVER",
+      walletBalance: 9600,
+      driverProfile: {
+        create: {
+          licenseNo: "B321-9845",
+          vehicle: "Toyota KDH",
+          status: "available",
+          bio: "5 years experience · English, Sinhala",
+        },
+      },
     },
   });
 
@@ -243,6 +282,7 @@ async function main() {
     tours: [tour1.slug, tour2.slug],
     tourist: tourist.phone,
     influencer: influencerUser.phone,
+    driver: driverUser.phone,
     offer: offer.title,
   });
 }

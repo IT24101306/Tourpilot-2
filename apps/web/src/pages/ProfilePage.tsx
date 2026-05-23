@@ -24,7 +24,9 @@ export function ProfilePage() {
   if (!user) {
     return (
       <section className="section">
-        <p>Please <Link to="/login">log in</Link>.</p>
+        <p>
+          Please <Link to="/login">log in</Link> or <Link to="/register">create an account</Link>.
+        </p>
       </section>
     );
   }

@@ -46,3 +46,10 @@ export function dashboardPathForRole(role: UserRole): string {
       return "/profile";
   }
 }
+
+export {
+  combinePhoneParts,
+  formatPhoneDisplay,
+  isValidInternationalPhone,
+  toStoredPhone,
+} from "./phone.js";

@@ -10,6 +10,7 @@ import { offersRouter } from "./routes/offers.js";
 import { influencerRouter } from "./routes/influencer.js";
 import { walletRouter } from "./routes/wallet.js";
 import { adminRouter } from "./routes/admin.js";
+import { driverRouter } from "./routes/driver.js";
 
 export function createApp() {
   const app = express();
@@ -31,6 +32,7 @@ export function createApp() {
   app.use("/api/influencer", influencerRouter);
   app.use("/api/wallet", walletRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/driver", driverRouter);
 
   app.use(
     (

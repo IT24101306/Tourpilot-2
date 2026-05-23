@@ -71,7 +71,7 @@ enum WalletTxnType {
 
 model User {
   id                   String                @id @default(cuid()) @db.VarChar(25)
-  phone                String                @unique @db.VarChar(15)
+  phone                String                @unique @db.VarChar(20)
   name                 String
   role                 UserRole              @default(TOURIST)
   email                String?
@@ -79,6 +79,7 @@ model User {
   district             String?
   country              String?               @default("LK")
   walletBalance        Decimal               @default(0) @db.Decimal(12, 2)
+  passwordHash         String?               @db.VarChar(64)
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -477,7 +478,7 @@ model WalletLedger {
 
 model OtpChallenge {
   id        String   @id @default(cuid()) @db.VarChar(25)
-  phone     String   @db.VarChar(15)
+  phone     String   @db.VarChar(20)
   otpHash   String   @db.VarChar(64)
   purpose   String   @db.VarChar(32)
   payload   Json?
