@@ -342,6 +342,7 @@ textarea {
 }
 
 .auth-switch {
+<<<<<<< HEAD
   margin: 0 0 16px;
   font-size: 0.9rem;
 }
@@ -370,6 +371,28 @@ textarea {
 .phone-input-hint {
   margin: -8px 0 0;
   font-size: 0.82rem;
+=======
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--green);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-link:hover {
+  color: var(--green-dark);
+>>>>>>> a1fb766 (Implement dashboard and API updates)
 }
 
 .offer-banner {
@@ -385,6 +408,7 @@ textarea {
   font-size: 1.2rem;
 }
 
+<<<<<<< HEAD
 /* Agency AgentDashboard */
 .agency-dashboard {
   min-height: 100vh;
@@ -771,6 +795,134 @@ textarea {
   .agency-kpi-row {
     grid-template-columns: 1fr;
   }
+=======
+.profile-inquiry-list {
+  display: grid;
+  gap: 20px;
+}
+
+.profile-inquiry-card h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+}
+
+.profile-inquiry-head {
+  margin-bottom: 16px;
+}
+
+.profile-inquiry-request h4,
+.profile-inquiry-replies h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555;
+}
+
+.profile-inquiry-request {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+
+.profile-reply-bubble {
+  background: #f4faf7;
+  border: 1px solid #d7e2dc;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.profile-reply-meta {
+  font-size: 0.82rem;
+  color: #666;
+  margin: 0 0 8px;
+}
+
+.profile-reply-message {
+  margin: 0 0 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.profile-reply-tour,
+.profile-reply-itinerary {
+  font-size: 0.92rem;
+  padding-top: 10px;
+  border-top: 1px dashed #d7e2dc;
+}
+
+.profile-awaiting {
+  font-style: italic;
+}
+
+.profile-proposal h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555;
+}
+
+.profile-proposal-items {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.profile-proposal-item {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.profile-proposal-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--green);
+  margin-right: 8px;
+}
+
+.profile-proposal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.profile-proposal-accepted {
+  margin-top: 12px;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.profile-revision-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.profile-revision-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.profile-revision-label textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+>>>>>>> a1fb766 (Implement dashboard and API updates)
 }
 
 @media (max-width: 900px) {

@@ -118,11 +118,24 @@ export function LoginPage() {
     }
   }
 
+<<<<<<< HEAD
   function handleBack() {
     setStep("phone");
     setOtp("");
     setPassword("");
     setError("");
+=======
+  function openRegister() {
+    setError("");
+    setIsRegistering(false);
+    setStep("register");
+  }
+
+  function openLogin() {
+    setError("");
+    setIsRegistering(false);
+    setStep("phone");
+>>>>>>> a1fb766 (Implement dashboard and API updates)
   }
 
   return (
@@ -176,6 +189,7 @@ export function LoginPage() {
         </>
       )}
 
+<<<<<<< HEAD
       {step === "password" && (
         <form className="form-grid" onSubmit={handlePasswordSubmit}>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -199,5 +213,101 @@ export function LoginPage() {
         </form>
       )}
     </AuthLayout>
+=======
+          {error && <p style={{ color: "#b42318", fontWeight: 700 }}>{error}</p>}
+
+          {step === "phone" && (
+            <form className="form-grid" onSubmit={handlePhoneSubmit}>
+              <label htmlFor="phone">Mobile number</label>
+              <input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0771234567"
+                required
+              />
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                Send OTP
+              </button>
+              <p className="auth-switch">
+                Don&apos;t have an account?{" "}
+                <button type="button" className="auth-link" onClick={openRegister}>
+                  Create account
+                </button>
+              </p>
+            </form>
+          )}
+
+          {step === "register" && (
+            <form className="form-grid" onSubmit={handleRegisterRequest}>
+              <label htmlFor="name">Full name</label>
+              <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+              <label htmlFor="phone-r">Mobile number</label>
+              <input id="phone-r" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              <label htmlFor="role">I am a</label>
+              <select id="role" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
+                <option value="TOURIST">Tourist</option>
+                <option value="AGENCY">Travel agency</option>
+                <option value="INFLUENCER">Influencer</option>
+                <option value="DRIVER">Driver</option>
+              </select>
+              {role === "AGENCY" && (
+                <>
+                  <label htmlFor="agency">Agency name</label>
+                  <input
+                    id="agency"
+                    value={agencyName}
+                    onChange={(e) => setAgencyName(e.target.value)}
+                    required
+                  />
+                </>
+              )}
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                Register & get OTP
+              </button>
+              <p className="auth-switch">
+                Already have an account?{" "}
+                <button type="button" className="auth-link" onClick={openLogin}>
+                  Sign in
+                </button>
+              </p>
+            </form>
+          )}
+
+          {step === "otp" && (
+            <form
+              className="form-grid"
+              onSubmit={isRegistering ? handleRegisterVerify : handleOtpSubmit}
+            >
+              <label htmlFor="otp">Enter OTP</label>
+              <input
+                id="otp"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                required
+              />
+              {(demoOtp || bypassCode) && (
+                <div className="otp-hint">
+                  {bypassCode ? (
+                    <>
+                      Dev bypass: always use <strong>{bypassCode}</strong>
+                    </>
+                  ) : (
+                    <>
+                      Demo OTP: <strong>{demoOtp}</strong>
+                    </>
+                  )}
+                </div>
+              )}
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                Verify & continue
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+>>>>>>> a1fb766 (Implement dashboard and API updates)
   );
 }

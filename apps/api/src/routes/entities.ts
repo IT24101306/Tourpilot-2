@@ -33,7 +33,7 @@ entitiesRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, 
 
     const body = z
       .object({
-        name: z.string().min(2),
+        name: z.string().min(1, "Name is required"),
         type: z.enum([
           "HOTEL",
           "VIEWPOINT",
@@ -52,14 +52,25 @@ entitiesRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, 
         lat: z.number().optional(),
         lng: z.number().optional(),
         media: z.array(z.unknown()).optional(),
+        metadata: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
       })
       .parse(req.body);
 
     const entity = await prisma.entity.create({
       data: {
         agencyId: agency.id,
-        ...body,
+        name: body.name.trim(),
+        type: body.type,
+        city: body.city?.trim() || undefined,
+        district: body.district?.trim() || undefined,
+        description: body.description?.trim() || undefined,
+        durationMin: body.durationMin,
+        priceHint: body.priceHint,
+        contact: body.contact?.trim() || undefined,
+        lat: body.lat,
+        lng: body.lng,
         media: body.media ? asJson(body.media) : undefined,
+        metadata: body.metadata ? asJson(body.metadata) : undefined,
       },
     });
 
@@ -85,7 +96,7 @@ entitiesRouter.get("/groups", authRequired, requireRoles("AGENCY"), async (req, 
       orderBy: { createdAt: "desc" },
     });
 
-    res.json(groups);
+    res.json(groups.map(serializeGroup));
   } catch (e) {
     next(e);
   }
@@ -100,15 +111,22 @@ entitiesRouter.post("/groups", authRequired, requireRoles("AGENCY"), async (req,
       .object({
         name: z.string().min(2),
         description: z.string().optional(),
-        entityIds: z.array(z.string()).default([]),
+        entityIds: z.array(z.string()).min(1, "Select at least one entity"),
       })
       .parse(req.body);
+
+    const ownedCount = await prisma.entity.count({
+      where: { agencyId: agency.id, id: { in: body.entityIds } },
+    });
+    if (ownedCount !== body.entityIds.length) {
+      return res.status(400).json({ error: "One or more selected entities are invalid" });
+    }
 
     const group = await prisma.entityGroup.create({
       data: {
         agencyId: agency.id,
-        name: body.name,
-        description: body.description,
+        name: body.name.trim(),
+        description: body.description?.trim() || undefined,
         items: {
           create: body.entityIds.map((entityId, idx) => ({
             entityId,
@@ -116,14 +134,36 @@ entitiesRouter.post("/groups", authRequired, requireRoles("AGENCY"), async (req,
           })),
         },
       },
-      include: { items: { include: { entity: true } } },
+      include: { items: { include: { entity: true }, orderBy: { sortOrder: "asc" } } },
     });
 
-    res.status(201).json(group);
+    res.status(201).json(serializeGroup(group));
   } catch (e) {
     next(e);
   }
 });
+
+function serializeGroup(group: {
+  id: string;
+  name: string;
+  description: string | null;
+  items: Array<{
+    id: string;
+    sortOrder: number;
+    entity: Parameters<typeof serializeEntity>[0];
+  }>;
+}) {
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    items: group.items.map((item) => ({
+      id: item.id,
+      sortOrder: item.sortOrder,
+      entity: serializeEntity(item.entity),
+    })),
+  };
+}
 
 function serializeEntity(entity: {
   id: string;
@@ -138,11 +178,13 @@ function serializeEntity(entity: {
   lat: unknown;
   lng: unknown;
   media: unknown;
+  metadata: unknown;
 }) {
   return {
     ...entity,
     priceHint: entity.priceHint != null ? Number(entity.priceHint) : null,
     lat: entity.lat != null ? Number(entity.lat) : null,
     lng: entity.lng != null ? Number(entity.lng) : null,
+    metadata: (entity.metadata as Record<string, unknown> | null) ?? null,
   };
 }

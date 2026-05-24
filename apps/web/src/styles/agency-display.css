@@ -1,0 +1,428 @@
+.agency-display {
+  background: #ecece9;
+  min-height: 100vh;
+  color: #111;
+}
+
+.agency-display-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.agency-display-hero h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 24px 0 32px;
+  letter-spacing: -0.02em;
+}
+
+.agency-display-section-head {
+  margin-bottom: 20px;
+}
+
+.agency-display-section-head h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+}
+
+.agency-display-section-head p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.agency-package-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(240px, 280px);
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+}
+
+.agency-package-card {
+  scroll-snap-align: start;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 360px;
+  background: #ddd;
+  text-decoration: none;
+  color: #fff;
+  display: block;
+}
+
+.agency-package-card-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.agency-package-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.75) 100%);
+}
+
+.agency-package-card-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px;
+  z-index: 1;
+}
+
+.agency-package-card-body h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.agency-package-card-body p {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  opacity: 0.92;
+}
+
+.agency-package-card-body strong {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.agency-showcase {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr 1fr;
+  gap: 20px;
+  margin: 48px 0;
+  align-items: stretch;
+}
+
+.agency-showcase-stats {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.agency-showcase-rating {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.agency-showcase-rating span {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.agency-showcase-stats ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  flex: 1;
+}
+
+.agency-showcase-stats li {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #333;
+}
+
+.agency-showcase-cta {
+  margin-top: auto;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.agency-showcase-featured {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 420px;
+}
+
+.agency-showcase-featured-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.agency-showcase-featured-quote {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.7));
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  font-style: italic;
+  z-index: 1;
+}
+
+.agency-showcase-reviews {
+  display: grid;
+  gap: 14px;
+}
+
+.agency-review-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.agency-review-stars {
+  color: #c9a227;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.agency-review-card p {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #333;
+}
+
+.agency-review-card strong {
+  font-size: 0.88rem;
+}
+
+.agency-offers {
+  margin: 48px 0;
+}
+
+.agency-offers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.agency-offer-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e4e2dd;
+}
+
+.agency-offer-card-cover {
+  height: 140px;
+  background-size: cover;
+  background-position: center;
+  background-color: #1f8f58;
+}
+
+.agency-offer-card-body {
+  padding: 18px;
+}
+
+.agency-offer-badge {
+  display: inline-block;
+  background: #1f8f58;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.agency-offer-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.agency-offer-card p {
+  margin: 0 0 10px;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.agency-offer-price {
+  font-weight: 800;
+  color: #1f8f58;
+}
+
+.agency-gallery-section {
+  margin: 48px 0;
+}
+
+.agency-gallery-wall {
+  display: grid;
+  grid-template-columns: 1.15fr 0.95fr 0.85fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.agency-gallery-col {
+  display: grid;
+  gap: 14px;
+}
+
+.agency-gallery-item {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ccc;
+}
+
+.agency-gallery-item.tall {
+  min-height: 280px;
+}
+
+.agency-gallery-item.wide {
+  min-height: 200px;
+}
+
+.agency-gallery-item.short {
+  min-height: 150px;
+}
+
+.agency-gallery-item-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.agency-gallery-item span {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 1;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+
+.agency-gallery-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.agency-inquiry-section {
+  margin-top: 48px;
+  padding: 48px 20px 64px;
+  background: #fff;
+  border-top: 1px solid #e4e2dd;
+}
+
+.agency-inquiry-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.agency-inquiry-section h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.agency-inquiry-lead {
+  color: #555;
+  line-height: 1.55;
+  margin: 0 0 24px;
+}
+
+.agency-inquiry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.agency-inquiry-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.agency-inquiry-grid label.full {
+  grid-column: 1 / -1;
+}
+
+.agency-inquiry-grid input,
+.agency-inquiry-grid textarea {
+  border: 1px solid #d7e2dc;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  width: 100%;
+}
+
+.agency-inquiry-grid textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.agency-inquiry-submit {
+  margin-top: 20px;
+  width: 100%;
+  min-height: 48px;
+}
+
+.agency-inquiry-status {
+  margin-top: 14px;
+  font-weight: 700;
+  color: #156a41;
+  text-align: center;
+}
+
+.agency-inquiry-foot {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.agency-inquiry-login-hint {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .agency-inquiry-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .agency-showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .agency-gallery-wall {
+    grid-template-columns: 1fr;
+  }
+
+  .agency-gallery-item.tall,
+  .agency-gallery-item.wide,
+  .agency-gallery-item.short {
+    min-height: 200px;
+  }
+}

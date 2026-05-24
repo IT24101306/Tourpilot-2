@@ -65,8 +65,30 @@ async function main() {
       reviewCount: 124,
       contactPhone: agencyPhone,
       gallery: [
-        "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+        {
+          url: "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
+          label: "Sand Morning",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+          label: "Camp Night",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1464822759021-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80",
+          label: "Nomad Route",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a72fe8?auto=format&fit=crop&w=1200&q=80",
+          label: "Warm Horizon",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80",
+          label: "Red Canyon",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80",
+          label: "Wild Trail",
+        },
       ],
       pageConfig: {
         sections: [
@@ -82,14 +104,84 @@ async function main() {
 
   await prisma.displaySettings.upsert({
     where: { agencyId: agency.id },
-    update: {},
+    update: {
+      sections: {
+        enabled: {
+          tours: true,
+          showcase: true,
+          reviews: true,
+          gallery: true,
+          offers: true,
+          inquiry: true,
+        },
+        content: {
+          heroHeadline: "Find your perfect trip experience.",
+          packagesTitle: "Ready-Made Packages",
+          packagesSubtitle:
+            "Curated routes with local guides, transport, and stays included.",
+          ratingScore: "4.9",
+          ratingSuffix: "/5",
+          highlights: [
+            "56+ guided tours delivered",
+            "100% safe routes with certified local guides",
+            "5+ years of island travel experience",
+          ],
+          ctaLabel: "Plan your trip",
+          featuredImageUrl:
+            "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+          featuredQuote:
+            "We expected sand and silence. We found peace, stars, and people who love what they do.",
+          packages: [],
+          offers: [
+            {
+              title: "Early bird special",
+              description: "Book 30 days ahead and save on any ready-made tour.",
+              priceLabel: "Save up to 15%",
+              badge: "Limited",
+            },
+          ],
+        },
+      },
+    },
     create: {
       agencyId: agency.id,
-      sections: [
-        { type: "hero", title: "Ceylon Trails" },
-        { type: "tours" },
-        { type: "reviews" },
-      ],
+      sections: {
+        enabled: {
+          tours: true,
+          showcase: true,
+          reviews: true,
+          gallery: true,
+          offers: true,
+          inquiry: true,
+        },
+        content: {
+          heroHeadline: "Find your perfect trip experience.",
+          packagesTitle: "Ready-Made Packages",
+          packagesSubtitle:
+            "Curated routes with local guides, transport, and stays included.",
+          ratingScore: "4.9",
+          ratingSuffix: "/5",
+          highlights: [
+            "56+ guided tours delivered",
+            "100% safe routes with certified local guides",
+            "5+ years of island travel experience",
+          ],
+          ctaLabel: "Plan your trip",
+          featuredImageUrl:
+            "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+          featuredQuote:
+            "We expected sand and silence. We found peace, stars, and people who love what they do.",
+          packages: [],
+          offers: [
+            {
+              title: "Early bird special",
+              description: "Book 30 days ahead and save on any ready-made tour.",
+              priceLabel: "Save up to 15%",
+              badge: "Limited",
+            },
+          ],
+        },
+      },
       theme: {},
     },
   });
@@ -248,6 +340,58 @@ async function main() {
     },
   });
 
+  const driverPhone = "0772223344";
+  const driverUser = await prisma.user.upsert({
+    where: { phone: driverPhone },
+    update: { role: "DRIVER" },
+    create: {
+      phone: driverPhone,
+      name: "Nimal Perera",
+      role: "DRIVER",
+      walletBalance: 100,
+    },
+  });
+
+  await prisma.driverProfile.upsert({
+    where: { userId: driverUser.id },
+    update: {
+      licenseNo: "B321-9845",
+      vehicle: "Toyota KDH",
+      status: "Available",
+      metadata: {
+        experience: "5 Years",
+        languages: "English, Sinhala",
+        availabilityNotes: "Prefers hill-country routes",
+      },
+    },
+    create: {
+      userId: driverUser.id,
+      licenseNo: "B321-9845",
+      vehicle: "Toyota KDH",
+      status: "Available",
+      blockedDates: ["2026-05-05", "2026-05-08", "2026-05-12"],
+      metadata: {
+        experience: "5 Years",
+        languages: "English, Sinhala",
+        availabilityNotes: "Prefers hill-country routes",
+      },
+    },
+  });
+
+  await prisma.agencyDriver.upsert({
+    where: { userId: driverUser.id },
+    update: { agencyId: agency.id },
+    create: {
+      agencyId: agency.id,
+      userId: driverUser.id,
+      name: "Nimal Perera",
+      phone: driverPhone,
+      licenseNo: "B321-9845",
+      vehicle: "Toyota KDH",
+      status: "Available",
+    },
+  });
+
   const offer = await prisma.offer.create({
     data: {
       title: "Early Bird Cultural Triangle",
@@ -282,7 +426,11 @@ async function main() {
     tours: [tour1.slug, tour2.slug],
     tourist: tourist.phone,
     influencer: influencerUser.phone,
+<<<<<<< HEAD
     driver: driverUser.phone,
+=======
+    driver: driverPhone,
+>>>>>>> a1fb766 (Implement dashboard and API updates)
     offer: offer.title,
   });
 }

@@ -17,6 +17,13 @@ export type AuthUser = {
   role: UserRole;
   walletBalance: number;
   agency?: { id: string; name: string; slug: string } | null;
+  agencyDriver?: {
+    id: string;
+    agencyId: string;
+    agencyName: string;
+    agencySlug: string;
+    status: string;
+  } | null;
 };
 
 type AuthContextValue = {

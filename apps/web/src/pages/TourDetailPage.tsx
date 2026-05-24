@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 
 export function TourDetailPage() {
   const { agencySlug, tourSlug } = useParams<{ agencySlug: string; tourSlug: string }>();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get("ref");
   const [tour, setTour] = useState<Awaited<ReturnType<typeof loadTour>> | null>(null);
 
   async function loadTour() {
@@ -31,6 +33,14 @@ export function TourDetailPage() {
   useEffect(() => {
     if (agencySlug && tourSlug) loadTour().then(setTour).catch(console.error);
   }, [agencySlug, tourSlug]);
+
+  useEffect(() => {
+    if (!refCode) return;
+    api("/influencer/track/" + refCode, {
+      method: "POST",
+      body: JSON.stringify({ sessionId: "web-" + Date.now() }),
+    }).catch(() => {});
+  }, [refCode]);
 
   if (!tour) return <section className="section">Loading…</section>;
 
@@ -67,7 +77,14 @@ export function TourDetailPage() {
         </div>
       ))}
 
-      <Link to={`/agencies/${tour.agency.slug}`} className="btn btn-primary">
+      <Link
+        to={
+          refCode
+            ? `/agencies/${tour.agency.slug}?ref=${encodeURIComponent(refCode)}`
+            : `/agencies/${tour.agency.slug}`
+        }
+        className="btn btn-primary"
+      >
         Inquire this tour
       </Link>
     </section>

@@ -85,7 +85,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
         const taken = await tx.agency.findUnique({ where: { slug } });
         if (taken) slug = `${slug}-${created.id.slice(-4)}`;
 
-        await tx.agency.create({
+        const agency = await tx.agency.create({
           data: {
             ownerId: created.id,
             name: agencyName,
@@ -93,6 +93,42 @@ authRouter.post("/verify-registration", async (req, res, next) => {
             status: "APPROVED",
             pageConfig: defaultAgencyPageConfig(agencyName),
             gallery: [],
+          },
+        });
+        await tx.displaySettings.create({
+          data: {
+            agencyId: agency.id,
+            sections: {
+              enabled: {
+                tours: true,
+                showcase: true,
+                reviews: true,
+                gallery: true,
+                offers: true,
+                inquiry: true,
+              },
+              content: {
+                heroHeadline: "Find your perfect trip experience.",
+                packagesTitle: "Ready-Made Packages",
+                packagesSubtitle:
+                  "Curated routes with local guides, transport, and stays included.",
+                ratingScore: "4.9",
+                ratingSuffix: "/5",
+                highlights: [
+                  "Handcrafted itineraries for every traveler",
+                  "Certified local guides and safe routes",
+                  "Years of on-the-ground experience",
+                ],
+                ctaLabel: "Plan your trip",
+                featuredImageUrl:
+                  "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+                featuredQuote:
+                  "We expected an adventure. We found peace, wonder, and people who love what they do.",
+                packages: [],
+                offers: [],
+              },
+            },
+            theme: {},
           },
         });
       }
@@ -104,7 +140,14 @@ authRouter.post("/verify-registration", async (req, res, next) => {
         await tx.influencerProfile.create({ data: { userId: created.id } });
       }
       if (role === "DRIVER") {
-        await tx.driverProfile.create({ data: { userId: created.id } });
+        await tx.driverProfile.create({
+          data: {
+            userId: created.id,
+            status: "Available",
+            blockedDates: [],
+            metadata: {},
+          },
+        });
       }
 
       return created;
@@ -240,6 +283,7 @@ authRouter.get("/me", authRequired, async (req, res, next) => {
         touristProfile: true,
         influencerProfile: { include: { codes: true } },
         driverProfile: true,
+        agencyDriver: { include: { agency: { select: { id: true, name: true, slug: true } } } },
       },
     });
     res.json({ user: serializeUser(user) });
@@ -256,7 +300,13 @@ function serializeUser(user: {
   email: string | null;
   avatarUrl: string | null;
   walletBalance: unknown;
-  agency?: unknown;
+  agency?: { id: string; name: string; slug: string } | null;
+  agencyDriver?: {
+    id: string;
+    agencyId: string;
+    status: string;
+    agency: { id: string; name: string; slug: string };
+  } | null;
 }) {
   return {
     id: user.id,
@@ -267,6 +317,15 @@ function serializeUser(user: {
     avatarUrl: user.avatarUrl,
     walletBalance: Number(user.walletBalance),
     agency: user.agency ?? null,
+    agencyDriver: user.agencyDriver
+      ? {
+          id: user.agencyDriver.id,
+          agencyId: user.agencyDriver.agencyId,
+          agencyName: user.agencyDriver.agency.name,
+          agencySlug: user.agencyDriver.agency.slug,
+          status: user.agencyDriver.status,
+        }
+      : null,
   };
 }
 

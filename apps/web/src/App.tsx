@@ -1,5 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
+import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
+import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
 import { DashboardLayout, PublicLayout } from "./components/Layout";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -10,6 +13,7 @@ import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
 import { OffersPage } from "./pages/OffersPage";
 import { ProfilePage } from "./pages/ProfilePage";
+<<<<<<< HEAD
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
 import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
@@ -25,6 +29,10 @@ import { DriverSchedulePage } from "./pages/driver/DriverSchedulePage";
 import { DriverVehiclePage } from "./pages/driver/DriverVehiclePage";
 import { DriverEarningsPage } from "./pages/driver/DriverEarningsPage";
 import { DriverProfilePage } from "./pages/driver/DriverProfilePage";
+=======
+import { AgencyDashboard } from "./pages/AgencyDashboard";
+import { DriverDashboard } from "./pages/DriverDashboard";
+>>>>>>> a1fb766 (Implement dashboard and API updates)
 import { InfluencerDashboard } from "./pages/InfluencerDashboard";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { ItinerarySharePage } from "./pages/ItinerarySharePage";
@@ -39,11 +47,14 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
   return <>{children}</>;
 }
 
+<<<<<<< HEAD
 const influencerLinks = [
   { to: "/dashboard/influencer", label: "Referrals" },
   { to: "/profile", label: "Profile" },
 ];
 
+=======
+>>>>>>> a1fb766 (Implement dashboard and API updates)
 const adminLinks = [
   { to: "/dashboard/admin", label: "Admin" },
   { to: "/profile", label: "Profile" },
@@ -109,10 +120,21 @@ export default function App() {
           </Route>
 
           <Route
+            path="dashboard/driver"
+            element={
+              <Protected roles={["DRIVER"]}>
+                <DriverDashboardLayout />
+              </Protected>
+            }
+          >
+            <Route index element={<DriverDashboard />} />
+          </Route>
+
+          <Route
             path="dashboard/influencer"
             element={
               <Protected roles={["INFLUENCER"]}>
-                <DashboardLayout links={influencerLinks} />
+                <InfluencerDashboardLayout />
               </Protected>
             }
           >

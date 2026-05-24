@@ -17,7 +17,11 @@ export function PublicLayout() {
             <>
               <Link to="/profile">Profile</Link>
               {user.role === "AGENCY" && <Link to="/dashboard/agency">Dashboard</Link>}
+<<<<<<< HEAD
               {user.role === "DRIVER" && <Link to="/dashboard/driver">Dashboard</Link>}
+=======
+              {user.role === "DRIVER" && <Link to="/dashboard/driver">Driver Dashboard</Link>}
+>>>>>>> a1fb766 (Implement dashboard and API updates)
               {user.role === "INFLUENCER" && <Link to="/dashboard/influencer">Dashboard</Link>}
               {user.role === "ADMIN" && <Link to="/dashboard/admin">Admin</Link>}
               <button type="button" className="btn btn-ghost" onClick={logout}>
