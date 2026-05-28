@@ -15,16 +15,43 @@ export type AgencyEntity = {
   type: string;
   city: string | null;
   district: string | null;
+  description?: string | null;
+  durationMin?: number | null;
   priceHint: number | null;
+  contact?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  media?: unknown[] | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type AgencyTourDayItem = {
+  scheduledTime: string | null;
+  entityId: string | null;
+  entityName: string | null;
+  entityType?: string | null;
+};
+
+export type AgencyTourDay = {
+  dayNumber: number;
+  title: string | null;
+  items: AgencyTourDayItem[];
 };
 
 export type AgencyTour = {
   id: string;
   title: string;
   slug: string;
+  summary: string | null;
+  description?: string | null;
   days: number;
+  tourKind: "READY_MADE" | "CUSTOM";
   basePriceLkr: number;
+  coverUrl?: string | null;
   isPublished: boolean;
+  durationLabel?: string;
+  updatedAt?: string;
+  tourDays?: AgencyTourDay[];
 };
 
 export type AgencyGroup = {

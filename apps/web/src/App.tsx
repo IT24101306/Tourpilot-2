@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
-import { DashboardLayout, PublicLayout } from "./components/Layout";
+import { PublicLayout } from "./components/Layout";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
@@ -13,8 +13,6 @@ import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
 import { OffersPage } from "./pages/OffersPage";
 import { ProfilePage } from "./pages/ProfilePage";
-<<<<<<< HEAD
-import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
 import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
@@ -22,22 +20,29 @@ import { AgencyDriversPage } from "./pages/agency/AgencyDriversPage";
 import { AgencyTravelersPage } from "./pages/agency/AgencyTravelersPage";
 import { AgencyAllEntitiesPage } from "./pages/agency/AgencyAllEntitiesPage";
 import { AgencyGroupsPage } from "./pages/agency/AgencyGroupsPage";
-import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { DriverOverviewPage } from "./pages/driver/DriverOverviewPage";
 import { DriverAssignedToursPage } from "./pages/driver/DriverAssignedToursPage";
 import { DriverSchedulePage } from "./pages/driver/DriverSchedulePage";
 import { DriverVehiclePage } from "./pages/driver/DriverVehiclePage";
 import { DriverEarningsPage } from "./pages/driver/DriverEarningsPage";
 import { DriverProfilePage } from "./pages/driver/DriverProfilePage";
-=======
-import { AgencyDashboard } from "./pages/AgencyDashboard";
-import { DriverDashboard } from "./pages/DriverDashboard";
->>>>>>> a1fb766 (Implement dashboard and API updates)
-import { InfluencerDashboard } from "./pages/InfluencerDashboard";
+import { InfluencerOverviewPage } from "./pages/influencer/InfluencerOverviewPage";
+import { InfluencerToursPage } from "./pages/influencer/InfluencerToursPage";
+import { InfluencerCodesPage } from "./pages/influencer/InfluencerCodesPage";
+import { InfluencerCommissionsPage } from "./pages/influencer/InfluencerCommissionsPage";
+import { InfluencerGuidePage } from "./pages/influencer/InfluencerGuidePage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
+import { AdminOffersPage } from "./pages/admin/AdminOffersPage";
+import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
+import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
+import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";
+import { TouristTripsPage } from "./pages/TouristTripsPage";
+import { TouristTripRoomPage } from "./pages/TouristTripRoomPage";
+import { AgencyTasksPage } from "./pages/agency/AgencyTasksPage";
+import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
 
 function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[] }) {
   const { user, loading } = useAuth();
@@ -46,19 +51,6 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
-
-<<<<<<< HEAD
-const influencerLinks = [
-  { to: "/dashboard/influencer", label: "Referrals" },
-  { to: "/profile", label: "Profile" },
-];
-
-=======
->>>>>>> a1fb766 (Implement dashboard and API updates)
-const adminLinks = [
-  { to: "/dashboard/admin", label: "Admin" },
-  { to: "/profile", label: "Profile" },
-];
 
 export default function App() {
   return (
@@ -87,6 +79,23 @@ export default function App() {
           <Route path="itinerary/:shareToken" element={<ItinerarySharePage />} />
 
           <Route
+            path="trips"
+            element={
+              <Protected roles={["TOURIST"]}>
+                <TouristTripsPage />
+              </Protected>
+            }
+          />
+          <Route
+            path="trips/:inquiryId"
+            element={
+              <Protected roles={["TOURIST"]}>
+                <TouristTripRoomPage />
+              </Protected>
+            }
+          />
+
+          <Route
             path="dashboard/agency"
             element={
               <Protected roles={["AGENCY"]}>
@@ -96,6 +105,9 @@ export default function App() {
           >
             <Route index element={<AgencyOverviewPage />} />
             <Route path="bookings" element={<AgencyBookingsPage />} />
+            <Route path="negotiations" element={<AgencyNegotiationsPage />} />
+            <Route path="trip-room/:inquiryId" element={<AgencyTripRoomPage />} />
+            <Route path="tasks" element={<AgencyTasksPage />} />
             <Route path="tours" element={<AgencyToursPage />} />
             <Route path="drivers" element={<AgencyDriversPage />} />
             <Route path="travelers" element={<AgencyTravelersPage />} />
@@ -111,23 +123,13 @@ export default function App() {
               </Protected>
             }
           >
-            <Route index element={<DriverOverviewPage />} />
+            <Route index element={<DriverSchedulePage />} />
+            <Route path="overview" element={<DriverOverviewPage />} />
             <Route path="assigned" element={<DriverAssignedToursPage />} />
-            <Route path="schedule" element={<DriverSchedulePage />} />
             <Route path="vehicle" element={<DriverVehiclePage />} />
             <Route path="earnings" element={<DriverEarningsPage />} />
             <Route path="profile" element={<DriverProfilePage />} />
-          </Route>
-
-          <Route
-            path="dashboard/driver"
-            element={
-              <Protected roles={["DRIVER"]}>
-                <DriverDashboardLayout />
-              </Protected>
-            }
-          >
-            <Route index element={<DriverDashboard />} />
+            <Route path="tasks" element={<DriverTasksPage />} />
           </Route>
 
           <Route
@@ -138,18 +140,23 @@ export default function App() {
               </Protected>
             }
           >
-            <Route index element={<InfluencerDashboard />} />
+            <Route index element={<InfluencerOverviewPage />} />
+            <Route path="tours" element={<InfluencerToursPage />} />
+            <Route path="codes" element={<InfluencerCodesPage />} />
+            <Route path="commissions" element={<InfluencerCommissionsPage />} />
+            <Route path="guide" element={<InfluencerGuidePage />} />
           </Route>
 
           <Route
             path="dashboard/admin"
             element={
               <Protected roles={["ADMIN"]}>
-                <DashboardLayout links={adminLinks} />
+                <AdminDashboardLayout />
               </Protected>
             }
           >
             <Route index element={<AdminDashboard />} />
+            <Route path="offers" element={<AdminOffersPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

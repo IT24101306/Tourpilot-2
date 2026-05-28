@@ -1,14 +1,94 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { normalizeBlockedDates, parseBlockedDates } from "../lib/driverBlockedDates.js";
+import {
+  assignmentDateKeys,
+  normalizeBlockedDates,
+  parseBlockedDates,
+} from "../lib/driverBlockedDates.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { asJson } from "../utils/json.js";
-import { toStoredPhone } from "../utils/phone.js";
+import { ensureDriverUserAccount, profileStatusFromAgency } from "../services/agencyDriverLink.js";
+import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 
 export const driversRouter = Router();
 
 const DRIVER_STATUSES = ["Available", "On Tour", "Off Duty"] as const;
+const ASSIGNMENT_STATUSES = ["Scheduled", "On Route", "Completed", "Cancelled"] as const;
+
+function serializeAssignment(a: {
+  id: string;
+  agencyDriverId: string;
+  title: string;
+  startDate: Date;
+  endDate: Date | null;
+  notes: string | null;
+  status: string;
+  inquiryId: string | null;
+  tourId: string | null;
+  createdAt: Date;
+  agencyDriver?: { id: string; name: string; phone: string | null; vehicle: string | null };
+  inquiry?: {
+    id: string;
+    pax: number;
+    status: string;
+    startDate: Date | null;
+    endDate: Date | null;
+    tourist: { name: string; phone: string };
+    tour: { title: string } | null;
+  } | null;
+  tour?: { id: string; title: string; days: number } | null;
+}) {
+  return {
+    id: a.id,
+    agencyDriverId: a.agencyDriverId,
+    driver: a.agencyDriver
+      ? {
+          id: a.agencyDriver.id,
+          name: a.agencyDriver.name,
+          phone: a.agencyDriver.phone,
+          vehicle: a.agencyDriver.vehicle,
+        }
+      : undefined,
+    title: a.title,
+    startDate: a.startDate,
+    endDate: a.endDate,
+    notes: a.notes,
+    status: a.status,
+    inquiryId: a.inquiryId,
+    tourId: a.tourId,
+    createdAt: a.createdAt,
+    inquiry: a.inquiry
+      ? {
+          id: a.inquiry.id,
+          pax: a.inquiry.pax,
+          status: a.inquiry.status,
+          startDate: a.inquiry.startDate,
+          endDate: a.inquiry.endDate,
+          touristName: a.inquiry.tourist.name,
+          touristPhone: a.inquiry.tourist.phone,
+          tourTitle: a.inquiry.tour?.title ?? null,
+        }
+      : null,
+    tour: a.tour ? { id: a.tour.id, title: a.tour.title, days: a.tour.days } : null,
+  };
+}
+
+const assignmentInclude = {
+  agencyDriver: { select: { id: true, name: true, phone: true, vehicle: true } },
+  inquiry: {
+    select: {
+      id: true,
+      pax: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      tourist: { select: { name: true, phone: true } },
+      tour: { select: { title: true } },
+    },
+  },
+  tour: { select: { id: true, title: true, days: true } },
+} as const;
 
 async function getDriverProfileForUser(userId: string) {
   return prisma.driverProfile.findUnique({
@@ -185,6 +265,42 @@ driversRouter.put("/me/blocked-dates", authRequired, requireRoles("DRIVER"), asy
   }
 });
 
+driversRouter.get("/me/assignments", authRequired, requireRoles("DRIVER"), async (req, res, next) => {
+  try {
+    const agencyDriver = await getAgencyDriverForUser(req.user!.id);
+    if (!agencyDriver) {
+      return res.json([]);
+    }
+
+    const assignments = await prisma.driverAssignment.findMany({
+      where: { agencyDriverId: agencyDriver.id, status: { not: "Cancelled" } },
+      orderBy: { startDate: "asc" },
+      include: assignmentInclude,
+    });
+
+    res.json(assignments.map(serializeAssignment));
+  } catch (e) {
+    next(e);
+  }
+});
+
+driversRouter.get("/agency/assignments", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const assignments = await prisma.driverAssignment.findMany({
+      where: { agencyDriver: { agencyId: agency.id } },
+      orderBy: { startDate: "desc" },
+      include: assignmentInclude,
+    });
+
+    res.json(assignments.map(serializeAssignment));
+  } catch (e) {
+    next(e);
+  }
+});
+
 driversRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
@@ -230,6 +346,312 @@ driversRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (r
   }
 });
 
+driversRouter.delete(
+  "/assignments/:assignmentId",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const existing = await prisma.driverAssignment.findFirst({
+        where: {
+          id: req.params.assignmentId,
+          agencyDriver: { agencyId: agency.id },
+        },
+      });
+      if (!existing) return res.status(404).json({ error: "Assignment not found" });
+
+      await prisma.driverAssignment.delete({ where: { id: existing.id } });
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+driversRouter.patch(
+  "/assignments/:assignmentId",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const body = z
+        .object({
+          status: z.enum(ASSIGNMENT_STATUSES).optional(),
+          notes: z.string().nullable().optional(),
+          startDate: z.string().datetime().optional(),
+          endDate: z.string().datetime().nullable().optional(),
+        })
+        .parse(req.body);
+
+      const existing = await prisma.driverAssignment.findFirst({
+        where: {
+          id: req.params.assignmentId,
+          agencyDriver: { agencyId: agency.id },
+        },
+      });
+      if (!existing) return res.status(404).json({ error: "Assignment not found" });
+
+      const updated = await prisma.driverAssignment.update({
+        where: { id: existing.id },
+        data: {
+          ...(body.status !== undefined ? { status: body.status } : {}),
+          ...(body.notes !== undefined ? { notes: body.notes } : {}),
+          ...(body.startDate !== undefined ? { startDate: new Date(body.startDate) } : {}),
+          ...(body.endDate !== undefined
+            ? { endDate: body.endDate ? new Date(body.endDate) : null }
+            : {}),
+        },
+        include: assignmentInclude,
+      });
+
+      if (body.status === "On Route") {
+        await prisma.agencyDriver.update({
+          where: { id: updated.agencyDriverId },
+          data: { status: "On Tour" },
+        });
+      }
+
+      res.json(serializeAssignment(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+driversRouter.get("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const driver = await prisma.agencyDriver.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+      include: {
+        user: {
+          include: {
+            driverProfile: true,
+          },
+        },
+        assignments: {
+          where: { status: { not: "Cancelled" } },
+          orderBy: { startDate: "desc" },
+          include: assignmentInclude,
+        },
+      },
+    });
+
+    if (!driver) return res.status(404).json({ error: "Driver not found" });
+
+    const profile = driver.user?.driverProfile;
+    const metadata = (profile?.metadata as Record<string, unknown> | null) || {};
+
+    res.json({
+      id: driver.id,
+      agencyId: driver.agencyId,
+      userId: driver.userId,
+      name: driver.name,
+      phone: driver.phone,
+      licenseNo: driver.licenseNo,
+      vehicle: driver.vehicle,
+      status: driver.status,
+      createdAt: driver.createdAt,
+      updatedAt: driver.updatedAt,
+      hasLogin: Boolean(driver.userId),
+      blockedDates: driver.userId ? parseBlockedDates(profile?.blockedDates) : [],
+      profile: profile
+        ? {
+            bio: profile.bio,
+            experience: typeof metadata.experience === "string" ? metadata.experience : "",
+            languages: typeof metadata.languages === "string" ? metadata.languages : "",
+            availabilityNotes:
+              typeof metadata.availabilityNotes === "string" ? metadata.availabilityNotes : "",
+          }
+        : null,
+      assignments: driver.assignments.map(serializeAssignment),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+driversRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const body = z
+      .object({
+        name: z.string().min(1).optional(),
+        phone: z.string().optional(),
+        licenseNo: z.string().optional(),
+        vehicle: z.string().optional(),
+        status: z.enum(DRIVER_STATUSES).optional(),
+      })
+      .parse(req.body);
+
+    const existing = await prisma.agencyDriver.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Driver not found" });
+
+    const phone = body.phone ? toStoredPhone(body.phone) : undefined;
+
+    const driver = await prisma.agencyDriver.update({
+      where: { id: existing.id },
+      data: {
+        ...(body.name !== undefined ? { name: body.name.trim() } : {}),
+        ...(body.phone !== undefined ? { phone: phone || body.phone.trim() || null } : {}),
+        ...(body.licenseNo !== undefined ? { licenseNo: body.licenseNo.trim() || null } : {}),
+        ...(body.vehicle !== undefined ? { vehicle: body.vehicle.trim() || null } : {}),
+        ...(body.status !== undefined ? { status: body.status } : {}),
+      },
+    });
+
+    if (body.status && driver.userId) {
+      await prisma.driverProfile.updateMany({
+        where: { userId: driver.userId },
+        data: { status: body.status },
+      });
+    }
+
+    res.json(driver);
+  } catch (e) {
+    next(e);
+  }
+});
+
+driversRouter.get(
+  "/:id/assignments",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const driver = await prisma.agencyDriver.findFirst({
+        where: { id: req.params.id, agencyId: agency.id },
+      });
+      if (!driver) return res.status(404).json({ error: "Driver not found" });
+
+      const assignments = await prisma.driverAssignment.findMany({
+        where: { agencyDriverId: driver.id },
+        orderBy: { startDate: "desc" },
+        include: assignmentInclude,
+      });
+
+      res.json(assignments.map(serializeAssignment));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+driversRouter.post("/:id/assignments", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const body = z
+      .object({
+        title: z.string().min(1).optional(),
+        inquiryId: z.string().optional(),
+        tourId: z.string().optional(),
+        startDate: z.string().datetime(),
+        endDate: z.string().datetime().optional(),
+        notes: z.string().optional(),
+        status: z.enum(ASSIGNMENT_STATUSES).default("Scheduled"),
+      })
+      .parse(req.body);
+
+    const driver = await prisma.agencyDriver.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+      include: { user: { include: { driverProfile: true } } },
+    });
+    if (!driver) return res.status(404).json({ error: "Driver not found" });
+
+    let inquiry: {
+      id: string;
+      agencyId: string;
+      startDate: Date | null;
+      endDate: Date | null;
+      tour: { id: string; title: string } | null;
+    } | null = null;
+
+    if (body.inquiryId) {
+      inquiry = await prisma.inquiry.findFirst({
+        where: { id: body.inquiryId, agencyId: agency.id },
+        include: { tour: { select: { id: true, title: true } } },
+      });
+      if (!inquiry) return res.status(400).json({ error: "Inquiry not found for this agency" });
+    }
+
+    if (body.tourId) {
+      const tour = await prisma.tour.findFirst({
+        where: { id: body.tourId, agencyId: agency.id },
+      });
+      if (!tour) return res.status(400).json({ error: "Tour not found for this agency" });
+    }
+
+    const startDate = new Date(body.startDate);
+    const endDate = body.endDate
+      ? new Date(body.endDate)
+      : inquiry?.endDate
+        ? new Date(inquiry.endDate)
+        : null;
+
+    const title =
+      body.title?.trim() ||
+      (inquiry?.tour?.title ? `${inquiry.tour.title} (${inquiry.id.slice(-6)})` : null) ||
+      (body.tourId
+        ? (
+            await prisma.tour.findUnique({
+              where: { id: body.tourId },
+              select: { title: true },
+            })
+          )?.title
+        : null) ||
+      `Trip assignment`;
+
+    const blocked = driver.userId
+      ? parseBlockedDates(driver.user?.driverProfile?.blockedDates)
+      : [];
+    const blockedSet = new Set(blocked);
+    const conflictDay = blocked.find((d) => {
+      const day = new Date(`${d}T12:00:00`);
+      return day >= startDate && (!endDate || day <= endDate);
+    });
+    if (conflictDay) {
+      return res.status(409).json({
+        error: `Driver marked unavailable on ${conflictDay}. Pick another date or driver.`,
+      });
+    }
+
+    const assignment = await prisma.driverAssignment.create({
+      data: {
+        agencyDriverId: driver.id,
+        inquiryId: body.inquiryId || inquiry?.id,
+        tourId: body.tourId || inquiry?.tour?.id,
+        title,
+        startDate: inquiry?.startDate ? new Date(inquiry.startDate) : startDate,
+        endDate: endDate,
+        notes: body.notes?.trim(),
+        status: body.status,
+      },
+      include: assignmentInclude,
+    });
+
+    res.status(201).json(serializeAssignment(assignment));
+  } catch (e) {
+    next(e);
+  }
+});
+
 driversRouter.get(
   "/:id/blocked-dates",
   authRequired,
@@ -243,6 +665,10 @@ driversRouter.get(
         where: { id: req.params.id, agencyId: agency.id },
         include: {
           user: { include: { driverProfile: true } },
+          assignments: {
+            where: { status: { not: "Cancelled" } },
+            select: { startDate: true, endDate: true, status: true },
+          },
         },
       });
 
@@ -254,6 +680,7 @@ driversRouter.get(
         blockedDates: driver.userId
           ? parseBlockedDates(driver.user?.driverProfile?.blockedDates)
           : [],
+        assignedDates: assignmentDateKeys(driver.assignments),
         hasLogin: Boolean(driver.userId),
       });
     } catch (e) {
@@ -270,40 +697,69 @@ driversRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, n
     const body = z
       .object({
         name: z.string().min(1, "Driver name is required"),
-        phone: z.string().optional(),
+        phone: z.string().min(1, "Phone is required to create driver login"),
         licenseNo: z.string().optional(),
         vehicle: z.string().optional(),
         status: z.enum(DRIVER_STATUSES).default("Available"),
       })
       .parse(req.body);
 
-    const phone = body.phone ? toStoredPhone(body.phone) : undefined;
-
-    let linkedUserId: string | undefined;
-    if (phone) {
-      const user = await prisma.user.findUnique({ where: { phone } });
-      if (user?.role === "DRIVER") {
-        const existing = await prisma.agencyDriver.findUnique({ where: { userId: user.id } });
-        if (existing && existing.agencyId !== agency.id) {
-          return res.status(409).json({ error: "This driver is already registered to another agency" });
-        }
-        linkedUserId = user.id;
-      }
+    const phone = toStoredPhone(body.phone);
+    if (!isValidInternationalPhone(phone)) {
+      return res.status(400).json({
+        error: "Invalid phone number. Include country code (e.g. +94771234567).",
+      });
     }
 
-    const driver = await prisma.agencyDriver.create({
-      data: {
-        agencyId: agency.id,
-        userId: linkedUserId,
-        name: body.name.trim(),
-        phone: phone || body.phone?.trim() || undefined,
-        licenseNo: body.licenseNo?.trim() || undefined,
-        vehicle: body.vehicle?.trim() || undefined,
+    const licenseNo = body.licenseNo?.trim() || undefined;
+    const vehicle = body.vehicle?.trim() || undefined;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const duplicate = await tx.agencyDriver.findFirst({
+        where: { agencyId: agency.id, phone },
+      });
+      if (duplicate) {
+        throw Object.assign(new Error("This driver is already on your roster"), { status: 409 });
+      }
+
+      const { userId, created } = await ensureDriverUserAccount(tx, {
+        name: body.name,
+        phone: body.phone,
+        licenseNo,
+        vehicle,
         status: body.status,
-      },
+      });
+
+      const otherAgency = await tx.agencyDriver.findUnique({ where: { userId } });
+      if (otherAgency && otherAgency.agencyId !== agency.id) {
+        throw Object.assign(
+          new Error("This driver is already linked to another agency"),
+          { status: 409 }
+        );
+      }
+
+      const driver = await tx.agencyDriver.create({
+        data: {
+          agencyId: agency.id,
+          userId,
+          name: body.name.trim(),
+          phone,
+          licenseNo,
+          vehicle,
+          status: body.status,
+        },
+      });
+
+      return { driver, accountCreated: created };
     });
 
-    res.status(201).json(driver);
+    res.status(201).json({
+      ...result.driver,
+      accountCreated: result.accountCreated,
+      linkedToAccount: true,
+      loginHint:
+        "Driver can log in at /login with this phone and OTP — no separate signup needed.",
+    });
   } catch (e) {
     next(e);
   }
@@ -324,7 +780,7 @@ driversRouter.patch("/:id/status", authRequired, requireRoles("AGENCY"), async (
     if (driver.userId) {
       await prisma.driverProfile.updateMany({
         where: { userId: driver.userId },
-        data: { status },
+        data: { status: profileStatusFromAgency(status) },
       });
     }
 

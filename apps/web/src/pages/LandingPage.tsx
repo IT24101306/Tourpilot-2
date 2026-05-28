@@ -1,101 +1,95 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-
-type AgencyCard = {
-  id: string;
-  name: string;
-  slug: string;
-  tagline: string | null;
-  coverUrl: string | null;
-  avgRating: number;
-  reviewCount: number;
-  tourCount: number;
-};
-
-type Offer = {
-  id: string;
-  title: string;
-  rewardText: string;
-  tourPriceLkr: number;
-  discountedLkr: number | null;
-  spotsLeft: number;
-  validUntil: string;
-};
+import { DiscoveryPathStrip } from "../components/discovery/DiscoveryPathStrip";
+import {
+  DiscoveryAgencyCard,
+  type DiscoveryAgency,
+} from "../components/discovery/DiscoveryAgencyCard";
+import { DiscoveryOfferCard, type DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 
 export function LandingPage() {
-  const [agencies, setAgencies] = useState<AgencyCard[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const [agencies, setAgencies] = useState<DiscoveryAgency[]>([]);
+  const [endingSoon, setEndingSoon] = useState<DiscoveryOffer[]>([]);
 
   useEffect(() => {
-    api<AgencyCard[]>("/agencies").then(setAgencies).catch(console.error);
-    api<Offer[]>("/offers/active").then(setOffers).catch(console.error);
+    api<DiscoveryAgency[]>("/agencies").then(setAgencies).catch(console.error);
+    api<DiscoveryOffer[]>("/offers/ending-soon?limit=3").then(setEndingSoon).catch(console.error);
   }, []);
 
+  const featured = agencies.slice(0, 3);
+
   return (
-    <>
-      <section className="hero-image">
-        <div className="hero-tags">
-          <span className="tag">Sri Lanka</span>
-          <span className="tag">Verified agencies</span>
-          <span className="tag">Custom itineraries</span>
-        </div>
-        <h1>Navigate the island with confidence</h1>
-        <p>
-          Discover curated tours, compare agencies, and receive transparent itineraries with optional
-          add-ons and prices — built for modern travelers.
-        </p>
-        <Link to="/agencies" className="btn btn-teal">
-          Explore agencies
-        </Link>
-        <Link to="/register" className="btn btn-ghost" style={{ marginLeft: 12 }}>
-          Sign up free
-        </Link>
-      </section>
-
-      {offers[0] && (
-        <section className="section">
-          <div className="offer-banner">
-            <h2 style={{ margin: "0 0 8px" }}>{offers[0].title}</h2>
-            <p style={{ margin: "0 0 8px", opacity: 0.95 }}>{offers[0].rewardText}</p>
-            <p style={{ margin: 0 }}>
-              Tour price: <strong>LKR {offers[0].tourPriceLkr.toLocaleString()}</strong>
-              {offers[0].discountedLkr != null && (
-                <> → <strong>LKR {offers[0].discountedLkr.toLocaleString()}</strong></>
-              )}
-            </p>
-            <p className="countdown" style={{ marginTop: 12 }}>
-              {offers[0].spotsLeft} spots left
-            </p>
-            <Link to="/offers" className="btn btn-ghost" style={{ marginTop: 12, background: "#fff" }}>
-              View offers
-            </Link>
+    <div className="module-discovery">
+      <section className={`hero-image hero-image--landing${endingSoon.length > 0 ? " hero-image--has-offers" : ""}`}>
+        <div className="hero-image-top">
+          <div className="hero-tags">
+            <span className="tag">Sri Lanka</span>
+            <span className="tag">Verified agencies</span>
+            <span className="tag">Custom itineraries</span>
           </div>
-        </section>
-      )}
+          <span className="disc-hero-badge">Inspired exploration</span>
+          <h1>Navigate the island with confidence</h1>
+          <p className="hero-image-lead">
+            Discover curated tours, compare agencies, and receive transparent itineraries with optional
+            add-ons and prices — built for modern travelers.
+          </p>
+        </div>
 
-      <section className="section">
-        <h2 className="section-title">Featured agencies</h2>
-        <div className="grid-3">
-          {agencies.map((a) => (
-            <Link key={a.id} to={`/agencies/${a.slug}`} className="card" style={{ textDecoration: "none" }}>
-              <div
-                className="card-cover"
-                style={{
-                  backgroundImage: `url(${a.coverUrl || "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800"})`,
-                }}
-              />
-              <div className="card-body">
-                <h3>{a.name}</h3>
-                <p className="muted">{a.tagline || "Curated Sri Lanka experiences"}</p>
-                <p className="muted">
-                  ★ {a.avgRating} · {a.reviewCount} reviews · {a.tourCount} tours
-                </p>
-              </div>
-            </Link>
-          ))}
+        {endingSoon.length > 0 && (
+          <div className="hero-offers disc-hero-offers">
+            <div className="hero-offers-head">
+              <span className="hero-offers-label">Ending soon</span>
+              <Link to="/offers" className="hero-offers-link">
+                View all offers
+              </Link>
+            </div>
+            <div className="disc-offer-grid disc-offer-grid--hero">
+              {endingSoon.map((o) => (
+                <Link key={o.id} to="/offers" className="disc-offer-card-link">
+                  <DiscoveryOfferCard offer={o} compact hero />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="hero-actions">
+          <Link to="/agencies" className="btn btn-teal">
+            Explore agencies
+          </Link>
+          <Link to="/register" className="btn btn-ghost">
+            Sign up free
+          </Link>
         </div>
       </section>
-    </>
+
+      <section className="section disc-path-section">
+        <DiscoveryPathStrip />
+      </section>
+
+      <section className="section module-shell">
+        <div className="disc-section-head">
+          <div>
+            <span className="module-badge module-badge--discovery">Featured agencies</span>
+            <h2 className="section-title">Start with trusted operators</h2>
+            <p className="muted">Highly rated teams ready to craft your Sri Lanka journey.</p>
+          </div>
+          <Link to="/agencies" className="btn btn-ghost">
+            View all agencies
+          </Link>
+        </div>
+
+        {featured.length === 0 ? (
+          <p className="muted">Loading featured agencies…</p>
+        ) : (
+          <div className="disc-agency-grid">
+            {featured.map((a, i) => (
+              <DiscoveryAgencyCard key={a.id} agency={a} featured={i === 0} />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

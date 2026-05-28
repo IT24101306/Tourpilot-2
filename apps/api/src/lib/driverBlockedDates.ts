@@ -29,3 +29,22 @@ export function toDateKey(date: Date): string {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+/** Expand assignment start/end into each calendar day (YYYY-MM-DD). */
+export function assignmentDateKeys(
+  assignments: Array<{ startDate: Date; endDate: Date | null; status: string }>
+): string[] {
+  const keys = new Set<string>();
+  for (const a of assignments) {
+    if (a.status === "Cancelled") continue;
+    const start = new Date(a.startDate);
+    const end = a.endDate ? new Date(a.endDate) : new Date(a.startDate);
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    while (cursor <= last) {
+      keys.add(toDateKey(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+  return [...keys].sort();
+}

@@ -14,11 +14,43 @@ export type DayPlan = {
 
 export type TourFormState = {
   title: string;
+  summary: string;
+  description: string;
+  basePriceLkr: number;
+  coverUrl: string;
+  isPublished: boolean;
   days: DayPlan[];
 };
 
-export function createEntry(): DayEntry {
-  return { id: crypto.randomUUID(), time: "", entityId: "" };
+export type AgencyTourDayItem = {
+  scheduledTime: string | null;
+  entityId: string | null;
+  entityName: string | null;
+  entityType?: string | null;
+};
+
+export type AgencyTourDay = {
+  dayNumber: number;
+  title: string | null;
+  items: AgencyTourDayItem[];
+};
+
+export type AgencyTourDetail = {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  description?: string | null;
+  days: number;
+  tourKind: TourKind;
+  basePriceLkr: number;
+  coverUrl?: string | null;
+  isPublished: boolean;
+  tourDays?: AgencyTourDay[];
+};
+
+export function createEntry(time = "", entityId = ""): DayEntry {
+  return { id: crypto.randomUUID(), time, entityId };
 }
 
 export function createDayPlan(dayNumber: number): DayPlan {
@@ -26,11 +58,45 @@ export function createDayPlan(dayNumber: number): DayPlan {
 }
 
 export function defaultTourForm(): TourFormState {
-  return { title: "", days: [createDayPlan(1)] };
+  return {
+    title: "",
+    summary: "",
+    description: "",
+    basePriceLkr: 0,
+    coverUrl: "",
+    isPublished: false,
+    days: [createDayPlan(1)],
+  };
 }
 
 export function renumberDays(days: DayPlan[]): DayPlan[] {
   return days.map((d, i) => ({ ...d, dayNumber: i + 1 }));
+}
+
+export function tourToFormState(tour: AgencyTourDetail): TourFormState {
+  const days: DayPlan[] =
+    tour.tourDays && tour.tourDays.length > 0
+      ? tour.tourDays.map((day) => ({
+          id: crypto.randomUUID(),
+          dayNumber: day.dayNumber,
+          entries:
+            day.items.length > 0
+              ? day.items.map((item) =>
+                  createEntry(item.scheduledTime ?? "", item.entityId ?? "")
+                )
+              : [createEntry()],
+        }))
+      : [createDayPlan(1)];
+
+  return {
+    title: tour.title,
+    summary: tour.summary ?? "",
+    description: tour.description ?? "",
+    basePriceLkr: tour.basePriceLkr,
+    coverUrl: tour.coverUrl ?? "",
+    isPublished: tour.isPublished,
+    days,
+  };
 }
 
 export type EntityOption = {
@@ -120,7 +186,11 @@ export function buildTourPlanPayload(form: TourFormState, tourKind: TourKind) {
   return {
     title: form.title.trim(),
     tourKind,
-    isPublished: tourKind === "READY_MADE",
+    basePriceLkr: form.basePriceLkr,
+    summary: form.summary.trim() || undefined,
+    description: form.description.trim() || undefined,
+    coverUrl: form.coverUrl.trim() || undefined,
+    isPublished: form.isPublished,
     dayPlans: form.days.map((day) => ({
       dayNumber: day.dayNumber,
       items: day.entries

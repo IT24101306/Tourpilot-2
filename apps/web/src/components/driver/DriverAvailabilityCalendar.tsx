@@ -10,12 +10,14 @@ function toDateKey(year: number, month: number, day: number) {
 
 type Props = {
   blockedDates: string[];
+  assignedDates?: string[];
   readOnly?: boolean;
   onBlockedDatesChange?: (dates: string[]) => void;
 };
 
 export function DriverAvailabilityCalendar({
   blockedDates,
+  assignedDates = [],
   readOnly = false,
   onBlockedDatesChange,
 }: Props) {
@@ -25,6 +27,7 @@ export function DriverAvailabilityCalendar({
   });
 
   const blockedSet = useMemo(() => new Set(blockedDates), [blockedDates]);
+  const assignedSet = useMemo(() => new Set(assignedDates), [assignedDates]);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -37,7 +40,13 @@ export function DriverAvailabilityCalendar({
     const days = Array.from({ length: daysInMonth }, (_, i) => {
       const day = i + 1;
       const key = toDateKey(year, month, day);
-      return { type: "day" as const, key, day, blocked: blockedSet.has(key) };
+      return {
+        type: "day" as const,
+        key,
+        day,
+        blocked: blockedSet.has(key),
+        assigned: !blockedSet.has(key) && assignedSet.has(key),
+      };
     });
     return [...blanks, ...days];
   }, [year, month, blockedSet]);
@@ -79,7 +88,9 @@ export function DriverAvailabilityCalendar({
             <button
               key={cell.key}
               type="button"
-              className={`driver-calendar-cell day ${cell.blocked ? "blocked" : "available"}`}
+              className={`driver-calendar-cell day ${
+                cell.blocked ? "blocked" : cell.assigned ? "assigned" : "available"
+              }`}
               disabled={readOnly}
               onClick={() => toggleDay(cell.key)}
             >
@@ -93,6 +104,9 @@ export function DriverAvailabilityCalendar({
       <div className="driver-calendar-legend">
         <span>
           <i className="legend-swatch available" /> Available
+        </span>
+        <span>
+          <i className="legend-swatch assigned" /> Assigned
         </span>
         <span>
           <i className="legend-swatch blocked" /> Unavailable

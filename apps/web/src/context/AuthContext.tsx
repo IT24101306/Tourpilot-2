@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(TOKEN_KEY, newToken);
     setToken(newToken);
     setUser(newUser);
+    setLoading(false);
   }, []);
 
   const logout = useCallback(() => {
@@ -66,10 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    // After OTP/password login, user is already set — skip /auth/me to avoid logout on transient API errors.
+    if (user) {
+      setLoading(false);
+      return;
+    }
     refreshUser()
       .catch(() => logout())
       .finally(() => setLoading(false));
-  }, [token, refreshUser, logout]);
+  }, [token, user, refreshUser, logout]);
 
   const value = useMemo(
     () => ({ user, token, loading, setSession, logout, refreshUser }),

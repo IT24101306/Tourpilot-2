@@ -13,6 +13,7 @@ type Props = {
 
 export function DriverCalendarModal({ open, token, driverId, driverName, onClose }: Props) {
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [assignedDates, setAssignedDates] = useState<string[]>([]);
   const [hasLogin, setHasLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,11 +22,13 @@ export function DriverCalendarModal({ open, token, driverId, driverName, onClose
     if (!open || !driverId) return;
     setLoading(true);
     setError("");
-    api<{ blockedDates: string[]; hasLogin: boolean }>(`/drivers/${driverId}/blocked-dates`, {
-      token,
-    })
+    api<{ blockedDates: string[]; assignedDates?: string[]; hasLogin: boolean }>(
+      `/drivers/${driverId}/blocked-dates`,
+      { token }
+    )
       .then((data) => {
         setBlockedDates(data.blockedDates);
+        setAssignedDates(data.assignedDates ?? []);
         setHasLogin(data.hasLogin);
       })
       .catch((err) => {
@@ -38,7 +41,7 @@ export function DriverCalendarModal({ open, token, driverId, driverName, onClose
     <DashboardModal
       open={open}
       title={`${driverName} — Availability`}
-      subtitle="Green days are available. Blocked dates are marked unavailable by the driver."
+      subtitle="Green = available, blue = assigned trip, red = driver blocked that day."
       onClose={onClose}
       dialogClassName="driver-calendar-dialog"
     >
@@ -50,7 +53,13 @@ export function DriverCalendarModal({ open, token, driverId, driverName, onClose
           phone number, then block dates from their driver dashboard.
         </p>
       )}
-      {!loading && <DriverAvailabilityCalendar blockedDates={blockedDates} readOnly />}
+      {!loading && (
+        <DriverAvailabilityCalendar
+          blockedDates={blockedDates}
+          assignedDates={assignedDates}
+          readOnly
+        />
+      )}
     </DashboardModal>
   );
 }

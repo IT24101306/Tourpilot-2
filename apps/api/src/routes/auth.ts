@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import type { UserRole } from "@prisma/client";
 import { dashboardPathForRole } from "@tourpilot/shared";
@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { authRequired, signAccessToken } from "../middleware/auth.js";
 import { createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
 import { verifyPassword } from "../services/password.js";
+import { linkAgencyDriverOnDriverSignup } from "../services/agencyDriverLink.js";
 import { chargeLoginFee } from "../services/wallet.js";
 import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 import { slugify } from "../utils/slug.js";
@@ -38,6 +39,13 @@ authRouter.post("/register-request", async (req, res, next) => {
 
     const exists = await prisma.user.findUnique({ where: { phone } });
     if (exists) {
+      if (exists.role === "DRIVER" || body.role === "DRIVER") {
+        return res.status(409).json({
+          error:
+            "A driver account already exists for this phone. Use Login and enter OTP — no signup needed.",
+          code: "ACCOUNT_EXISTS_LOGIN",
+        });
+      }
       return res.status(409).json({ error: "Account already exists for this phone" });
     }
 
@@ -143,11 +151,12 @@ authRouter.post("/verify-registration", async (req, res, next) => {
         await tx.driverProfile.create({
           data: {
             userId: created.id,
-            status: "Available",
+            status: "available",
             blockedDates: [],
             metadata: {},
           },
         });
+        await linkAgencyDriverOnDriverSignup(tx, created.id, phone);
       }
 
       return created;
@@ -165,7 +174,8 @@ authRouter.post("/verify-registration", async (req, res, next) => {
   }
 });
 
-authRouter.post("/send-otp", async (req, res, next) => {
+/** Start login: admin → password step; all other roles → OTP challenge. */
+async function handleLoginStart(req: Request, res: Response, next: NextFunction) {
   try {
     const { phone: raw } = z.object({ phone: z.string() }).parse(req.body);
     const phone = toStoredPhone(raw);
@@ -202,7 +212,10 @@ authRouter.post("/send-otp", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
-});
+}
+
+authRouter.post("/login-start", handleLoginStart);
+authRouter.post("/send-otp", handleLoginStart);
 
 authRouter.post("/login-password", async (req, res, next) => {
   try {

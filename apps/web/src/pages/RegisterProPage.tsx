@@ -87,7 +87,7 @@ export function RegisterProPage() {
   return (
     <AuthLayout
       title="Professional registration"
-      subtitle="For travel agencies, influencers, and drivers. Include country code on your phone number."
+      subtitle="For travel agencies, influencers, and drivers. Drivers invited by an agency should use Login with OTP instead — no signup here."
     >
       <p className="muted auth-footnote" style={{ marginTop: 0 }}>
         <Link to="/register" className="auth-switch-link">

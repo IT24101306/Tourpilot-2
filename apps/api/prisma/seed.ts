@@ -321,6 +321,70 @@ async function main() {
     },
   });
 
+  let demoInquiry = await prisma.inquiry.findFirst({
+    where: { touristId: tourist.id, agencyId: agency.id, tourId: tour1.id },
+  });
+  if (!demoInquiry) {
+    demoInquiry = await prisma.inquiry.create({
+      data: {
+        touristId: tourist.id,
+        agencyId: agency.id,
+        tourId: tour1.id,
+        type: "READY_MADE",
+        status: "SENT_TO_TOURIST",
+        pax: 2,
+        message: "We would love the cultural triangle with a sunrise hike add-on.",
+        statusHistory: { create: { status: "NEW", actorId: tourist.id } },
+      },
+    });
+  }
+
+  const demoShareToken = "demo-cultural-triangle";
+  const existingItin = await prisma.itinerary.findFirst({
+    where: { inquiryId: demoInquiry.id },
+  });
+  if (!existingItin) {
+    await prisma.itinerary.create({
+      data: {
+        inquiryId: demoInquiry.id,
+        title: "Cultural Triangle — your dream route",
+        notes:
+          "Picture slow mornings, ancient rock fortresses, and golden light over the plains.",
+        baseTotal: 18000,
+        optionalTotal: 3500,
+        grandMax: 21500,
+        isSent: true,
+        shareToken: demoShareToken,
+        days: {
+          create: [
+            {
+              dayNumber: 1,
+              title: "Rock fortress & village stay",
+              lineItems: {
+                create: [
+                  {
+                    label: "Sigiriya Village Hotel",
+                    kind: "REQUIRED",
+                    priceLkr: 18000,
+                    sortOrder: 0,
+                    entityId: hotel.id,
+                  },
+                  {
+                    label: "Pidurangala sunrise hike",
+                    kind: "OPTIONAL",
+                    priceLkr: 3500,
+                    sortOrder: 1,
+                    entityId: viewpoint.id,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+  }
+
   await prisma.review.createMany({
     data: [
       { agencyId: agency.id, authorName: "Sarah M.", rating: 5, body: "Flawless itinerary and great guides." },
@@ -426,12 +490,9 @@ async function main() {
     tours: [tour1.slug, tour2.slug],
     tourist: tourist.phone,
     influencer: influencerUser.phone,
-<<<<<<< HEAD
     driver: driverUser.phone,
-=======
-    driver: driverPhone,
->>>>>>> a1fb766 (Implement dashboard and API updates)
     offer: offer.title,
+    demoItinerary: `/itinerary/${demoShareToken}`,
   });
 }
 

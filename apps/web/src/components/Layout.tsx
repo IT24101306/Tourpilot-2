@@ -1,41 +1,71 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { navLinkClass } from "../utils/navLinkClass";
 
 export function PublicLayout() {
   const { user, logout } = useAuth();
 
   return (
     <div className="shell">
-      <header className="topbar">
+      <header className="topbar topbar--site">
         <Link to="/" className="brand">
           Tour<span>Pilot</span>
         </Link>
-        <nav className="nav">
-          <Link to="/agencies">Agencies</Link>
-          <Link to="/offers">Offers</Link>
-          {user ? (
-            <>
-              <Link to="/profile">Profile</Link>
-              {user.role === "AGENCY" && <Link to="/dashboard/agency">Dashboard</Link>}
-<<<<<<< HEAD
-              {user.role === "DRIVER" && <Link to="/dashboard/driver">Dashboard</Link>}
-=======
-              {user.role === "DRIVER" && <Link to="/dashboard/driver">Driver Dashboard</Link>}
->>>>>>> a1fb766 (Implement dashboard and API updates)
-              {user.role === "INFLUENCER" && <Link to="/dashboard/influencer">Dashboard</Link>}
-              {user.role === "ADMIN" && <Link to="/dashboard/admin">Admin</Link>}
-              <button type="button" className="btn btn-ghost" onClick={logout}>
-                Log out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/register">Sign up</Link>
-              <Link to="/login" className="btn btn-teal">
-                Login
-              </Link>
-            </>
-          )}
+        <nav className="nav" aria-label="Primary">
+          <div className="nav-links">
+            <NavLink to="/agencies" className={navLinkClass}>
+              Agencies
+            </NavLink>
+            <NavLink to="/offers" className={navLinkClass}>
+              Offers
+            </NavLink>
+            {user?.role === "TOURIST" && (
+              <NavLink to="/trips" className={navLinkClass}>
+                My trips
+              </NavLink>
+            )}
+          </div>
+          <div className="nav-actions">
+            {user ? (
+              <>
+                <NavLink to="/profile" className={navLinkClass}>
+                  Profile
+                </NavLink>
+                {user.role === "AGENCY" && (
+                  <NavLink to="/dashboard/agency" className={navLinkClass}>
+                    Dashboard
+                  </NavLink>
+                )}
+                {user.role === "DRIVER" && (
+                  <NavLink to="/dashboard/driver" className={navLinkClass}>
+                    Dashboard
+                  </NavLink>
+                )}
+                {user.role === "INFLUENCER" && (
+                  <NavLink to="/dashboard/influencer" className={navLinkClass}>
+                    Dashboard
+                  </NavLink>
+                )}
+                {user.role === "ADMIN" && (
+                  <NavLink to="/dashboard/admin" className={navLinkClass}>
+                    Admin
+                  </NavLink>
+                )}
+                <button type="button" className="btn btn-ghost btn-nav" onClick={logout}>
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <NavLink to="/register" className={navLinkClass}>
+                  Sign up
+                </NavLink>
+                <NavLink to="/login" className="btn btn-teal btn-nav">
+                  Login
+                </NavLink>
+              </>
+            )}
+          </div>
         </nav>
       </header>
       <Outlet />
@@ -48,14 +78,16 @@ export function DashboardLayout({ links }: { links: { to: string; label: string 
 
   return (
     <div className="shell">
-      <header className="topbar">
+      <header className="topbar topbar--site">
         <Link to="/" className="brand">
           Tour<span>Pilot</span>
         </Link>
-        <div className="nav">
-          <span className="muted">{user?.name}</span>
-          <span className="muted">LKR {user?.walletBalance?.toFixed(0)}</span>
-          <button type="button" className="btn btn-ghost" onClick={logout}>
+        <div className="nav nav--dashboard">
+          <div className="nav-meta">
+            <span className="nav-meta-name">{user?.name}</span>
+            <span className="nav-meta-wallet">LKR {user?.walletBalance?.toFixed(0)}</span>
+          </div>
+          <button type="button" className="btn btn-ghost btn-nav" onClick={logout}>
             Log out
           </button>
         </div>

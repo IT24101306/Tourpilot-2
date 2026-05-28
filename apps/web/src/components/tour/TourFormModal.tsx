@@ -14,6 +14,7 @@ import {
 
 type Props = {
   open: boolean;
+  mode: "create" | "edit";
   tourKind: TourKind;
   form: TourFormState;
   entities: EntityOption[];
@@ -27,6 +28,7 @@ type Props = {
 
 export function TourFormModal({
   open,
+  mode,
   tourKind,
   form,
   entities,
@@ -73,7 +75,9 @@ export function TourFormModal({
 
   if (!open) return null;
 
-  const modalTitle = tourKind === "READY_MADE" ? "Create Ready-Made Tour" : "Create Custom Tour";
+  const kindLabel = tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
+  const modalTitle =
+    mode === "edit" ? `Edit ${kindLabel} Tour` : `Create ${kindLabel} Tour`;
 
   function updateDays(days: DayPlan[]) {
     onChange({ ...form, days: renumberDays(days) });
@@ -126,10 +130,12 @@ export function TourFormModal({
   return (
     <div className="entity-modal tour-modal open" role="presentation" onClick={onClose}>
       <DialogShell title={modalTitle} onClose={onClose}>
-        <p className="dialog-sub muted">Set a tour title and plan day-wise entities with times.</p>
+        <p className="dialog-sub muted">
+          Set tour details, pricing, and a day-by-day plan with timed entities from your catalog.
+        </p>
 
         <form onSubmit={onSubmit}>
-          <FormField label="Tour Title" full>
+          <FormField label="Tour title" full>
             <input
               type="text"
               value={form.title}
@@ -139,6 +145,56 @@ export function TourFormModal({
               autoFocus
             />
           </FormField>
+
+          <div className="tour-meta-grid">
+            <FormField label="Base price (LKR)">
+              <input
+                type="number"
+                min={0}
+                step={100}
+                value={form.basePriceLkr || ""}
+                onChange={(e) =>
+                  onChange({ ...form, basePriceLkr: Number(e.target.value) || 0 })
+                }
+                placeholder="89500"
+              />
+            </FormField>
+            <FormField label="Cover image URL">
+              <input
+                type="url"
+                value={form.coverUrl}
+                onChange={(e) => onChange({ ...form, coverUrl: e.target.value })}
+                placeholder="https://…"
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Short summary" full>
+            <input
+              type="text"
+              value={form.summary}
+              onChange={(e) => onChange({ ...form, summary: e.target.value })}
+              placeholder="Highlights, regions, or who this tour is for"
+            />
+          </FormField>
+
+          <FormField label="Description" full>
+            <textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => onChange({ ...form, description: e.target.value })}
+              placeholder="Full description shown on the public tour page"
+            />
+          </FormField>
+
+          <label className="tour-publish-check">
+            <input
+              type="checkbox"
+              checked={form.isPublished}
+              onChange={(e) => onChange({ ...form, isPublished: e.target.checked })}
+            />
+            Publish on agency storefront (travelers can view and inquire)
+          </label>
 
           <div className="entity-filter-row">
             <FormField label="Filter by type">
@@ -203,7 +259,7 @@ export function TourFormModal({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving || !form.title.trim()}>
-              {saving ? "Saving…" : "Save Tour"}
+              {saving ? "Saving…" : mode === "edit" ? "Update tour" : "Create tour"}
             </button>
           </div>
           {status && <p className="tour-status">{status}</p>}

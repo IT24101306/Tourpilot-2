@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { TourItineraryPreview } from "../components/itinerary/TourItineraryPreview";
 
 export function TourDetailPage() {
   const { agencySlug, tourSlug } = useParams<{ agencySlug: string; tourSlug: string }>();
@@ -45,37 +46,18 @@ export function TourDetailPage() {
   if (!tour) return <section className="section">Loading…</section>;
 
   return (
-    <section className="section" style={{ maxWidth: 900, margin: "0 auto" }}>
+    <section className="section tour-detail-page" style={{ maxWidth: 900, margin: "0 auto" }}>
       <Link to={`/agencies/${tour.agency.slug}`} className="muted">
         ← {tour.agency.name}
       </Link>
-      <h1 style={{ margin: "12px 0" }}>{tour.title}</h1>
+      <h1 className="tour-detail-title">{tour.title}</h1>
       <p className="price" style={{ fontSize: "1.25rem" }}>
         From LKR {tour.basePriceLkr.toLocaleString()}
       </p>
       {tour.seasonTag && <p className="muted">Best season: {tour.seasonTag}</p>}
       <p style={{ marginTop: 16 }}>{tour.description || tour.summary}</p>
 
-      <h2 className="section-title">Itinerary with optional add-ons</h2>
-      {tour.tourDays.map((day) => (
-        <div key={day.dayNumber} className="panel">
-          <h3>
-            Day {day.dayNumber}
-            {day.title ? ` — ${day.title}` : ""}
-          </h3>
-          <ul style={{ paddingLeft: 20 }}>
-            {day.items.map((item, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>
-                <strong>{item.entity?.name || item.label}</strong>
-                <span className="muted"> · {item.kind.toLowerCase()}</span>
-                {item.priceLkr != null && (
-                  <span className="price"> — LKR {item.priceLkr.toLocaleString()}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      <TourItineraryPreview days={tour.tourDays} />
 
       <Link
         to={

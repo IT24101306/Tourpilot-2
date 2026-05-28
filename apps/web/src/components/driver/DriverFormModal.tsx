@@ -61,7 +61,10 @@ export function DriverFormModal({
             ×
           </button>
         </div>
-        <p className="dialog-sub muted">Add driver profile details for trip assignment.</p>
+        <p className="dialog-sub muted">
+          A TourPilot login is created automatically from the phone number. The driver only needs
+          to open Login, enter this number, and verify OTP — no separate signup.
+        </p>
 
         <form onSubmit={onSubmit}>
           <div className="entity-form-grid">
@@ -83,12 +86,13 @@ export function DriverFormModal({
                 placeholder="B321-9845"
               />
             </Field>
-            <Field label="Phone">
+            <Field label="Phone (required)">
               <input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setField("phone", e.target.value)}
-                placeholder="0772459032"
+                placeholder="+94771234567"
+                required
               />
             </Field>
             <Field label="Vehicle">
@@ -117,7 +121,11 @@ export function DriverFormModal({
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving || !form.name.trim()}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving || !form.name.trim() || !form.phone.trim()}
+            >
               {saving ? "Saving…" : "Save Driver"}
             </button>
           </div>

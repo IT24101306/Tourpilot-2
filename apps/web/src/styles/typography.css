@@ -1,0 +1,174 @@
+/**
+ * TourPilot typography
+ * Display — editorial elegance (public heroes, dream itineraries)
+ * Heading — modern UI titles (nav, modules, dashboards)
+ * Body — crisp readable copy (forms, lists, dense UI)
+ */
+
+:root {
+  --font-display: "Cormorant Garamond", "Georgia", "Times New Roman", serif;
+  --font-heading: "Outfit", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* —— Public site & tourist journeys —— */
+
+.shell {
+  font-family: var(--font-body);
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+.shell .topbar--site .brand,
+.topbar--site .brand,
+.agency-display .topbar--site .brand {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.shell .topbar--site .nav,
+.agency-display .topbar--site .nav {
+  font-family: var(--font-heading);
+  font-weight: 500;
+}
+
+.shell .section-title,
+.shell .module-title,
+.hero-image h1,
+.auth-page .hero-image h1,
+.module-itinerary .module-title,
+.module-guided .module-title,
+.module-discovery .module-title,
+.itin-dream .itin-hero-title,
+.itin-dream .itin-day-title,
+.disc-section-head .section-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+}
+
+.hero-image h1,
+.auth-page .hero-image h1 {
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+}
+
+.hero-image--landing .hero-image-lead {
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.shell .section-title {
+  font-size: clamp(1.65rem, 3vw, 2.1rem);
+  line-height: 1.15;
+}
+
+.disc-agency-body h3,
+.partner-tour-body h3,
+.cat-tour-card h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.disc-offer-card h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+/* Agency public storefront */
+.agency-display {
+  font-family: var(--font-body);
+}
+
+.agency-display-hero h1,
+.agency-display-section-head h2,
+.agency-display-logo-fallback {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.agency-display-logo-fallback {
+  font-family: var(--font-heading);
+  font-weight: 800;
+}
+
+.agency-package-card-body h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+/* Itinerary share — story-like headlines */
+.module-itinerary .itin-moment-title,
+.module-itinerary .itin-summary-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+/* Guided tourist — reassuring clarity */
+.module-guided .guided-next-body strong {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+.module-guided .guided-trip-card-head h3 {
+  font-family: var(--font-heading);
+}
+
+/* Standalone public pages (outside .shell layout) */
+.tour-detail-page {
+  font-family: var(--font-body);
+}
+
+.tour-detail-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 2.85rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin: 12px 0;
+}
+
+.tour-detail-page .price {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+/* Buttons & labels — confident, not shouty */
+.shell .btn,
+.auth-page .btn {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.shell .tag,
+.disc-hero-badge,
+.module-badge {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* Dashboards — clean sans only (no serif in dense tables) */
+.agency-dashboard,
+.influencer-dashboard,
+.agent-dashboard {
+  font-family: var(--font-body);
+}
+
+.agency-dashboard .brand,
+.influencer-dashboard .brand {
+  font-family: var(--font-heading);
+  letter-spacing: 0.04em;
+}
+
+.agency-tab,
+.agency-tabs .agency-tab {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

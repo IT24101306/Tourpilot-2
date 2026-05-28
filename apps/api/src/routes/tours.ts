@@ -1,9 +1,120 @@
 import { Router } from "express";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { slugify } from "../utils/slug.js";
+
 export const toursRouter = Router();
+
+const dayPlanSchema = z.object({
+  dayNumber: z.number().int().min(1),
+  title: z.string().optional(),
+  items: z.array(
+    z.object({
+      entityId: z.string(),
+      scheduledTime: z.string().min(1),
+      sortOrder: z.number().int().default(0),
+    })
+  ),
+});
+
+const withPlanBodySchema = z.object({
+  title: z.string().min(1),
+  tourKind: z.enum(["READY_MADE", "CUSTOM"]),
+  basePriceLkr: z.number().nonnegative().optional(),
+  summary: z.string().optional(),
+  description: z.string().optional(),
+  coverUrl: z.string().optional(),
+  isPublished: z.boolean().optional(),
+  dayPlans: z.array(dayPlanSchema),
+});
+
+type TourDb = Prisma.TransactionClient | typeof prisma;
+
+async function getAgencyTour(agencyId: string, tourId: string, db: TourDb = prisma) {
+  return db.tour.findFirst({
+    where: { id: tourId, agencyId },
+    include: {
+      tourDays: {
+        orderBy: { dayNumber: "asc" },
+        include: {
+          items: {
+            orderBy: { sortOrder: "asc" },
+            include: { entity: { select: { id: true, name: true, type: true } } },
+          },
+        },
+      },
+    },
+  });
+}
+
+async function replaceTourDayPlans(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  agencyId: string,
+  tourId: string,
+  dayPlans: z.infer<typeof dayPlanSchema>[]
+) {
+  await tx.tourDay.deleteMany({ where: { tourId } });
+
+  for (const day of dayPlans) {
+    const entityIds = day.items.map((i) => i.entityId);
+    const validEntities = await tx.entity.findMany({
+      where: { agencyId, id: { in: entityIds } },
+    });
+    if (validEntities.length !== new Set(entityIds).size) {
+      throw Object.assign(new Error("One or more entities are invalid for this agency"), {
+        status: 400,
+      });
+    }
+
+    const tourDay = await tx.tourDay.create({
+      data: {
+        tourId,
+        dayNumber: day.dayNumber,
+        title: day.title ?? `Day ${day.dayNumber}`,
+      },
+    });
+
+    for (const item of day.items) {
+      const entity = validEntities.find((e) => e.id === item.entityId)!;
+      await tx.tourDayItem.create({
+        data: {
+          tourDayId: tourDay.id,
+          entityId: item.entityId,
+          scheduledTime: item.scheduledTime,
+          sortOrder: item.sortOrder,
+          label: entity.name,
+          priceLkr: entity.priceHint,
+        },
+      });
+    }
+  }
+}
+
+toursRouter.get("/admin/all", authRequired, requireRoles("ADMIN"), async (_req, res, next) => {
+  try {
+    const tours = await prisma.tour.findMany({
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        isPublished: true,
+        basePriceLkr: true,
+        agency: { select: { id: true, name: true, slug: true } },
+      },
+    });
+    res.json(
+      tours.map((t) => ({
+        ...t,
+        basePriceLkr: Number(t.basePriceLkr),
+      }))
+    );
+  } catch (e) {
+    next(e);
+  }
+});
 
 toursRouter.get("/public/:agencySlug/:tourSlug", async (req, res, next) => {
   try {
@@ -65,32 +176,26 @@ toursRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (req
   }
 });
 
+toursRouter.get("/agency/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const tour = await getAgencyTour(agency.id, req.params.id);
+    if (!tour) return res.status(404).json({ error: "Tour not found" });
+
+    res.json(serializeTourAgencyDetail(tour));
+  } catch (e) {
+    next(e);
+  }
+});
+
 toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
 
-    const body = z
-      .object({
-        title: z.string().min(1),
-        tourKind: z.enum(["READY_MADE", "CUSTOM"]),
-        basePriceLkr: z.number().nonnegative().optional(),
-        isPublished: z.boolean().optional(),
-        dayPlans: z.array(
-          z.object({
-            dayNumber: z.number().int().min(1),
-            title: z.string().optional(),
-            items: z.array(
-              z.object({
-                entityId: z.string(),
-                scheduledTime: z.string().min(1),
-                sortOrder: z.number().int().default(0),
-              })
-            ),
-          })
-        ),
-      })
-      .parse(req.body);
+    const body = withPlanBodySchema.parse(req.body);
 
     if (body.dayPlans.length === 0) {
       return res.status(400).json({ error: "Add at least one day" });
@@ -117,63 +222,164 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
           slug,
           days: dayCount,
           tourKind: body.tourKind,
-          summary: `${kindLabel} ${dayCount} day tour`,
+          summary: body.summary?.trim() || `${kindLabel} ${dayCount} day tour`,
+          description: body.description?.trim() || null,
+          coverUrl: body.coverUrl?.trim() || null,
           basePriceLkr: body.basePriceLkr ?? 0,
           isPublished: body.isPublished ?? body.tourKind === "READY_MADE",
         },
       });
 
-      for (const day of body.dayPlans) {
-        const entityIds = day.items.map((i) => i.entityId);
-        const validEntities = await tx.entity.findMany({
-          where: { agencyId: agency.id, id: { in: entityIds } },
-        });
-        if (validEntities.length !== new Set(entityIds).size) {
-          throw Object.assign(new Error("One or more entities are invalid for this agency"), {
-            status: 400,
-          });
-        }
+      await replaceTourDayPlans(tx, agency.id, created.id, body.dayPlans);
 
-        const tourDay = await tx.tourDay.create({
-          data: {
-            tourId: created.id,
-            dayNumber: day.dayNumber,
-            title: day.title ?? `Day ${day.dayNumber}`,
-          },
-        });
-
-        for (const item of day.items) {
-          const entity = validEntities.find((e) => e.id === item.entityId)!;
-          await tx.tourDayItem.create({
-            data: {
-              tourDayId: tourDay.id,
-              entityId: item.entityId,
-              scheduledTime: item.scheduledTime,
-              sortOrder: item.sortOrder,
-              label: entity.name,
-              priceLkr: entity.priceHint,
-            },
-          });
-        }
-      }
-
-      return tx.tour.findUniqueOrThrow({
-        where: { id: created.id },
-        include: {
-          tourDays: {
-            orderBy: { dayNumber: "asc" },
-            include: {
-              items: {
-                orderBy: { sortOrder: "asc" },
-                include: { entity: { select: { id: true, name: true, type: true } } },
-              },
-            },
-          },
-        },
-      });
+      const loaded = await getAgencyTour(agency.id, created.id, tx);
+      if (!loaded) throw new Error("Tour not found after create");
+      return loaded;
     });
 
     res.status(201).json(serializeTourListItem(tour));
+  } catch (e) {
+    next(e);
+  }
+});
+
+toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await getAgencyTour(agency.id, req.params.id);
+    if (!existing) return res.status(404).json({ error: "Tour not found" });
+
+    const body = withPlanBodySchema.parse(req.body);
+
+    if (body.dayPlans.length === 0) {
+      return res.status(400).json({ error: "Add at least one day" });
+    }
+    for (const day of body.dayPlans) {
+      if (day.items.length === 0) {
+        return res.status(400).json({ error: `Day ${day.dayNumber} needs at least one timed entity` });
+      }
+    }
+
+    const dayCount = body.dayPlans.length;
+    const kindLabel = body.tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
+
+    let slug = existing.slug;
+    if (slugify(body.title) !== slugify(existing.title)) {
+      slug = slugify(body.title);
+      const clash = await prisma.tour.findFirst({
+        where: { agencyId: agency.id, slug, NOT: { id: existing.id } },
+      });
+      if (clash) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+    }
+
+    const tour = await prisma.$transaction(async (tx) => {
+      await tx.tour.update({
+        where: { id: existing.id },
+        data: {
+          title: body.title.trim(),
+          slug,
+          days: dayCount,
+          tourKind: body.tourKind,
+          summary: body.summary?.trim() || `${kindLabel} ${dayCount} day tour`,
+          description: body.description?.trim() || null,
+          coverUrl: body.coverUrl?.trim() || null,
+          basePriceLkr: body.basePriceLkr ?? Number(existing.basePriceLkr),
+          ...(body.isPublished !== undefined ? { isPublished: body.isPublished } : {}),
+        },
+      });
+
+      await replaceTourDayPlans(tx, agency.id, existing.id, body.dayPlans);
+
+      const loaded = await getAgencyTour(agency.id, existing.id, tx);
+      if (!loaded) throw new Error("Tour not found after update");
+      return loaded;
+    });
+
+    res.json(serializeTourListItem(tour));
+  } catch (e) {
+    next(e);
+  }
+});
+
+toursRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.tour.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Tour not found" });
+
+    const body = z
+      .object({
+        title: z.string().min(1).optional(),
+        summary: z.string().nullable().optional(),
+        description: z.string().nullable().optional(),
+        basePriceLkr: z.number().nonnegative().optional(),
+        seasonTag: z.string().nullable().optional(),
+        districtTags: z.array(z.string()).optional(),
+        coverUrl: z.string().nullable().optional(),
+        isPublished: z.boolean().optional(),
+        tourKind: z.enum(["READY_MADE", "CUSTOM"]).optional(),
+      })
+      .parse(req.body);
+
+    let slug = existing.slug;
+    if (body.title && slugify(body.title) !== slugify(existing.title)) {
+      slug = slugify(body.title);
+      const clash = await prisma.tour.findFirst({
+        where: { agencyId: agency.id, slug, NOT: { id: existing.id } },
+      });
+      if (clash) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
+    }
+
+    const tour = await prisma.tour.update({
+      where: { id: existing.id },
+      data: {
+        ...(body.title !== undefined ? { title: body.title.trim(), slug } : {}),
+        ...(body.summary !== undefined ? { summary: body.summary } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.basePriceLkr !== undefined ? { basePriceLkr: body.basePriceLkr } : {}),
+        ...(body.seasonTag !== undefined ? { seasonTag: body.seasonTag } : {}),
+        ...(body.districtTags !== undefined ? { districtTags: body.districtTags } : {}),
+        ...(body.coverUrl !== undefined ? { coverUrl: body.coverUrl } : {}),
+        ...(body.isPublished !== undefined ? { isPublished: body.isPublished } : {}),
+        ...(body.tourKind !== undefined ? { tourKind: body.tourKind } : {}),
+      },
+      include: {
+        tourDays: {
+          orderBy: { dayNumber: "asc" },
+          include: {
+            items: {
+              orderBy: { sortOrder: "asc" },
+              include: { entity: { select: { id: true, name: true, type: true } } },
+            },
+          },
+        },
+      },
+    });
+
+    res.json(serializeTourListItem(tour));
+  } catch (e) {
+    next(e);
+  }
+});
+
+toursRouter.delete("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.tour.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Tour not found" });
+
+    await prisma.tour.delete({ where: { id: existing.id } });
+    res.status(204).send();
   } catch (e) {
     next(e);
   }
@@ -301,10 +507,15 @@ function serializeTourListItem(tour: {
   title: string;
   slug: string;
   summary: string | null;
+  description?: string | null;
   days: number;
   tourKind: string;
   basePriceLkr: unknown;
+  coverUrl?: string | null;
+  seasonTag?: string | null;
+  districtTags?: unknown;
   isPublished: boolean;
+  updatedAt?: Date;
   tourDays?: Array<{
     dayNumber: number;
     title: string | null;
@@ -320,10 +531,15 @@ function serializeTourListItem(tour: {
     title: tour.title,
     slug: tour.slug,
     summary: tour.summary,
+    description: tour.description ?? null,
     days: tour.days,
     tourKind: tour.tourKind,
     basePriceLkr: Number(tour.basePriceLkr),
+    coverUrl: tour.coverUrl ?? null,
+    seasonTag: tour.seasonTag ?? null,
+    districtTags: tour.districtTags ?? null,
     isPublished: tour.isPublished,
+    updatedAt: tour.updatedAt?.toISOString(),
     durationLabel:
       tour.summary ||
       `${tour.tourKind === "READY_MADE" ? "Ready-Made" : "Custom"} ${tour.days} Days`,
@@ -332,11 +548,16 @@ function serializeTourListItem(tour: {
       title: d.title,
       items: d.items.map((i) => ({
         scheduledTime: i.scheduledTime,
+        entityId: i.entity?.id ?? null,
         entityName: i.entity?.name ?? i.label,
         entityType: i.entity?.type,
       })),
     })),
   };
+}
+
+function serializeTourAgencyDetail(tour: Parameters<typeof serializeTourListItem>[0]) {
+  return serializeTourListItem(tour);
 }
 
 function serializeTourDetail(tour: {

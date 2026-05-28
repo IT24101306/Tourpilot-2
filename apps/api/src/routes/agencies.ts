@@ -612,64 +612,47 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
 
 
+const DEFAULT_PACKAGE_IMAGE =
+  "https://images.unsplash.com/photo-1580619305218-8423a4bb63b2?auto=format&fit=crop&w=1200&q=80";
+
 function resolvePackages(
-
   custom: DisplayPackage[],
-
   tours: {
-
     id: string;
-
     title: string;
-
     slug: string;
-
     summary: string | null;
-
     days: number;
-
     basePriceLkr: unknown;
-
     coverUrl: string | null;
-
     districtTags: unknown;
-
   }[]
-
 ): DisplayPackage[] {
+  const tourById = new Map(tours.map((t) => [t.id, t]));
 
-  if (custom.length > 0) return custom;
-
-
+  if (custom.length > 0) {
+    return custom.map((p) => {
+      const tour = p.tourId ? tourById.get(p.tourId) : undefined;
+      return {
+        ...p,
+        imageUrl: p.imageUrl?.trim() || tour?.coverUrl || DEFAULT_PACKAGE_IMAGE,
+        tourId: p.tourId || tour?.id,
+      };
+    });
+  }
 
   return tours.map((t) => {
-
     const districts = Array.isArray(t.districtTags)
-
       ? (t.districtTags as string[]).filter(Boolean)
-
       : [];
-
     return {
-
       title: t.title,
-
       location: districts[0] || `${t.days} day tour`,
-
       priceLabel: `LKR ${Number(t.basePriceLkr).toLocaleString()} / per person`,
-
-      imageUrl:
-
-        t.coverUrl ||
-
-        "https://images.unsplash.com/photo-1580619305218-8423a4bb63b2?auto=format&fit=crop&w=1200&q=80",
-
+      imageUrl: t.coverUrl || DEFAULT_PACKAGE_IMAGE,
       tourId: t.id,
-
     };
-
   });
-
 }
 
 

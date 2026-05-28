@@ -1,47 +1,94 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-
-type AgencyCard = {
-  id: string;
-  name: string;
-  slug: string;
-  tagline: string | null;
-  district: string | null;
-  avgRating: number;
-  reviewCount: number;
-  tourCount: number;
-};
+import { ModuleHeader } from "../components/module/ModuleHeader";
+import {
+  DiscoveryAgencyCard,
+  type DiscoveryAgency,
+} from "../components/discovery/DiscoveryAgencyCard";
+import { uniqueDistricts } from "../lib/discoveryUtils";
 
 export function AgenciesPage() {
-  const [agencies, setAgencies] = useState<AgencyCard[]>([]);
+  const [agencies, setAgencies] = useState<DiscoveryAgency[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [district, setDistrict] = useState("all");
 
   useEffect(() => {
-    api<AgencyCard[]>("/agencies").then(setAgencies).catch(console.error);
+    setLoading(true);
+    api<DiscoveryAgency[]>("/agencies")
+      .then(setAgencies)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
+  const districts = useMemo(() => uniqueDistricts(agencies), [agencies]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return agencies.filter((a) => {
+      if (district !== "all" && a.district !== district) return false;
+      if (!q) return true;
+      return (
+        a.name.toLowerCase().includes(q) ||
+        (a.tagline?.toLowerCase().includes(q) ?? false) ||
+        (a.district?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [agencies, query, district]);
+
   return (
-    <section className="section">
-      <h1 className="section-title">Travel agencies</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        Browse verified agencies and their ready-made tours. Every tour shows pricing upfront.
-      </p>
-      <div className="grid-3">
-        {agencies.map((a) => (
-          <Link key={a.id} to={`/agencies/${a.slug}`} className="card" style={{ textDecoration: "none" }}>
-            <div className="card-body">
-              <h3>{a.name}</h3>
-              <p className="muted">{a.district || "Sri Lanka"}</p>
-              <p className="muted">
-                ★ {a.avgRating} · {a.tourCount} tours
-              </p>
-              <span className="btn btn-primary" style={{ marginTop: 12 }}>
-                View agency
-              </span>
-            </div>
-          </Link>
-        ))}
+    <section className="section module-shell module-discovery">
+      <ModuleHeader
+        module="discovery"
+        title="Find your agency"
+        subtitle="Compare verified operators, ratings, and tour catalogs — then start planning with confidence."
+      >
+        <Link to="/register" className="btn btn-teal">
+          Sign up free
+        </Link>
+      </ModuleHeader>
+
+      <div className="disc-toolbar">
+        <input
+          type="search"
+          className="disc-search"
+          placeholder="Search by name, region, or specialty…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search agencies"
+        />
+        <select
+          className="disc-filter"
+          value={district}
+          onChange={(e) => setDistrict(e.target.value)}
+          aria-label="Filter by district"
+        >
+          <option value="all">All regions</option>
+          {districts.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
       </div>
+
+      {loading ? (
+        <p className="muted">Loading agencies…</p>
+      ) : filtered.length === 0 ? (
+        <div className="disc-empty">
+          <p>No agencies match your search.</p>
+          <button type="button" className="btn btn-ghost" onClick={() => { setQuery(""); setDistrict("all"); }}>
+            Clear filters
+          </button>
+        </div>
+      ) : (
+        <div className="disc-agency-grid">
+          {filtered.map((a, i) => (
+            <DiscoveryAgencyCard key={a.id} agency={a} featured={i === 0 && !query && district === "all"} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

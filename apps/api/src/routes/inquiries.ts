@@ -157,7 +157,11 @@ inquiriesRouter.get("/share/:token", async (req, res, next) => {
     if (!itinerary) return res.status(404).json({ error: "Not found" });
     res.json({
       ...serializeItinerary(itinerary),
-      inquiry: { id: itinerary.inquiry.id, agency: itinerary.inquiry.agency },
+      inquiry: {
+        id: itinerary.inquiry.id,
+        agency: itinerary.inquiry.agency,
+        tourist: itinerary.inquiry.tourist,
+      },
     });
   } catch (e) {
     next(e);

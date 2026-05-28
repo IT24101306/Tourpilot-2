@@ -1,24 +1,28 @@
+import { Link } from "react-router-dom";
+import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { DriverDayTimeline } from "../../components/driver/DriverDayTimeline";
 import { DEMO_SCHEDULE } from "./types";
 
 export function DriverSchedulePage() {
+  const done = DEMO_SCHEDULE.filter((s) => s.done).length;
+
   return (
-    <>
-      <div className="agency-panel-head">
-        <h2>Today Schedule</h2>
-        <p>Checklist for each ride segment.</p>
-      </div>
-      <div className="agency-list">
-        {DEMO_SCHEDULE.map((item) => (
-          <div key={item.time + item.title} className="agency-list-item">
-            <span>
-              <strong>{item.time}</strong> — {item.title}
-            </span>
-            <span className={`agency-status ${item.done ? "ok" : "warn"}`}>
-              {item.done ? "Done" : "Upcoming"}
-            </span>
-          </div>
-        ))}
-      </div>
-    </>
+    <div className="module-shell module-operations">
+      <ModuleHeader
+        module="operations"
+        title="Today's schedule"
+        subtitle="Mission control for your day — complete each segment before moving on."
+      >
+        <Link to="/dashboard/driver/tasks" className="btn btn-teal">
+          Task checklist
+        </Link>
+      </ModuleHeader>
+
+      <p className="drv-schedule-progress muted">
+        {done} of {DEMO_SCHEDULE.length} segments completed
+      </p>
+
+      <DriverDayTimeline items={DEMO_SCHEDULE} />
+    </div>
   );
 }

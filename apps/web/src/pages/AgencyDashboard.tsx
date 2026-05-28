@@ -934,6 +934,7 @@ export function AgencyDashboard() {
 
       <TourFormModal
         open={tourModalOpen}
+        mode="create"
         tourKind={tourModalKind}
         form={tourForm}
         entities={entityOptions}

@@ -96,7 +96,7 @@ export function CreateReferralCodeModal({
           <p className="display-inquiry-hint" style={{ marginBottom: 12 }}>
             Referral code created. Share this link with your audience:
           </p>
-          <div className="influencer-share-box">
+          <div className="partner-share-box">
             <code>{createdLink}</code>
           </div>
           <div className="dialog-actions" style={{ marginTop: 16 }}>

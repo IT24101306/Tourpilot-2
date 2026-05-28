@@ -10,11 +10,8 @@ import { offersRouter } from "./routes/offers.js";
 import { influencerRouter } from "./routes/influencer.js";
 import { walletRouter } from "./routes/wallet.js";
 import { adminRouter } from "./routes/admin.js";
-<<<<<<< HEAD
 import { driverRouter } from "./routes/driver.js";
-=======
 import { driversRouter } from "./routes/drivers.js";
->>>>>>> a1fb766 (Implement dashboard and API updates)
 
 export function createApp() {
   const app = express();
@@ -36,11 +33,8 @@ export function createApp() {
   app.use("/api/influencer", influencerRouter);
   app.use("/api/wallet", walletRouter);
   app.use("/api/admin", adminRouter);
-<<<<<<< HEAD
   app.use("/api/driver", driverRouter);
-=======
   app.use("/api/drivers", driversRouter);
->>>>>>> a1fb766 (Implement dashboard and API updates)
 
   app.use(
     (

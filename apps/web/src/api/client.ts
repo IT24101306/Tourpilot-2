@@ -20,10 +20,19 @@ export async function api<T>(
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
-  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new ApiError(data.error || res.statusText, res.status);
+    const errBody = await res.json().catch(() => ({}));
+    throw new ApiError(
+      (errBody as { error?: string }).error || res.statusText,
+      res.status
+    );
   }
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  const data = await res.json().catch(() => ({}));
   return data as T;
 }

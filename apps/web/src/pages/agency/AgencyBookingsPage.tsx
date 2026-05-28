@@ -1,18 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { OpsMetricStrip } from "../../components/module/OpsMetricStrip";
+import { OperationsQueue } from "../../components/module/OperationsQueue";
+import {
+  filterInquiries,
+  groupByQueue,
+  opsMetrics,
+  type OpsFilter,
+} from "./operationsUtils";
 import { AgencyInquiry, formatInquiryStatus, inquiryStatusClass } from "./types";
 
 export function AgencyBookingsPage() {
   const { token } = useAuth();
   const [inquiries, setInquiries] = useState<AgencyInquiry[]>([]);
+  const [filter, setFilter] = useState<OpsFilter>("all");
   const [selectedInquiry, setSelectedInquiry] = useState<string | null>(null);
   const [itineraryLabel, setItineraryLabel] = useState("Day 1 experience");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!token) return;
-    api<AgencyInquiry[]>("/inquiries/mine", { token }).then(setInquiries);
+    setLoading(true);
+    api<AgencyInquiry[]>("/inquiries/mine", { token })
+      .then(setInquiries)
+      .finally(() => setLoading(false));
   }, [token]);
+
+  const metrics = useMemo(() => opsMetrics(inquiries), [inquiries]);
+  const filtered = useMemo(() => filterInquiries(inquiries, filter), [inquiries, filter]);
+  const queues = useMemo(() => groupByQueue(filtered), [filtered]);
 
   async function refresh() {
     if (!token) return;
@@ -45,56 +63,121 @@ export function AgencyBookingsPage() {
   }
 
   return (
-    <>
-      <div className="agency-panel-head">
-        <h2>Bookings</h2>
-        <p>Latest reservations and their current status.</p>
-      </div>
-      {inquiries.length === 0 && <p className="muted">No bookings yet.</p>}
-      <div className="agency-list">
-        {inquiries.map((inq) => (
-          <div key={inq.id} className="agency-list-item stacked">
-            <div className="agency-list-item-main">
-              <span>
-                <strong>{inq.id.slice(-6).toUpperCase()}</strong>
-                {inq.tour ? ` | ${inq.tour.title}` : " | Custom trip"} | {inq.pax} guests
-              </span>
-              <span className={`agency-status ${inquiryStatusClass(inq.status)}`}>
-                {formatInquiryStatus(inq.status)}
-              </span>
-            </div>
-            <p className="muted" style={{ margin: "8px 0 0", fontSize: "0.88rem" }}>
-              {inq.tourist?.name} · {inq.tourist?.phone}
-              {inq.message ? ` — ${inq.message}` : ""}
-            </p>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ marginTop: 10 }}
-              onClick={() => setSelectedInquiry(inq.id)}
-            >
-              Build &amp; send itinerary
-            </button>
-            {selectedInquiry === inq.id && (
-              <div style={{ marginTop: 12 }}>
-                <input
-                  value={itineraryLabel}
-                  onChange={(e) => setItineraryLabel(e.target.value)}
-                  placeholder="Main activity label"
-                />
-                <button
-                  type="button"
-                  className="btn btn-teal"
-                  style={{ marginTop: 8 }}
-                  onClick={() => sendItinerary(inq.id)}
-                >
-                  Send itinerary to tourist
-                </button>
+    <div className="module-shell module-operations">
+      <ModuleHeader
+        module="operations"
+        title="Bookings queue"
+        subtitle="Dense, status-driven view of every trip request and what to do next."
+      />
+
+      <OpsMetricStrip
+        metrics={[
+          {
+            id: "all",
+            label: "All",
+            value: metrics.total,
+            hint: "Full pipeline",
+            active: filter === "all",
+            onClick: () => setFilter("all"),
+          },
+          {
+            id: "action",
+            label: "Needs action",
+            value: metrics.needsAction,
+            hint: "Your turn",
+            active: filter === "action",
+            onClick: () => setFilter("action"),
+          },
+          {
+            id: "today",
+            label: "Today",
+            value: metrics.today,
+            hint: "New today",
+            active: filter === "today",
+            onClick: () => setFilter("today"),
+          },
+          {
+            id: "waiting",
+            label: "Waiting",
+            value: metrics.waitingTourist,
+            hint: "On traveler",
+            active: filter === "waiting",
+            onClick: () => setFilter("waiting"),
+          },
+          {
+            id: "confirmed",
+            label: "Confirmed",
+            value: metrics.confirmed,
+            hint: "Won",
+            active: filter === "confirmed",
+            onClick: () => setFilter("confirmed"),
+          },
+        ]}
+      />
+
+      {loading ? (
+        <p className="muted">Loading bookings…</p>
+      ) : filtered.length === 0 ? (
+        <div className="ops-empty-panel">
+          <p>No bookings match this filter.</p>
+          <button type="button" className="btn btn-ghost" onClick={() => setFilter("all")}>
+            Show all
+          </button>
+        </div>
+      ) : (
+        <OperationsQueue groups={queues} bookingsPath="/dashboard/agency/bookings" />
+      )}
+
+      <section className="ops-detail-panel">
+        <div className="ops-board-head">
+          <h3>Quick actions</h3>
+          <p className="muted">Select a booking below to build and send an itinerary.</p>
+        </div>
+        <div className="agency-list">
+          {filtered.map((inq) => (
+            <div key={inq.id} className="agency-list-item stacked ops-detail-card">
+              <div className="agency-list-item-main">
+                <span>
+                  <strong>{inq.tourist?.name ?? "Traveler"}</strong>
+                  {" · "}
+                  {inq.tour?.title ?? "Custom trip"}
+                </span>
+                <span className={`agency-status ${inquiryStatusClass(inq.status)}`}>
+                  {formatInquiryStatus(inq.status)}
+                </span>
               </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </>
+              <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.88rem" }}>
+                {inq.tourist?.phone}
+                {inq.message ? ` — ${inq.message}` : ""}
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ marginTop: 10 }}
+                onClick={() => setSelectedInquiry(inq.id)}
+              >
+                Build &amp; send itinerary
+              </button>
+              {selectedInquiry === inq.id && (
+                <div className="ops-inline-form">
+                  <input
+                    value={itineraryLabel}
+                    onChange={(e) => setItineraryLabel(e.target.value)}
+                    placeholder="Main activity label"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-teal"
+                    onClick={() => sendItinerary(inq.id)}
+                  >
+                    Send itinerary to tourist
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

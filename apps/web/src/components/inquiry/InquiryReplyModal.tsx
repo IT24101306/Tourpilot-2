@@ -175,7 +175,7 @@ export function InquiryReplyModal({
   function openCustomModal(existing?: DraftCustom) {
     if (existing) {
       setEditingCustomKey(existing.key);
-      setCustomForm({ title: existing.title, days: defaultTourForm().days });
+      setCustomForm({ ...defaultTourForm(), title: existing.title });
       setCustomFormStatus("Re-build this custom tour using the planner below, then save to replace it.");
     } else {
       setEditingCustomKey(null);
@@ -429,6 +429,7 @@ export function InquiryReplyModal({
 
       <TourFormModal
         open={customModalOpen}
+        mode="create"
         tourKind="CUSTOM"
         form={customForm}
         entities={entities}

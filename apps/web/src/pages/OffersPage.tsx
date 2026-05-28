@@ -1,26 +1,25 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-
-type Offer = {
-  id: string;
-  title: string;
-  description: string | null;
-  rewardText: string;
-  tourPriceLkr: number;
-  discountedLkr: number | null;
-  spotsLeft: number;
-  registeredCount: number;
-  validUntil: string;
-};
+import { ModuleHeader } from "../components/module/ModuleHeader";
+import {
+  DiscoveryOfferCard,
+  type DiscoveryOffer,
+} from "../components/discovery/DiscoveryOfferCard";
 
 export function OffersPage() {
-  const { token } = useAuth();
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const { token, user } = useAuth();
+  const [offers, setOffers] = useState<DiscoveryOffer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    api<Offer[]>("/offers/active").then(setOffers).catch(console.error);
+    setLoading(true);
+    api<DiscoveryOffer[]>("/offers/active")
+      .then(setOffers)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   async function register(offerId: string) {
@@ -30,8 +29,8 @@ export function OffersPage() {
     }
     try {
       await api(`/offers/${offerId}/register`, { method: "POST", token });
-      setMsg("Registered successfully!");
-      const refreshed = await api<Offer[]>("/offers/active");
+      setMsg("You are registered — your agency will follow up.");
+      const refreshed = await api<DiscoveryOffer[]>("/offers/active");
       setOffers(refreshed);
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Registration failed");
@@ -39,40 +38,42 @@ export function OffersPage() {
   }
 
   return (
-    <section className="section">
-      <h1 className="section-title">Loyalty & offers</h1>
-      <p className="muted">Tour prices are always shown. Limited spots with countdown.</p>
-      {msg && <p style={{ fontWeight: 700 }}>{msg}</p>}
-      <div className="grid-3">
-        {offers.map((o) => {
-          const ends = new Date(o.validUntil).getTime() - Date.now();
-          const daysLeft = Math.max(0, Math.ceil(ends / (1000 * 60 * 60 * 24)));
-          return (
-            <div key={o.id} className="card">
-              <div className="card-body">
-                <h3>{o.title}</h3>
-                <p className="muted">{o.description}</p>
-                <p>
-                  <strong>{o.rewardText}</strong>
-                </p>
-                <p className="price">
-                  LKR {o.tourPriceLkr.toLocaleString()}
-                  {o.discountedLkr != null && (
-                    <span className="muted"> → LKR {o.discountedLkr.toLocaleString()}</span>
-                  )}
-                </p>
-                <p className="countdown" style={{ color: "var(--green)" }}>
-                  {daysLeft}d left · {o.spotsLeft} spots left
-                </p>
-                <p className="muted">{o.registeredCount} registered</p>
-                <button type="button" className="btn btn-primary" onClick={() => register(o.id)}>
-                  Register
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <section className="section module-shell module-discovery">
+      <ModuleHeader
+        module="discovery"
+        title="Limited offers"
+        subtitle="Transparent tour pricing with rewards and countdown — no hidden surprises."
+      >
+        {!user && (
+          <Link to="/login" className="btn btn-teal">
+            Log in to register
+          </Link>
+        )}
+      </ModuleHeader>
+
+      {msg && <p className="disc-status-msg">{msg}</p>}
+
+      {loading ? (
+        <p className="muted">Loading offers…</p>
+      ) : offers.length === 0 ? (
+        <div className="disc-empty">
+          <p>No active offers right now. Check back soon or browse agencies.</p>
+          <Link to="/agencies" className="btn btn-primary">
+            Explore agencies
+          </Link>
+        </div>
+      ) : (
+        <div className="disc-offer-grid">
+          {offers.map((o) => (
+            <DiscoveryOfferCard
+              key={o.id}
+              offer={o}
+              onRegister={token ? () => register(o.id) : undefined}
+              registerLabel={token ? "Register for offer" : "Log in to register"}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
