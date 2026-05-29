@@ -872,6 +872,25 @@
   color: var(--green-dark);
 }
 
+.driver-lookup-hint {
+  margin: -4px 0 0;
+  font-size: 0.82rem;
+  color: var(--green-dark);
+}
+
+.driver-lookup-error {
+  margin: -4px 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #b42318;
+}
+
+.input-readonly {
+  background: #f4f6f5;
+  color: var(--ink-muted, #5a6b65);
+  cursor: not-allowed;
+}
+
 .driver-status-select {
   border: 1px solid var(--line);
   border-radius: 8px;

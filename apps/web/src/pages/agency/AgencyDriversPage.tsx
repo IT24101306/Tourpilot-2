@@ -83,7 +83,9 @@ export function AgencyDriversPage() {
 
   async function saveDriver(e: FormEvent) {
     e.preventDefault();
-    if (!token || !driverForm.name.trim()) return;
+    if (!token || !driverForm.phone.trim()) return;
+    if (!driverForm.profileLocked && !driverForm.name.trim()) return;
+    if (driverForm.lookupError) return;
 
     setDriverSaving(true);
     setDriverStatus("");
@@ -299,6 +301,7 @@ export function AgencyDriversPage() {
         form={driverForm}
         status={driverStatus}
         saving={driverSaving}
+        token={token}
         onClose={() => setDriverModalOpen(false)}
         onChange={setDriverForm}
         onSubmit={saveDriver}

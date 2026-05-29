@@ -301,6 +301,69 @@ driversRouter.get("/agency/assignments", authRequired, requireRoles("AGENCY"), a
   }
 });
 
+/** Agency: look up an existing platform driver by phone before adding to roster. */
+driversRouter.get(
+  "/agency/lookup-by-phone",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const phone = toStoredPhone(String(req.query.phone || ""));
+      if (!isValidInternationalPhone(phone)) {
+        return res.json({ found: false, invalidPhone: true });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { phone },
+        include: {
+          driverProfile: true,
+          agencyDriver: { include: { agency: { select: { id: true, name: true } } } },
+        },
+      });
+
+      if (!user) {
+        return res.json({ found: false });
+      }
+
+      if (user.role !== "DRIVER") {
+        return res.json({
+          found: true,
+          locked: false,
+          conflict: "wrong_role",
+          message: "This phone is already used by another account type.",
+        });
+      }
+
+      const alreadyOnRoster = user.agencyDriver?.agencyId === agency.id;
+      const linkedToOtherAgency = Boolean(
+        user.agencyDriver && user.agencyDriver.agencyId !== agency.id
+      );
+
+      return res.json({
+        found: true,
+        locked: true,
+        alreadyOnRoster,
+        linkedToOtherAgency,
+        otherAgencyName: linkedToOtherAgency ? user.agencyDriver!.agency.name : null,
+        name: user.name,
+        phone: user.phone,
+        licenseNo: user.driverProfile?.licenseNo ?? "",
+        vehicle: user.driverProfile?.vehicle ?? "",
+        message: alreadyOnRoster
+          ? "This driver is already on your roster."
+          : linkedToOtherAgency
+            ? `This driver is already linked to ${user.agencyDriver!.agency.name}.`
+            : "Existing driver — profile details are filled automatically.",
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 driversRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
@@ -722,30 +785,52 @@ driversRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, n
         throw Object.assign(new Error("This driver is already on your roster"), { status: 409 });
       }
 
-      const { userId, created } = await ensureDriverUserAccount(tx, {
-        name: body.name,
-        phone: body.phone,
-        licenseNo,
-        vehicle,
-        status: body.status,
+      const existingUser = await tx.user.findUnique({
+        where: { phone },
+        include: { driverProfile: true, agencyDriver: true },
       });
 
-      const otherAgency = await tx.agencyDriver.findUnique({ where: { userId } });
-      if (otherAgency && otherAgency.agencyId !== agency.id) {
+      if (existingUser?.role && existingUser.role !== "DRIVER") {
+        throw Object.assign(
+          new Error("This phone is already used by another account type. Use a different number."),
+          { status: 409 }
+        );
+      }
+
+      if (
+        existingUser?.agencyDriver &&
+        existingUser.agencyDriver.agencyId !== agency.id
+      ) {
         throw Object.assign(
           new Error("This driver is already linked to another agency"),
           { status: 409 }
         );
       }
 
+      const { userId, created } = await ensureDriverUserAccount(tx, {
+        name: existingUser?.name ?? body.name,
+        phone: body.phone,
+        licenseNo: existingUser?.driverProfile?.licenseNo ?? licenseNo,
+        vehicle: existingUser?.driverProfile?.vehicle ?? vehicle,
+        status: body.status,
+      });
+
+      const userWithProfile = await tx.user.findUnique({
+        where: { id: userId },
+        include: { driverProfile: true },
+      });
+      if (!userWithProfile) {
+        throw Object.assign(new Error("Driver account could not be loaded"), { status: 500 });
+      }
+
       const driver = await tx.agencyDriver.create({
         data: {
           agencyId: agency.id,
           userId,
-          name: body.name.trim(),
+          name: userWithProfile.name,
           phone,
-          licenseNo,
-          vehicle,
+          licenseNo: userWithProfile.driverProfile?.licenseNo ?? licenseNo ?? null,
+          vehicle: userWithProfile.driverProfile?.vehicle ?? vehicle ?? null,
           status: body.status,
         },
       });

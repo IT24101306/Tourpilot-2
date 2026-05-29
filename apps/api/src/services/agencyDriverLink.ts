@@ -55,18 +55,9 @@ export async function ensureDriverUserAccount(
         metadata: {},
       },
       update: {
-        licenseNo: input.licenseNo ?? undefined,
-        vehicle: input.vehicle ?? undefined,
         status: profileStatusFromAgency(input.status),
       },
     });
-
-    if (existing.name !== input.name.trim()) {
-      await tx.user.update({
-        where: { id: existing.id },
-        data: { name: input.name.trim() },
-      });
-    }
 
     return { userId: existing.id, created: false };
   }
