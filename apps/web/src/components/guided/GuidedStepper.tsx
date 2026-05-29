@@ -7,7 +7,8 @@ export function GuidedStepper({ status }: Props) {
   const terminal = status === "DECLINED" || status === "EXPIRED";
 
   return (
-    <ol className="guided-stepper" aria-label="Your trip progress">
+    <div className="guided-stepper-wrap">
+      <ol className="guided-stepper" aria-label="Your trip progress">
       {GUIDED_STEPS.map((step, i) => {
         const done = i < active || (i === 4 && status === "ACCEPTED");
         const current = i === active;
@@ -21,6 +22,7 @@ export function GuidedStepper({ status }: Props) {
           </li>
         );
       })}
-    </ol>
+      </ol>
+    </div>
   );
 }

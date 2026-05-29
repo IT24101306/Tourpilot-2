@@ -443,6 +443,7 @@ export function InquiryReplyModal({
         }}
         onChange={setCustomForm}
         onSubmit={saveCustomToProposal}
+        uploadToken={token}
       />
     </>
   );

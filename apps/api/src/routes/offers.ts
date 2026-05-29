@@ -1,14 +1,25 @@
 import { Router } from "express";
 import { z } from "zod";
+import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+import { optionalImageUrlSchema } from "../lib/imageUrlSchema.js";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
 
 export const offersRouter = Router();
 
+/** Offer image → linked tour cover → verified stock default (skips invalid stored URLs). */
+function resolveOfferImageUrl(
+  offerImageUrl: string | null | undefined,
+  tourCoverUrl: string | null | undefined
+) {
+  return resolveImageUrl(offerImageUrl, resolveImageUrl(tourCoverUrl, DEFAULT_TOUR_COVER_URL));
+}
+
 function serializeOfferAdmin(o: {
   id: string;
   title: string;
   description: string | null;
+  imageUrl: string | null;
   rewardText: string;
   registrationCap: number;
   validFrom: Date;
@@ -23,6 +34,7 @@ function serializeOfferAdmin(o: {
     id: o.id,
     title: o.title,
     description: o.description,
+    imageUrl: o.imageUrl,
     rewardText: o.rewardText,
     registrationCap: o.registrationCap,
     validFrom: o.validFrom,
@@ -40,6 +52,7 @@ function serializeActiveOffer(o: {
   id: string;
   title: string;
   description: string | null;
+  imageUrl: string | null;
   rewardText: string;
   registrationCap: number;
   validUntil: Date;
@@ -51,11 +64,14 @@ function serializeActiveOffer(o: {
       id: string;
       title: string;
       slug: string;
+      coverUrl: string | null;
       basePriceLkr: unknown;
       agency: { name: string; slug: string };
     };
   }>;
 }) {
+  const primary = o.tours[0]?.tour;
+
   return {
     id: o.id,
     title: o.title,
@@ -67,6 +83,11 @@ function serializeActiveOffer(o: {
     discountedLkr: o.discountedLkr != null ? Number(o.discountedLkr) : null,
     spotsLeft: Math.max(0, o.registrationCap - o._count.registrations),
     registeredCount: o._count.registrations,
+    imageUrl: resolveOfferImageUrl(o.imageUrl, primary?.coverUrl),
+    offerImageUrl: o.imageUrl,
+    agencyName: primary?.agency.name ?? null,
+    agencySlug: primary?.agency.slug ?? null,
+    tourSlug: primary?.slug ?? null,
     tours: o.tours.map((t) => ({
       ...t.tour,
       basePriceLkr: Number(t.tour.basePriceLkr),
@@ -81,7 +102,20 @@ offersRouter.get("/active", async (_req, res, next) => {
     const offers = await prisma.offer.findMany({
       where: { isActive: true, validFrom: { lte: now }, validUntil: { gte: now } },
       include: {
-        tours: { include: { tour: { include: { agency: { select: { name: true, slug: true } } } } } },
+        tours: {
+          include: {
+            tour: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                coverUrl: true,
+                basePriceLkr: true,
+                agency: { select: { name: true, slug: true } },
+              },
+            },
+          },
+        },
         _count: { select: { registrations: true } },
       },
       orderBy: { validUntil: "asc" },
@@ -101,7 +135,20 @@ offersRouter.get("/ending-soon", async (req, res, next) => {
     const offers = await prisma.offer.findMany({
       where: { isActive: true, validFrom: { lte: now }, validUntil: { gte: now } },
       include: {
-        tours: { include: { tour: { include: { agency: { select: { name: true, slug: true } } } } } },
+        tours: {
+          include: {
+            tour: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                coverUrl: true,
+                basePriceLkr: true,
+                agency: { select: { name: true, slug: true } },
+              },
+            },
+          },
+        },
         _count: { select: { registrations: true } },
       },
       orderBy: { validUntil: "asc" },
@@ -169,6 +216,7 @@ offersRouter.post("/", authRequired, requireRoles("ADMIN"), async (req, res, nex
       .object({
         title: z.string(),
         description: z.string().optional(),
+        imageUrl: optionalImageUrlSchema,
         rewardText: z.string(),
         registrationCap: z.number().int().positive(),
         validFrom: z.string().datetime(),
@@ -192,6 +240,7 @@ offersRouter.post("/", authRequired, requireRoles("ADMIN"), async (req, res, nex
       data: {
         title: body.title,
         description: body.description,
+        imageUrl: body.imageUrl,
         rewardText: body.rewardText,
         registrationCap: body.registrationCap,
         validFrom,
@@ -202,7 +251,14 @@ offersRouter.post("/", authRequired, requireRoles("ADMIN"), async (req, res, nex
       },
     });
 
-    res.status(201).json(offer);
+    const withMeta = await prisma.offer.findUniqueOrThrow({
+      where: { id: offer.id },
+      include: {
+        tours: { select: { tourId: true } },
+        _count: { select: { registrations: true } },
+      },
+    });
+    res.status(201).json(serializeOfferAdmin(withMeta));
   } catch (e) {
     next(e);
   }
@@ -215,6 +271,7 @@ offersRouter.patch("/:id", authRequired, requireRoles("ADMIN"), async (req, res,
       .object({
         title: z.string().optional(),
         description: z.string().nullable().optional(),
+        imageUrl: optionalImageUrlSchema.optional(),
         rewardText: z.string().optional(),
         registrationCap: z.number().int().positive().optional(),
         validFrom: z.string().datetime().optional(),
@@ -269,6 +326,7 @@ offersRouter.patch("/:id", authRequired, requireRoles("ADMIN"), async (req, res,
         data: {
           ...(body.title !== undefined ? { title: body.title } : {}),
           ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
           ...(body.rewardText !== undefined ? { rewardText: body.rewardText } : {}),
           ...(body.registrationCap !== undefined ? { registrationCap: body.registrationCap } : {}),
           ...(body.validFrom !== undefined ? { validFrom: nextValidFrom } : {}),

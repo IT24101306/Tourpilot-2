@@ -405,6 +405,7 @@ export function AgencyToursPage() {
         onClose={() => setModalOpen(false)}
         onChange={setTourForm}
         onSubmit={saveTour}
+        uploadToken={token}
       />
     </div>
   );

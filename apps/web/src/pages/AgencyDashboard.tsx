@@ -944,6 +944,7 @@ export function AgencyDashboard() {
         onClose={() => setTourModalOpen(false)}
         onChange={setTourForm}
         onSubmit={saveTour}
+        uploadToken={token}
       />
 
       <EntityFormModal

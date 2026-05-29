@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { toStoredPhone } from "@tourpilot/shared";
+import { MEDIA, toStoredPhone } from "@tourpilot/shared";
 import { hashPassword } from "../src/services/password.js";
 
 const prisma = new PrismaClient();
@@ -50,9 +50,16 @@ async function main() {
     },
   });
 
+  const demoGallery = [
+    { url: MEDIA.tourCover, label: "Reef & coast" },
+    { url: MEDIA.cultural, label: "Island trails" },
+    { url: MEDIA.coast, label: "South coast" },
+    { url: MEDIA.nature, label: "Wild Sri Lanka" },
+  ];
+
   const agency = await prisma.agency.upsert({
     where: { ownerId: agencyUser.id },
-    update: {},
+    update: { gallery: demoGallery },
     create: {
       ownerId: agencyUser.id,
       name: "Ceylon Trails",
@@ -64,32 +71,7 @@ async function main() {
       avgRating: 4.8,
       reviewCount: 124,
       contactPhone: agencyPhone,
-      gallery: [
-        {
-          url: "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
-          label: "Sand Morning",
-        },
-        {
-          url: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
-          label: "Camp Night",
-        },
-        {
-          url: "https://images.unsplash.com/photo-1464822759021-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80",
-          label: "Nomad Route",
-        },
-        {
-          url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a72fe8?auto=format&fit=crop&w=1200&q=80",
-          label: "Warm Horizon",
-        },
-        {
-          url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80",
-          label: "Red Canyon",
-        },
-        {
-          url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80",
-          label: "Wild Trail",
-        },
-      ],
+      gallery: demoGallery,
       pageConfig: {
         sections: [
           { type: "hero", title: "Ceylon Trails", subtitle: "Handcrafted island itineraries" },
@@ -127,8 +109,7 @@ async function main() {
             "5+ years of island travel experience",
           ],
           ctaLabel: "Plan your trip",
-          featuredImageUrl:
-            "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+          featuredImageUrl: MEDIA.hero,
           featuredQuote:
             "We expected sand and silence. We found peace, stars, and people who love what they do.",
           packages: [],
@@ -167,8 +148,7 @@ async function main() {
             "5+ years of island travel experience",
           ],
           ctaLabel: "Plan your trip",
-          featuredImageUrl:
-            "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+          featuredImageUrl: MEDIA.hero,
           featuredQuote:
             "We expected sand and silence. We found peace, stars, and people who love what they do.",
           packages: [],
@@ -237,7 +217,7 @@ async function main() {
 
   const tour1 = await prisma.tour.upsert({
     where: { agencyId_slug: { agencyId: agency.id, slug: "cultural-triangle-escape" } },
-    update: {},
+    update: { coverUrl: MEDIA.cultural },
     create: {
       agencyId: agency.id,
       title: "Cultural Triangle Escape",
@@ -247,15 +227,14 @@ async function main() {
       basePriceLkr: 89500,
       seasonTag: "Year-round",
       districtTags: ["Cultural Triangle"],
-      coverUrl:
-        "https://images.unsplash.com/photo-1580619305218-8423a4bb63b2?auto=format&fit=crop&w=1200&q=80",
+      coverUrl: MEDIA.cultural,
       isPublished: true,
     },
   });
 
   const tour2 = await prisma.tour.upsert({
     where: { agencyId_slug: { agencyId: agency.id, slug: "south-coast-slow" } },
-    update: {},
+    update: { coverUrl: MEDIA.coast },
     create: {
       agencyId: agency.id,
       title: "South Coast Slow Travel",
@@ -265,8 +244,7 @@ async function main() {
       basePriceLkr: 142000,
       seasonTag: "Nov–Apr best",
       districtTags: ["Galle", "Mirissa"],
-      coverUrl:
-        "https://images.unsplash.com/photo-1559128805-8c308fd483e6?auto=format&fit=crop&w=1200&q=80",
+      coverUrl: MEDIA.coast,
       isPublished: true,
     },
   });
@@ -460,6 +438,7 @@ async function main() {
     data: {
       title: "Early Bird Cultural Triangle",
       description: "Register before slots fill — price shown for transparency.",
+      imageUrl: MEDIA.cultural,
       rewardText: "LKR 5,000 off your booking",
       registrationCap: 100,
       validFrom: new Date(),

@@ -1,0 +1,102 @@
+import { Link } from "react-router-dom";
+import type { AdminStats } from "../../pages/admin/types";
+import { AdminHubIcon } from "./AdminHubIcon";
+import { HUB_SECTIONS } from "./adminHubConfig";
+
+type Kpi = {
+  id: string;
+  label: string;
+  value: number;
+  hint: string;
+  tone?: "default" | "accent" | "warn";
+};
+
+type Props = {
+  stats: AdminStats;
+  userTotal: number;
+};
+
+export function AdminCommandHub({ stats, userTotal }: Props) {
+  const openInquiries =
+    (stats.inquiries.NEW ?? 0) + (stats.inquiries.AGENCY_REVIEWING ?? 0) + (stats.inquiries.ITINERARY_DRAFT ?? 0);
+  const pendingCommissions = stats.commissions.PENDING ?? 0;
+
+  const kpis: Kpi[] = [
+    { id: "users", label: "Total users", value: userTotal, hint: "All roles on platform" },
+    {
+      id: "pending",
+      label: "Pending agencies",
+      value: stats.pendingAgencies,
+      hint: "Awaiting your review",
+      tone: stats.pendingAgencies > 0 ? "warn" : "default",
+    },
+    {
+      id: "inquiries",
+      label: "Open inquiries",
+      value: openInquiries,
+      hint: "Pre-confirmation pipeline",
+      tone: openInquiries > 0 ? "accent" : "default",
+    },
+    {
+      id: "comm",
+      label: "Pending commissions",
+      value: pendingCommissions,
+      hint: "Partner payouts",
+      tone: pendingCommissions > 0 ? "warn" : "default",
+    },
+  ];
+
+  return (
+    <div className="gov-command">
+      <div className="gov-kpi-row" role="list">
+        {kpis.map((k) => (
+          <div
+            key={k.id}
+            role="listitem"
+            className={`gov-kpi-card gov-kpi-card--${k.tone ?? "default"}`}
+          >
+            <span className="gov-kpi-value">{k.value.toLocaleString()}</span>
+            <span className="gov-kpi-label">{k.label}</span>
+            <span className="gov-kpi-hint">{k.hint}</span>
+          </div>
+        ))}
+      </div>
+
+      {HUB_SECTIONS.map((section) => (
+        <section key={section.title} className="gov-hub-section">
+          <h3 className="gov-hub-section-title">{section.title}</h3>
+          <div className="gov-hub-module-grid">
+            {section.modules.map((mod) => {
+              const statVal = mod.stat?.(stats);
+              const showBadge = statVal !== undefined && Number(statVal) > 0;
+              const isPendingAgency = mod.id === "agencies" && stats.pendingAgencies > 0;
+
+              return (
+                <Link
+                  key={mod.id}
+                  to={mod.to}
+                  className={`gov-module-card${isPendingAgency ? " gov-module-card--attention" : ""}`}
+                >
+                  <div className="gov-module-card-top">
+                    <AdminHubIcon icon={mod.icon} />
+                    {showBadge && (
+                      <span className="gov-module-badge">{String(statVal)}</span>
+                    )}
+                  </div>
+                  <div className="gov-module-card-body">
+                    <span className="gov-module-category">{mod.category}</span>
+                    <strong className="gov-module-title">{mod.title}</strong>
+                    <p className="gov-module-desc">{mod.description}</p>
+                  </div>
+                  <span className="gov-module-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}

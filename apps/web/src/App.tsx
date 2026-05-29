@@ -31,7 +31,16 @@ import { InfluencerToursPage } from "./pages/influencer/InfluencerToursPage";
 import { InfluencerCodesPage } from "./pages/influencer/InfluencerCodesPage";
 import { InfluencerCommissionsPage } from "./pages/influencer/InfluencerCommissionsPage";
 import { InfluencerGuidePage } from "./pages/influencer/InfluencerGuidePage";
-import { AdminDashboard } from "./pages/AdminDashboard";
+import { AdminOverviewPage } from "./pages/admin/AdminOverviewPage";
+import { AdminAgenciesPage } from "./pages/admin/AdminAgenciesPage";
+import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
+import { AdminToursPage } from "./pages/admin/AdminToursPage";
+import { AdminInquiriesPage } from "./pages/admin/AdminInquiriesPage";
+import { AdminCommissionsPage } from "./pages/admin/AdminCommissionsPage";
+import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
+import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
+import { AdminDriversPage } from "./pages/admin/AdminDriversPage";
+import { AdminCmsPage } from "./pages/admin/AdminCmsPage";
 import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
@@ -69,6 +78,22 @@ export default function App() {
                 </Protected>
               }
             />
+            <Route
+              path="trips"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <TouristTripsPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="trips/:inquiryId"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <TouristTripRoomPage />
+                </Protected>
+              }
+            />
           </Route>
 
           <Route path="login" element={<LoginPage />} />
@@ -77,23 +102,6 @@ export default function App() {
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
           <Route path="tours/:agencySlug/:tourSlug" element={<TourDetailPage />} />
           <Route path="itinerary/:shareToken" element={<ItinerarySharePage />} />
-
-          <Route
-            path="trips"
-            element={
-              <Protected roles={["TOURIST"]}>
-                <TouristTripsPage />
-              </Protected>
-            }
-          />
-          <Route
-            path="trips/:inquiryId"
-            element={
-              <Protected roles={["TOURIST"]}>
-                <TouristTripRoomPage />
-              </Protected>
-            }
-          />
 
           <Route
             path="dashboard/agency"
@@ -155,8 +163,17 @@ export default function App() {
               </Protected>
             }
           >
-            <Route index element={<AdminDashboard />} />
+            <Route index element={<AdminOverviewPage />} />
+            <Route path="agencies" element={<AdminAgenciesPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="inquiries" element={<AdminInquiriesPage />} />
+            <Route path="tours" element={<AdminToursPage />} />
+            <Route path="commissions" element={<AdminCommissionsPage />} />
+            <Route path="ledger" element={<AdminLedgerPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
+            <Route path="drivers" element={<AdminDriversPage />} />
+            <Route path="cms" element={<AdminCmsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

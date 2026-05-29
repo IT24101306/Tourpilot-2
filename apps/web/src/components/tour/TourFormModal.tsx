@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ImageUrlField } from "../ImageUrlField";
 import {
   createDayPlan,
   createEntry,
@@ -24,6 +25,7 @@ type Props = {
   onClose: () => void;
   onChange: (next: TourFormState) => void;
   onSubmit: (e: FormEvent) => void;
+  uploadToken?: string | null;
 };
 
 export function TourFormModal({
@@ -38,6 +40,7 @@ export function TourFormModal({
   onClose,
   onChange,
   onSubmit,
+  uploadToken,
 }: Props) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -159,14 +162,12 @@ export function TourFormModal({
                 placeholder="89500"
               />
             </FormField>
-            <FormField label="Cover image URL">
-              <input
-                type="url"
-                value={form.coverUrl}
-                onChange={(e) => onChange({ ...form, coverUrl: e.target.value })}
-                placeholder="https://…"
-              />
-            </FormField>
+            <ImageUrlField
+              label="Cover image"
+              value={form.coverUrl}
+              onChange={(coverUrl) => onChange({ ...form, coverUrl })}
+              token={uploadToken}
+            />
           </div>
 
           <FormField label="Short summary" full>

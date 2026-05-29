@@ -117,25 +117,25 @@ export function TripRoomView({
 
   const shellClass =
     role === "TOURIST"
-      ? "module-shell module-guided module-negotiation"
-      : "module-shell module-negotiation";
+      ? "section trip-room-page module-shell module-guided module-negotiation"
+      : "section trip-room-page module-shell module-negotiation";
 
   if (loading) {
     return (
-      <div className={shellClass}>
+      <section className={shellClass}>
         <p className="muted">Opening trip room…</p>
-      </div>
+      </section>
     );
   }
 
   if (error || !inquiry) {
     return (
-      <div className={shellClass}>
+      <section className={shellClass}>
         <p className="form-error">{error || "Trip not found"}</p>
         <Link to={backTo} className="btn btn-ghost">
           {backLabel}
         </Link>
-      </div>
+      </section>
     );
   }
 
@@ -147,7 +147,7 @@ export function TripRoomView({
   const canRespond = role === "TOURIST" && RESPONDABLE.has(inquiry.status) && inquiry.proposal;
 
   return (
-    <div className={shellClass}>
+    <section className={shellClass}>
       <ModuleHeader
         module={role === "TOURIST" ? "guided" : "negotiation"}
         title={
@@ -169,28 +169,29 @@ export function TripRoomView({
         )}
       </ModuleHeader>
 
-      {role === "TOURIST" ? (
-        <>
-          <GuidedNextBanner status={inquiry.status} hasProposal={!!inquiry.proposal} />
-          <GuidedStepper status={inquiry.status} />
-        </>
-      ) : (
-        <NegotiationStepper status={inquiry.status} />
-      )}
+      <div className="trip-room-surface">
+        {role === "TOURIST" ? (
+          <>
+            <GuidedNextBanner status={inquiry.status} hasProposal={!!inquiry.proposal} />
+            <GuidedStepper status={inquiry.status} />
+          </>
+        ) : (
+          <NegotiationStepper status={inquiry.status} />
+        )}
 
-      <div className="neg-trip-meta">
-        <span className={`agency-status ${inquiryStatusClass(inquiry.status)}`}>
-          {formatInquiryStatus(inquiry.status)}
-        </span>
-        <span className="muted">
-          {inquiry.pax} traveler{inquiry.pax === 1 ? "" : "s"}
-          {inquiry.tour?.title ? ` · ${inquiry.tour.title}` : " · Custom trip"}
-        </span>
-      </div>
+        <div className="neg-trip-meta">
+          <span className={`agency-status ${inquiryStatusClass(inquiry.status)}`}>
+            {formatInquiryStatus(inquiry.status)}
+          </span>
+          <span className="muted">
+            {inquiry.pax} traveler{inquiry.pax === 1 ? "" : "s"}
+            {inquiry.tour?.title ? ` · ${inquiry.tour.title}` : " · Custom trip"}
+          </span>
+        </div>
 
-      {actionStatus && <p className="neg-action-status">{actionStatus}</p>}
+        {actionStatus && <p className="neg-action-status">{actionStatus}</p>}
 
-      <div className="neg-trip-room-grid">
+        <div className="neg-trip-room-grid">
         <section className="neg-panel neg-panel--chat">
           <h3 className="neg-panel-title">Conversation</h3>
           <p className="neg-panel-hint">Ask questions and refine the plan together.</p>
@@ -286,6 +287,7 @@ export function TripRoomView({
             </div>
           )}
         </section>
+        </div>
       </div>
 
       {role === "AGENCY" && (
@@ -302,6 +304,6 @@ export function TripRoomView({
           }}
         />
       )}
-    </div>
+    </section>
   );
 }

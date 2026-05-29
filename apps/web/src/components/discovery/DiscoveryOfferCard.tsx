@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { CoverImage } from "../CoverImage";
 import { daysUntilEnd } from "../../lib/discoveryUtils";
 
 export type DiscoveryOffer = {
@@ -10,6 +12,10 @@ export type DiscoveryOffer = {
   spotsLeft: number;
   registeredCount?: number;
   validUntil: string;
+  imageUrl?: string;
+  agencyName?: string | null;
+  agencySlug?: string | null;
+  tourSlug?: string | null;
 };
 
 type Props = {
@@ -19,6 +25,8 @@ type Props = {
   compact?: boolean;
   /** Ultra-dense card for landing hero */
   hero?: boolean;
+  /** Spacious editorial card for /offers page */
+  page?: boolean;
 };
 
 export function DiscoveryOfferCard({
@@ -27,10 +35,86 @@ export function DiscoveryOfferCard({
   registerLabel = "Register",
   compact,
   hero,
+  page,
 }: Props) {
   const daysLeft = daysUntilEnd(offer.validUntil);
   const urgency =
     daysLeft === 0 ? "Ends today" : daysLeft === 1 ? "1 day left" : `${daysLeft} days left`;
+
+  const tourHref =
+    offer.agencySlug && offer.tourSlug
+      ? `/tours/${offer.agencySlug}/${offer.tourSlug}`
+      : null;
+
+  if (page) {
+    return (
+      <article className="disc-offer-card disc-offer-card--page">
+        <div className="disc-offer-media">
+          <CoverImage src={offer.imageUrl} className="disc-offer-media-img" alt="" />
+          <span className="disc-offer-urgency disc-offer-urgency--overlay">{urgency}</span>
+          {offer.spotsLeft <= 10 && (
+            <span className="disc-offer-scarcity disc-offer-scarcity--overlay">
+              {offer.spotsLeft === 0 ? "Full" : `${offer.spotsLeft} spots left`}
+            </span>
+          )}
+        </div>
+
+        <div className="disc-offer-body">
+          {offer.agencyName && offer.agencySlug && (
+            <Link to={`/agencies/${offer.agencySlug}`} className="disc-offer-agency">
+              {offer.agencyName}
+            </Link>
+          )}
+
+          <h3>{offer.title}</h3>
+
+          {offer.description && <p className="disc-offer-desc">{offer.description}</p>}
+
+          <p className="disc-offer-reward disc-offer-reward--pill">{offer.rewardText}</p>
+
+          <div className="disc-offer-price disc-offer-price--stacked">
+            {offer.discountedLkr != null ? (
+              <>
+                <span className="disc-offer-price-now">
+                  From LKR {offer.discountedLkr.toLocaleString()}
+                </span>
+                <span className="disc-offer-price-was">LKR {offer.tourPriceLkr.toLocaleString()}</span>
+              </>
+            ) : (
+              <span className="disc-offer-price-now">
+                From LKR {offer.tourPriceLkr.toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          <div className="disc-offer-meta-row">
+            {offer.registeredCount != null && (
+              <span className="disc-offer-social">
+                {offer.registeredCount} traveler{offer.registeredCount === 1 ? "" : "s"} registered
+              </span>
+            )}
+          </div>
+
+          <div className="disc-offer-actions">
+            {tourHref && (
+              <Link to={tourHref} className="btn btn-ghost disc-offer-secondary">
+                View tour
+              </Link>
+            )}
+            {onRegister ? (
+              <button type="button" className="btn btn-primary disc-offer-cta" onClick={onRegister}>
+                {registerLabel}
+              </button>
+            ) : (
+              <Link to="/login" className="btn btn-primary disc-offer-cta">
+                Log in to register
+              </Link>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   const cardClass = [
     "disc-offer-card",

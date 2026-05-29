@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -7,6 +7,7 @@ import {
   DiscoveryOfferCard,
   type DiscoveryOffer,
 } from "../components/discovery/DiscoveryOfferCard";
+import { daysUntilEnd } from "../lib/discoveryUtils";
 
 export function OffersPage() {
   const { token, user } = useAuth();
@@ -21,6 +22,12 @@ export function OffersPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const stats = useMemo(() => {
+    const endingSoon = offers.filter((o) => daysUntilEnd(o.validUntil) <= 7).length;
+    const openSpots = offers.reduce((s, o) => s + o.spotsLeft, 0);
+    return { total: offers.length, endingSoon, openSpots };
+  }, [offers]);
 
   async function register(offerId: string) {
     if (!token) {
@@ -38,7 +45,7 @@ export function OffersPage() {
   }
 
   return (
-    <section className="section module-shell module-discovery">
+    <section className="section module-shell module-discovery offers-page">
       <ModuleHeader
         module="discovery"
         title="Limited offers"
@@ -51,23 +58,41 @@ export function OffersPage() {
         )}
       </ModuleHeader>
 
-      {msg && <p className="disc-status-msg">{msg}</p>}
+      {!loading && offers.length > 0 && (
+        <div className="offers-stat-row">
+          <div className="offers-stat">
+            <span className="offers-stat-value">{stats.total}</span>
+            <span className="offers-stat-label">Active offers</span>
+          </div>
+          <div className="offers-stat">
+            <span className="offers-stat-value">{stats.endingSoon}</span>
+            <span className="offers-stat-label">Ending within 7 days</span>
+          </div>
+          <div className="offers-stat">
+            <span className="offers-stat-value">{stats.openSpots}</span>
+            <span className="offers-stat-label">Spots available</span>
+          </div>
+        </div>
+      )}
+
+      {msg && <p className="disc-status-msg offers-status-msg">{msg}</p>}
 
       {loading ? (
-        <p className="muted">Loading offers…</p>
+        <p className="muted offers-loading">Loading offers…</p>
       ) : offers.length === 0 ? (
-        <div className="disc-empty">
+        <div className="disc-empty offers-empty">
           <p>No active offers right now. Check back soon or browse agencies.</p>
           <Link to="/agencies" className="btn btn-primary">
             Explore agencies
           </Link>
         </div>
       ) : (
-        <div className="disc-offer-grid">
+        <div className="disc-offer-grid disc-offer-grid--page">
           {offers.map((o) => (
             <DiscoveryOfferCard
               key={o.id}
               offer={o}
+              page
               onRegister={token ? () => register(o.id) : undefined}
               registerLabel={token ? "Register for offer" : "Log in to register"}
             />

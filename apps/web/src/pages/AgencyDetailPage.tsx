@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useParams, useSearchParams } from "react-router-dom";
+import { CoverImage } from "../components/CoverImage";
 import { navLinkClass } from "../utils/navLinkClass";
+import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
 import { api } from "../api/client";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import {
@@ -13,9 +15,6 @@ import {
   type GalleryItem,
 } from "../components/display/displayTypes";
 import "../styles/agency-display.css";
-
-const DEFAULT_PACKAGE_IMAGE =
-  "https://images.unsplash.com/photo-1580619305218-8423a4bb63b2?auto=format&fit=crop&w=1200&q=80";
 
 type Tour = {
   id: string;
@@ -102,11 +101,11 @@ function PackageCard({
   tour?: Tour;
   agencySlug: string;
 }) {
-  const image = pkg.imageUrl?.trim() || tour?.coverUrl || DEFAULT_PACKAGE_IMAGE;
+  const image = resolveImageUrl(pkg.imageUrl?.trim() || tour?.coverUrl, DEFAULT_TOUR_COVER_URL);
   const href = tour ? `/tours/${agencySlug}/${tour.slug}` : null;
   const inner = (
     <>
-      <div className="agency-package-card-bg" style={{ backgroundImage: `url(${image})` }} />
+      <CoverImage src={image} className="agency-package-card-bg" />
       {tour && <span className="agency-package-days">{tour.days} days</span>}
       <div className="agency-package-card-body">
         <h3>{pkg.title}</h3>

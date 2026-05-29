@@ -1,3 +1,5 @@
+import { MEDIA } from "@tourpilot/shared";
+
 export type DisplaySectionFlags = {
   tours: boolean;
   showcase: boolean;
@@ -69,8 +71,7 @@ export function defaultDisplayContent(): DisplayContent {
       "5+ years of local travel experience",
     ],
     ctaLabel: "Plan your trip",
-    featuredImageUrl:
-      "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+    featuredImageUrl: MEDIA.hero,
     featuredQuote:
       "We expected sand and silence. We found peace, stars, and people who love what they do.",
     packages: [],

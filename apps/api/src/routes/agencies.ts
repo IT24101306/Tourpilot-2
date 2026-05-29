@@ -1,5 +1,7 @@
 import { Router } from "express";
 
+import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+
 import { z } from "zod";
 
 import { prisma } from "../lib/prisma.js";
@@ -8,16 +10,12 @@ import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth
 
 import { asJson } from "../utils/json.js";
 
+import { storedImageUrlSchema } from "../lib/imageUrlSchema.js";
 import {
-
   buildSectionsPayload,
-
   parseDisplayPayload,
-
   parseGallery,
-
   type DisplayPackage,
-
 } from "../lib/displaySettings.js";
 
 
@@ -27,11 +25,8 @@ export const agenciesRouter = Router();
 
 
 const galleryItemSchema = z.object({
-
-  url: z.string().min(1),
-
+  url: storedImageUrlSchema,
   label: z.string().default("Gallery"),
-
 });
 
 
@@ -44,7 +39,7 @@ const packageSchema = z.object({
 
   priceLabel: z.string().default(""),
 
-  imageUrl: z.string().min(1),
+  imageUrl: storedImageUrlSchema,
 
   tourId: z.string().optional(),
 
@@ -62,7 +57,7 @@ const offerSchema = z.object({
 
   badge: z.string().optional(),
 
-  imageUrl: z.string().optional(),
+  imageUrl: storedImageUrlSchema.optional(),
 
 });
 
@@ -84,7 +79,7 @@ const contentSchema = z.object({
 
   ctaLabel: z.string(),
 
-  featuredImageUrl: z.string(),
+  featuredImageUrl: storedImageUrlSchema,
 
   featuredQuote: z.string(),
 
@@ -612,9 +607,6 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
 
 
-const DEFAULT_PACKAGE_IMAGE =
-  "https://images.unsplash.com/photo-1580619305218-8423a4bb63b2?auto=format&fit=crop&w=1200&q=80";
-
 function resolvePackages(
   custom: DisplayPackage[],
   tours: {
@@ -635,7 +627,7 @@ function resolvePackages(
       const tour = p.tourId ? tourById.get(p.tourId) : undefined;
       return {
         ...p,
-        imageUrl: p.imageUrl?.trim() || tour?.coverUrl || DEFAULT_PACKAGE_IMAGE,
+        imageUrl: resolveImageUrl(p.imageUrl?.trim() || tour?.coverUrl, DEFAULT_TOUR_COVER_URL),
         tourId: p.tourId || tour?.id,
       };
     });
@@ -649,7 +641,7 @@ function resolvePackages(
       title: t.title,
       location: districts[0] || `${t.days} day tour`,
       priceLabel: `LKR ${Number(t.basePriceLkr).toLocaleString()} / per person`,
-      imageUrl: t.coverUrl || DEFAULT_PACKAGE_IMAGE,
+      imageUrl: resolveImageUrl(t.coverUrl, DEFAULT_TOUR_COVER_URL),
       tourId: t.id,
     };
   });

@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import type { InfluencerTour, ReferralCode } from "../../pages/influencer/types";
 import { shareLinkForCode } from "../../pages/influencer/types";
 
-const FALLBACK =
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80";
+import { CoverImage } from "../CoverImage";
+import { MEDIA } from "@tourpilot/shared";
 
 type Props = {
   tour: InfluencerTour;
@@ -15,10 +15,7 @@ type Props = {
 export function InfluencerTourCard({ tour, existingCode, onCreate, onCopy }: Props) {
   return (
     <article className="partner-tour-card">
-      <div
-        className="partner-tour-cover"
-        style={{ backgroundImage: `url(${tour.coverUrl || FALLBACK})` }}
-      />
+      <CoverImage src={tour.coverUrl} fallback={MEDIA.agencyCover} className="partner-tour-cover" />
       <div className="partner-tour-body">
         <span className="partner-tour-agency">{tour.agency.name}</span>
         <h3>{tour.title}</h3>

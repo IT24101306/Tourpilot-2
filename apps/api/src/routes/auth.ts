@@ -129,7 +129,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
                 ],
                 ctaLabel: "Plan your trip",
                 featuredImageUrl:
-                  "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+                  "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
                 featuredQuote:
                   "We expected an adventure. We found peace, wonder, and people who love what they do.",
                 packages: [],
@@ -313,6 +313,7 @@ function serializeUser(user: {
   email: string | null;
   avatarUrl: string | null;
   walletBalance: unknown;
+  touristProfile?: { loyaltyPoints: number } | null;
   agency?: { id: string; name: string; slug: string } | null;
   agencyDriver?: {
     id: string;
@@ -329,6 +330,9 @@ function serializeUser(user: {
     email: user.email,
     avatarUrl: user.avatarUrl,
     walletBalance: Number(user.walletBalance),
+    touristProfile: user.touristProfile
+      ? { loyaltyPoints: user.touristProfile.loyaltyPoints }
+      : null,
     agency: user.agency ?? null,
     agencyDriver: user.agencyDriver
       ? {

@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { ImageUrlField } from "../../components/ImageUrlField";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 
 type AdminOffer = {
   id: string;
   title: string;
   description: string | null;
+  imageUrl: string | null;
   rewardText: string;
   registrationCap: number;
   validFrom: string;
@@ -40,6 +42,7 @@ type OfferRegistration = {
 type OfferDraft = {
   title: string;
   description: string;
+  imageUrl: string;
   rewardText: string;
   registrationCap: number;
   validFrom: string;
@@ -63,6 +66,7 @@ function emptyDraft(): OfferDraft {
   return {
     title: "",
     description: "",
+    imageUrl: "",
     rewardText: "",
     registrationCap: 50,
     validFrom: toLocalDateTimeValue(now),
@@ -78,6 +82,7 @@ function offerToDraft(o: AdminOffer): OfferDraft {
   return {
     title: o.title,
     description: o.description ?? "",
+    imageUrl: o.imageUrl ?? "",
     rewardText: o.rewardText,
     registrationCap: o.registrationCap,
     validFrom: toLocalDateTimeValue(new Date(o.validFrom)),
@@ -150,6 +155,7 @@ export function AdminOffersPage() {
         body: JSON.stringify({
           title: draft.title,
           description: draft.description || undefined,
+          imageUrl: draft.imageUrl.trim() || "",
           rewardText: draft.rewardText,
           registrationCap: Number(draft.registrationCap),
           validFrom: new Date(draft.validFrom).toISOString(),
@@ -180,6 +186,7 @@ export function AdminOffersPage() {
         body: JSON.stringify({
           title: draft.title,
           description: draft.description === "" ? null : draft.description,
+          imageUrl: draft.imageUrl.trim() || null,
           rewardText: draft.rewardText,
           registrationCap: Number(draft.registrationCap),
           validFrom: new Date(draft.validFrom).toISOString(),
@@ -318,6 +325,16 @@ export function AdminOffersPage() {
                   rows={3}
                 />
               </label>
+
+              <ImageUrlField
+                className="field image-url-field--full"
+                label="Cover image (optional)"
+                value={draft.imageUrl}
+                onChange={(imageUrl) => setDraft((d) => ({ ...d, imageUrl }))}
+                token={token}
+                placeholder="Paste a link or upload from your device"
+                hint="If empty, the first linked tour's cover is used, then a default stock photo."
+              />
 
               <label className="field">
                 <span>Valid from</span>

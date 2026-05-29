@@ -15,7 +15,10 @@ export type AuthUser = {
   phone: string;
   name: string;
   role: UserRole;
+  email?: string | null;
+  avatarUrl?: string | null;
   walletBalance: number;
+  touristProfile?: { loyaltyPoints: number } | null;
   agency?: { id: string; name: string; slug: string } | null;
   agencyDriver?: {
     id: string;

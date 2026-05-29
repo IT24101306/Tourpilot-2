@@ -22,7 +22,8 @@ export function NegotiationStepper({ status }: Props) {
   const terminal = status === "DECLINED" || status === "EXPIRED";
 
   return (
-    <ol className="neg-stepper" aria-label="Trip planning progress">
+    <div className="neg-stepper-wrap">
+      <ol className="neg-stepper" aria-label="Trip planning progress">
       {STEPS.map((step, i) => {
         const done = i < active || (i === 4 && status === "ACCEPTED");
         const current = i === active;
@@ -36,6 +37,7 @@ export function NegotiationStepper({ status }: Props) {
           </li>
         );
       })}
-    </ol>
+      </ol>
+    </div>
   );
 }

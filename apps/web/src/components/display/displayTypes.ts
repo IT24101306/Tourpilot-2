@@ -69,7 +69,7 @@ export const defaultDisplayContent = (): DisplayContent => ({
   ],
   ctaLabel: "Plan your trip",
   featuredImageUrl:
-    "https://images.unsplash.com/photo-1526778548025-fa2f588cd1f1?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80", // keep in sync with @tourpilot/shared MEDIA.hero
   featuredQuote:
     "We expected sand and silence. We found peace, stars, and people who love what they do.",
   packages: [],

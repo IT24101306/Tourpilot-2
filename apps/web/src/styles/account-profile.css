@@ -1,0 +1,395 @@
+/* Account profile — full-width band + bento grid (no sidebar) */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.account-profile {
+  width: 100%;
+}
+
+.account-profile--embedded .account-profile-layout {
+  max-width: none;
+}
+
+.account-profile-layout {
+  width: 100%;
+  max-width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.account-profile-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* —— Full-width identity band —— */
+.account-profile-band {
+  background: linear-gradient(
+    118deg,
+    #e8f5ee 0%,
+    #dff4f0 38%,
+    #e6f3f8 72%,
+    #eef5f1 100%
+  );
+  border-bottom: 1px solid rgba(219, 230, 224, 0.95);
+  position: relative;
+}
+
+.account-profile-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 120% at 100% 0%, rgba(26, 168, 160, 0.12), transparent 55%);
+  pointer-events: none;
+}
+
+.account-profile-band-inner {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: clamp(22px, 3vw, 32px) clamp(20px, 3vw, 28px);
+}
+
+.account-profile-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(14px, 2vw, 20px);
+  min-width: 0;
+  flex: 1;
+}
+
+.account-profile-avatar {
+  flex-shrink: 0;
+  width: clamp(56px, 8vw, 72px);
+  height: clamp(56px, 8vw, 72px);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: linear-gradient(145deg, var(--green) 0%, var(--teal) 100%);
+  box-shadow: 0 12px 28px rgba(31, 143, 88, 0.32);
+}
+
+.account-profile-intro {
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.account-profile-name {
+  margin: 0 0 8px;
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.account-profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.account-profile-phone {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.account-profile-tagline {
+  margin: 10px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 52ch;
+}
+
+.account-role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--green-dark);
+  border: 1px solid rgba(31, 143, 88, 0.15);
+}
+
+.account-role-pill--influencer {
+  color: #0d6b7a;
+  border-color: rgba(13, 107, 122, 0.2);
+}
+
+.account-role-pill--agency {
+  color: #6b5344;
+  border-color: rgba(107, 83, 68, 0.2);
+}
+
+.account-role-pill--driver {
+  color: #3730a3;
+  border-color: rgba(55, 48, 163, 0.2);
+}
+
+.account-role-pill--admin {
+  color: #5b21b6;
+  border-color: rgba(91, 33, 182, 0.2);
+}
+
+.account-profile-wallet {
+  flex-shrink: 0;
+  text-align: right;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 24px rgba(18, 40, 29, 0.08);
+  min-width: 140px;
+}
+
+.account-profile-wallet-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.account-profile-wallet-value {
+  font-family: var(--font-heading);
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  font-weight: 700;
+  color: var(--green-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+/* —— Bento grid —— */
+.account-profile-bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+  padding: clamp(16px, 2.5vw, 22px);
+}
+
+.account-bento-span-1 {
+  grid-column: span 4;
+}
+
+.account-bento-span-2 {
+  grid-column: span 12;
+}
+
+.account-bento-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 108px;
+  padding: 16px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+a.account-bento-tile:hover {
+  border-color: rgba(31, 143, 88, 0.35);
+  box-shadow: 0 10px 24px rgba(18, 40, 29, 0.08);
+  transform: translateY(-2px);
+}
+
+.account-bento-kicker {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.account-bento-value {
+  font-family: var(--font-heading);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.account-bento-desc {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.account-bento-desc--strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.account-bento-cta {
+  align-self: flex-start;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.02em;
+}
+
+/* Highlight — featured row */
+.account-bento-tile--highlight {
+  min-height: 120px;
+  background: linear-gradient(135deg, #f4faf7 0%, #eef8f5 50%, #f8fbf9 100%);
+  border-color: rgba(31, 143, 88, 0.22);
+}
+
+.account-bento-tile--highlight .account-bento-value {
+  color: var(--green-dark);
+}
+
+.account-bento-tile--highlight .account-bento-cta {
+  margin-top: 4px;
+}
+
+/* Stat */
+.account-bento-tile--stat {
+  min-height: 96px;
+  cursor: default;
+}
+
+.account-bento-tile--stat.account-bento-tile--accent {
+  background: linear-gradient(160deg, #fff 0%, #f0faf5 100%);
+  border-color: rgba(31, 143, 88, 0.2);
+}
+
+.account-bento-tile--stat.account-bento-tile--accent .account-bento-value {
+  color: var(--green-dark);
+}
+
+/* Info */
+.account-bento-tile--info {
+  min-height: 96px;
+  cursor: default;
+}
+
+.account-bento-tile--info:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Action shortcuts */
+.account-bento-tile--action {
+  min-height: 88px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--white);
+}
+
+.account-bento-tile--action-primary,
+.account-bento-tile--action-teal {
+  background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+.account-bento-tile--action-primary .account-bento-kicker,
+.account-bento-tile--action-teal .account-bento-kicker,
+.account-bento-tile--action-primary .account-bento-cta,
+.account-bento-tile--action-teal .account-bento-cta {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.account-bento-tile--action-primary:hover,
+.account-bento-tile--action-teal:hover {
+  box-shadow: 0 12px 28px rgba(26, 168, 160, 0.35);
+}
+
+.account-profile-extra {
+  padding: 0 clamp(16px, 2.5vw, 22px) clamp(18px, 2.5vw, 22px);
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.account-profile-extra .form-grid {
+  margin-top: 0;
+}
+
+.account-profile-edit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.account-profile-edit-toolbar .agency-filter {
+  min-width: 140px;
+}
+
+.account-profile-status-msg {
+  margin: 12px 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--green-dark);
+}
+
+@media (max-width: 900px) {
+  .account-bento-span-1 {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 640px) {
+  .account-profile-band-inner {
+    flex-direction: column;
+  }
+
+  .account-profile-wallet {
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .account-bento-span-1,
+  .account-bento-span-2 {
+    grid-column: span 12;
+  }
+
+  .account-bento-tile--action {
+    min-height: 72px;
+  }
+}

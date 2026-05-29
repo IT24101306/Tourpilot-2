@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../../api/client";
+import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
 import {
   defaultDisplayConfig,
@@ -177,9 +178,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       title: tour.title,
       location: districts[0] || tour.summary || `${tour.days} day tour`,
       priceLabel: `LKR ${tour.basePriceLkr.toLocaleString()} / per person`,
-      imageUrl:
-        tour.coverUrl ||
-        "https://images.unsplash.com/photo-1580619305218-8423a4bb63b2?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: tour.coverUrl || "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
       tourId: tour.id,
     };
     setPackageForm(pkg);
@@ -438,13 +437,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 onChange={(e) => updateContent({ ctaLabel: e.target.value })}
               />
             </label>
-            <label className="full">
-              Featured image URL
-              <input
+            <div className="full">
+              <ImageUrlField
+                label="Featured image"
+                className="image-url-field--embedded image-url-field--full"
                 value={content.featuredImageUrl}
-                onChange={(e) => updateContent({ featuredImageUrl: e.target.value })}
+                onChange={(featuredImageUrl) => updateContent({ featuredImageUrl })}
+                token={token}
               />
-            </label>
+            </div>
             <label className="full">
               Featured quote
               <textarea
@@ -715,13 +716,13 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 placeholder="LKR 49,000 / per person"
               />
             </ModalField>
-            <ModalField label="Image URL" full>
-              <input
-                type="url"
+            <ModalField label="Package image" full>
+              <ImageUrlField
+                label=""
+                className="image-url-field--embedded"
                 value={packageForm.imageUrl}
-                onChange={(e) => setPackageForm({ ...packageForm, imageUrl: e.target.value })}
-                placeholder="https://…"
-                required
+                onChange={(imageUrl) => setPackageForm({ ...packageForm, imageUrl })}
+                token={token}
               />
             </ModalField>
           </div>
@@ -780,14 +781,13 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={saveGalleryItem}>
           <div className="entity-form-grid">
-            <ModalField label="Image URL" full>
-              <input
-                type="url"
+            <ModalField label="Gallery image" full>
+              <ImageUrlField
+                label=""
+                className="image-url-field--embedded"
                 value={galleryForm.url}
-                onChange={(e) => setGalleryForm({ ...galleryForm, url: e.target.value })}
-                placeholder="https://…"
-                required
-                autoFocus
+                onChange={(url) => setGalleryForm({ ...galleryForm, url })}
+                token={token}
               />
             </ModalField>
             <ModalField label="Label" full>
@@ -843,12 +843,13 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 placeholder="Save up to 15%"
               />
             </ModalField>
-            <ModalField label="Image URL (optional)" full>
-              <input
-                type="url"
+            <ModalField label="Offer image (optional)" full>
+              <ImageUrlField
+                label=""
+                className="image-url-field--embedded"
                 value={offerForm.imageUrl || ""}
-                onChange={(e) => setOfferForm({ ...offerForm, imageUrl: e.target.value })}
-                placeholder="https://…"
+                onChange={(imageUrl) => setOfferForm({ ...offerForm, imageUrl })}
+                token={token}
               />
             </ModalField>
           </div>

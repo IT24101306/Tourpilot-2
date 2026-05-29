@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { ImageUrlField } from "../../components/ImageUrlField";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 
 const ENTITY_TYPES = [
@@ -346,13 +347,30 @@ export function AgencyAllEntitiesPage() {
                 </select>
               </div>
               <div className="field grow">
-                <label htmlFor="media-url">URL</label>
-                <input
-                  id="media-url"
-                  placeholder="https://…"
-                  value={mediaDraft.url}
-                  onChange={(e) => setMediaDraft((d) => ({ ...d, url: e.target.value }))}
-                />
+                {mediaDraft.kind === "image" ? (
+                  <ImageUrlField
+                    label="Image"
+                    className="image-url-field--embedded"
+                    value={mediaDraft.url}
+                    onChange={(url) => setMediaDraft((d) => ({ ...d, url }))}
+                    token={token}
+                    placeholder="Paste a link or upload from your device"
+                  />
+                ) : (
+                  <>
+                    <label htmlFor="media-url">URL</label>
+                    <input
+                      id="media-url"
+                      placeholder={
+                        mediaDraft.kind === "video"
+                          ? "https://youtube.com/… or video URL"
+                          : "https://…"
+                      }
+                      value={mediaDraft.url}
+                      onChange={(e) => setMediaDraft((d) => ({ ...d, url: e.target.value }))}
+                    />
+                  </>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="media-label">Label</label>

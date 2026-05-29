@@ -20,6 +20,8 @@ export function AgencyInquirySection({ agencyId, agencyName, refCode }: Props) {
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const canSubmit = Boolean(token && user?.role === "TOURIST");
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!token) {
@@ -56,6 +58,8 @@ export function AgencyInquirySection({ agencyId, agencyName, refCode }: Props) {
       setMessage("");
       setInterests("");
       setBudgetBand("");
+      setStartDate("");
+      setEndDate("");
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : "Failed to send inquiry");
     } finally {
@@ -66,91 +70,156 @@ export function AgencyInquirySection({ agencyId, agencyName, refCode }: Props) {
   return (
     <section className="agency-inquiry-section" id="request-custom-tour">
       <div className="agency-inquiry-inner">
-        <h2>Request a custom tour</h2>
-        <p className="agency-inquiry-lead">
-          Tell {agencyName} what you need — dates, group size, budget, and interests — and they will
-          send a tailored proposal to your profile.
-        </p>
-
-        {!token && (
-          <p className="agency-inquiry-login-hint">
-            <Link to="/login">Log in</Link> as a tourist to submit an inquiry.
-          </p>
-        )}
-
-        <form className="agency-inquiry-form" onSubmit={submit}>
-          <div className="agency-inquiry-grid">
-            <label>
-              Travelers
-              <input
-                type="number"
-                min={1}
-                value={pax}
-                onChange={(e) => setPax(Number(e.target.value))}
-                required
-                disabled={!token}
-              />
-            </label>
-            <label>
-              Start date
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                disabled={!token}
-              />
-            </label>
-            <label>
-              End date
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                disabled={!token}
-              />
-            </label>
-            <label>
-              Budget (optional)
-              <input
-                type="text"
-                value={budgetBand}
-                onChange={(e) => setBudgetBand(e.target.value)}
-                placeholder="e.g. LKR 150,000 – 200,000"
-                disabled={!token}
-              />
-            </label>
-            <label className="full">
-              Interests (comma-separated)
-              <input
-                type="text"
-                value={interests}
-                onChange={(e) => setInterests(e.target.value)}
-                placeholder="Wildlife, beaches, tea country…"
-                disabled={!token}
-              />
-            </label>
-            <label className="full">
-              Your requirements
-              <textarea
-                rows={5}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your ideal trip, must-see places, pace, accommodation preferences…"
-                required
-                disabled={!token}
-              />
-            </label>
-          </div>
-          <button type="submit" className="btn btn-gold agency-inquiry-submit" disabled={submitting || !token}>
-            {submitting ? "Sending…" : "Send inquiry to agency"}
-          </button>
-          {status && <p className="agency-inquiry-status">{status}</p>}
-          {token && user?.role === "TOURIST" && (
-            <p className="muted agency-inquiry-foot">
-              Replies appear on your <Link to="/profile">profile</Link>.
+        <div className="agency-inquiry-layout">
+          <header className="agency-inquiry-intro">
+            <span className="agency-inquiry-eyebrow">Personalized travel</span>
+            <h2>Request a custom tour</h2>
+            <p className="agency-inquiry-lead">
+              Tell <strong>{agencyName}</strong> what you need — dates, group size, budget, and
+              interests — and receive a tailored proposal on your profile.
             </p>
-          )}
-        </form>
+            <ul className="agency-inquiry-trust" aria-hidden="true">
+              <li>
+                <span className="agency-inquiry-trust-icon">✓</span>
+                No payment required to inquire
+              </li>
+              <li>
+                <span className="agency-inquiry-trust-icon">✓</span>
+                Direct reply from the agency team
+              </li>
+              <li>
+                <span className="agency-inquiry-trust-icon">✓</span>
+                Refine the itinerary together
+              </li>
+            </ul>
+          </header>
+
+          <div className="agency-inquiry-card">
+            {!token && (
+              <div className="agency-inquiry-login-banner">
+                <p>
+                  <Link to="/login">Log in</Link> or{" "}
+                  <Link to="/register">create a free account</Link> to send your request.
+                </p>
+              </div>
+            )}
+
+            {token && user?.role !== "TOURIST" && (
+              <div className="agency-inquiry-login-banner agency-inquiry-login-banner--warn">
+                <p>Only tourist accounts can submit custom tour inquiries.</p>
+              </div>
+            )}
+
+            <form className="agency-inquiry-form" onSubmit={submit}>
+              <fieldset className="agency-inquiry-fieldset" disabled={!canSubmit}>
+                <legend className="agency-inquiry-legend">Trip details</legend>
+                <div className="agency-inquiry-grid agency-inquiry-grid--trip">
+                  <div className="inquiry-field inquiry-field--compact">
+                    <label htmlFor="inquiry-pax">Travelers</label>
+                    <input
+                      id="inquiry-pax"
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={pax}
+                      onChange={(e) => setPax(Number(e.target.value))}
+                      required
+                    />
+                  </div>
+                  <div className="inquiry-field">
+                    <label htmlFor="inquiry-start">Start date</label>
+                    <input
+                      id="inquiry-start"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="inquiry-field">
+                    <label htmlFor="inquiry-end">End date</label>
+                    <input
+                      id="inquiry-end"
+                      type="date"
+                      value={endDate}
+                      min={startDate || undefined}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset className="agency-inquiry-fieldset" disabled={!canSubmit}>
+                <legend className="agency-inquiry-legend">Preferences</legend>
+                <div className="agency-inquiry-grid agency-inquiry-grid--prefs">
+                  <div className="inquiry-field">
+                    <label htmlFor="inquiry-budget">
+                      Budget <span className="inquiry-optional">optional</span>
+                    </label>
+                    <input
+                      id="inquiry-budget"
+                      type="text"
+                      value={budgetBand}
+                      onChange={(e) => setBudgetBand(e.target.value)}
+                      placeholder="e.g. LKR 150,000 – 200,000"
+                    />
+                  </div>
+                  <div className="inquiry-field">
+                    <label htmlFor="inquiry-interests">Interests</label>
+                    <input
+                      id="inquiry-interests"
+                      type="text"
+                      value={interests}
+                      onChange={(e) => setInterests(e.target.value)}
+                      placeholder="Wildlife, beaches, tea country…"
+                    />
+                    <span className="inquiry-hint">Separate with commas</span>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset className="agency-inquiry-fieldset" disabled={!canSubmit}>
+                <legend className="agency-inquiry-legend">Your vision</legend>
+                <div className="inquiry-field inquiry-field--full">
+                  <label htmlFor="inquiry-message">Trip requirements</label>
+                  <textarea
+                    id="inquiry-message"
+                    rows={5}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Describe your ideal trip — must-see places, pace, accommodation style, dietary needs, or special occasions…"
+                    required
+                  />
+                </div>
+              </fieldset>
+
+              <div className="agency-inquiry-footer">
+                <button
+                  type="submit"
+                  className="agency-inquiry-submit"
+                  disabled={submitting || !canSubmit}
+                >
+                  {submitting ? "Sending your request…" : "Send inquiry to agency"}
+                </button>
+                {canSubmit && (
+                  <p className="agency-inquiry-foot">
+                    Replies appear on your <Link to="/profile">profile</Link>.
+                  </p>
+                )}
+              </div>
+            </form>
+
+            {status && (
+              <p
+                className={`agency-inquiry-status${
+                  status.includes("sent") ? " agency-inquiry-status--success" : ""
+                }`}
+                role="status"
+              >
+                {status}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

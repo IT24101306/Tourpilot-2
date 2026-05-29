@@ -1,10 +1,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../../api/client";
+import { AccountProfileShell } from "../../components/account/AccountProfileShell";
+import type {
+  AccountField,
+  AccountHighlight,
+  AccountStat,
+} from "../../components/account/accountProfileUtils";
 import { useAuth } from "../../context/AuthContext";
 import { formatDriverStatus, useDriverMe } from "./types";
 
 export function DriverProfilePage() {
-  const { token, refreshUser } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const { me, loading, refresh } = useDriverMe();
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState("available");
@@ -44,85 +50,106 @@ export function DriverProfilePage() {
     }
   }
 
-  if (loading) return <p className="muted">Loading…</p>;
+  if (loading || !user) {
+    return <p className="muted">Loading profile…</p>;
+  }
+
+  const dp = me?.driverProfile;
+  const stats: AccountStat[] = [
+    {
+      label: "Status",
+      value: formatDriverStatus(dp?.status ?? "available"),
+      tone: "accent",
+    },
+    { label: "Vehicle", value: dp?.vehicle?.trim() || "Not set" },
+  ];
+
+  const fields: AccountField[] = editing
+    ? []
+    : [
+        { label: "License", value: dp?.licenseNo?.trim() || "—" },
+        { label: "Vehicle", value: dp?.vehicle?.trim() || "—" },
+        { label: "Notes", value: dp?.bio?.trim() || "No notes yet" },
+      ];
+
+  const highlights: AccountHighlight[] = [
+    {
+      id: "today",
+      label: "Field operations",
+      value: formatDriverStatus(dp?.status ?? "available"),
+      description: user.agencyDriver
+        ? `${user.agencyDriver.agencyName} · open today’s route plan`
+        : "Pickups, legs, and guest counts for today.",
+      to: "/dashboard/driver",
+      span: 2,
+    },
+  ];
 
   return (
-    <>
-      <div className="agency-panel-head">
-        <h2>Driver Profile</h2>
-        <p>Keep your availability and contact details up to date.</p>
-      </div>
-
-      <div className="agency-tools">
+    <AccountProfileShell
+      variant="embedded"
+      name={me?.name ?? user.name}
+      phone={me?.phone ?? user.phone}
+      role="DRIVER"
+      email={user.email}
+      walletBalance={user.walletBalance}
+      stats={stats}
+      fields={fields}
+      highlights={highlights}
+      tagline={user.agencyDriver ? `Assigned to ${user.agencyDriver.agencyName}` : null}
+      actions={[
+        { label: "Today's schedule", to: "/dashboard/driver", variant: "teal" },
+        { label: "Assigned tours", to: "/dashboard/driver/assigned" },
+      ]}
+    >
+      <div className="account-profile-edit-toolbar">
+        <label className="sr-only" htmlFor="driver-status">
+          Availability
+        </label>
         <select
+          id="driver-status"
           className="agency-filter"
           value={status}
           onChange={(e) => {
             setStatus(e.target.value);
             setEditing(true);
           }}
-          aria-label="Update driver status"
         >
           <option value="available">Available</option>
-          <option value="on_tour">On Tour</option>
-          <option value="off_duty">Off Duty</option>
+          <option value="on_tour">On tour</option>
+          <option value="off_duty">Off duty</option>
         </select>
-        <button type="button" className="btn btn-primary" onClick={() => setEditing(true)}>
-          Edit Profile
-        </button>
+        {!editing ? (
+          <button type="button" className="btn btn-primary btn-nav" onClick={() => setEditing(true)}>
+            Edit details
+          </button>
+        ) : null}
       </div>
 
       {editing ? (
-        <form className="form-grid agency-panel" onSubmit={handleSave}>
-          <label htmlFor="license">License</label>
+        <form className="form-grid" onSubmit={handleSave}>
+          <label htmlFor="license">License number</label>
           <input id="license" value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} />
           <label htmlFor="vehicle">Vehicle</label>
           <input id="vehicle" value={vehicle} onChange={(e) => setVehicle(e.target.value)} />
-          <label htmlFor="bio">Bio / notes</label>
-          <input id="bio" value={bio} onChange={(e) => setBio(e.target.value)} />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              Save Changes
+          <label htmlFor="bio">Bio / availability notes</label>
+          <textarea id="bio" rows={3} value={bio} onChange={(e) => setBio(e.target.value)} />
+          <div className="account-profile-actions" style={{ padding: 0 }}>
+            <button type="submit" className="btn btn-primary btn-nav" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-nav"
+              onClick={() => setEditing(false)}
+            >
               Cancel
             </button>
           </div>
         </form>
-      ) : (
-        <div className="agency-table-wrap">
-          <table className="agency-table">
-            <tbody>
-              <tr>
-                <th style={{ width: 220 }}>Driver Name</th>
-                <td>{me?.name}</td>
-              </tr>
-              <tr>
-                <th>Phone</th>
-                <td>{me?.phone}</td>
-              </tr>
-              <tr>
-                <th>License</th>
-                <td>{me?.driverProfile?.licenseNo || "—"}</td>
-              </tr>
-              <tr>
-                <th>Vehicle</th>
-                <td>{me?.driverProfile?.vehicle || "—"}</td>
-              </tr>
-              <tr>
-                <th>Status</th>
-                <td>{formatDriverStatus(me?.driverProfile?.status ?? "available")}</td>
-              </tr>
-              <tr>
-                <th>Bio</th>
-                <td>{me?.driverProfile?.bio || "No notes"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+      ) : null}
 
-      {message && <p className="muted" style={{ marginTop: 12 }}>{message}</p>}
-    </>
+      {message ? <p className="account-profile-status-msg">{message}</p> : null}
+    </AccountProfileShell>
   );
 }

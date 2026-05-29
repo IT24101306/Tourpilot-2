@@ -19,6 +19,7 @@ enum AgencyStatus {
   PENDING
   APPROVED
   SUSPENDED
+  REJECTED
 }
 
 enum InquiryStatus {
@@ -209,6 +210,8 @@ model Agency {
   gallery         Json?
   contactPhone    String?
   contactEmail    String?
+  rejectionReason String?          @db.Text
+  rejectedAt      DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   staff           AgencyStaff[]
@@ -491,6 +494,7 @@ model Offer {
   id              String              @id @default(cuid()) @db.VarChar(25)
   title           String
   description     String?             @db.Text
+  imageUrl        String?             @db.Text
   rewardText      String
   registrationCap Int
   validFrom       DateTime
