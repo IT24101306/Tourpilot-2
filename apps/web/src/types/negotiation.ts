@@ -9,6 +9,8 @@ export type ProposalItem = {
     slug: string;
     days: number;
     basePriceLkr: number;
+    influencerCommissionLkr?: number;
+    publicPriceLkr?: number;
     coverUrl?: string | null;
   } | null;
   itinerary?: {

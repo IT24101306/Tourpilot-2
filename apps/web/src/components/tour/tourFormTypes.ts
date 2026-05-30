@@ -44,6 +44,9 @@ export type AgencyTourDetail = {
   days: number;
   tourKind: TourKind;
   basePriceLkr: number;
+  influencerCommissionPct?: number;
+  influencerCommissionLkr?: number;
+  publicPriceLkr?: number;
   coverUrl?: string | null;
   isPublished: boolean;
   tourDays?: AgencyTourDay[];
@@ -158,11 +161,18 @@ export type GroupOption = {
   entityIds: string[];
 };
 
+export function filterGroupOptions(groups: GroupOption[], searchQuery = ""): GroupOption[] {
+  const q = searchQuery.trim().toLowerCase();
+  if (!q) return groups;
+  return groups.filter((g) => g.name.toLowerCase().includes(q));
+}
+
 export function filterEntityOptions(
   entities: EntityOption[],
   groups: GroupOption[],
   typeFilter: string,
-  groupFilter: string
+  groupFilter: string,
+  searchQuery = ""
 ): EntityOption[] {
   let list = entities;
   if (typeFilter !== "all") {
@@ -172,6 +182,13 @@ export function filterEntityOptions(
     const group = groups.find((g) => g.id === groupFilter);
     const ids = new Set(group?.entityIds ?? []);
     list = list.filter((e) => ids.has(e.id));
+  }
+  const q = searchQuery.trim().toLowerCase();
+  if (q) {
+    list = list.filter((e) => {
+      const hay = `${e.name} ${e.type} ${e.city ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
   }
   return list;
 }

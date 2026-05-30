@@ -2,17 +2,33 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ImageUrlField } from "../../components/ImageUrlField";
+import { EntityFormFields } from "../../components/entity/EntityFormFields";
+import {
+  ALLOWED_ENTITY_TYPES,
+  buildEntityPayload,
+  defaultEntityForm,
+  entityDetailsSummary,
+  entityLocationLabel,
+  entityTypeLabel,
+  type EntityFormState,
+  type EntityTypeKey,
+} from "../../components/entity/entityTypes";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 
-const ENTITY_TYPES = [
+const TYPE_ICONS: Record<string, string> = {
+  HOTEL: "🏨",
+  VIEWPOINT: "🏔️",
+  ACTIVITY: "🎯",
+  RESTAURANT: "🍽️",
+  OTHER: "📍",
+};
+
+const PICKER_TYPES: { value: EntityTypeKey; label: string; icon: string }[] = [
   { value: "HOTEL", label: "Hotel", icon: "🏨" },
   { value: "VIEWPOINT", label: "Viewpoint", icon: "🏔️" },
   { value: "ACTIVITY", label: "Activity", icon: "🎯" },
   { value: "RESTAURANT", label: "Restaurant", icon: "🍽️" },
-  { value: "TRANSPORT", label: "Transport", icon: "🚐" },
-  { value: "FREE_TIME", label: "Free time", icon: "☕" },
-  { value: "OTHER", label: "Other", icon: "📍" },
-] as const;
+];
 
 type EntityMediaItem =
   | { kind: "image"; url: string; label?: string }
@@ -27,14 +43,12 @@ type AgencyEntity = {
   district: string | null;
   priceHint: number | null;
   description?: string | null;
+  contact?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
-function formatType(type: string) {
-  return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, " ");
-}
-
-function typeMeta(type: string) {
-  return ENTITY_TYPES.find((t) => t.value === type) ?? { label: formatType(type), icon: "📍" };
+function typeIcon(type: string) {
+  return TYPE_ICONS[type] ?? "📍";
 }
 
 export function AgencyAllEntitiesPage() {
@@ -44,24 +58,27 @@ export function AgencyAllEntitiesPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
 
-  const [entityForm, setEntityForm] = useState({
-    name: "",
-    type: "HOTEL",
-    city: "",
-    district: "",
-    description: "",
-    durationMin: "",
-    priceHint: "",
-    contact: "",
-    lat: "",
-    lng: "",
-  });
+  const [entityForm, setEntityForm] = useState<EntityFormState>(defaultEntityForm());
   const [media, setMedia] = useState<EntityMediaItem[]>([]);
   const [mediaDraft, setMediaDraft] = useState<{ kind: EntityMediaItem["kind"]; url: string; label: string }>({
     kind: "image",
     url: "",
     label: "",
   });
+
+  const filterTabs = useMemo(() => {
+    const tabs: { value: string; label: string; icon: string }[] = [
+      { value: "all", label: "All", icon: "📋" },
+      ...PICKER_TYPES.map((t) => ({ value: t.value, label: t.label, icon: t.icon })),
+    ];
+    const legacyTypes = new Set(entities.map((e) => e.type));
+    for (const t of legacyTypes) {
+      if (!ALLOWED_ENTITY_TYPES.includes(t as EntityTypeKey)) {
+        tabs.push({ value: t, label: entityTypeLabel(t), icon: typeIcon(t) });
+      }
+    }
+    return tabs;
+  }, [entities]);
 
   const stats = useMemo(() => {
     const byType: Record<string, number> = {};
@@ -93,31 +110,11 @@ export function AgencyAllEntitiesPage() {
         method: "POST",
         token,
         body: JSON.stringify({
-          name: savedName,
-          type: entityForm.type,
-          city: entityForm.city,
-          district: entityForm.district || undefined,
-          description: entityForm.description || undefined,
-          durationMin: entityForm.durationMin ? Number(entityForm.durationMin) : undefined,
-          priceHint: entityForm.priceHint ? Number(entityForm.priceHint) : undefined,
-          contact: entityForm.contact || undefined,
-          lat: entityForm.lat ? Number(entityForm.lat) : undefined,
-          lng: entityForm.lng ? Number(entityForm.lng) : undefined,
+          ...buildEntityPayload(entityForm),
           media: media.length > 0 ? media : undefined,
         }),
       });
-      setEntityForm({
-        name: "",
-        type: entityForm.type,
-        city: "",
-        district: "",
-        description: "",
-        durationMin: "",
-        priceHint: "",
-        contact: "",
-        lat: "",
-        lng: "",
-      });
+      setEntityForm(defaultEntityForm());
       setMedia([]);
       setMediaDraft({ kind: "image", url: "", label: "" });
       setToast(`${savedName || "Entity"} saved to your library.`);
@@ -145,7 +142,7 @@ export function AgencyAllEntitiesPage() {
       <ModuleHeader
         module="catalog"
         title="Entity library"
-        subtitle="Hotels, viewpoints, activities, and more — the building blocks of your tours."
+        subtitle="Hotels, viewpoints, activities, and restaurants — the building blocks of your tours."
       />
 
       <header className="entities-studio-hero cat-studio-hero">
@@ -162,19 +159,9 @@ export function AgencyAllEntitiesPage() {
       </header>
 
       <div className="entities-type-tabs" role="tablist" aria-label="Filter by type">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={typeFilter === "all"}
-          className={`entities-type-tab ${typeFilter === "all" ? "active" : ""}`}
-          onClick={() => setTypeFilter("all")}
-        >
-          All
-          <span className="entities-type-count">{stats.total}</span>
-        </button>
-        {ENTITY_TYPES.map((t) => {
-          const count = stats.byType[t.value] ?? 0;
-          if (typeFilter !== "all" && typeFilter !== t.value && count === 0) return null;
+        {filterTabs.map((t) => {
+          const count = t.value === "all" ? stats.total : stats.byType[t.value] ?? 0;
+          if (t.value !== "all" && typeFilter !== t.value && count === 0) return null;
           return (
             <button
               key={t.value}
@@ -197,140 +184,24 @@ export function AgencyAllEntitiesPage() {
           <div className="entities-form-card-head">
             <div>
               <h3>Add new entity</h3>
-              <p className="muted">Only the name is required — everything else helps on trip planning.</p>
+              <p className="muted">Choose a type — the form updates with the right fields.</p>
             </div>
           </div>
 
           <div className="entities-form-section">
-            <h4>Basics</h4>
+            <h4>Details</h4>
             <div className="entity-form-grid">
-              <div className="field full">
-                <label htmlFor="ent-name">Name *</label>
-                <input
-                  id="ent-name"
-                  placeholder="e.g. Sigiriya Village Hotel"
-                  value={entityForm.name}
-                  onChange={(e) => setEntityForm({ ...entityForm, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="field full">
-                <span className="field-label">Type</span>
-                <div className="entities-type-picker">
-                  {ENTITY_TYPES.map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      className={`entities-type-chip ${entityForm.type === t.value ? "selected" : ""}`}
-                      onClick={() => setEntityForm({ ...entityForm, type: t.value })}
-                    >
-                      <span className="entities-type-chip-icon" aria-hidden="true">
-                        {t.icon}
-                      </span>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor="ent-desc">Description</label>
-                <textarea
-                  id="ent-desc"
-                  rows={3}
-                  placeholder="What makes this place special?"
-                  value={entityForm.description}
-                  onChange={(e) => setEntityForm({ ...entityForm, description: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="entities-form-section">
-            <h4>Location & contact</h4>
-            <div className="entity-form-grid">
-              <div className="field">
-                <label htmlFor="ent-city">City</label>
-                <input
-                  id="ent-city"
-                  placeholder="Ella"
-                  value={entityForm.city}
-                  onChange={(e) => setEntityForm({ ...entityForm, city: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="ent-district">District</label>
-                <input
-                  id="ent-district"
-                  placeholder="Badulla"
-                  value={entityForm.district}
-                  onChange={(e) => setEntityForm({ ...entityForm, district: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="ent-lat">Latitude</label>
-                <input
-                  id="ent-lat"
-                  type="number"
-                  step="any"
-                  placeholder="6.9271"
-                  value={entityForm.lat}
-                  onChange={(e) => setEntityForm({ ...entityForm, lat: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="ent-lng">Longitude</label>
-                <input
-                  id="ent-lng"
-                  type="number"
-                  step="any"
-                  placeholder="79.8612"
-                  value={entityForm.lng}
-                  onChange={(e) => setEntityForm({ ...entityForm, lng: e.target.value })}
-                />
-              </div>
-              <div className="field full">
-                <label htmlFor="ent-contact">Contact</label>
-                <input
-                  id="ent-contact"
-                  placeholder="Phone, email, or WhatsApp"
-                  value={entityForm.contact}
-                  onChange={(e) => setEntityForm({ ...entityForm, contact: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="entities-form-section">
-            <h4>Pricing & duration</h4>
-            <div className="entity-form-grid">
-              <div className="field">
-                <label htmlFor="ent-price">Price hint (LKR)</label>
-                <input
-                  id="ent-price"
-                  type="number"
-                  min={0}
-                  placeholder="15000"
-                  value={entityForm.priceHint}
-                  onChange={(e) => setEntityForm({ ...entityForm, priceHint: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="ent-duration">Duration (minutes)</label>
-                <input
-                  id="ent-duration"
-                  type="number"
-                  min={0}
-                  placeholder="120"
-                  value={entityForm.durationMin}
-                  onChange={(e) => setEntityForm({ ...entityForm, durationMin: e.target.value })}
-                />
-              </div>
+              <EntityFormFields
+                form={entityForm}
+                onChange={setEntityForm}
+                typePicker="chips"
+              />
             </div>
           </div>
 
           <div className="entities-form-section">
             <h4>Media gallery</h4>
-            <p className="entities-section-hint muted">Images, videos, and links shown on entity cards.</p>
+            <p className="entities-section-hint muted">Optional images, videos, and links for this entity.</p>
             <div className="entities-media-add">
               <div className="field">
                 <label htmlFor="media-kind">Kind</label>
@@ -441,35 +312,32 @@ export function AgencyAllEntitiesPage() {
                     <th>Name</th>
                     <th>Type</th>
                     <th>Location</th>
+                    <th>Details</th>
                     <th>Price</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {entities.map((ent) => {
-                    const meta = typeMeta(ent.type);
-                    return (
-                      <tr key={ent.id}>
-                        <td>
-                          <strong className="entities-row-name">{ent.name}</strong>
-                          {ent.description && (
-                            <span className="entities-row-desc muted">{ent.description}</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`entities-type-badge type-${ent.type.toLowerCase()}`}>
-                            <span aria-hidden="true">{meta.icon}</span>
-                            {meta.label}
-                          </span>
-                        </td>
-                        <td>
-                          {[ent.city, ent.district].filter(Boolean).join(", ") || "—"}
-                        </td>
-                        <td className="entities-price">
-                          {ent.priceHint != null ? `LKR ${ent.priceHint.toLocaleString()}` : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {entities.map((ent) => (
+                    <tr key={ent.id}>
+                      <td>
+                        <strong className="entities-row-name">{ent.name}</strong>
+                        {ent.description && (
+                          <span className="entities-row-desc muted">{ent.description}</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`entities-type-badge type-${ent.type.toLowerCase()}`}>
+                          <span aria-hidden="true">{typeIcon(ent.type)}</span>
+                          {entityTypeLabel(ent.type)}
+                        </span>
+                      </td>
+                      <td>{entityLocationLabel(ent)}</td>
+                      <td className="muted entities-details-cell">{entityDetailsSummary(ent)}</td>
+                      <td className="entities-price">
+                        {ent.priceHint != null ? `LKR ${ent.priceHint.toLocaleString()}` : "—"}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

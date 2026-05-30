@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { displayTourPrice } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
@@ -20,12 +21,15 @@ type PublishedTour = {
   days: number;
   summary: string | null;
   basePriceLkr: number;
+  influencerCommissionLkr?: number;
+  publicPriceLkr?: number;
   coverUrl: string | null;
   districtTags: unknown;
 };
 
 type DisplayPayload = {
   slug: string;
+  influencerCommissionPct: number;
   enabled: DisplaySectionFlags;
   content: DisplayContent;
   gallery: GalleryItem[];
@@ -64,6 +68,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [config, setConfig] = useState<DisplayConfig>(defaultDisplayConfig);
   const [publishedTours, setPublishedTours] = useState<PublishedTour[]>([]);
   const [slug, setSlug] = useState(agencySlug || "");
+  const [influencerCommissionPct, setInfluencerCommissionPct] = useState(8);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
@@ -88,6 +93,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     try {
       const data = await api<DisplayPayload>("/agencies/mine/display", { token });
       setSlug(data.slug);
+      setInfluencerCommissionPct(data.influencerCommissionPct ?? 8);
       setPublishedTours(data.publishedTours);
       setConfig({
         enabled: data.enabled,
@@ -142,6 +148,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         method: "PUT",
         token,
         body: JSON.stringify({
+          influencerCommissionPct,
           enabled: config.enabled,
           content: {
             ...config.content,
@@ -156,6 +163,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         }),
       });
       setSlug(data.slug);
+      setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
       setConfig({
         enabled: data.enabled,
         content: data.content,
@@ -177,7 +185,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     const pkg: DisplayPackage = {
       title: tour.title,
       location: districts[0] || tour.summary || `${tour.days} day tour`,
-      priceLabel: `LKR ${tour.basePriceLkr.toLocaleString()} / per person`,
+      priceLabel: `LKR ${displayTourPrice(tour).toLocaleString()} / per person`,
       imageUrl: tour.coverUrl || "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
       tourId: tour.id,
     };
@@ -295,6 +303,24 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           </a>
         )}
       </div>
+
+      <section className="display-section-card agency-partner-settings">
+        <h3>Influencer referrals</h3>
+        <p className="muted">
+          One commission rate for all ready-made tours. It is added to your base price on public
+          listings; influencers see their earn amount in LKR.
+        </p>
+        <label htmlFor="influencerCommissionPct">Commission (% of base tour price)</label>
+        <input
+          id="influencerCommissionPct"
+          type="number"
+          min={0}
+          max={50}
+          step={0.5}
+          value={influencerCommissionPct}
+          onChange={(e) => setInfluencerCommissionPct(Number(e.target.value) || 0)}
+        />
+      </section>
 
       <div className="display-sections">
         <section className="display-section-card display-copy-card">
@@ -593,7 +619,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               <span>Enable</span>
             </label>
           </div>
-          <p className="muted display-section-desc">Promotions and deals section on your display page</p>
+          <p className="muted display-section-desc">
+            Registration-cap loyalty offers are managed under the{" "}
+            <a href="/dashboard/agency/offers">Offers</a> tab and shown here when active. Use the
+            cards below for simple promotional banners.
+          </p>
           {content.offers.length > 0 && (
             <ul className="display-item-list">
               {content.offers.map((o, i) => (

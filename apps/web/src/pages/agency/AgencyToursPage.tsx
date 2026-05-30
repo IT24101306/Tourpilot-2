@@ -13,6 +13,7 @@ import {
   type TourFormState,
   type TourKind,
 } from "../../components/tour/tourFormTypes";
+import { displayTourPrice } from "../../lib/tourPricing";
 import { AgencyTour } from "./types";
 
 type EntityRow = {
@@ -50,19 +51,22 @@ export function AgencyToursPage() {
   const [tourForm, setTourForm] = useState<TourFormState>(defaultTourForm());
   const [tourStatus, setTourStatus] = useState("");
   const [tourSaving, setTourSaving] = useState(false);
+  const [influencerCommissionPct, setInfluencerCommissionPct] = useState(0);
 
   const agencySlug = user?.agency?.slug;
 
   const refresh = useCallback(async () => {
     if (!token) return;
-    const [tourList, entityList, groupList] = await Promise.all([
+    const [tourList, entityList, groupList, display] = await Promise.all([
       api<AgencyTour[]>("/tours/agency/mine", { token }),
       api<EntityRow[]>("/entities", { token }),
       api<GroupRow[]>("/entities/groups", { token }),
+      api<{ influencerCommissionPct: number }>("/agencies/mine/display", { token }),
     ]);
     setTours(tourList);
     setEntities(entityList);
     setGroups(groupList);
+    setInfluencerCommissionPct(display.influencerCommissionPct ?? 0);
   }, [token]);
 
   useEffect(() => {
@@ -113,7 +117,7 @@ export function AgencyToursPage() {
       drafts: drafts.length,
       readyMade: tours.filter((t) => t.tourKind === "READY_MADE").length,
       custom: tours.filter((t) => t.tourKind === "CUSTOM").length,
-      catalogValue: published.reduce((s, t) => s + t.basePriceLkr, 0),
+      catalogValue: published.reduce((s, t) => s + displayTourPrice(t), 0),
     };
   }, [tours]);
 
@@ -325,7 +329,11 @@ export function AgencyToursPage() {
                     </div>
                   </div>
                   <p className="muted">
-                    {t.days} days · LKR {t.basePriceLkr.toLocaleString()} · /{t.slug}
+                    {t.days} days · LKR {displayTourPrice(t).toLocaleString()} listed
+                    {(t.influencerCommissionLkr ?? 0) > 0
+                      ? ` · incl. LKR ${t.influencerCommissionLkr!.toLocaleString()} influencer`
+                      : ""}{" "}
+                    · /{t.slug}
                   </p>
                   {t.summary && <p className="cat-tour-summary">{t.summary}</p>}
                 </div>
@@ -406,6 +414,7 @@ export function AgencyToursPage() {
         onChange={setTourForm}
         onSubmit={saveTour}
         uploadToken={token}
+        agencyInfluencerCommissionPct={influencerCommissionPct}
       />
     </div>
   );

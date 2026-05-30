@@ -22,6 +22,8 @@ export type AdminAgency = {
   owner: { id: string; name: string; phone: string; email: string | null };
   tourCount: number;
   inquiryCount: number;
+  kyc: Record<string, unknown> | null;
+  kycSubmittedAt: string | null;
   createdAt: string;
 };
 

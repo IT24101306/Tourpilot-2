@@ -9,6 +9,7 @@ import {
 const INFLUENCER_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/influencer", label: "Overview", end: true },
   { to: "/dashboard/influencer/tours", label: "Tours" },
+  { to: "/dashboard/influencer/display", label: "Display" },
   { to: "/dashboard/influencer/codes", label: "Codes" },
   { to: "/dashboard/influencer/commissions", label: "Commissions" },
   { to: "/dashboard/influencer/guide", label: "Guide" },

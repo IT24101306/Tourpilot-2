@@ -345,7 +345,7 @@ export function InquiryReplyModal({
                                 {" "}
                                 · {t.days} days
                                 {t.basePriceLkr != null
-                                  ? ` · from LKR ${t.basePriceLkr.toLocaleString()}`
+                                  ? ` · from LKR ${(t.publicPriceLkr ?? t.basePriceLkr).toLocaleString()}`
                                   : ""}
                               </span>
                             </span>

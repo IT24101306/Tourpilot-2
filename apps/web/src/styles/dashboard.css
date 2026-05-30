@@ -579,6 +579,29 @@
   width: 100%;
 }
 
+.entity-field-checkbox {
+  align-self: center;
+}
+
+.entity-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.entity-checkbox-label input {
+  width: auto;
+  min-height: auto;
+}
+
+.entities-details-cell {
+  max-width: 220px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 .entity-form-grid textarea {
   min-height: 82px;
   resize: vertical;
@@ -660,9 +683,48 @@
   margin-bottom: 0;
 }
 
+.tour-entity-filters {
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+}
+
+.tour-entity-filters .groups-search {
+  min-width: 0;
+}
+
+.tour-entity-filters .table-filter {
+  min-width: 9.5rem;
+}
+
+.tour-group-filter-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 9.5rem;
+}
+
+.tour-group-filter-wrap .groups-search--filter {
+  min-width: 0;
+}
+
+.tour-group-filter-empty {
+  font-size: 0.8rem;
+}
+
 .entity-filter-hint {
   font-size: 0.85rem;
   margin: 0 0 12px;
+}
+
+@media (max-width: 720px) {
+  .tour-entity-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .tour-entity-filters .table-filter {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 640px) {

@@ -481,6 +481,26 @@
   margin: 0;
 }
 
+.agency-offer-status {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #f0f7f3;
+  color: var(--ad-green);
+  font-size: 0.9rem;
+}
+
+.agency-loyalty-offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.agency-loyalty-offers .disc-offer-card {
+  height: 100%;
+}
+
 /* —— Gallery —— */
 .agency-gallery-section {
   margin-bottom: 56px;

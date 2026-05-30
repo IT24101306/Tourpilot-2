@@ -26,6 +26,9 @@ export function InfluencerOverviewPage() {
         <Link to="/dashboard/influencer/tours" className="btn btn-teal">
           Browse tours
         </Link>
+        <Link to="/dashboard/influencer/display" className="btn btn-ghost">
+          Display page
+        </Link>
       </ModuleHeader>
 
       <OpsMetricStrip

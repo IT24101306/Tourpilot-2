@@ -5,6 +5,7 @@ import { EntityFormModal } from "../components/entity/EntityFormModal";
 import {
   buildEntityPayload,
   defaultEntityForm,
+  entityDetailsSummary,
   entityLocationLabel,
   type EntityFormState,
   type EntityTypeKey,
@@ -1021,13 +1022,7 @@ function formatPrice(ent: EntityRow) {
 }
 
 function formatDetails(ent: EntityRow) {
-  const m = ent.metadata || {};
-  const parts: string[] = [];
-  if (ent.type === "HOTEL" && m.rooms != null) parts.push(`${m.rooms} rooms`);
-  if (ent.type === "ACTIVITY" && m.duration) parts.push(String(m.duration));
-  if (ent.type === "RESTAURANT" && m.openHoursDays) parts.push(String(m.openHoursDays));
-  if (m.otherInfo) parts.push(String(m.otherInfo).slice(0, 40) + (String(m.otherInfo).length > 40 ? "…" : ""));
-  return parts.length ? parts.join(" · ") : ent.description?.slice(0, 50) || "—";
+  return entityDetailsSummary(ent);
 }
 
 function formatBookingStatus(status: string) {

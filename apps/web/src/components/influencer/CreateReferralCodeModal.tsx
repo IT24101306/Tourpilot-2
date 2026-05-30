@@ -1,20 +1,13 @@
 import { FormEvent, useEffect, useState } from "react";
+import { tourPublicPriceLkr } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
+import type { InfluencerTour } from "../../pages/influencer/types";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
-
-type TourOption = {
-  id: string;
-  title: string;
-  days: number;
-  basePriceLkr: number;
-  agency: { name: string; slug: string };
-  slug: string;
-};
 
 type Props = {
   open: boolean;
   token: string;
-  tours: TourOption[];
+  tours: InfluencerTour[];
   preselectedTourId?: string;
   onClose: () => void;
   onCreated: () => void;
@@ -30,7 +23,6 @@ export function CreateReferralCodeModal({
 }: Props) {
   const [tourId, setTourId] = useState("");
   const [code, setCode] = useState("");
-  const [commissionPct, setCommissionPct] = useState(8);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [createdLink, setCreatedLink] = useState("");
@@ -39,7 +31,6 @@ export function CreateReferralCodeModal({
     if (open) {
       setTourId(preselectedTourId || "");
       setCode("");
-      setCommissionPct(8);
       setError("");
       setCreatedLink("");
     }
@@ -61,12 +52,12 @@ export function CreateReferralCodeModal({
         body: JSON.stringify({
           tourId,
           code: code.trim() || undefined,
-          commissionPct,
         }),
       });
+      const tour = tours.find((t) => t.id === tourId);
       const link =
         result.shareUrl ||
-        `${window.location.origin}/tours/${tours.find((t) => t.id === tourId)?.agency.slug}/${tours.find((t) => t.id === tourId)?.slug}?ref=${result.code}`;
+        `${window.location.origin}/tours/${tour?.agency.slug}/${tour?.slug}?ref=${result.code}`;
       setCreatedLink(link);
       onCreated();
     } catch (err) {
@@ -87,7 +78,7 @@ export function CreateReferralCodeModal({
     <DashboardModal
       open={open}
       title="Create referral code"
-      subtitle="Promote a ready-made tour. You earn commission when tourists inquire using your link."
+      subtitle="Promote a ready-made tour. You earn the commission set by the agency when tourists book through your link."
       onClose={onClose}
       dialogClassName="influencer-code-dialog"
     >
@@ -112,23 +103,29 @@ export function CreateReferralCodeModal({
         <form onSubmit={submit}>
           <div className="entity-form-grid">
             <ModalField label="Ready-made tour" full>
-              <select
-                value={tourId}
-                onChange={(e) => setTourId(e.target.value)}
-                required
-              >
+              <select value={tourId} onChange={(e) => setTourId(e.target.value)} required>
                 <option value="">Select tour…</option>
                 {tours.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.agency.name} — {t.title} ({t.days}d · LKR {t.basePriceLkr.toLocaleString()})
+                    {t.agency.name} — {t.title} ({t.days}d · LKR{" "}
+                    {tourPublicPriceLkr(t).toLocaleString()} listed)
                   </option>
                 ))}
               </select>
             </ModalField>
             {selectedTour && (
               <p className="muted full" style={{ gridColumn: "1 / -1", margin: 0 }}>
-                Tourists who use your link and book with {selectedTour.agency.name} can generate
-                commission when the agency sends them an itinerary.
+                Listed at LKR {selectedTour.publicPriceLkr.toLocaleString()}.
+                {selectedTour.influencerCommissionLkr > 0 ? (
+                  <>
+                    {" "}
+                    You earn{" "}
+                    <strong>LKR {selectedTour.influencerCommissionLkr.toLocaleString()}</strong> per
+                    qualifying booking.
+                  </>
+                ) : (
+                  " This tour has no influencer commission configured yet."
+                )}
               </p>
             )}
             <ModalField label="Custom code (optional)">
@@ -137,15 +134,6 @@ export function CreateReferralCodeModal({
                 onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
                 placeholder="e.g. ISLAND10"
                 maxLength={20}
-              />
-            </ModalField>
-            <ModalField label="Your commission %">
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={commissionPct}
-                onChange={(e) => setCommissionPct(Number(e.target.value))}
               />
             </ModalField>
           </div>

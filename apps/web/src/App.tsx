@@ -20,6 +20,8 @@ import { AgencyDriversPage } from "./pages/agency/AgencyDriversPage";
 import { AgencyTravelersPage } from "./pages/agency/AgencyTravelersPage";
 import { AgencyAllEntitiesPage } from "./pages/agency/AgencyAllEntitiesPage";
 import { AgencyGroupsPage } from "./pages/agency/AgencyGroupsPage";
+import { AgencyDisplayPage } from "./pages/agency/AgencyDisplayPage";
+import { AgencyOffersPage } from "./pages/agency/AgencyOffersPage";
 import { DriverOverviewPage } from "./pages/driver/DriverOverviewPage";
 import { DriverAssignedToursPage } from "./pages/driver/DriverAssignedToursPage";
 import { DriverSchedulePage } from "./pages/driver/DriverSchedulePage";
@@ -31,6 +33,8 @@ import { InfluencerToursPage } from "./pages/influencer/InfluencerToursPage";
 import { InfluencerCodesPage } from "./pages/influencer/InfluencerCodesPage";
 import { InfluencerCommissionsPage } from "./pages/influencer/InfluencerCommissionsPage";
 import { InfluencerGuidePage } from "./pages/influencer/InfluencerGuidePage";
+import { InfluencerDisplayPage } from "./pages/influencer/InfluencerDisplayPage";
+import { InfluencerDetailPage } from "./pages/InfluencerDetailPage";
 import { AdminOverviewPage } from "./pages/admin/AdminOverviewPage";
 import { AdminAgenciesPage } from "./pages/admin/AdminAgenciesPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
@@ -49,6 +53,9 @@ import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
 import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
 import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";
 import { TouristTripsPage } from "./pages/TouristTripsPage";
+import { TouristBookingsPage } from "./pages/TouristBookingsPage";
+import { TouristSavedPage } from "./pages/TouristSavedPage";
+import { TouristTravelLayout } from "./components/tourist/TouristTravelLayout";
 import { TouristTripRoomPage } from "./pages/TouristTripRoomPage";
 import { AgencyTasksPage } from "./pages/agency/AgencyTasksPage";
 import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
@@ -82,10 +89,23 @@ export default function App() {
               path="trips"
               element={
                 <Protected roles={["TOURIST"]}>
-                  <TouristTripsPage />
+                  <TouristTravelLayout />
                 </Protected>
               }
-            />
+            >
+              <Route index element={<TouristTripsPage />} />
+              <Route path="bookings" element={<TouristBookingsPage />} />
+            </Route>
+            <Route
+              path="saved"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <TouristTravelLayout />
+                </Protected>
+              }
+            >
+              <Route index element={<TouristSavedPage />} />
+            </Route>
             <Route
               path="trips/:inquiryId"
               element={
@@ -100,6 +120,7 @@ export default function App() {
           <Route path="register" element={<RegisterPage />} />
           <Route path="register/pro" element={<RegisterProPage />} />
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
+          <Route path="influencers/:slug" element={<InfluencerDetailPage />} />
           <Route path="tours/:agencySlug/:tourSlug" element={<TourDetailPage />} />
           <Route path="itinerary/:shareToken" element={<ItinerarySharePage />} />
 
@@ -121,6 +142,8 @@ export default function App() {
             <Route path="travelers" element={<AgencyTravelersPage />} />
             <Route path="all" element={<AgencyAllEntitiesPage />} />
             <Route path="groups" element={<AgencyGroupsPage />} />
+            <Route path="offers" element={<AgencyOffersPage />} />
+            <Route path="display" element={<AgencyDisplayPage />} />
           </Route>
 
           <Route
@@ -150,6 +173,7 @@ export default function App() {
           >
             <Route index element={<InfluencerOverviewPage />} />
             <Route path="tours" element={<InfluencerToursPage />} />
+            <Route path="display" element={<InfluencerDisplayPage />} />
             <Route path="codes" element={<InfluencerCodesPage />} />
             <Route path="commissions" element={<InfluencerCommissionsPage />} />
             <Route path="guide" element={<InfluencerGuidePage />} />

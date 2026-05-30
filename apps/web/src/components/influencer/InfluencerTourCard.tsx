@@ -20,9 +20,14 @@ export function InfluencerTourCard({ tour, existingCode, onCreate, onCopy }: Pro
         <span className="partner-tour-agency">{tour.agency.name}</span>
         <h3>{tour.title}</h3>
         <p className="partner-tour-meta muted">
-          {tour.days} days · LKR {tour.basePriceLkr.toLocaleString()}
+          {tour.days} days · LKR {tour.publicPriceLkr.toLocaleString()} listed
           {tour.seasonTag ? ` · ${tour.seasonTag}` : ""}
         </p>
+        {tour.influencerCommissionLkr > 0 && (
+          <p className="partner-tour-commission">
+            You earn <strong>LKR {tour.influencerCommissionLkr.toLocaleString()}</strong> per booking
+          </p>
+        )}
         {tour.summary && <p className="partner-tour-summary">{tour.summary}</p>}
         <div className="partner-tour-actions">
           <Link

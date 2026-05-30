@@ -5748,3 +5748,257 @@ textarea {
 .entities-media-add .image-url-field-row input[type="text"] {
   min-width: 8rem;
 }
+
+/* Tourist travel hub — inquiries, bookings, saved */
+.tourist-travel-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle, #e2e8e4);
+}
+
+.tourist-travel-tabs a {
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-muted, #5c6b64);
+  text-decoration: none;
+}
+
+.tourist-travel-tabs a.active {
+  background: var(--teal-50, #e6f4f1);
+  color: var(--teal-800, #0d5c52);
+}
+
+.tour-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.save-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--border-subtle, #d8e0dc);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted, #5c6b64);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.save-tour-btn:hover:not(:disabled) {
+  border-color: var(--teal-400, #3d9a8f);
+  color: var(--teal-800, #0d5c52);
+}
+
+.save-tour-btn--saved {
+  border-color: var(--teal-500, #2a8f83);
+  color: var(--teal-800, #0d5c52);
+  background: var(--teal-50, #e6f4f1);
+}
+
+.save-tour-btn-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.agency-package-card {
+  position: relative;
+}
+
+.agency-package-save {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.saved-tour-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.saved-tour-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid var(--border-subtle, #e2e8e4);
+  border-radius: var(--radius-lg, 14px);
+  overflow: hidden;
+  background: #fff;
+}
+
+.saved-tour-card-media {
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.saved-tour-card-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.saved-tour-card-body {
+  padding: 1rem 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.35rem;
+}
+
+.saved-tour-card-body h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.saved-tour-card-summary {
+  font-size: 0.88rem;
+  color: var(--text-muted, #5c6b64);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.saved-tour-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.65rem;
+}
+
+/* Agency KYC — registration & admin review */
+.agency-kyc-register {
+  max-width: 520px;
+}
+
+.agency-kyc-intro {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+}
+
+.agency-kyc-section {
+  border: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.agency-kyc-section legend {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.35rem;
+  color: var(--text, #1a2e28);
+}
+
+.agency-kyc-declaration {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0.5rem 0 0;
+}
+
+.agency-kyc-declaration input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.agency-kyc-register-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.agency-kyc-modal {
+  max-width: 520px;
+  width: 100%;
+}
+
+.agency-kyc-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.agency-kyc-modal-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.agency-kyc-modal-grid {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.agency-kyc-modal-row dt {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #5c6b64);
+  margin: 0;
+}
+
+.agency-kyc-modal-row dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+}
+
+.agency-status-banner {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid transparent;
+}
+
+.agency-status-banner strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.agency-status-banner p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.agency-status-banner--pending {
+  background: #fff8e6;
+  border-color: #e8c96a;
+  color: #5c4a12;
+}
+
+.agency-status-banner--rejected {
+  background: #fdecea;
+  border-color: #e8a8a0;
+  color: #6b2218;
+}

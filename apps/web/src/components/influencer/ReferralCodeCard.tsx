@@ -31,8 +31,12 @@ export function ReferralCodeCard({ code, onCopy }: Props) {
 
       <div className="partner-code-metrics">
         <div>
-          <span className="partner-metric-value">{code.commissionPct}%</span>
-          <span className="partner-metric-label">Commission</span>
+          <span className="partner-metric-value">
+            {code.tour && code.tour.influencerCommissionLkr > 0
+              ? `LKR ${code.tour.influencerCommissionLkr.toLocaleString()}`
+              : "—"}
+          </span>
+          <span className="partner-metric-label">You earn</span>
         </div>
         <div>
           <span className="partner-metric-value">{code.clickCount}</span>

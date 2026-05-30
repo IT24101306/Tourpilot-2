@@ -9,6 +9,8 @@ export type InfluencerTour = {
   summary: string | null;
   days: number;
   basePriceLkr: number;
+  influencerCommissionLkr: number;
+  publicPriceLkr: number;
   coverUrl: string | null;
   seasonTag: string | null;
   agency: { id: string; name: string; slug: string };
@@ -17,14 +19,14 @@ export type InfluencerTour = {
 export type ReferralCode = {
   id: string;
   code: string;
-  commissionPct: number;
+  commissionPct?: number;
   clickCount: number;
   isActive: boolean;
   inquiryCount: number;
   commissionCount: number;
   shareUrl?: string;
   sharePath: string;
-  tour: InfluencerTour | null;
+  tour: (InfluencerTour & { influencerCommissionLkr?: number }) | null;
 };
 
 export type InfluencerCommission = {

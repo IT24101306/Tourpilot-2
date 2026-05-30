@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { displayTourPrice } from "../../lib/tourPricing";
 import type { ProposalItem } from "../../types/negotiation";
 
 type Props = {
@@ -27,7 +28,7 @@ export function ProposalCards({ items, agencySlug, compare = true }: Props) {
               <span className="neg-proposal-tag">Ready-made</span>
               <h4>{item.tour.title}</h4>
               <p className="neg-proposal-meta">
-                {item.tour.days} days · from LKR {item.tour.basePriceLkr.toLocaleString()}
+                {item.tour.days} days · from LKR {displayTourPrice(item.tour).toLocaleString()}
               </p>
               {agencySlug && (
                 <Link

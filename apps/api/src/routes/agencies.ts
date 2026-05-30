@@ -17,6 +17,19 @@ import {
   parseGallery,
   type DisplayPackage,
 } from "../lib/displaySettings.js";
+import {
+  assertToursBelongToAgency,
+  offerCreateBodySchema,
+  offerIncludeActive,
+  offerIncludeAdmin,
+  offerUpdateBodySchema,
+  serializeActiveOffer,
+  serializeOfferAdmin,
+  validateDiscount,
+  validateOfferDates,
+} from "../lib/offers.js";
+import { applyOfferUpdate } from "../lib/offers.js";
+import { attachTourPricing } from "../lib/tourPricing.js";
 
 
 
@@ -199,6 +212,8 @@ agenciesRouter.patch("/mine", authRequired, requireRoles("AGENCY"), async (req, 
 
         contactEmail: z.string().email().optional(),
 
+        influencerCommissionPct: z.number().min(0).max(50).optional(),
+
         gallery: z.array(z.unknown()).optional(),
 
         pageConfig: z.record(z.unknown()).optional(),
@@ -220,6 +235,10 @@ agenciesRouter.patch("/mine", authRequired, requireRoles("AGENCY"), async (req, 
         pageConfig: body.pageConfig ? asJson(body.pageConfig) : undefined,
 
         gallery: body.gallery ? asJson(body.gallery) : undefined,
+
+        ...(body.influencerCommissionPct !== undefined
+          ? { influencerCommissionPct: body.influencerCommissionPct }
+          : {}),
 
       },
 
@@ -299,6 +318,8 @@ agenciesRouter.get("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
       slug: full.slug,
 
+      influencerCommissionPct: Number(full.influencerCommissionPct),
+
       enabled: display.enabled,
 
       content: display.content,
@@ -317,8 +338,9 @@ agenciesRouter.get("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
       })),
 
-      publishedTours: full.tours.map((t) => ({
-
+      publishedTours: full.tours.map((t) => {
+        const pricing = attachTourPricing(t, Number(full.influencerCommissionPct));
+        return {
         id: t.id,
 
         title: t.title,
@@ -329,13 +351,14 @@ agenciesRouter.get("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
         summary: t.summary,
 
-        basePriceLkr: Number(t.basePriceLkr),
+        ...pricing,
 
         coverUrl: t.coverUrl,
 
         districtTags: t.districtTags,
 
-      })),
+      };
+      }),
 
     });
 
@@ -387,6 +410,8 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
           .default([]),
 
+        influencerCommissionPct: z.number().min(0).max(50).optional(),
+
       })
 
       .parse(req.body);
@@ -431,7 +456,12 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
         where: { id: agency.id },
 
-        data: { gallery: asJson(galleryItems) },
+        data: {
+          gallery: asJson(galleryItems),
+          ...(body.influencerCommissionPct !== undefined
+            ? { influencerCommissionPct: body.influencerCommissionPct }
+            : {}),
+        },
 
       });
 
@@ -491,9 +521,16 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
 
 
+    const withPct = await prisma.agency.findUniqueOrThrow({
+      where: { id: agency.id },
+      select: { influencerCommissionPct: true },
+    });
+
     res.json({
 
       slug: updated.slug,
+
+      influencerCommissionPct: Number(withPct.influencerCommissionPct),
 
       enabled: body.enabled,
 
@@ -523,7 +560,149 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
 });
 
+agenciesRouter.get("/mine/offers", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
 
+    const offers = await prisma.offer.findMany({
+      where: { agencyId: agency.id },
+      orderBy: { createdAt: "desc" },
+      include: offerIncludeAdmin,
+    });
+    res.json(offers.map(serializeOfferAdmin));
+  } catch (e) {
+    next(e);
+  }
+});
+
+agenciesRouter.post("/mine/offers", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const body = offerCreateBodySchema.parse(req.body);
+    const tourErr = await assertToursBelongToAgency(agency.id, body.tourIds);
+    if (tourErr) return res.status(400).json({ error: tourErr });
+
+    const validFrom = new Date(body.validFrom);
+    const validUntil = new Date(body.validUntil);
+    const dateErr = validateOfferDates(validFrom, validUntil);
+    if (dateErr) return res.status(400).json({ error: dateErr });
+
+    const discountErr = validateDiscount(body.tourPriceLkr, body.discountedLkr);
+    if (discountErr) return res.status(400).json({ error: discountErr });
+
+    const offer = await prisma.offer.create({
+      data: {
+        agencyId: agency.id,
+        title: body.title,
+        description: body.description,
+        imageUrl: body.imageUrl,
+        rewardText: body.rewardText,
+        registrationCap: body.registrationCap,
+        validFrom,
+        validUntil,
+        tourPriceLkr: body.tourPriceLkr,
+        discountedLkr: body.discountedLkr,
+        tours: { create: body.tourIds.map((tourId) => ({ tourId })) },
+      },
+    });
+
+    const withMeta = await prisma.offer.findUniqueOrThrow({
+      where: { id: offer.id },
+      include: offerIncludeAdmin,
+    });
+    res.status(201).json(serializeOfferAdmin(withMeta));
+  } catch (e) {
+    next(e);
+  }
+});
+
+agenciesRouter.patch(
+  "/mine/offers/:id",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const existing = await prisma.offer.findUnique({
+        where: { id: req.params.id },
+        include: offerIncludeAdmin,
+      });
+      if (!existing || existing.agencyId !== agency.id) {
+        return res.status(404).json({ error: "Offer not found" });
+      }
+
+      const body = offerUpdateBodySchema.parse(req.body);
+      if (body.tourIds) {
+        const tourErr = await assertToursBelongToAgency(agency.id, body.tourIds);
+        if (tourErr) return res.status(400).json({ error: tourErr });
+      }
+
+      try {
+        const updated = await applyOfferUpdate(existing, body);
+        res.json(serializeOfferAdmin(updated));
+      } catch (e) {
+        const err = e as Error & { status?: number };
+        if (err.status === 400) return res.status(400).json({ error: err.message });
+        throw e;
+      }
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+agenciesRouter.delete(
+  "/mine/offers/:id",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const existing = await prisma.offer.findUnique({ where: { id: req.params.id } });
+      if (!existing || existing.agencyId !== agency.id) {
+        return res.status(404).json({ error: "Offer not found" });
+      }
+
+      await prisma.offer.delete({ where: { id: existing.id } });
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+agenciesRouter.get(
+  "/mine/offers/:id/registrations",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const offer = await prisma.offer.findFirst({
+        where: { id: req.params.id, agencyId: agency.id },
+      });
+      if (!offer) return res.status(404).json({ error: "Offer not found" });
+
+      const regs = await prisma.offerRegistration.findMany({
+        where: { offerId: offer.id },
+        include: { user: { select: { id: true, name: true, phone: true, createdAt: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+      res.json(regs);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 agenciesRouter.get("/:slug", async (req, res, next) => {
 
@@ -561,9 +740,23 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
     const gallery = parseGallery(agency.gallery);
 
-    const packages = resolvePackages(display.content.packages, agency.tours);
+    const packages = resolvePackages(
+      display.content.packages,
+      agency.tours,
+      Number(agency.influencerCommissionPct)
+    );
 
-
+    const now = new Date();
+    const loyaltyOffers = await prisma.offer.findMany({
+      where: {
+        agencyId: agency.id,
+        isActive: true,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
+      include: offerIncludeActive,
+      orderBy: { validUntil: "asc" },
+    });
 
     res.json({
 
@@ -587,13 +780,17 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
       reviewCount: agency.reviewCount,
 
-      tours: agency.tours.map(serializeTourCard),
+      tours: agency.tours.map((t) =>
+        serializeTourCard(t, Number(agency.influencerCommissionPct))
+      ),
 
       reviews: agency.reviews,
 
       display: { enabled: display.enabled, content: { ...display.content, packages } },
 
       gallery,
+
+      loyaltyOffers: loyaltyOffers.map(serializeActiveOffer),
 
     });
 
@@ -618,7 +815,8 @@ function resolvePackages(
     basePriceLkr: unknown;
     coverUrl: string | null;
     districtTags: unknown;
-  }[]
+  }[],
+  commissionPct: number
 ): DisplayPackage[] {
   const tourById = new Map(tours.map((t) => [t.id, t]));
 
@@ -640,7 +838,7 @@ function resolvePackages(
     return {
       title: t.title,
       location: districts[0] || `${t.days} day tour`,
-      priceLabel: `LKR ${Number(t.basePriceLkr).toLocaleString()} / per person`,
+      priceLabel: `LKR ${attachTourPricing(t, commissionPct).publicPriceLkr.toLocaleString()} / per person`,
       imageUrl: resolveImageUrl(t.coverUrl, DEFAULT_TOUR_COVER_URL),
       tourId: t.id,
     };
@@ -649,27 +847,21 @@ function resolvePackages(
 
 
 
-export function serializeTourCard(tour: {
-
-  id: string;
-
-  title: string;
-
-  slug: string;
-
-  summary: string | null;
-
-  days: number;
-
-  basePriceLkr: unknown;
-
-  coverUrl: string | null;
-
-  seasonTag: string | null;
-
-  districtTags: unknown;
-
-}) {
+export function serializeTourCard(
+  tour: {
+    id: string;
+    title: string;
+    slug: string;
+    summary: string | null;
+    days: number;
+    basePriceLkr: unknown;
+    coverUrl: string | null;
+    seasonTag: string | null;
+    districtTags: unknown;
+  },
+  commissionPct: number
+) {
+  const pricing = attachTourPricing(tour, commissionPct);
 
   return {
 
@@ -683,7 +875,9 @@ export function serializeTourCard(tour: {
 
     days: tour.days,
 
-    basePriceLkr: Number(tour.basePriceLkr),
+    basePriceLkr: pricing.publicPriceLkr,
+
+    publicPriceLkr: pricing.publicPriceLkr,
 
     coverUrl: tour.coverUrl,
 

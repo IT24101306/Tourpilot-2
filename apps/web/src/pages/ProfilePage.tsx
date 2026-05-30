@@ -13,11 +13,12 @@ import { lkr, roleLabel } from "../components/account/accountProfileUtils";
 import { useAuth } from "../context/AuthContext";
 import type { InfluencerDashboardData } from "./influencer/types";
 
-type InquirySummary = { id: string };
+type InquirySummary = { id: string; status: string };
 
 export function ProfilePage() {
   const { user, token } = useAuth();
   const [inquiries, setInquiries] = useState<InquirySummary[]>([]);
+  const [savedCount, setSavedCount] = useState(0);
   const [partner, setPartner] = useState<InfluencerDashboardData | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(false);
 
@@ -25,6 +26,12 @@ export function ProfilePage() {
     if (!token || user?.role !== "TOURIST") return;
     const list = await api<InquirySummary[]>("/inquiries/mine", { token });
     setInquiries(list);
+  }, [token, user?.role]);
+
+  const loadSavedCount = useCallback(async () => {
+    if (!token || user?.role !== "TOURIST") return;
+    const list = await api<{ id: string }[]>("/saved-tours/mine", { token });
+    setSavedCount(list.length);
   }, [token, user?.role]);
 
   const loadPartner = useCallback(async () => {
@@ -36,10 +43,10 @@ export function ProfilePage() {
   useEffect(() => {
     if (!user || !token) return;
     setLoadingExtra(true);
-    Promise.all([loadInquiries(), loadPartner()])
+    Promise.all([loadInquiries(), loadSavedCount(), loadPartner()])
       .catch(console.error)
       .finally(() => setLoadingExtra(false));
-  }, [user, token, loadInquiries, loadPartner]);
+  }, [user, token, loadInquiries, loadSavedCount, loadPartner]);
 
   if (!user) {
     return (
@@ -69,30 +76,35 @@ export function ProfilePage() {
   switch (user.role) {
     case "TOURIST": {
       const loyalty = user.touristProfile?.loyaltyPoints ?? 0;
-      const tripCount = inquiries.length;
+      const inquiryCount = inquiries.length;
+      const bookingCount = inquiries.filter((i) => i.status === "ACCEPTED").length;
 
       highlights.push({
         id: "journey",
-        label: tripCount > 0 ? "Your trip room" : "Start your Sri Lanka journey",
+        label: inquiryCount > 0 ? "Your travel hub" : "Start your Sri Lanka journey",
         value:
-          tripCount > 0
-            ? `${tripCount} active trip${tripCount === 1 ? "" : "s"}`
+          inquiryCount > 0
+            ? `${inquiryCount} inquir${inquiryCount === 1 ? "y" : "ies"} · ${bookingCount} booking${bookingCount === 1 ? "" : "s"}`
             : "Discover trusted agencies",
         description:
-          tripCount > 0
-            ? "Compare proposals, chat with your agency, and confirm when you are ready."
+          inquiryCount > 0
+            ? "Track inquiries, confirmed bookings, and saved tours in one place."
             : "Curated operators, transparent itineraries, and optional add-ons.",
-        to: tripCount > 0 ? "/trips" : "/agencies",
+        to: inquiryCount > 0 ? "/trips" : "/agencies",
         span: 2,
       });
 
       stats.push(
-        { label: "Active trips", value: String(tripCount), tone: "accent" },
+        { label: "Inquiries", value: String(inquiryCount), tone: "accent" },
+        { label: "Bookings", value: String(bookingCount) },
+        { label: "Saved tours", value: String(savedCount) },
         { label: "Loyalty points", value: loyalty.toLocaleString() }
       );
 
       actions.push(
-        { label: "My trips", to: "/trips", variant: "teal" },
+        { label: "Inquiries", to: "/trips", variant: "teal" },
+        { label: "Bookings", to: "/trips/bookings" },
+        { label: "Saved tours", to: "/saved" },
         { label: "Browse agencies", to: "/agencies" },
         { label: "Special offers", to: "/offers" }
       );

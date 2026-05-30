@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
+import { attachTourPricing } from "../lib/tourPricing.js";
 import { slugify } from "../utils/slug.js";
 
 export const toursRouter = Router();
@@ -102,7 +103,7 @@ toursRouter.get("/admin/all", authRequired, requireRoles("ADMIN"), async (_req, 
         slug: true,
         isPublished: true,
         basePriceLkr: true,
-        agency: { select: { id: true, name: true, slug: true } },
+        agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } },
       },
     });
     res.json(
@@ -135,7 +136,7 @@ toursRouter.get("/public/:agencySlug/:tourSlug", async (req, res, next) => {
             },
           },
         },
-        agency: { select: { id: true, name: true, slug: true } },
+        agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } },
       },
     });
 
@@ -170,7 +171,8 @@ toursRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (req
         },
       },
     });
-    res.json(tours.map(serializeTourListItem));
+    const pct = Number(agency.influencerCommissionPct);
+    res.json(tours.map((t) => serializeTourListItem(t, pct)));
   } catch (e) {
     next(e);
   }
@@ -184,7 +186,7 @@ toursRouter.get("/agency/:id", authRequired, requireRoles("AGENCY"), async (req,
     const tour = await getAgencyTour(agency.id, req.params.id);
     if (!tour) return res.status(404).json({ error: "Tour not found" });
 
-    res.json(serializeTourAgencyDetail(tour));
+    res.json(serializeTourAgencyDetail(tour, Number(agency.influencerCommissionPct)));
   } catch (e) {
     next(e);
   }
@@ -237,7 +239,7 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
       return loaded;
     });
 
-    res.status(201).json(serializeTourListItem(tour));
+    res.status(201).json(serializeTourListItem(tour, Number(agency.influencerCommissionPct)));
   } catch (e) {
     next(e);
   }
@@ -297,7 +299,7 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
       return loaded;
     });
 
-    res.json(serializeTourListItem(tour));
+    res.json(serializeTourListItem(tour, Number(agency.influencerCommissionPct)));
   } catch (e) {
     next(e);
   }
@@ -362,7 +364,7 @@ toursRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res,
       },
     });
 
-    res.json(serializeTourListItem(tour));
+    res.json(serializeTourListItem(tour, Number(agency.influencerCommissionPct)));
   } catch (e) {
     next(e);
   }
@@ -502,30 +504,35 @@ toursRouter.post("/:id/days", authRequired, requireRoles("AGENCY"), async (req, 
   }
 });
 
-function serializeTourListItem(tour: {
-  id: string;
-  title: string;
-  slug: string;
-  summary: string | null;
-  description?: string | null;
-  days: number;
-  tourKind: string;
-  basePriceLkr: unknown;
-  coverUrl?: string | null;
-  seasonTag?: string | null;
-  districtTags?: unknown;
-  isPublished: boolean;
-  updatedAt?: Date;
-  tourDays?: Array<{
-    dayNumber: number;
-    title: string | null;
-    items: Array<{
-      scheduledTime: string | null;
-      entity: { id: string; name: string; type: string } | null;
-      label: string | null;
+function serializeTourListItem(
+  tour: {
+    id: string;
+    title: string;
+    slug: string;
+    summary: string | null;
+    description?: string | null;
+    days: number;
+    tourKind: string;
+    basePriceLkr: unknown;
+    coverUrl?: string | null;
+    seasonTag?: string | null;
+    districtTags?: unknown;
+    isPublished: boolean;
+    updatedAt?: Date;
+    agency?: { influencerCommissionPct?: unknown } | null;
+    tourDays?: Array<{
+      dayNumber: number;
+      title: string | null;
+      items: Array<{
+        scheduledTime: string | null;
+        entity: { id: string; name: string; type: string } | null;
+        label: string | null;
+      }>;
     }>;
-  }>;
-}) {
+  },
+  commissionPctOverride?: number
+) {
+  const pricing = attachTourPricing(tour, commissionPctOverride);
   return {
     id: tour.id,
     title: tour.title,
@@ -534,7 +541,7 @@ function serializeTourListItem(tour: {
     description: tour.description ?? null,
     days: tour.days,
     tourKind: tour.tourKind,
-    basePriceLkr: Number(tour.basePriceLkr),
+    ...pricing,
     coverUrl: tour.coverUrl ?? null,
     seasonTag: tour.seasonTag ?? null,
     districtTags: tour.districtTags ?? null,
@@ -556,8 +563,11 @@ function serializeTourListItem(tour: {
   };
 }
 
-function serializeTourAgencyDetail(tour: Parameters<typeof serializeTourListItem>[0]) {
-  return serializeTourListItem(tour);
+function serializeTourAgencyDetail(
+  tour: Parameters<typeof serializeTourListItem>[0],
+  commissionPctOverride?: number
+) {
+  return serializeTourListItem(tour, commissionPctOverride);
 }
 
 function serializeTourDetail(tour: {
@@ -572,7 +582,7 @@ function serializeTourDetail(tour: {
   districtTags: unknown;
   coverUrl: string | null;
   media: unknown;
-  agency: { id: string; name: string; slug: string };
+  agency: { id: string; name: string; slug: string; influencerCommissionPct?: unknown };
   tourDays: Array<{
     id: string;
     dayNumber: number;
@@ -588,6 +598,7 @@ function serializeTourDetail(tour: {
     }>;
   }>;
 }) {
+  const pricing = attachTourPricing(tour);
   return {
     id: tour.id,
     title: tour.title,
@@ -595,7 +606,8 @@ function serializeTourDetail(tour: {
     summary: tour.summary,
     description: tour.description,
     days: tour.days,
-    basePriceLkr: Number(tour.basePriceLkr),
+    basePriceLkr: pricing.publicPriceLkr,
+    publicPriceLkr: pricing.publicPriceLkr,
     seasonTag: tour.seasonTag,
     districtTags: tour.districtTags,
     coverUrl: tour.coverUrl,

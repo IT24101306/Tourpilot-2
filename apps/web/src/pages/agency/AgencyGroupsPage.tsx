@@ -14,8 +14,6 @@ const TYPE_ICONS: Record<string, string> = {
   VIEWPOINT: "🏔️",
   ACTIVITY: "🎯",
   RESTAURANT: "🍽️",
-  TRANSPORT: "🚐",
-  FREE_TIME: "☕",
   OTHER: "📍",
 };
 

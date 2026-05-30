@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { buildDisplayPayload, parseInfluencerDisplay } from "../lib/influencerDisplay.js";
+import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
+import { attachTourPricing } from "../lib/tourPricing.js";
 import { buildReferralSharePath, buildReferralShareUrl } from "../lib/referralShare.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
 
@@ -16,8 +19,9 @@ function serializeTour(tour: {
   basePriceLkr: unknown;
   coverUrl: string | null;
   seasonTag: string | null;
-  agency: { id: string; name: string; slug: string };
+  agency: { id: string; name: string; slug: string; influencerCommissionPct?: unknown };
 }) {
+  const pricing = attachTourPricing(tour);
   return {
     id: tour.id,
     title: tour.title,
@@ -25,7 +29,7 @@ function serializeTour(tour: {
     summary: tour.summary,
     days: tour.days,
     tourKind: tour.tourKind,
-    basePriceLkr: Number(tour.basePriceLkr),
+    ...pricing,
     coverUrl: tour.coverUrl,
     seasonTag: tour.seasonTag,
     agency: tour.agency,
@@ -49,7 +53,6 @@ function serializeCode(
   return {
     id: code.id,
     code: code.code,
-    commissionPct: Number(code.commissionPct),
     clickCount: code.clickCount,
     isActive: code.isActive,
     createdAt: code.createdAt,
@@ -69,7 +72,11 @@ influencerRouter.get("/dashboard", authRequired, requireRoles("INFLUENCER"), asy
         user: { select: { name: true } },
         codes: {
           include: {
-            tour: { include: { agency: { select: { id: true, name: true, slug: true } } } },
+            tour: {
+              include: {
+                agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } },
+              },
+            },
             _count: { select: { inquiries: true, commissions: true } },
           },
           orderBy: { createdAt: "desc" },
@@ -151,7 +158,6 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
       .object({
         tourId: z.string().min(1, "Select a ready-made tour to promote"),
         code: z.string().min(4).max(20).optional(),
-        commissionPct: z.number().min(1).max(50).default(8),
       })
       .parse(req.body);
 
@@ -161,8 +167,10 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
         isPublished: true,
         tourKind: "READY_MADE",
       },
-      include: { agency: { select: { id: true, name: true, slug: true } } },
+      include: { agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } } },
     });
+
+    const agencyCommissionPct = Number(tour?.agency.influencerCommissionPct ?? 0);
 
     if (!tour) {
       return res.status(400).json({ error: "Tour not found or not available for promotion" });
@@ -192,10 +200,12 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
         where: { id: existingForTour.id },
         data: {
           ...(body.code ? { code: codeValue } : {}),
-          commissionPct: body.commissionPct,
+          commissionPct: agencyCommissionPct,
         },
         include: {
-          tour: { include: { agency: { select: { id: true, name: true, slug: true } } } },
+          tour: {
+            include: { agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } } },
+          },
           _count: { select: { inquiries: true, commissions: true } },
         },
       });
@@ -212,10 +222,12 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
         influencerId: profile.id,
         tourId: tour.id,
         code: codeValue,
-        commissionPct: body.commissionPct,
+        commissionPct: agencyCommissionPct,
       },
       include: {
-        tour: { include: { agency: { select: { id: true, name: true, slug: true } } } },
+        tour: {
+          include: { agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } } },
+        },
         _count: { select: { inquiries: true, commissions: true } },
       },
     });
@@ -229,11 +241,123 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
   }
 });
 
+async function getInfluencerProfileForUser(userId: string) {
+  let profile = await prisma.influencerProfile.findUnique({
+    where: { userId },
+    include: { user: { select: { name: true } } },
+  });
+  if (!profile) return null;
+
+  if (!profile.slug) {
+    const slug = await ensureUniqueInfluencerSlug(prisma, profile.user.name, profile.id);
+    profile = await prisma.influencerProfile.update({
+      where: { id: profile.id },
+      data: { slug },
+      include: { user: { select: { name: true } } },
+    });
+  }
+  return profile;
+}
+
+influencerRouter.get("/mine/display", authRequired, requireRoles("INFLUENCER"), async (req, res, next) => {
+  try {
+    const profile = await getInfluencerProfileForUser(req.user!.id);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+
+    const display = parseInfluencerDisplay(profile.display, profile.user.name);
+    const tours = await prisma.tour.findMany({
+      where: { isPublished: true, tourKind: "READY_MADE" },
+      include: { agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } } },
+      orderBy: [{ agency: { name: "asc" } }, { title: "asc" }],
+    });
+
+    const codes = await prisma.referralCode.findMany({
+      where: { influencerId: profile.id, isActive: true, tourId: { not: null } },
+      select: { tourId: true, code: true },
+    });
+    const codeByTourId = new Map(
+      codes.filter((c): c is typeof c & { tourId: string } => Boolean(c.tourId)).map((c) => [c.tourId, c.code])
+    );
+
+    res.json({
+      slug: profile.slug,
+      publicPath: `/influencers/${profile.slug}`,
+      display,
+      availableTours: tours.map((t) => {
+        const pricing = attachTourPricing(t);
+        return {
+          id: t.id,
+          title: t.title,
+          slug: t.slug,
+          summary: t.summary,
+          days: t.days,
+          publicPriceLkr: pricing.publicPriceLkr,
+          influencerCommissionLkr: pricing.influencerCommissionLkr,
+          coverUrl: t.coverUrl,
+          agency: t.agency,
+          hasReferralCode: codeByTourId.has(t.id),
+          referralCode: codeByTourId.get(t.id) ?? null,
+        };
+      }),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), async (req, res, next) => {
+  try {
+    const profile = await getInfluencerProfileForUser(req.user!.id);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+
+    const body = z
+      .object({
+        headline: z.string().min(1).max(200),
+        tagline: z.string().max(500),
+        tourIds: z.array(z.string()).max(48),
+      })
+      .parse(req.body);
+
+    const validTours = await prisma.tour.findMany({
+      where: {
+        id: { in: body.tourIds },
+        isPublished: true,
+        tourKind: "READY_MADE",
+      },
+      select: { id: true },
+    });
+    const validIds = new Set(validTours.map((t) => t.id));
+    const tourIds = body.tourIds.filter((id) => validIds.has(id));
+
+    const content = {
+      headline: body.headline.trim(),
+      tagline: body.tagline.trim(),
+      tourIds,
+    };
+
+    await prisma.influencerProfile.update({
+      where: { id: profile.id },
+      data: { display: buildDisplayPayload(content) },
+    });
+
+    res.json({
+      slug: profile.slug,
+      publicPath: `/influencers/${profile.slug}`,
+      display: content,
+    });
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: e.errors[0]?.message || "Invalid input" });
+    }
+    next(e);
+  }
+});
+
 influencerRouter.get("/tours", authRequired, requireRoles("INFLUENCER"), async (_req, res, next) => {
   try {
     const tours = await prisma.tour.findMany({
       where: { isPublished: true, tourKind: "READY_MADE" },
-      include: { agency: { select: { id: true, name: true, slug: true } } },
+      include: { agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } } },
       orderBy: [{ agency: { name: "asc" } }, { title: "asc" }],
     });
     res.json(tours.map(serializeTour));

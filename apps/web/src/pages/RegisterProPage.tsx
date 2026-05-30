@@ -1,13 +1,21 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { dashboardPathForRole, isValidInternationalPhone, toStoredPhone, type UserRole } from "@tourpilot/shared";
+import {
+  dashboardPathForRole,
+  defaultAgencyKyc,
+  isValidInternationalPhone,
+  toStoredPhone,
+  type AgencyKycInput,
+  type UserRole,
+} from "@tourpilot/shared";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { AuthLayout } from "../components/AuthLayout";
 import { OtpStep } from "../components/OtpStep";
 import { PhoneInput } from "../components/PhoneInput";
+import { AgencyKycForm } from "../components/agency/AgencyKycForm";
 
-type Step = "details" | "otp";
+type Step = "details" | "kyc" | "otp";
 
 export function RegisterProPage() {
   const navigate = useNavigate();
@@ -18,6 +26,7 @@ export function RegisterProPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<UserRole>("AGENCY");
   const [agencyName, setAgencyName] = useState("");
+  const [agencyKyc, setAgencyKyc] = useState<AgencyKycInput>(() => defaultAgencyKyc());
   const [otp, setOtp] = useState("");
   const [challengeId, setChallengeId] = useState("");
   const [demoOtp, setDemoOtp] = useState<string | undefined>();
@@ -25,7 +34,15 @@ export function RegisterProPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleDetailsSubmit(e: FormEvent) {
+  useEffect(() => {
+    if (role !== "AGENCY") return;
+    setAgencyKyc((prev) => ({
+      ...prev,
+      legalBusinessName: agencyName.trim() || prev.legalBusinessName,
+    }));
+  }, [agencyName, role]);
+
+  function handleDetailsSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -35,9 +52,40 @@ export function RegisterProPage() {
       return;
     }
 
+    setPhone(normalizedPhone);
+
+    if (role === "AGENCY") {
+      if (!agencyName.trim()) {
+        setError("Agency name is required.");
+        return;
+      }
+      setAgencyKyc((prev) => ({
+        ...defaultAgencyKyc({ legalBusinessName: agencyName.trim() }),
+        ...prev,
+        legalBusinessName: agencyName.trim(),
+      }));
+      setStep("kyc");
+      return;
+    }
+
+    void requestOtp(normalizedPhone);
+  }
+
+  async function handleKycSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (!agencyKyc.declarationsAccepted) {
+      setError("Please confirm the declarations to continue.");
+      return;
+    }
+
+    await requestOtp(phone);
+  }
+
+  async function requestOtp(normalizedPhone: string) {
     setLoading(true);
     try {
-      setPhone(normalizedPhone);
       const data = await api<{ challengeId: string; otp?: string; bypassOtp?: string }>(
         "/auth/register-request",
         {
@@ -47,6 +95,7 @@ export function RegisterProPage() {
             phone: normalizedPhone,
             role,
             agencyName: role === "AGENCY" ? agencyName : undefined,
+            agencyKyc: role === "AGENCY" ? agencyKyc : undefined,
           }),
         }
       );
@@ -69,7 +118,14 @@ export function RegisterProPage() {
     try {
       const data = await api<{
         token: string;
-        user: { id: string; phone: string; name: string; role: UserRole; walletBalance: number };
+        user: {
+          id: string;
+          phone: string;
+          name: string;
+          role: UserRole;
+          walletBalance: number;
+          agency?: { status: string } | null;
+        };
         redirectTo: string;
       }>("/auth/verify-registration", {
         method: "POST",
@@ -110,18 +166,41 @@ export function RegisterProPage() {
           </select>
           {role === "AGENCY" && (
             <>
-              <label htmlFor="agency">Agency name</label>
+              <label htmlFor="agency">Agency display name</label>
               <input
                 id="agency"
                 value={agencyName}
                 onChange={(e) => setAgencyName(e.target.value)}
                 required
+                placeholder="As travelers will see it"
               />
             </>
           )}
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            Send OTP
+            {role === "AGENCY" ? "Continue to verification" : "Send OTP"}
           </button>
+        </form>
+      )}
+
+      {step === "kyc" && role === "AGENCY" && (
+        <form className="form-grid agency-kyc-register" onSubmit={handleKycSubmit}>
+          <AgencyKycForm value={agencyKyc} onChange={setAgencyKyc} disabled={loading} />
+          <div className="agency-kyc-register-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={loading}
+              onClick={() => {
+                setStep("details");
+                setError("");
+              }}
+            >
+              Back
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              Send OTP
+            </button>
+          </div>
         </form>
       )}
 
@@ -129,6 +208,13 @@ export function RegisterProPage() {
         <>
           <p className="muted" style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>
             Code sent to {phone}
+            {role === "AGENCY" && (
+              <>
+                <br />
+                After verification, your agency is submitted for review (usually within 1–2 business
+                days).
+              </>
+            )}
           </p>
           <OtpStep
             otp={otp}
@@ -139,7 +225,7 @@ export function RegisterProPage() {
             onOtpChange={setOtp}
             onSubmit={handleOtpSubmit}
             onBack={() => {
-              setStep("details");
+              setStep(role === "AGENCY" ? "kyc" : "details");
               setOtp("");
               setError("");
             }}

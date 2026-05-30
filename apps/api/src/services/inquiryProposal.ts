@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { resolveReferralCommissionLkr } from "../lib/referralCommission.js";
 import { createInquiryItinerary, itineraryBodySchema } from "../routes/inquiryResponses.js";
 import { createInquiryMessage } from "./inquiryMessages.js";
 import { z } from "zod";
@@ -168,9 +169,6 @@ export async function upsertInquiryProposal(
 async function syncReferralCommission(inquiryId: string, referralCodeId: string | null) {
   if (!referralCodeId) return;
 
-  const ref = await prisma.referralCode.findUnique({ where: { id: referralCodeId } });
-  if (!ref) return;
-
   const customItems = await prisma.inquiryProposalItem.findMany({
     where: { proposal: { inquiryId }, kind: "CUSTOM" },
     include: { itinerary: true },
@@ -183,7 +181,11 @@ async function syncReferralCommission(inquiryId: string, referralCodeId: string 
 
   if (grandTotal <= 0) return;
 
-  const amount = (grandTotal * Number(ref.commissionPct)) / 100;
+  const amount = await resolveReferralCommissionLkr(referralCodeId, grandTotal);
+  if (amount <= 0) return;
+
+  const ref = await prisma.referralCode.findUnique({ where: { id: referralCodeId } });
+  if (!ref) return;
 
   await prisma.commission.upsert({
     where: { inquiryId },

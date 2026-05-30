@@ -1,0 +1,213 @@
+.influencer-display-editor {
+  max-width: 720px;
+}
+
+.influencer-display-url {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: var(--partner-canvas, #f8fbf9);
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--line, #e2ebe6);
+}
+
+.influencer-display-url-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.influencer-display-url-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.influencer-display-url code {
+  font-size: 0.88rem;
+  word-break: break-all;
+}
+
+.influencer-display-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.influencer-display-share-msg {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--teal, #0d6b52);
+}
+
+.influencer-display-tour-list {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 1px solid var(--line, #e2ebe6);
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+}
+
+.influencer-display-tour-list li + li {
+  border-top: 1px solid var(--line, #e2ebe6);
+}
+
+.influencer-display-tour-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.influencer-display-tour-row--on {
+  background: #f0f7f3;
+}
+
+.influencer-display-tour-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.influencer-display-tour-main strong {
+  font-size: 0.95rem;
+}
+
+.influencer-display-ref {
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.influencer-display-ref.ok {
+  color: var(--teal, #0d6b52);
+}
+
+/* —— Public storefront —— */
+.influencer-display-public {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f4faf7 0%, #fff 28%);
+}
+
+.influencer-display-public-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.influencer-display-hero {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.influencer-display-eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--teal, #0d6b52);
+}
+
+.influencer-display-hero h1 {
+  margin: 0 0 12px;
+  font-family: var(--font-heading, Georgia, serif);
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  line-height: 1.15;
+}
+
+.influencer-display-lead {
+  margin: 0 auto 12px;
+  max-width: 36rem;
+  font-size: 1.05rem;
+  color: var(--muted, #5a6b63);
+}
+
+.influencer-display-bio {
+  margin: 0 auto;
+  max-width: 32rem;
+}
+
+.influencer-display-packages h2 {
+  margin: 0 0 20px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.influencer-display-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.influencer-display-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line, #e2ebe6);
+  box-shadow: 0 8px 24px rgba(15, 26, 22, 0.06);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.influencer-display-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 26, 22, 0.1);
+}
+
+.influencer-display-card-cover {
+  height: 160px;
+  width: 100%;
+  object-fit: cover;
+}
+
+.influencer-display-card-body {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.influencer-display-card-agency {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--teal, #0d6b52);
+}
+
+.influencer-display-card-body h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-family: var(--font-heading, Georgia, serif);
+}
+
+.influencer-display-card-summary {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted, #5a6b63);
+  line-height: 1.45;
+  flex: 1;
+}
+
+.influencer-display-card-cta {
+  margin-top: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--teal, #0d6b52);
+}

@@ -10,6 +10,10 @@ import { linkAgencyDriverOnDriverSignup } from "../services/agencyDriverLink.js"
 import { chargeLoginFee } from "../services/wallet.js";
 import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 import { slugify } from "../utils/slug.js";
+import { buildDisplayPayload, defaultInfluencerDisplay } from "../lib/influencerDisplay.js";
+import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
+import { buildAgencyKycRecord, parseAgencyKyc } from "../lib/agencyKyc.js";
+import { asJson } from "../utils/json.js";
 
 export const authRouter = Router();
 
@@ -23,8 +27,19 @@ authRouter.post("/register-request", async (req, res, next) => {
         phone: z.string(),
         role: roleSchema,
         agencyName: z.string().optional(),
+        agencyKyc: z.record(z.unknown()).optional(),
       })
       .parse(req.body);
+
+    if (body.role === "AGENCY") {
+      if (!body.agencyName?.trim()) {
+        return res.status(400).json({ error: "Agency name is required" });
+      }
+      if (!body.agencyKyc) {
+        return res.status(400).json({ error: "Agency KYC details are required" });
+      }
+      parseAgencyKyc(body.agencyKyc);
+    }
 
     const phone = toStoredPhone(body.phone);
     if (!isValidInternationalPhone(phone)) {
@@ -53,6 +68,7 @@ authRouter.post("/register-request", async (req, res, next) => {
       name: body.name,
       role: body.role,
       agencyName: body.agencyName,
+      agencyKyc: body.role === "AGENCY" ? parseAgencyKyc(body.agencyKyc) : undefined,
     });
 
     res.json({
@@ -82,6 +98,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
     const name = String(payload.name || "User");
     const role = payload.role as UserRole;
     const agencyName = String(payload.agencyName || `${name} Tours`);
+    const agencyKycRaw = payload.agencyKyc;
 
     const user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
@@ -89,6 +106,14 @@ authRouter.post("/verify-registration", async (req, res, next) => {
       });
 
       if (role === "AGENCY") {
+        if (!agencyKycRaw || typeof agencyKycRaw !== "object") {
+          const err = new Error("Agency KYC details are missing. Please register again.");
+          (err as Error & { status: number }).status = 400;
+          throw err;
+        }
+        const kycInput = parseAgencyKyc(agencyKycRaw);
+        const kycRecord = buildAgencyKycRecord(kycInput);
+
         let slug = slugify(agencyName);
         const taken = await tx.agency.findUnique({ where: { slug } });
         if (taken) slug = `${slug}-${created.id.slice(-4)}`;
@@ -98,7 +123,12 @@ authRouter.post("/verify-registration", async (req, res, next) => {
             ownerId: created.id,
             name: agencyName,
             slug,
-            status: "APPROVED",
+            status: "PENDING",
+            district: kycInput.district,
+            contactEmail: kycInput.businessEmail,
+            contactPhone: phone,
+            kyc: asJson(kycRecord),
+            kycSubmittedAt: new Date(),
             pageConfig: defaultAgencyPageConfig(agencyName),
             gallery: [],
           },
@@ -145,7 +175,14 @@ authRouter.post("/verify-registration", async (req, res, next) => {
         await tx.touristProfile.create({ data: { userId: created.id } });
       }
       if (role === "INFLUENCER") {
-        await tx.influencerProfile.create({ data: { userId: created.id } });
+        const slug = await ensureUniqueInfluencerSlug(tx, created.name);
+        await tx.influencerProfile.create({
+          data: {
+            userId: created.id,
+            slug,
+            display: buildDisplayPayload(defaultInfluencerDisplay(created.name)),
+          },
+        });
       }
       if (role === "DRIVER") {
         await tx.driverProfile.create({
@@ -314,7 +351,7 @@ function serializeUser(user: {
   avatarUrl: string | null;
   walletBalance: unknown;
   touristProfile?: { loyaltyPoints: number } | null;
-  agency?: { id: string; name: string; slug: string } | null;
+  agency?: { id: string; name: string; slug: string; status: string } | null;
   agencyDriver?: {
     id: string;
     agencyId: string;
@@ -333,7 +370,14 @@ function serializeUser(user: {
     touristProfile: user.touristProfile
       ? { loyaltyPoints: user.touristProfile.loyaltyPoints }
       : null,
-    agency: user.agency ?? null,
+    agency: user.agency
+      ? {
+          id: user.agency.id,
+          name: user.agency.name,
+          slug: user.agency.slug,
+          status: user.agency.status,
+        }
+      : null,
     agencyDriver: user.agencyDriver
       ? {
           id: user.agencyDriver.id,

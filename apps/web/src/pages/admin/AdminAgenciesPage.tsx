@@ -4,6 +4,8 @@ import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { RejectAgencyModal } from "../../components/admin/RejectAgencyModal";
+import { AgencyKycModal } from "../../components/admin/AgencyKycModal";
+import type { AgencyKycRecord } from "@tourpilot/shared";
 import type { AdminAgency } from "./types";
 
 const STATUSES = ["", "PENDING", "APPROVED", "SUSPENDED", "REJECTED"] as const;
@@ -16,6 +18,9 @@ export function AdminAgenciesPage() {
   const [msg, setMsg] = useState("");
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ id: string; name: string } | null>(null);
+  const [kycTarget, setKycTarget] = useState<{ name: string; kyc: AgencyKycRecord | null } | null>(
+    null
+  );
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -129,6 +134,20 @@ export function AdminAgenciesPage() {
                         View
                       </Link>
                     )}
+                    {a.kyc && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-nav"
+                        onClick={() =>
+                          setKycTarget({
+                            name: a.name,
+                            kyc: a.kyc as AgencyKycRecord,
+                          })
+                        }
+                      >
+                        View KYC
+                      </button>
+                    )}
                     {a.status === "PENDING" && (
                       <>
                         <button
@@ -175,6 +194,13 @@ export function AdminAgenciesPage() {
           </table>
         </div>
       )}
+
+      <AgencyKycModal
+        agencyName={kycTarget?.name ?? ""}
+        kyc={kycTarget?.kyc ?? null}
+        open={!!kycTarget}
+        onClose={() => setKycTarget(null)}
+      />
 
       <RejectAgencyModal
         agencyName={rejectTarget?.name ?? ""}

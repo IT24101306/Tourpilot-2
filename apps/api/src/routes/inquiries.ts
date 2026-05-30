@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { resolveReferralCommissionLkr } from "../lib/referralCommission.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { calculateItineraryTotals } from "../utils/pricing.js";
 import { createShareToken } from "../services/otp.js";
@@ -256,22 +257,27 @@ inquiriesRouter.post("/:id/reply", authRequired, requireRoles("AGENCY"), async (
       itineraryId = itinerary.id;
 
       if (inquiry.referralCodeId) {
-        const ref = await prisma.referralCode.findUnique({
-          where: { id: inquiry.referralCodeId },
-        });
-        if (ref) {
-          const amount = (totals.grandMax * Number(ref.commissionPct)) / 100;
-          await prisma.commission.upsert({
-            where: { inquiryId: inquiry.id },
-            create: {
-              inquiryId: inquiry.id,
-              referralCodeId: ref.id,
-              influencerId: ref.influencerId,
-              amountLkr: amount,
-              status: "PENDING",
-            },
-            update: { amountLkr: amount },
+        const amount = await resolveReferralCommissionLkr(
+          inquiry.referralCodeId,
+          totals.grandMax
+        );
+        if (amount > 0) {
+          const ref = await prisma.referralCode.findUnique({
+            where: { id: inquiry.referralCodeId },
           });
+          if (ref) {
+            await prisma.commission.upsert({
+              where: { inquiryId: inquiry.id },
+              create: {
+                inquiryId: inquiry.id,
+                referralCodeId: ref.id,
+                influencerId: ref.influencerId,
+                amountLkr: amount,
+                status: "PENDING",
+              },
+              update: { amountLkr: amount },
+            });
+          }
         }
       }
     }
@@ -460,23 +466,27 @@ inquiriesRouter.post("/:id/itinerary", authRequired, requireRoles("AGENCY"), asy
       });
 
       if (inquiry.referralCodeId) {
-        const ref = await prisma.referralCode.findUnique({
-          where: { id: inquiry.referralCodeId },
-          include: { influencer: true },
-        });
-        if (ref) {
-          const amount = (totals.grandMax * Number(ref.commissionPct)) / 100;
-          await prisma.commission.upsert({
-            where: { inquiryId: inquiry.id },
-            create: {
-              inquiryId: inquiry.id,
-              referralCodeId: ref.id,
-              influencerId: ref.influencerId,
-              amountLkr: amount,
-              status: "PENDING",
-            },
-            update: { amountLkr: amount },
+        const amount = await resolveReferralCommissionLkr(
+          inquiry.referralCodeId,
+          totals.grandMax
+        );
+        if (amount > 0) {
+          const ref = await prisma.referralCode.findUnique({
+            where: { id: inquiry.referralCodeId },
           });
+          if (ref) {
+            await prisma.commission.upsert({
+              where: { inquiryId: inquiry.id },
+              create: {
+                inquiryId: inquiry.id,
+                referralCodeId: ref.id,
+                influencerId: ref.influencerId,
+                amountLkr: amount,
+                status: "PENDING",
+              },
+              update: { amountLkr: amount },
+            });
+          }
         }
       }
     } else {

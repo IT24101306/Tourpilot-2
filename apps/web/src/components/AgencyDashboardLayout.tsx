@@ -14,10 +14,12 @@ const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/agency/travelers", label: "Travelers" },
   { to: "/dashboard/agency/all", label: "ALL" },
   { to: "/dashboard/agency/groups", label: "Groups" },
+  { to: "/dashboard/agency/offers", label: "Offers" },
+  { to: "/dashboard/agency/display", label: "Display" },
 ];
-
 export function AgencyDashboardLayout() {
-  const { token, refreshUser } = useAuth();
+  const { user, token, refreshUser } = useAuth();
+  const agencyStatus = user?.agency?.status;
   const [topupOpen, setTopupOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
   const [topupStatus, setTopupStatus] = useState("");
@@ -93,6 +95,30 @@ export function AgencyDashboardLayout() {
       </nav>
 
       <section className="agency-content">
+        {agencyStatus === "PENDING" && (
+          <div className="agency-status-banner agency-status-banner--pending" role="status">
+            <strong>Verification in progress</strong>
+            <p>
+              Your KYC was submitted and is awaiting TourPilot approval. You can prepare tours and
+              your storefront; travelers will see your agency once approved.
+            </p>
+          </div>
+        )}
+        {agencyStatus === "REJECTED" && (
+          <div className="agency-status-banner agency-status-banner--rejected" role="alert">
+            <strong>Application not approved</strong>
+            <p>
+              Contact support if you believe this was a mistake. You can update your details and
+              reach out to request a review.
+            </p>
+          </div>
+        )}
+        {agencyStatus === "SUSPENDED" && (
+          <div className="agency-status-banner agency-status-banner--rejected" role="alert">
+            <strong>Account suspended</strong>
+            <p>Your agency is not visible to travelers. Please contact TourPilot support.</p>
+          </div>
+        )}
         <Outlet />
       </section>
 

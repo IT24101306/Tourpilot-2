@@ -20,9 +20,14 @@ export function PublicLayout() {
               Offers
             </NavLink>
             {user?.role === "TOURIST" && (
-              <NavLink to="/trips" className={navLinkClass}>
-                My trips
-              </NavLink>
+              <>
+                <NavLink to="/trips" className={navLinkClass}>
+                  My travel
+                </NavLink>
+                <NavLink to="/saved" className={navLinkClass}>
+                  Saved
+                </NavLink>
+              </>
             )}
           </div>
           <div className="nav-actions">

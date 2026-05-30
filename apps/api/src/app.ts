@@ -9,11 +9,13 @@ import { entitiesRouter } from "./routes/entities.js";
 import { inquiriesRouter } from "./routes/inquiries.js";
 import { offersRouter } from "./routes/offers.js";
 import { influencerRouter } from "./routes/influencer.js";
+import { influencersRouter } from "./routes/influencers.js";
 import { walletRouter } from "./routes/wallet.js";
 import { adminRouter } from "./routes/admin/index.js";
 import { driverRouter } from "./routes/driver.js";
 import { driversRouter } from "./routes/drivers.js";
 import { uploadsRouter } from "./routes/uploads.js";
+import { savedToursRouter } from "./routes/savedTours.js";
 
 export function createApp() {
   const app = express();
@@ -35,11 +37,13 @@ export function createApp() {
   app.use("/api/inquiries", inquiriesRouter);
   app.use("/api/offers", offersRouter);
   app.use("/api/influencer", influencerRouter);
+  app.use("/api/influencers", influencersRouter);
   app.use("/api/wallet", walletRouter);
   app.use("/api/admin", adminRouter);
   app.use("/api/driver", driverRouter);
   app.use("/api/drivers", driversRouter);
   app.use("/api/uploads", uploadsRouter);
+  app.use("/api/saved-tours", savedToursRouter);
 
   app.use(
     (

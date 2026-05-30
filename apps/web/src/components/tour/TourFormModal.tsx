@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ImageUrlField } from "../ImageUrlField";
+import { tourPublicPriceLkr } from "@tourpilot/shared";
 import {
   createDayPlan,
   createEntry,
   entityOptionLabel,
   filterEntityOptions,
+  filterGroupOptions,
   renumberDays,
   type DayPlan,
   type EntityOption,
@@ -26,6 +28,8 @@ type Props = {
   onChange: (next: TourFormState) => void;
   onSubmit: (e: FormEvent) => void;
   uploadToken?: string | null;
+  /** Agency-wide % — commission is calculated from base price automatically. */
+  agencyInfluencerCommissionPct?: number;
 };
 
 export function TourFormModal({
@@ -41,21 +45,38 @@ export function TourFormModal({
   onChange,
   onSubmit,
   uploadToken,
+  agencyInfluencerCommissionPct = 0,
 }: Props) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
+  const [groupSearch, setGroupSearch] = useState("");
+  const [entitySearch, setEntitySearch] = useState("");
+
+  const filteredGroups = useMemo(
+    () => filterGroupOptions(groups, groupSearch),
+    [groups, groupSearch]
+  );
 
   const filteredEntities = useMemo(
-    () => filterEntityOptions(entities, groups, typeFilter, groupFilter),
-    [entities, groups, typeFilter, groupFilter]
+    () => filterEntityOptions(entities, groups, typeFilter, groupFilter, entitySearch),
+    [entities, groups, typeFilter, groupFilter, entitySearch]
   );
 
   useEffect(() => {
     if (!open) {
       setTypeFilter("all");
       setGroupFilter("all");
+      setGroupSearch("");
+      setEntitySearch("");
     }
   }, [open]);
+
+  useEffect(() => {
+    if (groupFilter === "all") return;
+    if (!filteredGroups.some((g) => g.id === groupFilter)) {
+      setGroupFilter("all");
+    }
+  }, [filteredGroups, groupFilter]);
 
   useEffect(() => {
     if (!open) return;
@@ -74,9 +95,14 @@ export function TourFormModal({
         ),
       })),
     });
-  }, [typeFilter, groupFilter, filteredEntities, open]);
+  }, [typeFilter, groupFilter, entitySearch, filteredEntities, open]);
 
   if (!open) return null;
+
+  const listedPrice = tourPublicPriceLkr({
+    basePriceLkr: form.basePriceLkr,
+    influencerCommissionPct: agencyInfluencerCommissionPct,
+  });
 
   const kindLabel = tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
   const modalTitle =
@@ -150,7 +176,7 @@ export function TourFormModal({
           </FormField>
 
           <div className="tour-meta-grid">
-            <FormField label="Base price (LKR)">
+            <FormField label="Your tour price (LKR)">
               <input
                 type="number"
                 min={0}
@@ -162,6 +188,13 @@ export function TourFormModal({
                 placeholder="89500"
               />
             </FormField>
+            <p className="tour-listed-price muted full" style={{ gridColumn: "1 / -1", margin: 0 }}>
+              Tourists see <strong>LKR {listedPrice.toLocaleString()}</strong> (your price +{" "}
+              {agencyInfluencerCommissionPct > 0
+                ? `${agencyInfluencerCommissionPct}% influencer commission`
+                : "no influencer commission"}
+              ). Set the % in Display settings.
+            </p>
             <ImageUrlField
               label="Cover image"
               value={form.coverUrl}
@@ -197,41 +230,58 @@ export function TourFormModal({
             Publish on agency storefront (travelers can view and inquire)
           </label>
 
-          <div className="entity-filter-row">
-            <FormField label="Filter by type">
-              <select
-                className="table-filter"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                aria-label="Filter entities by type"
-              >
-                <option value="all">All types</option>
-                <option value="HOTEL">Hotel</option>
-                <option value="ACTIVITY">Activity</option>
-                <option value="VIEWPOINT">View point</option>
-                <option value="RESTAURANT">Restaurant</option>
-              </select>
-            </FormField>
-            <FormField label="Filter by group">
+          <div className="entity-filter-row tour-entity-filters" role="search">
+            <input
+              type="search"
+              className="groups-search"
+              placeholder="Search by name, type, city…"
+              value={entitySearch}
+              onChange={(e) => setEntitySearch(e.target.value)}
+              aria-label="Search entities"
+            />
+            <select
+              className="table-filter"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label="Filter by type"
+            >
+              <option value="all">All types</option>
+              <option value="HOTEL">Hotel</option>
+              <option value="ACTIVITY">Activity</option>
+              <option value="VIEWPOINT">View point</option>
+              <option value="RESTAURANT">Restaurant</option>
+            </select>
+            <div className="tour-group-filter-wrap">
+              <input
+                type="search"
+                className="groups-search groups-search--filter"
+                placeholder="Search groups…"
+                value={groupSearch}
+                onChange={(e) => setGroupSearch(e.target.value)}
+                aria-label="Search groups"
+              />
               <select
                 className="table-filter"
                 value={groupFilter}
                 onChange={(e) => setGroupFilter(e.target.value)}
-                aria-label="Filter entities by group"
+                aria-label="Filter by group"
               >
                 <option value="all">All groups</option>
-                {groups.map((group) => (
+                {filteredGroups.map((group) => (
                   <option key={group.id} value={group.id}>
                     {group.name}
                   </option>
                 ))}
               </select>
-            </FormField>
+              {groupSearch.trim() && filteredGroups.length === 0 && (
+                <span className="tour-group-filter-empty muted">No groups match</span>
+              )}
+            </div>
           </div>
 
           {filteredEntities.length === 0 && (
             <p className="entity-filter-hint muted">
-              No entities match the current filters. Adjust filters or add entities in the ALL tab.
+              No entities match your search or filters. Adjust them or add entities in the ALL tab.
             </p>
           )}
 

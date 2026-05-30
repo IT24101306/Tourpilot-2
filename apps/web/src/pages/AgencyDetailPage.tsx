@@ -3,8 +3,14 @@ import { Link, NavLink, useParams, useSearchParams } from "react-router-dom";
 import { CoverImage } from "../components/CoverImage";
 import { navLinkClass } from "../utils/navLinkClass";
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
+import { useAuth } from "../context/AuthContext";
+import {
+  DiscoveryOfferCard,
+  type DiscoveryOffer,
+} from "../components/discovery/DiscoveryOfferCard";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
+import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import {
   defaultDisplayConfig,
   sectionEnabled,
@@ -43,6 +49,7 @@ type Agency = {
     enabled: DisplaySectionFlags;
     content: DisplayContent;
   };
+  loyaltyOffers?: DiscoveryOffer[];
 };
 
 function splitGalleryColumns(items: GalleryItem[]) {
@@ -106,6 +113,9 @@ function PackageCard({
   const inner = (
     <>
       <CoverImage src={image} className="agency-package-card-bg" />
+      {tour && (
+        <SaveTourButton tourId={tour.id} className="agency-package-save" />
+      )}
       {tour && <span className="agency-package-days">{tour.days} days</span>}
       <div className="agency-package-card-body">
         <h3>{pkg.title}</h3>
@@ -130,7 +140,9 @@ export function AgencyDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get("ref");
+  const { token } = useAuth();
   const [agency, setAgency] = useState<Agency | null>(null);
+  const [offerMsg, setOfferMsg] = useState("");
 
   useEffect(() => {
     if (!slug) return;
@@ -146,7 +158,8 @@ export function AgencyDetailPage() {
   const enabled = agency?.display?.enabled ?? defaultDisplayConfig().enabled;
   const content = agency?.display?.content ?? defaultDisplayConfig().content;
   const packages = content.packages;
-  const offers = content.offers;
+  const cmsOffers = content.offers;
+  const loyaltyOffers = agency?.loyaltyOffers ?? [];
   const gallery = agency?.gallery || [];
 
   const tourById = useMemo(() => {
@@ -170,6 +183,23 @@ export function AgencyDetailPage() {
 
   function scrollToInquiry() {
     document.getElementById("request-custom-tour")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  async function registerForOffer(offerId: string) {
+    if (!token) {
+      setOfferMsg("Log in to register for this offer.");
+      return;
+    }
+    if (!slug) return;
+    setOfferMsg("");
+    try {
+      await api(`/offers/${offerId}/register`, { method: "POST", token });
+      setOfferMsg("You are registered — the agency will follow up.");
+      const refreshed = await api<Agency>(`/agencies/${slug}`);
+      setAgency(refreshed);
+    } catch (e) {
+      setOfferMsg(e instanceof ApiError ? e.message : "Registration failed");
+    }
   }
 
   const [col1, col2, col3] = splitGalleryColumns(gallery);
@@ -313,30 +343,53 @@ export function AgencyDetailPage() {
           </section>
         )}
 
-        {showOffers && offers.length > 0 && (
+        {showOffers && (loyaltyOffers.length > 0 || cmsOffers.length > 0) && (
           <section className="agency-section agency-offers">
             <div className="agency-display-section-head">
               <h2>Special offers</h2>
-              <p>Limited deals and seasonal promotions from {agency.name}.</p>
+              <p>Limited deals and promotions from {agency.name}.</p>
             </div>
-            <div className="agency-offers-grid">
-              {offers.map((offer: DisplayOffer, i) => (
-                <article key={i} className="agency-offer-card">
-                  {offer.imageUrl && (
-                    <div
-                      className="agency-offer-card-cover"
-                      style={{ backgroundImage: `url(${offer.imageUrl})` }}
-                    />
-                  )}
-                  <div className="agency-offer-card-body">
-                    {offer.badge && <span className="agency-offer-badge">{offer.badge}</span>}
-                    <h3>{offer.title}</h3>
-                    <p>{offer.description}</p>
-                    {offer.priceLabel && <p className="agency-offer-price">{offer.priceLabel}</p>}
-                  </div>
-                </article>
-              ))}
-            </div>
+            {offerMsg && <p className="agency-offer-status">{offerMsg}</p>}
+            {loyaltyOffers.length > 0 && (
+              <div className="agency-loyalty-offers disc-offer-grid">
+                {loyaltyOffers.map((offer) => (
+                  <DiscoveryOfferCard
+                    key={offer.id}
+                    offer={{ ...offer, agencyName: agency.name, agencySlug: agency.slug }}
+                    compact
+                    onRegister={
+                      offer.spotsLeft > 0
+                        ? () => {
+                            if (token) void registerForOffer(offer.id);
+                            else setOfferMsg("Log in to register for this offer.");
+                          }
+                        : undefined
+                    }
+                    registerLabel={offer.spotsLeft > 0 ? "Register for offer" : "Offer full"}
+                  />
+                ))}
+              </div>
+            )}
+            {cmsOffers.length > 0 && (
+              <div className="agency-offers-grid">
+                {cmsOffers.map((offer: DisplayOffer, i) => (
+                  <article key={i} className="agency-offer-card">
+                    {offer.imageUrl && (
+                      <div
+                        className="agency-offer-card-cover"
+                        style={{ backgroundImage: `url(${offer.imageUrl})` }}
+                      />
+                    )}
+                    <div className="agency-offer-card-body">
+                      {offer.badge && <span className="agency-offer-badge">{offer.badge}</span>}
+                      <h3>{offer.title}</h3>
+                      <p>{offer.description}</p>
+                      {offer.priceLabel && <p className="agency-offer-price">{offer.priceLabel}</p>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

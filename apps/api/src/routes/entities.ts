@@ -34,15 +34,7 @@ entitiesRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, 
     const body = z
       .object({
         name: z.string().min(1, "Name is required"),
-        type: z.enum([
-          "HOTEL",
-          "VIEWPOINT",
-          "ACTIVITY",
-          "RESTAURANT",
-          "TRANSPORT",
-          "FREE_TIME",
-          "OTHER",
-        ]),
+        type: z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT"]),
         city: z.string().optional(),
         district: z.string().optional(),
         description: z.string().optional(),
@@ -52,7 +44,9 @@ entitiesRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, 
         lat: z.number().optional(),
         lng: z.number().optional(),
         media: z.array(z.unknown()).optional(),
-        metadata: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
+        metadata: z
+          .record(z.union([z.string(), z.number(), z.boolean()]))
+          .optional(),
       })
       .parse(req.body);
 

@@ -100,6 +100,8 @@ adminRouter.get("/agencies", async (req, res, next) => {
         owner: a.owner,
         tourCount: a._count.tours,
         inquiryCount: a._count.inquiries,
+        kyc: a.kyc,
+        kycSubmittedAt: a.kycSubmittedAt,
         createdAt: a.createdAt,
       }))
     );

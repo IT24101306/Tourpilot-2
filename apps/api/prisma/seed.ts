@@ -5,13 +5,17 @@ import { hashPassword } from "../src/services/password.js";
 const prisma = new PrismaClient();
 
 async function migrateLegacyPhones() {
-  const users = await prisma.user.findMany({
-    where: { NOT: { phone: { startsWith: "+" } } },
-  });
+  const users = await prisma.$queryRaw<{ id: string; phone: string }[]>`
+    SELECT id, phone FROM User WHERE phone NOT LIKE '+%'
+  `;
   for (const user of users) {
     const next = toStoredPhone(user.phone);
-    if (next !== user.phone) {
-      await prisma.user.update({ where: { id: user.id }, data: { phone: next } });
+    if (next === user.phone) continue;
+    try {
+      await prisma.$executeRaw`UPDATE User SET phone = ${next} WHERE id = ${user.id}`;
+    } catch (err) {
+      const code = (err as { code?: string; meta?: { code?: string } }).meta?.code;
+      if (code !== "1062") throw err;
     }
   }
 }
@@ -57,9 +61,26 @@ async function main() {
     { url: MEDIA.nature, label: "Wild Sri Lanka" },
   ];
 
+  const demoAgencyKyc = {
+    legalBusinessName: "Ceylon Trails (Pvt) Ltd",
+    businessType: "PRIVATE_LIMITED",
+    registrationNumber: "PV 123456",
+    registeredAddress: "42 Galle Road, Colombo 03, Sri Lanka",
+    district: "Colombo",
+    businessEmail: "hello@ceylon-trails.demo",
+    tourismLicenseNo: "SLTDA-DEMO-001",
+    ownerIdType: "NIC",
+    ownerIdNumber: "199012345678",
+    bankAccountName: "Ceylon Trails (Pvt) Ltd",
+    bankName: "Demo Bank",
+    bankAccountNumber: "1234567890",
+    declarationsAccepted: true,
+    submittedAt: new Date().toISOString(),
+  };
+
   const agency = await prisma.agency.upsert({
     where: { ownerId: agencyUser.id },
-    update: { gallery: demoGallery },
+    update: { gallery: demoGallery, kyc: demoAgencyKyc, kycSubmittedAt: new Date() },
     create: {
       ownerId: agencyUser.id,
       name: "Ceylon Trails",
@@ -67,7 +88,10 @@ async function main() {
       tagline: "Authentic Sri Lanka journeys",
       description: "Boutique tours across cultural triangle, hill country, and south coast.",
       district: "Colombo",
+      influencerCommissionPct: 8,
       status: "APPROVED",
+      kyc: demoAgencyKyc,
+      kycSubmittedAt: new Date(),
       avgRating: 4.8,
       reviewCount: 124,
       contactPhone: agencyPhone,
@@ -180,20 +204,53 @@ async function main() {
 
   const driverUser = await prisma.user.upsert({
     where: { phone: driverPhone },
-    update: {},
+    update: { role: "DRIVER" },
     create: {
       phone: driverPhone,
       name: "Nimal Perera",
       role: "DRIVER",
       walletBalance: 9600,
-      driverProfile: {
-        create: {
-          licenseNo: "B321-9845",
-          vehicle: "Toyota KDH",
-          status: "available",
-          bio: "5 years experience · English, Sinhala",
-        },
+    },
+  });
+
+  await prisma.driverProfile.upsert({
+    where: { userId: driverUser.id },
+    update: {
+      licenseNo: "B321-9845",
+      vehicle: "Toyota KDH",
+      status: "Available",
+      blockedDates: ["2026-05-05", "2026-05-08", "2026-05-12"],
+      metadata: {
+        experience: "5 Years",
+        languages: "English, Sinhala",
+        availabilityNotes: "Prefers hill-country routes",
       },
+    },
+    create: {
+      userId: driverUser.id,
+      licenseNo: "B321-9845",
+      vehicle: "Toyota KDH",
+      status: "Available",
+      blockedDates: ["2026-05-05", "2026-05-08", "2026-05-12"],
+      metadata: {
+        experience: "5 Years",
+        languages: "English, Sinhala",
+        availabilityNotes: "Prefers hill-country routes",
+      },
+    },
+  });
+
+  await prisma.agencyDriver.upsert({
+    where: { userId: driverUser.id },
+    update: { agencyId: agency.id },
+    create: {
+      agencyId: agency.id,
+      userId: driverUser.id,
+      name: "Nimal Perera",
+      phone: driverPhone,
+      licenseNo: "B321-9845",
+      vehicle: "Toyota KDH",
+      status: "Available",
     },
   });
 
@@ -211,7 +268,7 @@ async function main() {
     },
   });
 
-  const influencerProfile = await prisma.influencerProfile.findUniqueOrThrow({
+  let influencerProfile = await prisma.influencerProfile.findUniqueOrThrow({
     where: { userId: influencerUser.id },
   });
 
@@ -246,6 +303,18 @@ async function main() {
       districtTags: ["Galle", "Mirissa"],
       coverUrl: MEDIA.coast,
       isPublished: true,
+    },
+  });
+
+  influencerProfile = await prisma.influencerProfile.update({
+    where: { id: influencerProfile.id },
+    data: {
+      slug: "island-vibes",
+      display: {
+        headline: "Island Vibes — Sri Lanka picks",
+        tagline: "My favourite ready-made tours with local agencies.",
+        tourIds: [tour1.id, tour2.id],
+      },
     },
   });
 
@@ -322,7 +391,7 @@ async function main() {
     where: { inquiryId: demoInquiry.id },
   });
   if (!existingItin) {
-    await prisma.itinerary.create({
+    const demoItinerary = await prisma.itinerary.create({
       data: {
         inquiryId: demoInquiry.id,
         title: "Cultural Triangle — your dream route",
@@ -333,33 +402,36 @@ async function main() {
         grandMax: 21500,
         isSent: true,
         shareToken: demoShareToken,
-        days: {
-          create: [
-            {
-              dayNumber: 1,
-              title: "Rock fortress & village stay",
-              lineItems: {
-                create: [
-                  {
-                    label: "Sigiriya Village Hotel",
-                    kind: "REQUIRED",
-                    priceLkr: 18000,
-                    sortOrder: 0,
-                    entityId: hotel.id,
-                  },
-                  {
-                    label: "Pidurangala sunrise hike",
-                    kind: "OPTIONAL",
-                    priceLkr: 3500,
-                    sortOrder: 1,
-                    entityId: viewpoint.id,
-                  },
-                ],
-              },
-            },
-          ],
-        },
       },
+    });
+    const demoDay = await prisma.itineraryDay.create({
+      data: {
+        itineraryId: demoItinerary.id,
+        dayNumber: 1,
+        title: "Rock fortress & village stay",
+      },
+    });
+    await prisma.itineraryLineItem.createMany({
+      data: [
+        {
+          itineraryId: demoItinerary.id,
+          dayId: demoDay.id,
+          label: "Sigiriya Village Hotel",
+          kind: "REQUIRED",
+          priceLkr: 18000,
+          sortOrder: 0,
+          entityId: hotel.id,
+        },
+        {
+          itineraryId: demoItinerary.id,
+          dayId: demoDay.id,
+          label: "Pidurangala sunrise hike",
+          kind: "OPTIONAL",
+          priceLkr: 3500,
+          sortOrder: 1,
+          entityId: viewpoint.id,
+        },
+      ],
     });
   }
 
@@ -382,60 +454,9 @@ async function main() {
     },
   });
 
-  const driverPhone = "0772223344";
-  const driverUser = await prisma.user.upsert({
-    where: { phone: driverPhone },
-    update: { role: "DRIVER" },
-    create: {
-      phone: driverPhone,
-      name: "Nimal Perera",
-      role: "DRIVER",
-      walletBalance: 100,
-    },
-  });
-
-  await prisma.driverProfile.upsert({
-    where: { userId: driverUser.id },
-    update: {
-      licenseNo: "B321-9845",
-      vehicle: "Toyota KDH",
-      status: "Available",
-      metadata: {
-        experience: "5 Years",
-        languages: "English, Sinhala",
-        availabilityNotes: "Prefers hill-country routes",
-      },
-    },
-    create: {
-      userId: driverUser.id,
-      licenseNo: "B321-9845",
-      vehicle: "Toyota KDH",
-      status: "Available",
-      blockedDates: ["2026-05-05", "2026-05-08", "2026-05-12"],
-      metadata: {
-        experience: "5 Years",
-        languages: "English, Sinhala",
-        availabilityNotes: "Prefers hill-country routes",
-      },
-    },
-  });
-
-  await prisma.agencyDriver.upsert({
-    where: { userId: driverUser.id },
-    update: { agencyId: agency.id },
-    create: {
-      agencyId: agency.id,
-      userId: driverUser.id,
-      name: "Nimal Perera",
-      phone: driverPhone,
-      licenseNo: "B321-9845",
-      vehicle: "Toyota KDH",
-      status: "Available",
-    },
-  });
-
   const offer = await prisma.offer.create({
     data: {
+      agencyId: agency.id,
       title: "Early Bird Cultural Triangle",
       description: "Register before slots fill — price shown for transparency.",
       imageUrl: MEDIA.cultural,
