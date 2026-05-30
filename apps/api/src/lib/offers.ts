@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
 import { optionalImageUrlSchema } from "./imageUrlSchema.js";
 import { prisma } from "./prisma.js";
@@ -37,21 +38,7 @@ export function resolveOfferImageUrl(
   return resolveImageUrl(offerImageUrl, resolveImageUrl(tourCoverUrl, DEFAULT_TOUR_COVER_URL));
 }
 
-export function serializeOfferAdmin(o: {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  rewardText: string;
-  registrationCap: number;
-  validFrom: Date;
-  validUntil: Date;
-  tourPriceLkr: unknown;
-  discountedLkr: unknown;
-  isActive: boolean;
-  tours: { tourId: string }[];
-  _count: { registrations: number };
-}) {
+export function serializeOfferAdmin(o: OfferWithAdminInclude) {
   return {
     id: o.id,
     title: o.title,
@@ -132,6 +119,16 @@ export function validateDiscount(tourPriceLkr: number, discountedLkr: number | n
   return null;
 }
 
+/** Active offers owned by an agency (direct link or via linked tours). */
+export function agencyOfferWhere(agencyId: string): Prisma.OfferWhereInput {
+  return {
+    OR: [
+      { agencyId },
+      { tours: { some: { tour: { agencyId } } } },
+    ],
+  };
+}
+
 export async function assertToursBelongToAgency(agencyId: string, tourIds: string[]) {
   if (tourIds.length === 0) return null;
   const tours = await prisma.tour.findMany({
@@ -149,20 +146,14 @@ export const offerIncludeAdmin = {
   _count: { select: { registrations: true } },
 } as const;
 
-type OfferRow = {
-  id: string;
-  validFrom: Date;
-  validUntil: Date;
-  tourPriceLkr: unknown;
-  discountedLkr: unknown;
-  tours: { tourId: string }[];
-  _count: { registrations: number };
-};
+export type OfferWithAdminInclude = Prisma.OfferGetPayload<{
+  include: typeof offerIncludeAdmin;
+}>;
 
 export async function applyOfferUpdate(
-  existing: OfferRow,
+  existing: OfferWithAdminInclude,
   body: z.infer<typeof offerUpdateBodySchema>
-) {
+): Promise<OfferWithAdminInclude> {
   const nextValidFrom = body.validFrom ? new Date(body.validFrom) : existing.validFrom;
   const nextValidUntil = body.validUntil ? new Date(body.validUntil) : existing.validUntil;
   const dateErr = validateOfferDates(nextValidFrom, nextValidUntil);
@@ -173,12 +164,12 @@ export async function applyOfferUpdate(
   }
 
   const nextTourPrice = body.tourPriceLkr ?? Number(existing.tourPriceLkr);
-  const nextDiscounted =
+  const nextDiscounted: number | null =
     body.discountedLkr === undefined
-      ? existing.discountedLkr
-      : body.discountedLkr === null
-        ? null
-        : body.discountedLkr;
+      ? existing.discountedLkr != null
+        ? Number(existing.discountedLkr)
+        : null
+      : body.discountedLkr;
 
   const discountErr = validateDiscount(
     nextTourPrice,

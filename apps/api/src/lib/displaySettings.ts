@@ -30,8 +30,15 @@ export type DisplayOffer = {
   imageUrl?: string;
 };
 
+export type HeroSlide = {
+  url: string;
+  label?: string;
+};
+
 export type DisplayContent = {
   heroHeadline: string;
+  heroSubheadline: string;
+  heroImages: HeroSlide[];
   packagesTitle: string;
   packagesSubtitle: string;
   ratingScore: string;
@@ -61,6 +68,8 @@ export const defaultDisplayEnabled = (): DisplaySectionFlags => ({
 export function defaultDisplayContent(): DisplayContent {
   return {
     heroHeadline: "Find your perfect trip experience.",
+    heroSubheadline: "Handcrafted journeys with local experts, transparent pricing, and routes you can trust.",
+    heroImages: [],
     packagesTitle: "Ready-Made Packages",
     packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
     ratingScore: "4.9",
@@ -110,6 +119,7 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
       : obj;
 
   if (typeof content.heroHeadline === "string") base.heroHeadline = content.heroHeadline;
+  if (typeof content.heroSubheadline === "string") base.heroSubheadline = content.heroSubheadline;
   if (typeof content.packagesTitle === "string") base.packagesTitle = content.packagesTitle;
   if (typeof content.packagesSubtitle === "string") base.packagesSubtitle = content.packagesSubtitle;
   if (typeof content.ratingScore === "string") base.ratingScore = content.ratingScore;
@@ -117,6 +127,21 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
   if (typeof content.ctaLabel === "string") base.ctaLabel = content.ctaLabel;
   if (typeof content.featuredImageUrl === "string") base.featuredImageUrl = content.featuredImageUrl;
   if (typeof content.featuredQuote === "string") base.featuredQuote = content.featuredQuote;
+
+  if (Array.isArray(content.heroImages)) {
+    const heroImages: HeroSlide[] = [];
+    for (const slide of content.heroImages) {
+      if (!slide || typeof slide !== "object") continue;
+      const row = slide as Record<string, unknown>;
+      const url = String(row.url || "").trim();
+      if (!url) continue;
+      heroImages.push({
+        url,
+        label: typeof row.label === "string" ? row.label.trim() : undefined,
+      });
+    }
+    base.heroImages = heroImages.slice(0, 12);
+  }
 
   if (Array.isArray(content.highlights)) {
     base.highlights = content.highlights

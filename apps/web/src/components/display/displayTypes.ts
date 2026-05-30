@@ -1,3 +1,5 @@
+import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+
 export type DisplaySectionFlags = {
   tours: boolean;
   showcase: boolean;
@@ -19,6 +21,11 @@ export type GalleryItem = {
   label: string;
 };
 
+export type HeroSlide = {
+  url: string;
+  label?: string;
+};
+
 export type DisplayPackage = {
   title: string;
   location: string;
@@ -37,6 +44,8 @@ export type DisplayOffer = {
 
 export type DisplayContent = {
   heroHeadline: string;
+  heroSubheadline: string;
+  heroImages: HeroSlide[];
   packagesTitle: string;
   packagesSubtitle: string;
   ratingScore: string;
@@ -58,6 +67,9 @@ export type DisplayConfig = {
 
 export const defaultDisplayContent = (): DisplayContent => ({
   heroHeadline: "Find your perfect trip experience.",
+  heroSubheadline:
+    "Handcrafted journeys with local experts, transparent pricing, and routes you can trust.",
+  heroImages: [],
   packagesTitle: "Ready-Made Packages",
   packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
   ratingScore: "4.9",
@@ -69,7 +81,7 @@ export const defaultDisplayContent = (): DisplayContent => ({
   ],
   ctaLabel: "Plan your trip",
   featuredImageUrl:
-    "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80", // keep in sync with @tourpilot/shared MEDIA.hero
+    "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
   featuredQuote:
     "We expected sand and silence. We found peace, stars, and people who love what they do.",
   packages: [],
@@ -95,4 +107,31 @@ export function sectionEnabled(
   key: keyof DisplaySectionFlags
 ): boolean {
   return enabled?.[key] ?? defaultDisplayConfig().enabled[key];
+}
+
+/** Resolve hero slides for the public page (custom slides → cover → featured → default). */
+export function resolveHeroSlides(
+  content: DisplayContent,
+  fallbacks: { coverUrl?: string | null; featuredImageUrl?: string | null }
+): HeroSlide[] {
+  const custom = content.heroImages
+    .map((s) => ({ url: s.url.trim(), label: s.label?.trim() }))
+    .filter((s) => s.url);
+
+  if (custom.length > 0) return custom;
+
+  const slides: HeroSlide[] = [];
+  const cover = fallbacks.coverUrl?.trim();
+  const featured = fallbacks.featuredImageUrl?.trim();
+
+  if (cover) slides.push({ url: resolveImageUrl(cover), label: "" });
+  if (featured && featured !== cover) {
+    slides.push({ url: resolveImageUrl(featured), label: "" });
+  }
+
+  if (slides.length === 0) {
+    slides.push({ url: DEFAULT_TOUR_COVER_URL, label: "" });
+  }
+
+  return slides;
 }

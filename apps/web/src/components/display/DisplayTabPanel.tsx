@@ -12,6 +12,7 @@ import {
   type DisplayReview,
   type DisplaySectionFlags,
   type GalleryItem,
+  type HeroSlide,
 } from "./displayTypes";
 
 type PublishedTour = {
@@ -29,6 +30,8 @@ type PublishedTour = {
 
 type DisplayPayload = {
   slug: string;
+  logoUrl: string | null;
+  coverUrl: string | null;
   influencerCommissionPct: number;
   enabled: DisplaySectionFlags;
   content: DisplayContent;
@@ -68,6 +71,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [config, setConfig] = useState<DisplayConfig>(defaultDisplayConfig);
   const [publishedTours, setPublishedTours] = useState<PublishedTour[]>([]);
   const [slug, setSlug] = useState(agencySlug || "");
+  const [logoUrl, setLogoUrl] = useState("");
   const [influencerCommissionPct, setInfluencerCommissionPct] = useState(8);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,15 +81,18 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [packageModalOpen, setPackageModalOpen] = useState(false);
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [offerModalOpen, setOfferModalOpen] = useState(false);
+  const [heroModalOpen, setHeroModalOpen] = useState(false);
 
   const [reviewForm, setReviewForm] = useState<DisplayReview>(defaultReviewForm);
   const [packageForm, setPackageForm] = useState<DisplayPackage>(defaultPackageForm);
   const [galleryForm, setGalleryForm] = useState<GalleryItem>({ url: "", label: "" });
   const [offerForm, setOfferForm] = useState<DisplayOffer>(defaultOfferForm);
+  const [heroForm, setHeroForm] = useState<HeroSlide>({ url: "", label: "" });
 
   const [editReviewIndex, setEditReviewIndex] = useState<number | null>(null);
   const [editPackageIndex, setEditPackageIndex] = useState<number | null>(null);
   const [editOfferIndex, setEditOfferIndex] = useState<number | null>(null);
+  const [editHeroIndex, setEditHeroIndex] = useState<number | null>(null);
 
   const loadDisplay = useCallback(async () => {
     if (!token) return;
@@ -93,7 +100,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     try {
       const data = await api<DisplayPayload>("/agencies/mine/display", { token });
       setSlug(data.slug);
-      setInfluencerCommissionPct(data.influencerCommissionPct ?? 8);
+      setLogoUrl(data.logoUrl || "");
+      setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
       setPublishedTours(data.publishedTours);
       setConfig({
         enabled: data.enabled,
@@ -149,6 +157,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         token,
         body: JSON.stringify({
           influencerCommissionPct,
+          logoUrl: logoUrl.trim() || undefined,
           enabled: config.enabled,
           content: {
             ...config.content,
@@ -163,6 +172,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         }),
       });
       setSlug(data.slug);
+      setLogoUrl(data.logoUrl || logoUrl);
       setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
       setConfig({
         enabled: data.enabled,
@@ -254,6 +264,34 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     setGalleryModalOpen(false);
   }
 
+  function saveHeroSlide(e: FormEvent) {
+    e.preventDefault();
+    const url = heroForm.url.trim();
+    if (!url) return;
+    const entry: HeroSlide = {
+      url,
+      label: heroForm.label?.trim() || undefined,
+    };
+
+    setConfig((prev) => {
+      const heroImages = [...prev.content.heroImages];
+      if (editHeroIndex === null) heroImages.push(entry);
+      else heroImages[editHeroIndex] = entry;
+      return { ...prev, content: { ...prev.content, heroImages } };
+    });
+    setHeroModalOpen(false);
+  }
+
+  function moveHeroSlide(index: number, direction: -1 | 1) {
+    setConfig((prev) => {
+      const heroImages = [...prev.content.heroImages];
+      const next = index + direction;
+      if (next < 0 || next >= heroImages.length) return prev;
+      [heroImages[index], heroImages[next]] = [heroImages[next], heroImages[index]];
+      return { ...prev, content: { ...prev.content, heroImages } };
+    });
+  }
+
   function saveOffer(e: FormEvent) {
     e.preventDefault();
     const entry: DisplayOffer = {
@@ -323,9 +361,22 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       </section>
 
       <div className="display-sections">
-        <section className="display-section-card display-copy-card">
-          <h3>Page headline</h3>
+        <section className="display-section-card display-copy-card display-hero-card">
+          <h3>Hero banner</h3>
+          <p className="muted display-section-desc">
+            Full-width banner at the top of your public page. Add multiple images for an automatic
+            left-to-right scroll. Headline and subheadline overlay the banner.
+          </p>
           <div className="display-field-grid">
+            <div className="full">
+              <ImageUrlField
+                label="Agency logo"
+                className="image-url-field--embedded image-url-field--full"
+                value={logoUrl}
+                onChange={setLogoUrl}
+                token={token}
+              />
+            </div>
             <label>
               Hero headline
               <input
@@ -333,6 +384,94 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 onChange={(e) => updateContent({ heroHeadline: e.target.value })}
               />
             </label>
+            <label className="full">
+              Hero subheadline
+              <textarea
+                rows={2}
+                value={content.heroSubheadline}
+                onChange={(e) => updateContent({ heroSubheadline: e.target.value })}
+                placeholder="A short line under your headline"
+              />
+            </label>
+          </div>
+
+          {content.heroImages.length > 0 && (
+            <ul className="display-item-list display-hero-list">
+              {content.heroImages.map((slide, i) => (
+                <li key={`${slide.url}-${i}`} className="display-review-item">
+                  <div className="display-hero-thumb-wrap">
+                    <img src={slide.url} alt="" className="display-hero-thumb" />
+                    <div>
+                      <strong>Slide {i + 1}</strong>
+                      {slide.label && <span className="muted"> · {slide.label}</span>}
+                    </div>
+                  </div>
+                  <div className="display-item-actions">
+                    <button
+                      type="button"
+                      className="btn btn-lite"
+                      disabled={i === 0}
+                      onClick={() => moveHeroSlide(i, -1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-lite"
+                      disabled={i === content.heroImages.length - 1}
+                      onClick={() => moveHeroSlide(i, 1)}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-lite"
+                      onClick={() => {
+                        setEditHeroIndex(i);
+                        setHeroForm({ url: slide.url, label: slide.label || "" });
+                        setHeroModalOpen(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-lite"
+                      onClick={() =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          content: {
+                            ...prev.content,
+                            heroImages: prev.content.heroImages.filter((_, j) => j !== i),
+                          },
+                        }))
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-primary display-section-btn"
+            disabled={content.heroImages.length >= 12}
+            onClick={() => {
+              setEditHeroIndex(null);
+              setHeroForm({ url: "", label: "" });
+              setHeroModalOpen(true);
+            }}
+          >
+            + Add hero image
+          </button>
+        </section>
+
+        <section className="display-section-card display-copy-card">
+          <h3>Page sections</h3>
+          <div className="display-field-grid">
             <label>
               Packages title
               <input
@@ -830,6 +969,39 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             </ModalField>
           </div>
           <ModalActions onCancel={() => setGalleryModalOpen(false)} submitLabel="Add image" />
+        </form>
+      </DashboardModal>
+
+      <DashboardModal
+        open={heroModalOpen}
+        title={editHeroIndex === null ? "Add hero image" : "Edit hero image"}
+        subtitle="Images scroll automatically when you add two or more."
+        onClose={() => setHeroModalOpen(false)}
+      >
+        <form onSubmit={saveHeroSlide}>
+          <div className="entity-form-grid">
+            <ModalField label="Hero image" full>
+              <ImageUrlField
+                label=""
+                className="image-url-field--embedded"
+                value={heroForm.url}
+                onChange={(url) => setHeroForm({ ...heroForm, url })}
+                token={token}
+              />
+            </ModalField>
+            <ModalField label="Caption (optional)" full>
+              <input
+                type="text"
+                value={heroForm.label || ""}
+                onChange={(e) => setHeroForm({ ...heroForm, label: e.target.value })}
+                placeholder="Sigiriya sunrise"
+              />
+            </ModalField>
+          </div>
+          <ModalActions
+            onCancel={() => setHeroModalOpen(false)}
+            submitLabel={editHeroIndex === null ? "Add slide" : "Save slide"}
+          />
         </form>
       </DashboardModal>
 

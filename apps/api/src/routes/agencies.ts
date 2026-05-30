@@ -18,6 +18,7 @@ import {
   type DisplayPackage,
 } from "../lib/displaySettings.js";
 import {
+  agencyOfferWhere,
   assertToursBelongToAgency,
   offerCreateBodySchema,
   offerIncludeActive,
@@ -76,9 +77,18 @@ const offerSchema = z.object({
 
 
 
+const heroSlideSchema = z.object({
+  url: storedImageUrlSchema,
+  label: z.string().optional(),
+});
+
 const contentSchema = z.object({
 
   heroHeadline: z.string(),
+
+  heroSubheadline: z.string().default(""),
+
+  heroImages: z.array(heroSlideSchema).max(12).default([]),
 
   packagesTitle: z.string(),
 
@@ -318,6 +328,10 @@ agenciesRouter.get("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
       slug: full.slug,
 
+      logoUrl: full.logoUrl,
+
+      coverUrl: full.coverUrl,
+
       influencerCommissionPct: Number(full.influencerCommissionPct),
 
       enabled: display.enabled,
@@ -412,6 +426,8 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
         influencerCommissionPct: z.number().min(0).max(50).optional(),
 
+        logoUrl: storedImageUrlSchema.optional(),
+
       })
 
       .parse(req.body);
@@ -452,6 +468,8 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
 
 
+      const firstHeroUrl = body.content.heroImages[0]?.url?.trim();
+
       await tx.agency.update({
 
         where: { id: agency.id },
@@ -461,6 +479,8 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
           ...(body.influencerCommissionPct !== undefined
             ? { influencerCommissionPct: body.influencerCommissionPct }
             : {}),
+          ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl } : {}),
+          ...(firstHeroUrl ? { coverUrl: firstHeroUrl } : {}),
         },
 
       });
@@ -530,6 +550,10 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
       slug: updated.slug,
 
+      logoUrl: updated.logoUrl,
+
+      coverUrl: updated.coverUrl,
+
       influencerCommissionPct: Number(withPct.influencerCommissionPct),
 
       enabled: body.enabled,
@@ -566,7 +590,7 @@ agenciesRouter.get("/mine/offers", authRequired, requireRoles("AGENCY"), async (
     if (!agency) return res.status(404).json({ error: "Agency not found" });
 
     const offers = await prisma.offer.findMany({
-      where: { agencyId: agency.id },
+      where: agencyOfferWhere(agency.id),
       orderBy: { createdAt: "desc" },
       include: offerIncludeAdmin,
     });
@@ -749,7 +773,7 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
     const now = new Date();
     const loyaltyOffers = await prisma.offer.findMany({
       where: {
-        agencyId: agency.id,
+        ...agencyOfferWhere(agency.id),
         isActive: true,
         validFrom: { lte: now },
         validUntil: { gte: now },

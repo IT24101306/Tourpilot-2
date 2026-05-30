@@ -1,3 +1,6 @@
+import type { Prisma } from "@prisma/client";
+import { asJson } from "../utils/json.js";
+
 export type InfluencerDisplayContent = {
   headline: string;
   tagline: string;
@@ -33,10 +36,10 @@ export function parseInfluencerDisplay(raw: unknown, name: string): InfluencerDi
   return base;
 }
 
-export function buildDisplayPayload(content: InfluencerDisplayContent): Record<string, unknown> {
-  return {
+export function buildDisplayPayload(content: InfluencerDisplayContent): Prisma.InputJsonValue {
+  return asJson({
     headline: content.headline,
     tagline: content.tagline,
     tourIds: content.tourIds,
-  };
+  });
 }

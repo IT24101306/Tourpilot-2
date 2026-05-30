@@ -11,8 +11,10 @@ import {
 } from "../components/discovery/DiscoveryOfferCard";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
+import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
 import {
   defaultDisplayConfig,
+  resolveHeroSlides,
   sectionEnabled,
   type DisplayContent,
   type DisplayOffer,
@@ -40,6 +42,7 @@ type Agency = {
   description: string | null;
   coverUrl: string | null;
   logoUrl: string | null;
+  district: string | null;
   gallery: GalleryItem[];
   avgRating: number;
   reviewCount: number;
@@ -157,6 +160,16 @@ export function AgencyDetailPage() {
 
   const enabled = agency?.display?.enabled ?? defaultDisplayConfig().enabled;
   const content = agency?.display?.content ?? defaultDisplayConfig().content;
+  const heroSlides = useMemo(
+    () =>
+      agency
+        ? resolveHeroSlides(content, {
+            coverUrl: agency.coverUrl,
+            featuredImageUrl: content.featuredImageUrl,
+          })
+        : [],
+    [agency, content]
+  );
   const packages = content.packages;
   const cmsOffers = content.offers;
   const loyaltyOffers = agency?.loyaltyOffers ?? [];
@@ -236,33 +249,49 @@ export function AgencyDetailPage() {
         </nav>
       </header>
 
-      {agency.coverUrl && (
-        <div
-          className="agency-display-cover"
-          style={{ backgroundImage: `url(${agency.coverUrl})` }}
-          aria-hidden="true"
-        />
-      )}
+      <section className="agency-hero-banner" aria-label={`${agency.name} hero`}>
+        <AgencyHeroBanner slides={heroSlides} />
+        <div className="agency-hero-banner__content">
+          <div className="agency-display-intro agency-display-intro--hero">
+            {agency.logoUrl ? (
+              <img src={agency.logoUrl} alt="" className="agency-display-logo" />
+            ) : (
+              <div className="agency-display-logo-fallback">{agency.name.charAt(0)}</div>
+            )}
+            <div>
+              <p className="agency-display-eyebrow">{agency.name}</p>
+              {agency.tagline && <p className="agency-display-tagline">{agency.tagline}</p>}
+              {agency.district && (
+                <p className="agency-display-region">{agency.district}, Sri Lanka</p>
+              )}
+            </div>
+          </div>
 
-      <div className="agency-display-inner">
-        <div className="agency-display-intro">
-          {agency.logoUrl ? (
-            <img src={agency.logoUrl} alt="" className="agency-display-logo" />
-          ) : (
-            <div className="agency-display-logo-fallback">{agency.name.charAt(0)}</div>
-          )}
-          <div>
-            <p className="agency-display-eyebrow">{agency.name}</p>
-            {agency.tagline && <p className="agency-display-tagline">{agency.tagline}</p>}
+          <div className="agency-hero-banner__copy">
+            <h1>{content.heroHeadline}</h1>
+            {content.heroSubheadline && (
+              <p className="agency-hero-banner__lead">{content.heroSubheadline}</p>
+            )}
+          </div>
+
+          <div className="agency-hero-banner__actions">
+            {inquiryEnabled && (
+              <button type="button" className="agency-hero-banner__cta" onClick={scrollToInquiry}>
+                {content.ctaLabel || "Plan your trip"}
+              </button>
+            )}
+            {showTours && packages.length > 0 && (
+              <a href="#packages" className="agency-hero-banner__ghost">
+                Browse packages
+              </a>
+            )}
           </div>
         </div>
+      </section>
 
-        <div className="agency-display-hero">
-          <h1>{content.heroHeadline}</h1>
-        </div>
-
+      <div className="agency-display-inner">
         {showTours && (
-          <section className="agency-section">
+          <section className="agency-section" id="packages">
             <div className="agency-display-section-head">
               <h2>{content.packagesTitle}</h2>
               <p>{content.packagesSubtitle}</p>
