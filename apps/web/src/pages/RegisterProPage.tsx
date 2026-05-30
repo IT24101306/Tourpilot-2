@@ -9,7 +9,7 @@ import {
   type UserRole,
 } from "@tourpilot/shared";
 import { api } from "../api/client";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, type AuthUser } from "../context/AuthContext";
 import { AuthLayout } from "../components/AuthLayout";
 import { OtpStep } from "../components/OtpStep";
 import { PhoneInput } from "../components/PhoneInput";
@@ -118,14 +118,7 @@ export function RegisterProPage() {
     try {
       const data = await api<{
         token: string;
-        user: {
-          id: string;
-          phone: string;
-          name: string;
-          role: UserRole;
-          walletBalance: number;
-          agency?: { status: string } | null;
-        };
+        user: AuthUser;
         redirectTo: string;
       }>("/auth/verify-registration", {
         method: "POST",

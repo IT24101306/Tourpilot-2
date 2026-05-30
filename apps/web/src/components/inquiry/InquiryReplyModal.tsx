@@ -19,6 +19,7 @@ type TourOption = {
   tourKind: string;
   isPublished: boolean;
   basePriceLkr?: number;
+  publicPriceLkr?: number;
 };
 
 type ProposalItem = {

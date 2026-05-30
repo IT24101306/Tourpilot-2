@@ -3,7 +3,6 @@ import {
   AGENCY_BUSINESS_TYPES,
   AGENCY_ID_TYPES,
   SRI_LANKA_DISTRICTS,
-  defaultAgencyKyc,
   type AgencyKycInput,
 } from "@tourpilot/shared";
 

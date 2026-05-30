@@ -60,6 +60,7 @@ export function InfluencerDetailPage() {
     );
   }
 
+  const storefront = store;
   const pageUrl = typeof window !== "undefined" ? window.location.href : "";
 
   async function sharePage() {
@@ -68,8 +69,8 @@ export function InfluencerDetailPage() {
     try {
       if (typeof navigator.share === "function") {
         await navigator.share({
-          title: `${store.name} — ${store.headline}`,
-          text: store.tagline,
+          title: `${storefront.name} — ${storefront.headline}`,
+          text: storefront.tagline,
           url: pageUrl,
         });
         setShareMsg("Thanks for sharing!");
@@ -102,10 +103,10 @@ export function InfluencerDetailPage() {
 
       <div className="influencer-display-public-inner">
         <div className="influencer-display-hero">
-          <p className="influencer-display-eyebrow">{store.name}</p>
-          <h1>{store.headline}</h1>
-          <p className="influencer-display-lead">{store.tagline}</p>
-          {store.bio && <p className="influencer-display-bio muted">{store.bio}</p>}
+          <p className="influencer-display-eyebrow">{storefront.name}</p>
+          <h1>{storefront.headline}</h1>
+          <p className="influencer-display-lead">{storefront.tagline}</p>
+          {storefront.bio && <p className="influencer-display-bio muted">{storefront.bio}</p>}
           <div className="influencer-display-hero-actions">
             <button type="button" className="btn btn-primary" onClick={() => void sharePage()}>
               Share this page
@@ -116,11 +117,11 @@ export function InfluencerDetailPage() {
 
         <section className="influencer-display-packages">
           <h2>Featured tours</h2>
-          {store.tours.length === 0 ? (
+          {storefront.tours.length === 0 ? (
             <p className="muted">No tours featured yet. Check back soon.</p>
           ) : (
             <div className="influencer-display-grid">
-              {store.tours.map((t) => (
+              {storefront.tours.map((t) => (
                 <Link key={t.id} to={t.tourPath} className="influencer-display-card">
                   <CoverImage
                     src={t.coverUrl}
