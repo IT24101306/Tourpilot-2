@@ -11,7 +11,7 @@
     "dev:api": "npm run dev -w @tourpilot/api",
     "dev:web": "npm run dev -w @tourpilot/web",
     "dev:mobile": "npm run start -w @tourpilot/mobile",
-    "build": "npm run build -w @tourpilot/api && npm run build -w @tourpilot/web",
+    "build": "npm run build -w @tourpilot/shared && npm run build -w @tourpilot/api && npm run build -w @tourpilot/web",
     "db:generate": "npm run db:generate -w @tourpilot/api",
     "db:migrate": "npm run db:migrate -w @tourpilot/api",
     "db:seed": "npm run db:seed -w @tourpilot/api",
