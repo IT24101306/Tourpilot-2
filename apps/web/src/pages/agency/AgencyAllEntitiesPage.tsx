@@ -16,18 +16,18 @@ import {
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 
 const TYPE_ICONS: Record<string, string> = {
-  HOTEL: "🏨",
-  VIEWPOINT: "🏔️",
-  ACTIVITY: "🎯",
-  RESTAURANT: "🍽️",
-  OTHER: "📍",
+  HOTEL: "",
+  VIEWPOINT: "",
+  ACTIVITY: "",
+  RESTAURANT: "",
+  OTHER: "",
 };
 
 const PICKER_TYPES: { value: EntityTypeKey; label: string; icon: string }[] = [
-  { value: "HOTEL", label: "Hotel", icon: "🏨" },
-  { value: "VIEWPOINT", label: "Viewpoint", icon: "🏔️" },
-  { value: "ACTIVITY", label: "Activity", icon: "🎯" },
-  { value: "RESTAURANT", label: "Restaurant", icon: "🍽️" },
+  { value: "HOTEL", label: "Hotel", icon: "" },
+  { value: "VIEWPOINT", label: "Viewpoint", icon: "" },
+  { value: "ACTIVITY", label: "Activity", icon: "" },
+  { value: "RESTAURANT", label: "Restaurant", icon: "" },
 ];
 
 type EntityMediaItem =

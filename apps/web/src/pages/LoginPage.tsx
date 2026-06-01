@@ -155,8 +155,10 @@ export function LoginPage() {
             {loading ? "Checking…" : "Continue"}
           </button>
           <p className="muted phone-input-hint" style={{ margin: 0 }}>
-            Admin accounts sign in with a password after Continue — no OTP.
+           
           </p>
+
+          
           {error && error.includes("No account") && (
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
               <Link to="/register" className="auth-switch-link">

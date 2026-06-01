@@ -61,6 +61,7 @@ export async function upsertInquiryProposal(
   });
 
   if (!inquiry) throw new Error("Inquiry not found");
+  const hadProposal = Boolean(inquiry.proposal);
   if (!isProposalEditable(inquiry.status)) {
     throw new Error("This inquiry can no longer be edited — the tourist has already responded.");
   }
@@ -160,7 +161,7 @@ export async function upsertInquiryProposal(
     authorId,
     "AGENCY",
     body.message.trim(),
-    inquiry.proposal ? "PROPOSAL_UPDATED" : "PROPOSAL_SENT"
+    hadProposal ? "PROPOSAL_UPDATED" : "PROPOSAL_SENT"
   );
 
   return proposal;

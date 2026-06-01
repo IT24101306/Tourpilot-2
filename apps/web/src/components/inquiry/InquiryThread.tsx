@@ -10,14 +10,15 @@ export type ThreadMessage = {
 type Props = {
   messages: ThreadMessage[];
   compact?: boolean;
+  hideTitle?: boolean;
 };
 
-export function InquiryThread({ messages, compact }: Props) {
+export function InquiryThread({ messages, compact, hideTitle }: Props) {
   if (!messages.length) return null;
 
   return (
     <div className={`inquiry-thread${compact ? " inquiry-thread-compact" : ""}`}>
-      <h4 className="inquiry-thread-title">Conversation</h4>
+      {!hideTitle && <h4 className="inquiry-thread-title">Conversation</h4>}
       <ul className="inquiry-thread-list">
         {messages.map((msg) => (
           <li
@@ -42,6 +43,7 @@ export function InquiryThread({ messages, compact }: Props) {
 }
 
 function actionLabel(action: string) {
+  if (action === "INQUIRY_CREATED") return "Trip request";
   if (action === "REVISION_REQUESTED") return "Requested changes";
   if (action === "PROPOSAL_SENT") return "Proposal sent";
   if (action === "PROPOSAL_UPDATED") return "Proposal updated";

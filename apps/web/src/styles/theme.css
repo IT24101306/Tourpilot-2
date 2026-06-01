@@ -2123,6 +2123,22 @@ textarea {
   background: var(--neg-canvas);
 }
 
+.module-negotiation .neg-request-meta {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border);
+}
+
+.module-negotiation .neg-request-meta p {
+  margin: 0;
+}
+
+.module-negotiation .neg-request-meta p + p {
+  margin-top: 4px;
+}
+
 .module-negotiation .neg-request-card {
   background: var(--white);
   border: 1px dashed var(--line);
@@ -2157,6 +2173,17 @@ textarea {
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   font-style: italic;
   line-height: 1.55;
+}
+
+.module-negotiation .neg-proposal-message-label {
+  display: block;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
 }
 
 .module-negotiation .neg-proposal-grid {

@@ -4,6 +4,15 @@ import { api, ApiError } from "../../api/client";
 import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
 import {
+  DisplayCompactRow,
+  DisplayFieldHint,
+  DisplaySectionActions,
+  DisplayStepNav,
+  DisplayStepPanel,
+  DisplayVisibilityToggle,
+  type DisplayStep,
+} from "./DisplayEditorUi";
+import {
   defaultDisplayConfig,
   type DisplayConfig,
   type DisplayContent,
@@ -68,6 +77,7 @@ const defaultOfferForm = (): DisplayOffer => ({
 });
 
 export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
+  const [activeStep, setActiveStep] = useState<DisplayStep>("hero");
   const [config, setConfig] = useState<DisplayConfig>(defaultDisplayConfig);
   const [publishedTours, setPublishedTours] = useState<PublishedTour[]>([]);
   const [slug, setSlug] = useState(agencySlug || "");
@@ -93,6 +103,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [editPackageIndex, setEditPackageIndex] = useState<number | null>(null);
   const [editOfferIndex, setEditOfferIndex] = useState<number | null>(null);
   const [editHeroIndex, setEditHeroIndex] = useState<number | null>(null);
+  const [editGalleryIndex, setEditGalleryIndex] = useState<number | null>(null);
 
   const loadDisplay = useCallback(async () => {
     if (!token) return;
@@ -232,6 +243,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         packages: prev.content.packages.filter((_, i) => i !== index),
       },
     }));
+    setPackageModalOpen(false);
+    setEditPackageIndex(null);
   }
 
   function saveReview(e: FormEvent) {
@@ -256,11 +269,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     e.preventDefault();
     const url = galleryForm.url.trim();
     if (!url) return;
-    setConfig((prev) => ({
-      ...prev,
-      gallery: [...prev.gallery, { url, label: galleryForm.label.trim() || "Gallery" }],
-    }));
+    const entry = { url, label: galleryForm.label.trim() || "Gallery" };
+    setConfig((prev) => {
+      const gallery = [...prev.gallery];
+      if (editGalleryIndex === null) gallery.push(entry);
+      else gallery[editGalleryIndex] = entry;
+      return { ...prev, gallery };
+    });
     setGalleryForm({ url: "", label: "" });
+    setEditGalleryIndex(null);
     setGalleryModalOpen(false);
   }
 
@@ -312,6 +329,48 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     setOfferModalOpen(false);
   }
 
+  function removeHeroSlide(index: number) {
+    setConfig((prev) => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        heroImages: prev.content.heroImages.filter((_, j) => j !== index),
+      },
+    }));
+    setHeroModalOpen(false);
+    setEditHeroIndex(null);
+  }
+
+  function removeReview(index: number) {
+    setConfig((prev) => ({
+      ...prev,
+      reviews: prev.reviews.filter((_, j) => j !== index),
+    }));
+    setReviewModalOpen(false);
+    setEditReviewIndex(null);
+  }
+
+  function removeGalleryItem(index: number) {
+    setConfig((prev) => ({
+      ...prev,
+      gallery: prev.gallery.filter((_, j) => j !== index),
+    }));
+    setGalleryModalOpen(false);
+    setEditGalleryIndex(null);
+  }
+
+  function removeOffer(index: number) {
+    setConfig((prev) => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        offers: prev.content.offers.filter((_, j) => j !== index),
+      },
+    }));
+    setOfferModalOpen(false);
+    setEditOfferIndex(null);
+  }
+
   const displayPageUrl = slug ? `/agencies/${slug}` : "";
   const { content } = config;
 
@@ -324,459 +383,436 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   }
 
   return (
-    <article className="agent-tab-panel">
-      <div className="panel-head display-panel-head">
+    <article className="agent-tab-panel display-editor">
+      <div className="display-editor-toolbar">
         <div>
-          <h2>Agency Display Customization</h2>
-          <p>Customize what sections appear on your public agency display page.</p>
+          <h2>Display page</h2>
+          <p className="muted">Edit your public agency page one section at a time.</p>
         </div>
-        {displayPageUrl && (
-          <a
-            href={displayPageUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-ghost display-view-btn"
+        <div className="display-editor-toolbar-actions">
+          {displayPageUrl && (
+            <a
+              href={displayPageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost"
+            >
+              Preview page ↗
+            </a>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={saving}
+            onClick={saveSettings}
           >
-            View display page
-          </a>
-        )}
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
 
-      <section className="display-section-card agency-partner-settings">
-        <h3>Influencer referrals</h3>
-        <p className="muted">
-          One commission rate for all ready-made tours. It is added to your base price on public
-          listings; influencers see their earn amount in LKR.
-        </p>
-        <label htmlFor="influencerCommissionPct">Commission (% of base tour price)</label>
-        <input
-          id="influencerCommissionPct"
-          type="number"
-          min={0}
-          max={50}
-          step={0.5}
-          value={influencerCommissionPct}
-          onChange={(e) => setInfluencerCommissionPct(Number(e.target.value) || 0)}
-        />
-      </section>
+      <DisplayStepNav active={activeStep} onChange={setActiveStep} />
 
-      <div className="display-sections">
-        <section className="display-section-card display-copy-card display-hero-card">
-          <h3>Hero banner</h3>
-          <p className="muted display-section-desc">
-            Full-width banner at the top of your public page. Add multiple images for an automatic
-            left-to-right scroll. Headline and subheadline overlay the banner.
-          </p>
-          <div className="display-field-grid">
-            <div className="full">
+      <div className="display-step-content">
+        {activeStep === "hero" && (
+          <DisplayStepPanel
+            title="Hero banner"
+            description="First thing visitors see — logo, scrolling photos, headline and subheadline."
+          >
+            <div className="display-field-stack">
               <ImageUrlField
                 label="Agency logo"
-                className="image-url-field--embedded image-url-field--full"
+                className="image-url-field--embedded"
                 value={logoUrl}
                 onChange={setLogoUrl}
                 token={token}
               />
+              <label>
+                Headline
+                <input
+                  value={content.heroHeadline}
+                  onChange={(e) => updateContent({ heroHeadline: e.target.value })}
+                  maxLength={80}
+                  placeholder="Find your perfect trip experience"
+                />
+                <DisplayFieldHint>Keep under ~60 characters for best layout.</DisplayFieldHint>
+              </label>
+              <label>
+                Subheadline
+                <textarea
+                  rows={2}
+                  value={content.heroSubheadline}
+                  onChange={(e) => updateContent({ heroSubheadline: e.target.value })}
+                  placeholder="A short line under your headline"
+                  maxLength={160}
+                />
+              </label>
             </div>
-            <label>
-              Hero headline
-              <input
-                value={content.heroHeadline}
-                onChange={(e) => updateContent({ heroHeadline: e.target.value })}
-              />
-            </label>
-            <label className="full">
-              Hero subheadline
-              <textarea
-                rows={2}
-                value={content.heroSubheadline}
-                onChange={(e) => updateContent({ heroSubheadline: e.target.value })}
-                placeholder="A short line under your headline"
-              />
-            </label>
-          </div>
 
-          {content.heroImages.length > 0 && (
-            <ul className="display-item-list display-hero-list">
-              {content.heroImages.map((slide, i) => (
-                <li key={`${slide.url}-${i}`} className="display-review-item">
-                  <div className="display-hero-thumb-wrap">
-                    <img src={slide.url} alt="" className="display-hero-thumb" />
-                    <div>
-                      <strong>Slide {i + 1}</strong>
-                      {slide.label && <span className="muted"> · {slide.label}</span>}
-                    </div>
-                  </div>
-                  <div className="display-item-actions">
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      disabled={i === 0}
-                      onClick={() => moveHeroSlide(i, -1)}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      disabled={i === content.heroImages.length - 1}
-                      onClick={() => moveHeroSlide(i, 1)}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      onClick={() => {
+            <div className="display-list-block">
+              <p className="display-subsection-label">Banner slides</p>
+              <p className="muted display-subsection-desc">
+                Add 2+ images for automatic scrolling. First slide is also used on discovery cards.
+              </p>
+              {content.heroImages.length === 0 ? (
+                <p className="display-empty-hint">No slides yet — add your first banner image.</p>
+              ) : (
+                <div className="display-compact-list">
+                  {content.heroImages.map((slide, i) => (
+                    <DisplayCompactRow
+                      key={`${slide.url}-${i}`}
+                      thumb={<img src={slide.url} alt="" className="display-compact-row-thumb" />}
+                      title={slide.label?.trim() || `Slide ${i + 1}`}
+                      meta={
+                        <span className="muted">
+                          {i + 1} of {content.heroImages.length}
+                          {i > 0 && (
+                            <>
+                              {" · "}
+                              <button
+                                type="button"
+                                className="display-inline-link"
+                                onClick={() => moveHeroSlide(i, -1)}
+                              >
+                                Move up
+                              </button>
+                            </>
+                          )}
+                          {i < content.heroImages.length - 1 && (
+                            <>
+                              {" · "}
+                              <button
+                                type="button"
+                                className="display-inline-link"
+                                onClick={() => moveHeroSlide(i, 1)}
+                              >
+                                Move down
+                              </button>
+                            </>
+                          )}
+                        </span>
+                      }
+                      onEdit={() => {
                         setEditHeroIndex(i);
                         setHeroForm({ url: slide.url, label: slide.label || "" });
                         setHeroModalOpen(true);
                       }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      onClick={() =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          content: {
-                            ...prev.content,
-                            heroImages: prev.content.heroImages.filter((_, j) => j !== i),
-                          },
-                        }))
-                      }
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                    />
+                  ))}
+                </div>
+              )}
+              <DisplaySectionActions>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={content.heroImages.length >= 12}
+                  onClick={() => {
+                    setEditHeroIndex(null);
+                    setHeroForm({ url: "", label: "" });
+                    setHeroModalOpen(true);
+                  }}
+                >
+                  + Add slide
+                </button>
+              </DisplaySectionActions>
+            </div>
+          </DisplayStepPanel>
+        )}
 
-          <button
-            type="button"
-            className="btn btn-primary display-section-btn"
-            disabled={content.heroImages.length >= 12}
-            onClick={() => {
-              setEditHeroIndex(null);
-              setHeroForm({ url: "", label: "" });
-              setHeroModalOpen(true);
-            }}
+        {activeStep === "packages" && (
+          <DisplayStepPanel
+            title="Ready-made packages"
+            description="Tour cards shown on your public page. Leave empty to auto-list published tours."
           >
-            + Add hero image
-          </button>
-        </section>
+            <DisplayVisibilityToggle
+              label="Show packages section"
+              hint="Turn off to hide tour cards from your public page"
+              checked={config.enabled.tours}
+              onChange={(checked) => toggleSection("tours", checked)}
+            />
 
-        <section className="display-section-card display-copy-card">
-          <h3>Page sections</h3>
-          <div className="display-field-grid">
-            <label>
-              Packages title
-              <input
-                value={content.packagesTitle}
-                onChange={(e) => updateContent({ packagesTitle: e.target.value })}
-              />
-            </label>
-            <label className="full">
-              Packages subtitle
-              <input
-                value={content.packagesSubtitle}
-                onChange={(e) => updateContent({ packagesSubtitle: e.target.value })}
-              />
-            </label>
-          </div>
-        </section>
+            <div className="display-field-stack display-field-stack--spaced">
+              <label>
+                Section title
+                <input
+                  value={content.packagesTitle}
+                  onChange={(e) => updateContent({ packagesTitle: e.target.value })}
+                />
+              </label>
+              <label>
+                Section subtitle
+                <input
+                  value={content.packagesSubtitle}
+                  onChange={(e) => updateContent({ packagesSubtitle: e.target.value })}
+                />
+              </label>
+            </div>
 
-        <section className="display-section-card">
-          <div className="display-section-head">
-            <h3>Ready-Made Packages</h3>
-            <label className="display-enable">
-              <input
-                type="checkbox"
-                checked={config.enabled.tours}
-                onChange={(e) => toggleSection("tours", e.target.checked)}
-              />
-              <span>Enable</span>
-            </label>
-          </div>
-          <p className="muted display-section-desc">
-            Horizontal package cards on your display page. Leave empty to auto-show published tours.
-          </p>
-          {config.content.packages.length > 0 && (
-            <ul className="display-item-list">
-              {config.content.packages.map((p, i) => (
-                <li key={i} className="display-review-item">
-                  <div>
-                    <strong>{p.title}</strong>
-                    <span className="muted">
-                      {" "}
-                      · {p.location} · {p.priceLabel}
-                    </span>
-                  </div>
-                  <div className="display-item-actions">
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      onClick={() => {
+            <div className="display-list-block">
+              <p className="display-subsection-label">Package cards</p>
+              {config.content.packages.length === 0 ? (
+                <p className="display-empty-hint">No custom packages — published tours may still appear.</p>
+              ) : (
+                <div className="display-compact-list">
+                  {config.content.packages.map((p, i) => (
+                    <DisplayCompactRow
+                      key={`${p.tourId ?? p.title}-${i}`}
+                      thumb={
+                        p.imageUrl ? (
+                          <img src={p.imageUrl} alt="" className="display-compact-row-thumb" />
+                        ) : undefined
+                      }
+                      title={p.title}
+                      meta={
+                        <span className="muted">
+                          {p.location} · {p.priceLabel}
+                        </span>
+                      }
+                      onEdit={() => {
                         setEditPackageIndex(i);
                         setPackageForm(p);
                         setPackageModalOpen(true);
                       }}
-                    >
-                      Edit
-                    </button>
-                    <button type="button" className="btn btn-lite" onClick={() => removePackage(i)}>
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          {publishedTours.length > 0 && (
-            <div className="display-import-row">
-              <span className="muted">Import from published tours:</span>
-              <div className="display-import-btns">
-                {publishedTours.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className="btn btn-lite"
-                    onClick={() => importTourAsPackage(t)}
-                  >
-                    {t.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary display-section-btn"
-            onClick={() => {
-              setEditPackageIndex(null);
-              setPackageForm(defaultPackageForm());
-              setPackageModalOpen(true);
-            }}
-          >
-            + Add Tour Package
-          </button>
-          <button type="button" className="btn btn-lite display-section-btn" onClick={onGoToTours}>
-            Manage tours in Tours tab
-          </button>
-        </section>
+                    />
+                  ))}
+                </div>
+              )}
 
-        <section className="display-section-card">
-          <div className="display-section-head">
-            <h3>Showcase (rating &amp; featured)</h3>
-            <label className="display-enable">
-              <input
-                type="checkbox"
-                checked={config.enabled.showcase}
-                onChange={(e) => toggleSection("showcase", e.target.checked)}
-              />
-              <span>Enable</span>
-            </label>
-          </div>
-          <div className="display-field-grid">
-            <label>
-              Rating score
-              <input
-                value={content.ratingScore}
-                onChange={(e) => updateContent({ ratingScore: e.target.value })}
-              />
-            </label>
-            <label>
-              Rating suffix
-              <input
-                value={content.ratingSuffix}
-                onChange={(e) => updateContent({ ratingSuffix: e.target.value })}
-              />
-            </label>
-            <label>
-              CTA button label
-              <input
-                value={content.ctaLabel}
-                onChange={(e) => updateContent({ ctaLabel: e.target.value })}
-              />
-            </label>
-            <div className="full">
+              {publishedTours.length > 0 && (
+                <div className="display-import-row">
+                  <span className="muted">Quick import from tours:</span>
+                  <div className="display-import-btns">
+                    {publishedTours.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className="btn btn-lite"
+                        onClick={() => importTourAsPackage(t)}
+                      >
+                        {t.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <DisplaySectionActions>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setEditPackageIndex(null);
+                    setPackageForm(defaultPackageForm());
+                    setPackageModalOpen(true);
+                  }}
+                >
+                  + Add package
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={onGoToTours}>
+                  Manage tours
+                </button>
+              </DisplaySectionActions>
+            </div>
+          </DisplayStepPanel>
+        )}
+
+        {activeStep === "showcase" && (
+          <DisplayStepPanel
+            title="Showcase & social proof"
+            description="Rating block, featured photo, trust bullets, and guest reviews."
+          >
+            <DisplayVisibilityToggle
+              label="Show showcase section"
+              checked={config.enabled.showcase}
+              onChange={(checked) => toggleSection("showcase", checked)}
+            />
+
+            <div className="display-rating-row">
+              <label>
+                Rating
+                <input
+                  value={content.ratingScore}
+                  onChange={(e) => updateContent({ ratingScore: e.target.value })}
+                  placeholder="4.9"
+                />
+              </label>
+              <label>
+                Suffix
+                <input
+                  value={content.ratingSuffix}
+                  onChange={(e) => updateContent({ ratingSuffix: e.target.value })}
+                  placeholder="/5"
+                />
+              </label>
+              <label>
+                CTA label
+                <input
+                  value={content.ctaLabel}
+                  onChange={(e) => updateContent({ ctaLabel: e.target.value })}
+                  placeholder="Plan your trip"
+                />
+              </label>
+            </div>
+
+            <div className="display-field-stack">
               <ImageUrlField
                 label="Featured image"
-                className="image-url-field--embedded image-url-field--full"
+                className="image-url-field--embedded"
                 value={content.featuredImageUrl}
                 onChange={(featuredImageUrl) => updateContent({ featuredImageUrl })}
                 token={token}
               />
+              <label>
+                Featured quote
+                <textarea
+                  rows={3}
+                  value={content.featuredQuote}
+                  onChange={(e) => updateContent({ featuredQuote: e.target.value })}
+                  placeholder="Guest testimonial on the featured photo"
+                />
+              </label>
             </div>
-            <label className="full">
-              Featured quote
-              <textarea
-                rows={3}
-                value={content.featuredQuote}
-                onChange={(e) => updateContent({ featuredQuote: e.target.value })}
-              />
-            </label>
-          </div>
-          <p className="muted display-section-desc">Highlight bullets (left card)</p>
-          {content.highlights.map((line, i) => (
-            <label key={i} className="display-highlight-row">
-              Bullet {i + 1}
-              <input value={line} onChange={(e) => updateHighlight(i, e.target.value)} />
-            </label>
-          ))}
-          {content.highlights.length < 6 && (
-            <button type="button" className="btn btn-lite" onClick={addHighlight}>
-              + Add highlight
-            </button>
-          )}
-        </section>
 
-        <section className="display-section-card">
-          <div className="display-section-head">
-            <h3>Reviews &amp; Testimonials</h3>
-            <label className="display-enable">
-              <input
-                type="checkbox"
+            <div className="display-list-block">
+              <p className="display-subsection-label">Trust highlights</p>
+              <div className="display-highlights-grid">
+                {content.highlights.map((line, i) => (
+                  <label key={i} className="display-highlight-row">
+                    Highlight {i + 1}
+                    <input
+                      value={line}
+                      onChange={(e) => updateHighlight(i, e.target.value)}
+                      placeholder="e.g. Certified local guides"
+                    />
+                  </label>
+                ))}
+              </div>
+              {content.highlights.length < 6 && (
+                <DisplaySectionActions>
+                  <button type="button" className="btn btn-lite" onClick={addHighlight}>
+                    + Add highlight
+                  </button>
+                </DisplaySectionActions>
+              )}
+            </div>
+
+            <div className="display-list-block">
+              <DisplayVisibilityToggle
+                label="Show reviews"
+                hint="Guest quotes in the showcase column"
                 checked={config.enabled.reviews}
-                onChange={(e) => toggleSection("reviews", e.target.checked)}
+                onChange={(checked) => toggleSection("reviews", checked)}
               />
-              <span>Enable</span>
-            </label>
-          </div>
-          <p className="muted display-section-desc">Shown in the right column of the showcase</p>
-          {config.reviews.length > 0 && (
-            <ul className="display-item-list">
-              {config.reviews.map((r, i) => (
-                <li key={r.id || i} className="display-review-item">
-                  <div>
-                    <strong>{r.authorName}</strong>
-                    <span className="muted"> · {"★".repeat(r.rating)}</span>
-                    {r.body && <p className="muted">{r.body}</p>}
-                  </div>
-                  <div className="display-item-actions">
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      onClick={() => {
+              {config.reviews.length === 0 ? (
+                <p className="display-empty-hint">No reviews yet.</p>
+              ) : (
+                <div className="display-compact-list">
+                  {config.reviews.map((r, i) => (
+                    <DisplayCompactRow
+                      key={r.id || i}
+                      title={r.authorName}
+                      meta={
+                        <>
+                          <span className="muted">{"★".repeat(r.rating)}</span>
+                          {r.body && <p className="muted">{r.body}</p>}
+                        </>
+                      }
+                      onEdit={() => {
                         setEditReviewIndex(i);
                         setReviewForm(r);
                         setReviewModalOpen(true);
                       }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      onClick={() =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          reviews: prev.reviews.filter((_, j) => j !== i),
-                        }))
-                      }
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary display-section-btn"
-            onClick={() => {
-              setEditReviewIndex(null);
-              setReviewForm(defaultReviewForm());
-              setReviewModalOpen(true);
-            }}
-          >
-            + Add Review
-          </button>
-        </section>
+                    />
+                  ))}
+                </div>
+              )}
+              <DisplaySectionActions>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setEditReviewIndex(null);
+                    setReviewForm(defaultReviewForm());
+                    setReviewModalOpen(true);
+                  }}
+                >
+                  + Add review
+                </button>
+              </DisplaySectionActions>
+            </div>
+          </DisplayStepPanel>
+        )}
 
-        <section className="display-section-card">
-          <div className="display-section-head">
-            <h3>Gallery</h3>
-            <label className="display-enable">
-              <input
-                type="checkbox"
+        {activeStep === "gallery" && (
+          <>
+            <DisplayStepPanel title="Gallery" description="Photo wall on your public page.">
+              <DisplayVisibilityToggle
+                label="Show gallery"
                 checked={config.enabled.gallery}
-                onChange={(e) => toggleSection("gallery", e.target.checked)}
+                onChange={(checked) => toggleSection("gallery", checked)}
               />
-              <span>Enable</span>
-            </label>
-          </div>
-          <p className="muted display-section-desc">Asymmetric gallery wall with image labels</p>
-          {config.gallery.length > 0 && (
-            <ul className="display-item-list">
-              {config.gallery.map((g, i) => (
-                <li key={`${g.url}-${i}`}>
-                  <strong>{g.label}</strong>
-                  <span className="muted"> · {g.url.slice(0, 48)}…</span>
-                  <button
-                    type="button"
-                    className="btn btn-lite"
-                    style={{ marginTop: 6 }}
-                    onClick={() =>
-                      setConfig((prev) => ({
-                        ...prev,
-                        gallery: prev.gallery.filter((_, j) => j !== i),
-                      }))
-                    }
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary display-section-btn"
-            onClick={() => {
-              setGalleryForm({ url: "", label: "" });
-              setGalleryModalOpen(true);
-            }}
-          >
-            + Add Gallery Image
-          </button>
-        </section>
+              {config.gallery.length === 0 ? (
+                <p className="display-empty-hint">No gallery images yet.</p>
+              ) : (
+                <div className="display-compact-list">
+                  {config.gallery.map((g, i) => (
+                    <DisplayCompactRow
+                      key={`${g.url}-${i}`}
+                      thumb={<img src={g.url} alt="" className="display-compact-row-thumb" />}
+                      title={g.label}
+                      onEdit={() => {
+                        setEditGalleryIndex(i);
+                        setGalleryForm(g);
+                        setGalleryModalOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              <DisplaySectionActions>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setEditGalleryIndex(null);
+                    setGalleryForm({ url: "", label: "" });
+                    setGalleryModalOpen(true);
+                  }}
+                >
+                  + Add image
+                </button>
+              </DisplaySectionActions>
+            </DisplayStepPanel>
 
-        <section className="display-section-card">
-          <div className="display-section-head">
-            <h3>Special Offers</h3>
-            <label className="display-enable">
-              <input
-                type="checkbox"
+            <DisplayStepPanel
+              title="Promotional offers"
+              description="Simple promo banners. Registration offers are managed under the Offers tab."
+            >
+              <DisplayVisibilityToggle
+                label="Show offers section"
                 checked={config.enabled.offers}
-                onChange={(e) => toggleSection("offers", e.target.checked)}
+                onChange={(checked) => toggleSection("offers", checked)}
               />
-              <span>Enable</span>
-            </label>
-          </div>
-          <p className="muted display-section-desc">
-            Registration-cap loyalty offers are managed under the{" "}
-            <a href="/dashboard/agency/offers">Offers</a> tab and shown here when active. Use the
-            cards below for simple promotional banners.
-          </p>
-          {content.offers.length > 0 && (
-            <ul className="display-item-list">
-              {content.offers.map((o, i) => (
-                <li key={i} className="display-review-item">
-                  <div>
-                    <strong>{o.title}</strong>
-                    {o.badge && <span className="muted"> · {o.badge}</span>}
-                    <p className="muted">{o.description}</p>
-                  </div>
-                  <div className="display-item-actions">
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      onClick={() => {
+              {content.offers.length === 0 ? (
+                <p className="display-empty-hint">No promo cards yet.</p>
+              ) : (
+                <div className="display-compact-list">
+                  {content.offers.map((o, i) => (
+                    <DisplayCompactRow
+                      key={i}
+                      thumb={
+                        o.imageUrl ? (
+                          <img src={o.imageUrl} alt="" className="display-compact-row-thumb" />
+                        ) : undefined
+                      }
+                      title={o.title}
+                      meta={
+                        <span className="muted">
+                          {o.badge && `${o.badge} · `}
+                          {o.priceLabel || o.description}
+                        </span>
+                      }
+                      onEdit={() => {
                         setEditOfferIndex(i);
                         setOfferForm({
                           ...o,
@@ -785,71 +821,79 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                         });
                         setOfferModalOpen(true);
                       }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-lite"
-                      onClick={() =>
-                        setConfig((prev) => ({
-                          ...prev,
-                          content: {
-                            ...prev.content,
-                            offers: prev.content.offers.filter((_, j) => j !== i),
-                          },
-                        }))
-                      }
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary display-section-btn"
-            onClick={() => {
-              setEditOfferIndex(null);
-              setOfferForm(defaultOfferForm());
-              setOfferModalOpen(true);
-            }}
-          >
-            + Add Offer
-          </button>
-        </section>
+                    />
+                  ))}
+                </div>
+              )}
+              <DisplaySectionActions>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setEditOfferIndex(null);
+                    setOfferForm(defaultOfferForm());
+                    setOfferModalOpen(true);
+                  }}
+                >
+                  + Add offer
+                </button>
+                <a href="/dashboard/agency/offers" className="btn btn-ghost">
+                  Manage loyalty offers
+                </a>
+              </DisplaySectionActions>
+            </DisplayStepPanel>
+          </>
+        )}
 
-        <section className="display-section-card">
-          <div className="display-section-head">
-            <h3>Inquiry Form</h3>
-            <label className="display-enable">
-              <input
-                type="checkbox"
-                checked={config.enabled.inquiry}
-                onChange={(e) => toggleSection("inquiry", e.target.checked)}
-              />
-              <span>Enable</span>
-            </label>
-          </div>
-          <p className="display-inquiry-hint">
-            {config.enabled.inquiry
-              ? "Visitors can plan trips and send inquiries from your public page."
-              : "Inquiry form is hidden on your public page."}
-          </p>
-        </section>
+        {activeStep === "settings" && (
+          <DisplayStepPanel title="Page settings" description="Inquiry form and partner commissions.">
+            <DisplayVisibilityToggle
+              label="Show inquiry form"
+              hint={
+                config.enabled.inquiry
+                  ? "Visitors can send trip inquiries from your page"
+                  : "Inquiry form is hidden on your public page"
+              }
+              checked={config.enabled.inquiry}
+              onChange={(checked) => toggleSection("inquiry", checked)}
+            />
 
+            <div className="display-field-stack display-field-stack--spaced">
+              <label htmlFor="influencerCommissionPct">
+                Influencer commission (% of base tour price)
+                <input
+                  id="influencerCommissionPct"
+                  type="number"
+                  min={0}
+                  max={50}
+                  step={0.5}
+                  value={influencerCommissionPct}
+                  onChange={(e) => setInfluencerCommissionPct(Number(e.target.value) || 0)}
+                />
+              </label>
+              <DisplayFieldHint>
+                Added to your base price on public listings; influencers see their earn amount in LKR.
+              </DisplayFieldHint>
+            </div>
+          </DisplayStepPanel>
+        )}
+      </div>
+
+      <div className="display-save-bar">
+        <div className="display-save-bar-copy">
+          <strong>Ready to publish?</strong>
+          <p className="muted">Save to update your public agency page.</p>
+        </div>
         <button
           type="button"
           className="btn btn-primary display-save-btn"
           disabled={saving}
           onClick={saveSettings}
         >
-          {saving ? "Saving…" : "Save Display Settings"}
+          {saving ? "Saving…" : "Save display settings"}
         </button>
-        {saveStatus && <p className="display-save-status">{saveStatus}</p>}
       </div>
+      {saveStatus && <p className="display-save-status">{saveStatus}</p>}
 
       <DashboardModal
         open={packageModalOpen}
@@ -899,6 +943,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             onCancel={() => setPackageModalOpen(false)}
             submitLabel="Save package"
           />
+          {editPackageIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removePackage(editPackageIndex)}
+            >
+              Remove package
+            </button>
+          )}
         </form>
       </DashboardModal>
 
@@ -939,14 +992,26 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             </ModalField>
           </div>
           <ModalActions onCancel={() => setReviewModalOpen(false)} submitLabel="Save review" />
+          {editReviewIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removeReview(editReviewIndex)}
+            >
+              Remove review
+            </button>
+          )}
         </form>
       </DashboardModal>
 
       <DashboardModal
         open={galleryModalOpen}
-        title="Add Gallery Image"
+        title={editGalleryIndex === null ? "Add gallery image" : "Edit gallery image"}
         subtitle="Images appear in the masonry gallery on your display page."
-        onClose={() => setGalleryModalOpen(false)}
+        onClose={() => {
+          setGalleryModalOpen(false);
+          setEditGalleryIndex(null);
+        }}
       >
         <form onSubmit={saveGalleryItem}>
           <div className="entity-form-grid">
@@ -968,7 +1033,22 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               />
             </ModalField>
           </div>
-          <ModalActions onCancel={() => setGalleryModalOpen(false)} submitLabel="Add image" />
+          <ModalActions
+            onCancel={() => {
+              setGalleryModalOpen(false);
+              setEditGalleryIndex(null);
+            }}
+            submitLabel={editGalleryIndex === null ? "Add image" : "Save image"}
+          />
+          {editGalleryIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removeGalleryItem(editGalleryIndex)}
+            >
+              Remove image
+            </button>
+          )}
         </form>
       </DashboardModal>
 
@@ -1002,6 +1082,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             onCancel={() => setHeroModalOpen(false)}
             submitLabel={editHeroIndex === null ? "Add slide" : "Save slide"}
           />
+          {editHeroIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removeHeroSlide(editHeroIndex)}
+            >
+              Remove slide
+            </button>
+          )}
         </form>
       </DashboardModal>
 
@@ -1056,6 +1145,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             </ModalField>
           </div>
           <ModalActions onCancel={() => setOfferModalOpen(false)} submitLabel="Save offer" />
+          {editOfferIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removeOffer(editOfferIndex)}
+            >
+              Remove offer
+            </button>
+          )}
         </form>
       </DashboardModal>
     </article>

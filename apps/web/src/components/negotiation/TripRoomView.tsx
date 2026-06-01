@@ -196,22 +196,22 @@ export function TripRoomView({
           <h3 className="neg-panel-title">Conversation</h3>
           <p className="neg-panel-hint">Ask questions and refine the plan together.</p>
 
-          <div className="neg-request-card">
-            <h4>Original request</h4>
-            {inquiry.startDate && (
-              <p className="muted">
-                Dates: {new Date(inquiry.startDate).toLocaleDateString()}
-                {inquiry.endDate
-                  ? ` – ${new Date(inquiry.endDate).toLocaleDateString()}`
-                  : ""}
-              </p>
-            )}
-            {inquiry.budgetBand && <p className="muted">Budget: {inquiry.budgetBand}</p>}
-            <p>{inquiry.message || "No additional message."}</p>
-          </div>
+          {(inquiry.startDate || inquiry.budgetBand) && (
+            <div className="neg-request-meta">
+              {inquiry.startDate && (
+                <p className="muted">
+                  Dates: {new Date(inquiry.startDate).toLocaleDateString()}
+                  {inquiry.endDate
+                    ? ` – ${new Date(inquiry.endDate).toLocaleDateString()}`
+                    : ""}
+                </p>
+              )}
+              {inquiry.budgetBand && <p className="muted">Budget: {inquiry.budgetBand}</p>}
+            </div>
+          )}
 
           {inquiry.thread && inquiry.thread.length > 0 ? (
-            <InquiryThread messages={inquiry.thread} />
+            <InquiryThread messages={inquiry.thread} hideTitle />
           ) : (
             <p className="muted neg-chat-empty">
               {role === "AGENCY"
@@ -230,7 +230,10 @@ export function TripRoomView({
           </p>
 
           {inquiry.proposal?.message && (
-            <blockquote className="neg-proposal-message">{inquiry.proposal.message}</blockquote>
+            <blockquote className="neg-proposal-message">
+              <span className="neg-proposal-message-label">Latest proposal note</span>
+              {inquiry.proposal.message}
+            </blockquote>
           )}
 
           <ProposalCards

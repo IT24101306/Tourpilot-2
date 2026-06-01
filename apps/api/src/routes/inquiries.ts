@@ -18,6 +18,7 @@ import {
   upsertInquiryProposal,
 } from "../services/inquiryProposal.js";
 import {
+  buildInquiryThread,
   createInquiryMessage,
   inquiryMessagesInclude,
   serializeInquiryMessage,
@@ -26,11 +27,12 @@ import {
 export const inquiriesRouter = Router();
 
 const inquiryIncludeForAgency = {
-  tourist: { select: { id: true, name: true, phone: true, email: true } },
+  tourist: { select: { id: true, name: true, phone: true, email: true, role: true } },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
   responses: {
     orderBy: { createdAt: "asc" as const },
     include: {
+      author: { select: { id: true, name: true, role: true } },
       tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true, coverUrl: true } },
       itinerary: {
         include: {
@@ -49,10 +51,12 @@ const inquiryIncludeForAgency = {
 
 const inquiryIncludeForTourist = {
   agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
+  tourist: { select: { id: true, name: true, role: true } },
   tour: { select: { id: true, title: true, slug: true } },
   responses: {
     orderBy: { createdAt: "asc" as const },
     include: {
+      author: { select: { id: true, name: true, role: true } },
       tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
       itinerary: {
         include: {
@@ -110,6 +114,16 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
       },
       include: { agency: true, tour: true },
     });
+
+    if (body.message?.trim()) {
+      await createInquiryMessage(
+        inquiry.id,
+        req.user!.id,
+        "TOURIST",
+        body.message.trim(),
+        "INQUIRY_CREATED"
+      );
+    }
 
     res.status(201).json(inquiry);
   } catch (e) {
@@ -317,6 +331,14 @@ inquiriesRouter.post("/:id/reply", authRequired, requireRoles("AGENCY"), async (
         },
       },
     });
+
+    await createInquiryMessage(
+      inquiry.id,
+      req.user!.id,
+      "AGENCY",
+      body.message.trim(),
+      "PROPOSAL_SENT"
+    );
 
     res.status(201).json(serializeResponse(response));
   } catch (e) {
@@ -577,7 +599,7 @@ function serializeInquiryForClient(inquiry: {
   endDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  tourist?: { id: string; name: string; phone: string; email?: string | null };
+  tourist?: { id: string; name: string; phone?: string; email?: string | null; role?: string };
   agency?: { id: string; name: string; slug: string; logoUrl?: string | null };
   tour?: {
     id: string;
@@ -591,6 +613,8 @@ function serializeInquiryForClient(inquiry: {
     message: string;
     kind: string;
     createdAt: Date;
+    authorId: string;
+    author?: { id: string; name: string; role: string };
     tour?: {
       id: string;
       title: string;
@@ -627,7 +651,7 @@ function serializeInquiryForClient(inquiry: {
     responses: inquiry.responses?.map(serializeResponse) ?? [],
     proposal: inquiry.proposal ? serializeProposal(inquiry.proposal) : null,
     proposalEditable: isProposalEditable(inquiry.status),
-    thread: inquiry.messages?.map(serializeInquiryMessage) ?? [],
+    thread: buildInquiryThread(inquiry),
   };
 }
 
