@@ -19,12 +19,18 @@ export function AgencyNegotiationsPage() {
   const { token } = useAuth();
   const [inquiries, setInquiries] = useState<NegotiationListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
+    setError("");
     api<NegotiationListItem[]>("/inquiries/mine", { token })
       .then(setInquiries)
+      .catch((err) => {
+        setInquiries([]);
+        setError(err instanceof Error ? err.message : "Failed to load inquiries");
+      })
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -42,6 +48,8 @@ export function AgencyNegotiationsPage() {
           Operations queue
         </Link>
       </ModuleHeader>
+
+      {error && <p className="form-error">{error}</p>}
 
       {loading ? (
         <p className="muted">Loading negotiations…</p>

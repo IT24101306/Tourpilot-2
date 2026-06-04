@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { ModuleHeader } from "../components/module/ModuleHeader";
@@ -11,9 +11,12 @@ import { daysUntilEnd } from "../lib/discoveryUtils";
 
 export function OffersPage() {
   const { token, user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("offer");
   const [offers, setOffers] = useState<DiscoveryOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const scrolledRef = useRef(false);
 
   useEffect(() => {
     setLoading(true);
@@ -22,6 +25,17 @@ export function OffersPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!highlightId || loading || scrolledRef.current) return;
+    const el = document.getElementById(`offer-${highlightId}`);
+    if (!el) return;
+    scrolledRef.current = true;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("disc-offer-card--highlight");
+    const t = window.setTimeout(() => el.classList.remove("disc-offer-card--highlight"), 4000);
+    return () => window.clearTimeout(t);
+  }, [highlightId, loading, offers.length]);
 
   const stats = useMemo(() => {
     const endingSoon = offers.filter((o) => daysUntilEnd(o.validUntil) <= 7).length;
@@ -93,6 +107,7 @@ export function OffersPage() {
               key={o.id}
               offer={o}
               page
+              cardId={`offer-${o.id}`}
               onRegister={token ? () => register(o.id) : undefined}
               registerLabel={token ? "Register for offer" : "Log in to register"}
             />

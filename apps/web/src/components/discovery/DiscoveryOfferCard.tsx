@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CoverImage } from "../CoverImage";
 import { daysUntilEnd } from "../../lib/discoveryUtils";
+import { OfferShareButton } from "./OfferShareButton";
 
 export type DiscoveryOffer = {
   id: string;
@@ -27,6 +28,10 @@ type Props = {
   hero?: boolean;
   /** Spacious editorial card for /offers page */
   page?: boolean;
+  /** Show share button (default true on public cards) */
+  showShare?: boolean;
+  /** DOM id for deep-link scroll (e.g. offer-abc123) */
+  cardId?: string;
 };
 
 export function DiscoveryOfferCard({
@@ -36,6 +41,8 @@ export function DiscoveryOfferCard({
   compact,
   hero,
   page,
+  showShare = true,
+  cardId,
 }: Props) {
   const daysLeft = daysUntilEnd(offer.validUntil);
   const urgency =
@@ -48,7 +55,10 @@ export function DiscoveryOfferCard({
 
   if (page) {
     return (
-      <article className="disc-offer-card disc-offer-card--page">
+      <article
+        id={cardId}
+        className="disc-offer-card disc-offer-card--page"
+      >
         <div className="disc-offer-media">
           <CoverImage src={offer.imageUrl} className="disc-offer-media-img" alt="" />
           <span className="disc-offer-urgency disc-offer-urgency--overlay">{urgency}</span>
@@ -96,6 +106,7 @@ export function DiscoveryOfferCard({
           </div>
 
           <div className="disc-offer-actions">
+            {showShare && <OfferShareButton offer={offer} />}
             {tourHref && (
               <Link to={tourHref} className="btn btn-ghost disc-offer-secondary">
                 View tour
@@ -125,12 +136,15 @@ export function DiscoveryOfferCard({
     .join(" ");
 
   return (
-    <article className={cardClass}>
+    <article id={cardId} className={cardClass}>
       <div className="disc-offer-top">
         <span className="disc-offer-urgency">{urgency}</span>
-        {!hero && offer.spotsLeft <= 5 && (
-          <span className="disc-offer-scarcity">Only {offer.spotsLeft} spots</span>
-        )}
+        <span className="disc-offer-top-end">
+          {!hero && offer.spotsLeft <= 5 && (
+            <span className="disc-offer-scarcity">Only {offer.spotsLeft} spots</span>
+          )}
+          {showShare && <OfferShareButton offer={offer} compact={hero} />}
+        </span>
       </div>
       <h3>{offer.title}</h3>
       {!compact && offer.description && <p className="disc-offer-desc">{offer.description}</p>}

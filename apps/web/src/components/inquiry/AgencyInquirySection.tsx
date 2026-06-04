@@ -54,7 +54,7 @@ export function AgencyInquirySection({ agencyId, agencyName, refCode }: Props) {
           refCode: refCode || undefined,
         }),
       });
-      setStatus("Your inquiry was sent! The agency will reply on your profile.");
+      setStatus("Your inquiry was sent! View it under My trips on your profile.");
       setMessage("");
       setInterests("");
       setBudgetBand("");

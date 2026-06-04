@@ -80,8 +80,8 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
         tourId: z.string().optional(),
         type: z.enum(["READY_MADE", "CUSTOM"]),
         pax: z.number().int().min(1).default(2),
-        startDate: z.string().datetime().optional(),
-        endDate: z.string().datetime().optional(),
+        startDate: z.union([z.string().datetime(), z.string().date()]).optional(),
+        endDate: z.union([z.string().datetime(), z.string().date()]).optional(),
         budgetBand: z.string().optional(),
         interests: z.array(z.string()).optional(),
         message: z.string().optional(),
@@ -97,36 +97,45 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
       if (code?.isActive) referralCodeId = code.id;
     }
 
-    const inquiry = await prisma.inquiry.create({
-      data: {
-        touristId: req.user!.id,
-        agencyId: body.agencyId,
-        tourId: body.tourId,
-        type: body.type,
-        pax: body.pax,
-        startDate: body.startDate ? new Date(body.startDate) : undefined,
-        endDate: body.endDate ? new Date(body.endDate) : undefined,
-        budgetBand: body.budgetBand,
-        interests: body.interests ?? [],
-        message: body.message,
-        referralCodeId,
-        statusHistory: { create: { status: "NEW", actorId: req.user!.id } },
-      },
-      include: { agency: true, tour: true },
-    });
+    const inquiry = await prisma.$transaction(async (tx) => {
+      const created = await tx.inquiry.create({
+        data: {
+          touristId: req.user!.id,
+          agencyId: body.agencyId,
+          tourId: body.tourId,
+          type: body.type,
+          pax: body.pax,
+          startDate: body.startDate ? new Date(body.startDate) : undefined,
+          endDate: body.endDate ? new Date(body.endDate) : undefined,
+          budgetBand: body.budgetBand,
+          interests: body.interests ?? [],
+          message: body.message,
+          referralCodeId,
+          statusHistory: { create: { status: "NEW", actorId: req.user!.id } },
+        },
+        include: { agency: true, tour: true },
+      });
 
-    if (body.message?.trim()) {
-      await createInquiryMessage(
-        inquiry.id,
-        req.user!.id,
-        "TOURIST",
-        body.message.trim(),
-        "INQUIRY_CREATED"
-      );
-    }
+      if (body.message?.trim()) {
+        await tx.inquiryMessage.create({
+          data: {
+            inquiryId: created.id,
+            authorId: req.user!.id,
+            kind: "TOURIST",
+            body: body.message.trim(),
+            action: "INQUIRY_CREATED",
+          },
+        });
+      }
+
+      return created;
+    });
 
     res.status(201).json(inquiry);
   } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: e.errors[0]?.message || "Invalid inquiry data" });
+    }
     next(e);
   }
 });

@@ -114,8 +114,9 @@ model User {
   walletLedger         WalletLedger[]
   refreshTokens        RefreshToken[]
   referralAttributions ReferralAttribution[]
-  agencyDriver         AgencyDriver?
-  inquiryMessages      InquiryMessage[]
+  agencyDriver              AgencyDriver?
+  inquiryMessages           InquiryMessage[]
+  authoredInquiryResponses  InquiryResponse[] @relation("InquiryResponseAuthor")
 }
 
 model AgencyDriver {
@@ -446,6 +447,7 @@ model InquiryResponse {
   inquiryId   String              @db.VarChar(25)
   inquiry     Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
   authorId    String              @db.VarChar(25)
+  author      User                @relation("InquiryResponseAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   message     String              @db.Text
   kind        InquiryResponseKind
   tourId      String?             @db.VarChar(25)

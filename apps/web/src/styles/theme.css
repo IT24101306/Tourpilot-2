@@ -3188,6 +3188,76 @@ textarea {
   flex: 0 0 auto;
 }
 
+.disc-offer-share-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.disc-offer-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 10px);
+  background: var(--white);
+  color: var(--green);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.disc-offer-share-btn:hover {
+  background: #f4faf6;
+  border-color: #b9d4c4;
+}
+
+.disc-offer-card--hero .disc-offer-share-btn {
+  padding: 4px 8px;
+  min-width: 32px;
+  justify-content: center;
+}
+
+.disc-offer-card--hero .disc-offer-share-btn span {
+  display: none;
+}
+
+.disc-offer-share-feedback {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.disc-offer-top-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.disc-offer-card--highlight {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(46, 125, 87, 0.12);
+}
+
+.gov-panel-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.gov-share-hint {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+}
+
 .disc-offer-grid--hero {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
@@ -3266,6 +3336,7 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: space-between;
 }
 
 .disc-offer-urgency {

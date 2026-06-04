@@ -21,11 +21,18 @@ export function ProfilePage() {
   const [savedCount, setSavedCount] = useState(0);
   const [partner, setPartner] = useState<InfluencerDashboardData | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const loadInquiries = useCallback(async () => {
     if (!token || user?.role !== "TOURIST") return;
-    const list = await api<InquirySummary[]>("/inquiries/mine", { token });
-    setInquiries(list);
+    setLoadError("");
+    try {
+      const list = await api<InquirySummary[]>("/inquiries/mine", { token });
+      setInquiries(list);
+    } catch (err) {
+      setInquiries([]);
+      setLoadError(err instanceof Error ? err.message : "Could not load your inquiries");
+    }
   }, [token, user?.role]);
 
   const loadSavedCount = useCallback(async () => {
@@ -43,9 +50,9 @@ export function ProfilePage() {
   useEffect(() => {
     if (!user || !token) return;
     setLoadingExtra(true);
-    Promise.all([loadInquiries(), loadSavedCount(), loadPartner()])
-      .catch(console.error)
-      .finally(() => setLoadingExtra(false));
+    Promise.all([loadInquiries(), loadSavedCount(), loadPartner()]).finally(() =>
+      setLoadingExtra(false)
+    );
   }, [user, token, loadInquiries, loadSavedCount, loadPartner]);
 
   if (!user) {
@@ -217,6 +224,11 @@ export function ProfilePage() {
       actions={actions}
       highlights={highlights}
       tagline={tagline}
-    />
+    >
+      {loadError && <p className="form-error">{loadError}</p>}
+      {loadingExtra && user.role === "TOURIST" && (
+        <p className="muted">Refreshing your travel activity…</p>
+      )}
+    </AccountProfileShell>
   );
 }

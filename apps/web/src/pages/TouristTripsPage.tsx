@@ -9,12 +9,18 @@ export function TouristTripsPage() {
   const { token } = useAuth();
   const [inquiries, setInquiries] = useState<NegotiationListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
+    setError("");
     api<NegotiationListItem[]>("/inquiries/mine", { token })
       .then(setInquiries)
+      .catch((err) => {
+        setInquiries([]);
+        setError(err instanceof Error ? err.message : "Failed to load inquiries");
+      })
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -24,6 +30,10 @@ export function TouristTripsPage() {
 
   if (loading) {
     return <p className="muted">Loading your inquiries…</p>;
+  }
+
+  if (error) {
+    return <p className="form-error">{error}</p>;
   }
 
   if (inquiries.length === 0) {

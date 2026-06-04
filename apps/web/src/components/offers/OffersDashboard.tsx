@@ -4,6 +4,7 @@ import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { ModuleHeader } from "../module/ModuleHeader";
+import { offerShareFeedback, offerShareUrl, shareOffer } from "../../lib/offerShare";
 
 export type ManagedOffer = {
   id: string;
@@ -132,6 +133,7 @@ export function OffersDashboard({
   const [busy, setBusy] = useState(false);
   const [registrations, setRegistrations] = useState<OfferRegistration[] | null>(null);
   const [regsMsg, setRegsMsg] = useState("");
+  const [shareMsg, setShareMsg] = useState("");
 
   const selected = useMemo(
     () => (selectedId ? offers.find((o) => o.id === selectedId) ?? null : null),
@@ -317,11 +319,52 @@ export function OffersDashboard({
             <div className="gov-panel-head">
               <h3 className="gov-panel-title">{selectedId ? "Edit offer" : "Create offer"}</h3>
               {selectedId && (
-                <button type="button" className="btn btn-ghost" onClick={deleteSelected} disabled={busy}>
-                  Delete
-                </button>
+                <div className="gov-panel-head-actions">
+                  {draft.isActive && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={busy}
+                      onClick={async () => {
+                        const result = await shareOffer({
+                          id: selectedId,
+                          title: draft.title || "TourPilot offer",
+                          description: draft.description,
+                          rewardText: draft.rewardText,
+                        });
+                        const fb = offerShareFeedback(result);
+                        setShareMsg(fb);
+                        if (fb) setTimeout(() => setShareMsg(""), 2500);
+                      }}
+                    >
+                      Share offer
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={busy || !draft.isActive}
+                    title={draft.isActive ? offerShareUrl(selectedId) : "Activate offer to get a public link"}
+                    onClick={async () => {
+                      if (!draft.isActive) return;
+                      try {
+                        await navigator.clipboard.writeText(offerShareUrl(selectedId));
+                        setShareMsg("Public link copied.");
+                        setTimeout(() => setShareMsg(""), 2500);
+                      } catch {
+                        setShareMsg("Could not copy link.");
+                      }
+                    }}
+                  >
+                    Copy link
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={deleteSelected} disabled={busy}>
+                    Delete
+                  </button>
+                </div>
               )}
             </div>
+            {shareMsg && <p className="muted gov-share-hint">{shareMsg}</p>}
 
             <div className="grid-2">
               <label className="field">
