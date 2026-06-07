@@ -6,6 +6,7 @@ import { prisma } from "../../lib/prisma.js";
 import { authRequired, requireRoles } from "../../middleware/auth.js";
 import { asJson } from "../../utils/json.js";
 import { agencyRejectionEmail, sendPlatformEmail } from "../../services/email.js";
+import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
   notifyAdminInquiryMessage,
@@ -467,7 +468,7 @@ adminRouter.post("/inquiries/:id/messages", async (req, res, next) => {
     const message = await createInquiryMessage(
       inquiry.id,
       req.user!.id,
-      "ADMIN",
+      InquiryMessageKind.ADMIN,
       body.message,
       "ADMIN_MESSAGE"
     );
