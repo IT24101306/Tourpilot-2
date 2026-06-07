@@ -66,11 +66,12 @@ export function TourDetailPage() {
       <TourItineraryPreview days={tour.tourDays} />
 
       <Link
-        to={
-          refCode
-            ? `/agencies/${tour.agency.slug}?ref=${encodeURIComponent(refCode)}`
-            : `/agencies/${tour.agency.slug}`
-        }
+        to={(() => {
+          const params = new URLSearchParams();
+          params.set("inquireTour", tour.id);
+          if (refCode) params.set("ref", refCode);
+          return `/agencies/${tour.agency.slug}?${params.toString()}#request-custom-tour`;
+        })()}
         className="btn btn-primary"
       >
         Inquire this tour

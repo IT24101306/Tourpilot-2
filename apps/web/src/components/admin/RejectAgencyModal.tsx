@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 
 type Props = {
   agencyName: string;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function RejectAgencyModal({ agencyName, open, loading, onClose, onConfirm }: Props) {
+  const { requestConfirm } = useConfirmAction();
   const [reason, setReason] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
 
@@ -17,7 +19,18 @@ export function RejectAgencyModal({ agencyName, open, loading, onClose, onConfir
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (reason.trim().length < 3) return;
-    onConfirm(reason.trim(), sendEmail);
+    requestConfirm({
+      title: "Reject agency?",
+      description: "The owner will see your reason on their dashboard.",
+      variant: "danger",
+      confirmLabel: "Reject agency",
+      summary: [
+        { label: "Agency", value: agencyName },
+        { label: "Reason", value: reason.trim() },
+        { label: "Email", value: sendEmail ? "Send rejection email" : "No email" },
+      ],
+      onConfirm: () => onConfirm(reason.trim(), sendEmail),
+    });
   }
 
   return (

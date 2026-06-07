@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { dashboardPathForRole, isValidInternationalPhone, toStoredPhone } from "@tourpilot/shared";
+import { AUTH_RETURN_PARAM, resolvePostLoginPath } from "../utils/authRedirect";
 import { api, ApiError } from "../api/client";
 import { useAuth, type AuthUser } from "../context/AuthContext";
 import { AuthLayout, AuthSwitch } from "../components/AuthLayout";
@@ -23,7 +24,14 @@ type LoginStartResponse =
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get(AUTH_RETURN_PARAM);
   const { setSession } = useAuth();
+
+  function afterLogin(user: AuthUser, apiRedirect?: string) {
+    const fallback = apiRedirect || dashboardPathForRole(user.role);
+    navigate(resolvePostLoginPath(returnTo, fallback), { replace: true });
+  }
   const [step, setStep] = useState<Step>("phone");
   const [phoneInput, setPhoneInput] = useState("");
   const [phone, setPhone] = useState("");
@@ -94,7 +102,7 @@ export function LoginPage() {
         body: JSON.stringify({ challengeId, phone, otp }),
       });
       setSession(data.token, data.user);
-      navigate(data.redirectTo || dashboardPathForRole(data.user.role));
+      afterLogin(data.user, data.redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid OTP");
     } finally {
@@ -116,7 +124,7 @@ export function LoginPage() {
         body: JSON.stringify({ phone, password }),
       });
       setSession(data.token, data.user);
-      navigate(data.redirectTo || dashboardPathForRole(data.user.role));
+      afterLogin(data.user, data.redirectTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid password");
     } finally {
@@ -140,7 +148,7 @@ export function LoginPage() {
           : "Enter the same phone number you registered with, including country code."
       }
     >
-      <AuthSwitch mode="login" />
+      <AuthSwitch mode="login" returnTo={returnTo} />
 
       {error && <p className="form-error">{error}</p>}
 
@@ -161,7 +169,14 @@ export function LoginPage() {
           
           {error && error.includes("No account") && (
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-              <Link to="/register" className="auth-switch-link">
+              <Link
+                to={
+                  returnTo
+                    ? `/register?${AUTH_RETURN_PARAM}=${encodeURIComponent(returnTo)}`
+                    : "/register"
+                }
+                className="auth-switch-link"
+              >
                 Create a free tourist account
               </Link>
             </p>

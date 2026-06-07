@@ -43,6 +43,12 @@ export function InfluencerCommissionsPage() {
             value: metrics.approved,
             hint: "Settled rows",
           },
+          {
+            id: "wallet",
+            label: "Wallet balance",
+            value: Math.round(data?.stats.walletBalance ?? data?.profile.walletBalance ?? 0),
+            hint: `LKR ${(data?.stats.paidToWallet ?? 0).toLocaleString()} credited`,
+          },
         ]}
       />
 

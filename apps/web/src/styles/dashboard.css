@@ -2053,6 +2053,51 @@
   border-left: 3px solid var(--green);
 }
 
+.inquiry-thread-item--admin {
+  border-left: 3px solid #4a5fc1;
+  background: #f4f6fd;
+}
+
+.inquiry-thread-role-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #4a5fc1;
+  color: #fff;
+}
+
+.inquiry-thread-badge--admin {
+  background: #e8ebfa;
+  color: #32408a;
+}
+
+.neg-admin-compose {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.neg-admin-compose label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.neg-admin-compose textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
 .inquiry-thread-item-head {
   display: flex;
   align-items: center;
@@ -2746,4 +2791,55 @@
   .agent-stat-grid.three-col {
     grid-template-columns: 1fr;
   }
+}
+
+.confirm-action-dialog {
+  width: min(520px, 100%);
+}
+
+.confirm-action-backdrop {
+  z-index: 1200;
+}
+
+.confirm-summary {
+  margin: 16px 0 20px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-2, #f8faf9);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirm-summary-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 38%) 1fr;
+  gap: 10px 14px;
+  align-items: start;
+  font-size: 0.9rem;
+}
+
+.confirm-summary-row dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink-muted, #5c6b64);
+}
+
+.confirm-summary-row dd {
+  margin: 0;
+  color: var(--ink, #0f1714);
+  word-break: break-word;
+}
+
+.confirm-summary-row--warning dd {
+  color: #b45309;
+}
+
+.confirm-summary-row--danger dd {
+  color: #9b1c1c;
+}
+
+.confirm-action-actions {
+  margin-top: 4px;
 }

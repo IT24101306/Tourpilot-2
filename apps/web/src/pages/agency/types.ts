@@ -5,7 +5,7 @@ export type AgencyInquiry = {
   pax: number;
   message: string | null;
   createdAt: string;
-  tourist?: { id: string; name: string; phone: string };
+  tourist?: { id: string; name: string; phone: string; email?: string | null };
   tour?: { title: string } | null;
 };
 
@@ -38,6 +38,12 @@ export type AgencyTourDay = {
   items: AgencyTourDayItem[];
 };
 
+export type LinkedOfferLite = {
+  id: string;
+  title: string;
+  isActive: boolean;
+};
+
 export type AgencyTour = {
   id: string;
   title: string;
@@ -54,6 +60,7 @@ export type AgencyTour = {
   durationLabel?: string;
   updatedAt?: string;
   tourDays?: AgencyTourDay[];
+  linkedOffers?: LinkedOfferLite[];
 };
 
 export type AgencyGroup = {

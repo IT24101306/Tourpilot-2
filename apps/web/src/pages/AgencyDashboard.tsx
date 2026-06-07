@@ -10,7 +10,14 @@ import {
   type EntityFormState,
   type EntityTypeKey,
 } from "../components/entity/entityTypes";
+import type { ManagedOffer } from "../components/offers/OffersDashboard";
 import { TourFormModal } from "../components/tour/TourFormModal";
+import {
+  buildTourSavePayload,
+  emptyTourOfferLink,
+  validateTourOfferLink,
+  type TourOfferLinkState,
+} from "../lib/tourOfferLink";
 import { DriverFormModal, defaultDriverForm, type DriverFormState } from "../components/driver/DriverFormModal";
 import { DriverCalendarModal } from "../components/driver/DriverCalendarModal";
 import { GroupFormModal } from "../components/group/GroupFormModal";
@@ -18,7 +25,6 @@ import { DisplayTabPanel } from "../components/display/DisplayTabPanel";
 import { InquiryReplyModal } from "../components/inquiry/InquiryReplyModal";
 import { InquiryThread, type ThreadMessage } from "../components/inquiry/InquiryThread";
 import {
-  buildTourPlanPayload,
   defaultTourForm,
   type EntityOption,
   type GroupOption,
@@ -70,6 +76,8 @@ export function AgencyDashboard() {
   const [tourForm, setTourForm] = useState<TourFormState>(defaultTourForm());
   const [tourStatus, setTourStatus] = useState("");
   const [tourSaving, setTourSaving] = useState(false);
+  const [offers, setOffers] = useState<ManagedOffer[]>([]);
+  const [offerLink, setOfferLink] = useState<TourOfferLinkState>(emptyTourOfferLink);
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [driverStatusFilter, setDriverStatusFilter] = useState<string>("all");
@@ -163,18 +171,20 @@ export function AgencyDashboard() {
   const selectedCount = selectedEntityIds.length;
 
   async function refresh(authToken: string) {
-    const [inq, ent, tr, dr, gr] = await Promise.all([
+    const [inq, ent, tr, dr, gr, offerList] = await Promise.all([
       api<InquiryRow[]>("/inquiries/mine", { token: authToken }),
       api<EntityRow[]>("/entities", { token: authToken }),
       api<TourRow[]>("/tours/agency/mine", { token: authToken }),
       api<DriverRow[]>("/drivers/agency/mine", { token: authToken }),
       api<EntityGroupRow[]>("/entities/groups", { token: authToken }),
+      api<ManagedOffer[]>("/agencies/mine/offers", { token: authToken }),
     ]);
     setInquiries(inq);
     setEntities(ent);
     setTours(tr);
     setDrivers(dr);
     setGroups(gr);
+    setOffers(offerList);
   }
 
   function toggleEntitySelection(entityId: string, checked: boolean) {
@@ -294,7 +304,11 @@ export function AgencyDashboard() {
 
   function openTourModal(kind: TourKind) {
     setTourModalKind(kind);
-    setTourForm(defaultTourForm());
+    setTourForm({
+      ...defaultTourForm(),
+      isPublished: kind === "READY_MADE",
+    });
+    setOfferLink(emptyTourOfferLink());
     setTourStatus("");
     setTourModalOpen(true);
   }
@@ -311,15 +325,25 @@ export function AgencyDashboard() {
       return;
     }
 
+    const offerErr = validateTourOfferLink(offerLink, { isPublished: tourForm.isPublished });
+    if (offerErr) {
+      setTourStatus(offerErr);
+      return;
+    }
+
     setTourSaving(true);
     setTourStatus("");
     try {
       await api("/tours/with-plan", {
         method: "POST",
         token,
-        body: JSON.stringify(buildTourPlanPayload(tourForm, tourModalKind)),
+        body: JSON.stringify(
+          buildTourSavePayload(tourForm, tourModalKind, offerLink, [])
+        ),
       });
-      setTourStatus("Tour saved successfully.");
+      setTourStatus(
+        offerLink.enabled ? "Tour saved with offer links." : "Tour saved successfully."
+      );
       await refresh(token);
       setTourSubTab(tourModalKind);
       setTab("tours");
@@ -948,6 +972,9 @@ export function AgencyDashboard() {
         onChange={setTourForm}
         onSubmit={saveTour}
         uploadToken={token}
+        offers={offers}
+        offerLink={offerLink}
+        onOfferLinkChange={setOfferLink}
       />
 
       <EntityFormModal

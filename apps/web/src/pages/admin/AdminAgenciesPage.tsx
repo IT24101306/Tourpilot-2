@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { RejectAgencyModal } from "../../components/admin/RejectAgencyModal";
 import { AgencyKycModal } from "../../components/admin/AgencyKycModal";
@@ -12,6 +13,7 @@ const STATUSES = ["", "PENDING", "APPROVED", "SUSPENDED", "REJECTED"] as const;
 
 export function AdminAgenciesPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [rows, setRows] = useState<AdminAgency[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -35,22 +37,36 @@ export function AdminAgenciesPage() {
     load().catch(console.error);
   }, [load]);
 
-  async function setStatus(id: string, status: string) {
+  function setStatus(agency: AdminAgency, status: string) {
     if (!token) return;
-    setWorkingId(id);
-    try {
-      await api(`/admin/agencies/${id}/status`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({ status }),
-      });
-      setMsg(`Status updated to ${status}.`);
-      await load();
-    } catch {
-      setMsg("Update failed.");
-    } finally {
-      setWorkingId(null);
-    }
+    requestConfirm({
+      title: `Set agency to ${status.replace(/_/g, " ").toLowerCase()}?`,
+      description: "This changes marketplace visibility and access for the agency.",
+      confirmLabel: "Update status",
+      variant: status === "SUSPENDED" || status === "REJECTED" ? "danger" : "default",
+      summary: [
+        { label: "Agency", value: agency.name },
+        { label: "Owner", value: agency.owner.name },
+        { label: "Current status", value: agency.status },
+        { label: "New status", value: status },
+      ],
+      onConfirm: async () => {
+        setWorkingId(agency.id);
+        try {
+          await api(`/admin/agencies/${agency.id}/status`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ status }),
+          });
+          setMsg(`Status updated to ${status}.`);
+          await load();
+        } catch {
+          setMsg("Update failed.");
+        } finally {
+          setWorkingId(null);
+        }
+      },
+    });
   }
 
   async function reject(reason: string, sendEmail: boolean) {
@@ -154,7 +170,7 @@ export function AdminAgenciesPage() {
                           type="button"
                           className="btn btn-primary btn-nav"
                           disabled={workingId === a.id}
-                          onClick={() => setStatus(a.id, "APPROVED")}
+                          onClick={() => setStatus(a, "APPROVED")}
                         >
                           Approve
                         </button>
@@ -172,7 +188,7 @@ export function AdminAgenciesPage() {
                         type="button"
                         className="btn btn-ghost btn-nav"
                         disabled={workingId === a.id}
-                        onClick={() => setStatus(a.id, "SUSPENDED")}
+                        onClick={() => setStatus(a, "SUSPENDED")}
                       >
                         Suspend
                       </button>
@@ -182,7 +198,7 @@ export function AdminAgenciesPage() {
                         type="button"
                         className="btn btn-ghost btn-nav"
                         disabled={workingId === a.id}
-                        onClick={() => setStatus(a.id, "APPROVED")}
+                        onClick={() => setStatus(a, "APPROVED")}
                       >
                         Reinstate
                       </button>

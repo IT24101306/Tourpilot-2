@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import type { AdminReview } from "./types";
 
 export function AdminReviewsPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [rows, setRows] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
@@ -18,21 +20,39 @@ export function AdminReviewsPage() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  async function toggleVisible(r: AdminReview) {
+  function toggleVisible(r: AdminReview) {
     if (!token) return;
-    setWorkingId(r.id);
-    try {
-      await api(`/admin/reviews/${r.id}`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({ isVisible: !r.isVisible }),
-      });
-      setRows((prev) =>
-        prev.map((row) => (row.id === r.id ? { ...row, isVisible: !r.isVisible } : row))
-      );
-    } finally {
-      setWorkingId(null);
-    }
+    const nextVisible = !r.isVisible;
+    requestConfirm({
+      title: nextVisible ? "Show review?" : "Hide review?",
+      confirmLabel: nextVisible ? "Show on site" : "Hide from site",
+      variant: nextVisible ? "default" : "danger",
+      summary: [
+        { label: "Author", value: r.authorName ?? "Anonymous" },
+        { label: "Agency", value: r.agency.name },
+        { label: "Rating", value: `${r.rating}/5` },
+        {
+          label: "Preview",
+          value: (r.body ?? "").length > 100 ? `${(r.body ?? "").slice(0, 100)}…` : r.body ?? "—",
+        },
+        { label: "New visibility", value: nextVisible ? "Visible" : "Hidden" },
+      ],
+      onConfirm: async () => {
+        setWorkingId(r.id);
+        try {
+          await api(`/admin/reviews/${r.id}`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ isVisible: nextVisible }),
+          });
+          setRows((prev) =>
+            prev.map((row) => (row.id === r.id ? { ...row, isVisible: nextVisible } : row))
+          );
+        } finally {
+          setWorkingId(null);
+        }
+      },
+    });
   }
 
   return (

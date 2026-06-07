@@ -4,9 +4,10 @@ import { shareLinkForCode } from "../../pages/influencer/types";
 type Props = {
   code: ReferralCode;
   onCopy: (text: string, label: string) => void;
+  onViewTour?: () => void;
 };
 
-export function ReferralCodeCard({ code, onCopy }: Props) {
+export function ReferralCodeCard({ code, onCopy, onViewTour }: Props) {
   const link = shareLinkForCode(code);
 
   return (
@@ -22,9 +23,16 @@ export function ReferralCodeCard({ code, onCopy }: Props) {
       </div>
 
       {code.tour ? (
-        <p className="partner-code-tour muted">
-          {code.tour.agency.name} — {code.tour.title}
-        </p>
+        onViewTour ? (
+          <button type="button" className="partner-code-tour-btn" onClick={onViewTour}>
+            <span className="partner-code-tour-label">Tour</span>
+            {code.tour.agency.name} — {code.tour.title}
+          </button>
+        ) : (
+          <p className="partner-code-tour muted">
+            {code.tour.agency.name} — {code.tour.title}
+          </p>
+        )
       ) : (
         <p className="partner-code-tour muted">No tour linked</p>
       )}

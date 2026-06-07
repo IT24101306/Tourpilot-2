@@ -1,11 +1,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import type { AdminCmsPage } from "./types";
 
 export function AdminCmsPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [pages, setPages] = useState<AdminCmsPage[]>([]);
   const [slug, setSlug] = useState("home");
   const [title, setTitle] = useState("");
@@ -33,7 +35,7 @@ export function AdminCmsPage() {
     setBlocksJson(JSON.stringify(page.blocks, null, 2));
   }
 
-  async function handleSave(e: FormEvent) {
+  function handleSave(e: FormEvent) {
     e.preventDefault();
     if (!token) return;
     let blocks: unknown[];
@@ -45,29 +47,42 @@ export function AdminCmsPage() {
       return;
     }
 
-    setSaving(true);
-    setMsg("");
-    try {
-      const saved = await api<AdminCmsPage>(`/admin/cms/${slug}`, {
-        method: "PUT",
-        token,
-        body: JSON.stringify({ title, blocks, isPublished: published }),
-      });
-      setPages((prev) => {
-        const i = prev.findIndex((p) => p.slug === saved.slug);
-        if (i >= 0) {
-          const next = [...prev];
-          next[i] = saved;
-          return next;
+    requestConfirm({
+      title: "Save CMS page?",
+      description: "Changes go live according to the published setting below.",
+      confirmLabel: "Save page",
+      summary: [
+        { label: "Slug", value: slug },
+        { label: "Title", value: title.trim() || "(untitled)" },
+        { label: "Blocks", value: String(blocks.length) },
+        { label: "Published", value: published ? "Yes" : "No (draft)" },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        setMsg("");
+        try {
+          const saved = await api<AdminCmsPage>(`/admin/cms/${slug}`, {
+            method: "PUT",
+            token,
+            body: JSON.stringify({ title, blocks, isPublished: published }),
+          });
+          setPages((prev) => {
+            const i = prev.findIndex((p) => p.slug === saved.slug);
+            if (i >= 0) {
+              const next = [...prev];
+              next[i] = saved;
+              return next;
+            }
+            return [...prev, saved];
+          });
+          setMsg("Page saved.");
+        } catch {
+          setMsg("Save failed.");
+        } finally {
+          setSaving(false);
         }
-        return [...prev, saved];
-      });
-      setMsg("Page saved.");
-    } catch {
-      setMsg("Save failed.");
-    } finally {
-      setSaving(false);
-    }
+      },
+    });
   }
 
   return (

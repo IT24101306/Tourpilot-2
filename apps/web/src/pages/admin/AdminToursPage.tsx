@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import type { AdminTour } from "./types";
 
 export function AdminToursPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [rows, setRows] = useState<AdminTour[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
@@ -18,21 +20,34 @@ export function AdminToursPage() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  async function togglePublish(t: AdminTour) {
+  function togglePublish(t: AdminTour) {
     if (!token) return;
-    setWorkingId(t.id);
-    try {
-      await api(`/admin/tours/${t.id}`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({ isPublished: !t.isPublished }),
-      });
-      setRows((prev) =>
-        prev.map((row) => (row.id === t.id ? { ...row, isPublished: !t.isPublished } : row))
-      );
-    } finally {
-      setWorkingId(null);
-    }
+    const nextPublished = !t.isPublished;
+    requestConfirm({
+      title: nextPublished ? "Publish tour?" : "Unpublish tour?",
+      confirmLabel: nextPublished ? "Publish" : "Unpublish",
+      summary: [
+        { label: "Tour", value: t.title },
+        { label: "Agency", value: t.agency.name },
+        { label: "Current status", value: t.isPublished ? "Published" : "Draft" },
+        { label: "New status", value: nextPublished ? "Published" : "Draft" },
+      ],
+      onConfirm: async () => {
+        setWorkingId(t.id);
+        try {
+          await api(`/admin/tours/${t.id}`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ isPublished: nextPublished }),
+          });
+          setRows((prev) =>
+            prev.map((row) => (row.id === t.id ? { ...row, isPublished: nextPublished } : row))
+          );
+        } finally {
+          setWorkingId(null);
+        }
+      },
+    });
   }
 
   return (

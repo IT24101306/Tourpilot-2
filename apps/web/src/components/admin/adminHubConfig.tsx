@@ -73,6 +73,22 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
         stat: (s) => s.commissions.PENDING ?? 0,
       },
       {
+        id: "influencers",
+        to: "/dashboard/admin/influencers",
+        category: "Partners",
+        title: "Influencers",
+        description: "Referral partners, codes, and wallets",
+        icon: "commission",
+      },
+      {
+        id: "itineraries",
+        to: "/dashboard/admin/itineraries",
+        category: "Trips",
+        title: "Itineraries",
+        description: "Shared proposal links and revoke/regenerate",
+        icon: "inquiry",
+      },
+      {
         id: "drivers",
         to: "/dashboard/admin/drivers",
         category: "Field ops",

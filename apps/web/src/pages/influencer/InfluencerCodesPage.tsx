@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { InfluencerTourDetailModal } from "../../components/influencer/InfluencerTourDetailModal";
 import { ReferralCodeCard } from "../../components/influencer/ReferralCodeCard";
 import { useInfluencerDashboard } from "./types";
+import type { InfluencerTour } from "./types";
 
 export function InfluencerCodesPage() {
   const { data, loading, openCreateForTour, copyText } = useInfluencerDashboard();
   const [agencyFilter, setAgencyFilter] = useState("all");
+  const [detailTour, setDetailTour] = useState<InfluencerTour | null>(null);
   const codes = data?.codes ?? [];
 
   const agencies = useMemo(() => {
@@ -65,11 +68,24 @@ export function InfluencerCodesPage() {
         <ul className="partner-code-list">
           {filteredCodes.map((c) => (
             <li key={c.id}>
-              <ReferralCodeCard code={c} onCopy={copyText} />
+              <ReferralCodeCard
+                code={c}
+                onCopy={copyText}
+                onViewTour={c.tour ? () => setDetailTour(c.tour as InfluencerTour) : undefined}
+              />
             </li>
           ))}
         </ul>
       )}
+
+      <InfluencerTourDetailModal
+        tour={detailTour}
+        existingCode={detailTour ? codes.find((c) => c.tour?.id === detailTour.id && c.isActive) : undefined}
+        open={!!detailTour}
+        onClose={() => setDetailTour(null)}
+        onCreate={() => detailTour && openCreateForTour(detailTour.id)}
+        onCopy={copyText}
+      />
     </div>
   );
 }

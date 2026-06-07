@@ -33,6 +33,9 @@ export function GuidedTripCard({ inquiry }: Props) {
       <GuidedStepper status={inquiry.status} />
 
       <p className="guided-trip-meta muted">
+        {inquiry.type === "READY_MADE" && inquiry.tour?.title && (
+          <span className="inquiry-type-pill">Ready-made tour</span>
+        )}{" "}
         {tourLabel} · {inquiry.pax} traveler{inquiry.pax === 1 ? "" : "s"}
       </p>
 

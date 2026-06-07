@@ -1,3 +1,6 @@
+import nodemailer from "nodemailer";
+import { config } from "../lib/config.js";
+
 type EmailPayload = {
   to: string;
   subject: string;
@@ -7,29 +10,58 @@ type EmailPayload = {
 
 export type EmailResult = {
   delivered: boolean;
-  mode: "log" | "webhook";
+  mode: "log" | "webhook" | "smtp";
   error?: string;
 };
 
-/** Platform email — logs in dev; optional EMAIL_WEBHOOK_URL for real delivery. */
+let smtpTransport: nodemailer.Transporter | null = null;
+
+function getSmtpTransport() {
+  if (smtpTransport) return smtpTransport;
+  const { host, port, user, pass, secure } = config.email.smtp;
+  if (!host) return null;
+  smtpTransport = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: user ? { user, pass } : undefined,
+  });
+  return smtpTransport;
+}
+
+/** Platform email — log in dev; webhook or SMTP when configured. */
 export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailResult> {
   const { to, subject, text, html } = payload;
   if (!to?.trim()) {
-    return { delivered: false, mode: "log", error: "No recipient address" };
+    return { delivered: false, mode: config.email.mode, error: "No recipient address" };
   }
 
-  console.log("[TourPilot email]");
-  console.log(`  To: ${to}`);
-  console.log(`  Subject: ${subject}`);
-  console.log(`  Body:\n${text}`);
+  const mode = config.email.mode;
 
-  const webhook = process.env.EMAIL_WEBHOOK_URL?.trim();
-  if (webhook) {
+  if (mode === "log") {
+    console.log("[TourPilot email]");
+    console.log(`  To: ${to}`);
+    console.log(`  Subject: ${subject}`);
+    console.log(`  Body:\n${text}`);
+    return { delivered: true, mode: "log" };
+  }
+
+  if (mode === "webhook") {
+    const webhook = config.email.webhookUrl;
+    if (!webhook) {
+      return { delivered: false, mode: "webhook", error: "EMAIL_WEBHOOK_URL not set" };
+    }
     try {
       const res = await fetch(webhook, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, text, html: html ?? text }),
+        body: JSON.stringify({
+          from: config.email.from,
+          to,
+          subject,
+          text,
+          html: html ?? text,
+        }),
       });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
@@ -45,7 +77,35 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
     }
   }
 
-  return { delivered: true, mode: "log" };
+  const transport = getSmtpTransport();
+  if (!transport) {
+    return { delivered: false, mode: "smtp", error: "SMTP_HOST not configured" };
+  }
+
+  try {
+    await transport.sendMail({
+      from: config.email.from,
+      to,
+      subject,
+      text,
+      html: html ?? text,
+    });
+    return { delivered: true, mode: "smtp" };
+  } catch (e) {
+    return {
+      delivered: false,
+      mode: "smtp",
+      error: e instanceof Error ? e.message : "SMTP send failed",
+    };
+  }
+}
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 export function agencyRejectionEmail(params: {
@@ -79,10 +139,114 @@ export function agencyRejectionEmail(params: {
   return { subject, text, html };
 }
 
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+export function inquiryCreatedEmail(params: {
+  agencyName: string;
+  touristName: string;
+  tripUrl: string;
+}) {
+  const subject = `New trip inquiry for ${params.agencyName}`;
+  const text = [
+    `Hello ${params.agencyName} team,`,
+    "",
+    `${params.touristName} submitted a new trip inquiry.`,
+    "",
+    `Open the trip room: ${params.tripUrl}`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello <strong>${escapeHtml(params.agencyName)}</strong> team,</p>
+<p><strong>${escapeHtml(params.touristName)}</strong> submitted a new trip inquiry.</p>
+<p><a href="${escapeHtml(params.tripUrl)}">Open trip room</a></p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
+export function proposalSentEmail(params: {
+  touristName: string;
+  agencyName: string;
+  tripUrl: string;
+}) {
+  const subject = `${params.agencyName} sent you a tour proposal`;
+  const text = [
+    `Hello ${params.touristName},`,
+    "",
+    `${params.agencyName} has sent you a tour proposal on TourPilot.`,
+    "",
+    `Review it here: ${params.tripUrl}`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.touristName)},</p>
+<p><strong>${escapeHtml(params.agencyName)}</strong> has sent you a tour proposal.</p>
+<p><a href="${escapeHtml(params.tripUrl)}">Review proposal</a></p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
+export function inquiryStatusEmail(params: {
+  recipientName: string;
+  agencyName: string;
+  touristName: string;
+  status: string;
+  tripUrl: string;
+  note?: string;
+}) {
+  const subject = `Trip inquiry update — ${params.status.replace(/_/g, " ")}`;
+  const lines = [
+    `Hello ${params.recipientName},`,
+    "",
+    `Trip inquiry between ${params.touristName} and ${params.agencyName} is now: ${params.status}.`,
+  ];
+  if (params.note) lines.push("", params.note);
+  lines.push("", `View: ${params.tripUrl}`, "", "— TourPilot");
+  const text = lines.join("\n");
+  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
+<p>Trip inquiry between <strong>${escapeHtml(params.touristName)}</strong> and <strong>${escapeHtml(params.agencyName)}</strong> is now: <strong>${escapeHtml(params.status)}</strong>.</p>
+${params.note ? `<p>${escapeHtml(params.note)}</p>` : ""}
+<p><a href="${escapeHtml(params.tripUrl)}">Open trip room</a></p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
+export function inquiryExpiredEmail(params: {
+  recipientName: string;
+  agencyName: string;
+  tripUrl: string;
+}) {
+  const subject = `Trip inquiry expired — ${params.agencyName}`;
+  const text = [
+    `Hello ${params.recipientName},`,
+    "",
+    `A trip inquiry with ${params.agencyName} has expired due to inactivity.`,
+    "",
+    `Details: ${params.tripUrl}`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
+<p>A trip inquiry with <strong>${escapeHtml(params.agencyName)}</strong> has expired due to inactivity.</p>
+<p><a href="${escapeHtml(params.tripUrl)}">View inquiry</a></p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
+export function commissionPaidEmail(params: {
+  influencerName: string;
+  amountLkr: number;
+  walletBalance: number;
+}) {
+  const subject = `Commission paid — LKR ${params.amountLkr.toLocaleString()}`;
+  const text = [
+    `Hello ${params.influencerName},`,
+    "",
+    `LKR ${params.amountLkr.toLocaleString()} has been credited to your TourPilot wallet.`,
+    `New wallet balance: LKR ${params.walletBalance.toLocaleString()}.`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.influencerName)},</p>
+<p><strong>LKR ${params.amountLkr.toLocaleString()}</strong> has been credited to your TourPilot wallet.</p>
+<p>New balance: <strong>LKR ${params.walletBalance.toLocaleString()}</strong>.</p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
 }

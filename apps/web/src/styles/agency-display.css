@@ -764,6 +764,7 @@
 
 /* —— Custom tour inquiry —— */
 .agency-inquiry-section {
+  scroll-margin-top: 88px;
   margin-top: 0;
   padding: 64px 24px 80px;
   background: linear-gradient(165deg, #f0ebe3 0%, var(--ad-surface) 42%, #eef5f0 100%);
@@ -939,6 +940,23 @@
 
 .agency-inquiry-grid--prefs {
   grid-template-columns: 1fr 1fr;
+}
+
+.agency-inquiry-grid--contact {
+  grid-template-columns: 1fr 1fr;
+}
+
+.inquiry-field-hint {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  color: var(--ad-muted);
+  line-height: 1.45;
+}
+
+.inquiry-input-readonly {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--ad-muted);
+  cursor: default;
 }
 
 .inquiry-field {
@@ -1174,4 +1192,72 @@
   .agency-inquiry-grid--trip {
     grid-template-columns: 1fr;
   }
+
+  .agency-inquiry-grid--contact,
+  .agency-inquiry-grid--prefs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inquiry-tour-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(31, 143, 88, 0.25);
+  background: linear-gradient(135deg, rgba(31, 143, 88, 0.08), rgba(31, 143, 88, 0.03));
+}
+
+.inquiry-tour-chip--compact {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+}
+
+.inquiry-tour-chip-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--green, #1f8f58);
+}
+
+.inquiry-tour-chip-main {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inquiry-tour-chip-main strong {
+  font-size: 0.95rem;
+}
+
+.inquiry-tour-chip-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--green, #1f8f58);
+  text-decoration: none;
+}
+
+.inquiry-tour-chip-link:hover {
+  text-decoration: underline;
+}
+
+.inquiry-type-pill {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #0f5f3a;
+  background: rgba(31, 143, 88, 0.14);
+  border: 1px solid rgba(31, 143, 88, 0.22);
+  vertical-align: middle;
 }

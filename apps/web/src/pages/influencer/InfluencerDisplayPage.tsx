@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { InfluencerTourDetailModal } from "../../components/influencer/InfluencerTourDetailModal";
+import { useInfluencerDashboard, type InfluencerTour } from "./types";
 
 type DisplayTour = {
   id: string;
@@ -27,6 +29,7 @@ type DisplayData = {
 
 export function InfluencerDisplayPage() {
   const { token } = useAuth();
+  const { openCreateForTour, copyText } = useInfluencerDashboard();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -36,6 +39,7 @@ export function InfluencerDisplayPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tours, setTours] = useState<DisplayTour[]>([]);
   const [agencyFilter, setAgencyFilter] = useState("all");
+  const [detailTour, setDetailTour] = useState<InfluencerTour | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -233,11 +237,36 @@ export function InfluencerDisplayPage() {
                             ` · you earn LKR ${t.influencerCommissionLkr.toLocaleString()}`}
                         </span>
                       </span>
-                      {t.hasReferralCode ? (
-                        <span className="influencer-display-ref ok">Code {t.referralCode}</span>
-                      ) : (
-                        <span className="influencer-display-ref muted">No code yet</span>
-                      )}
+                      <span className="influencer-display-tour-side">
+                        {t.hasReferralCode ? (
+                          <span className="influencer-display-ref ok">Code {t.referralCode}</span>
+                        ) : (
+                          <span className="influencer-display-ref muted">No code yet</span>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-nav influencer-display-info-btn"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDetailTour({
+                              id: t.id,
+                              title: t.title,
+                              slug: t.slug,
+                              summary: t.summary,
+                              days: t.days,
+                              basePriceLkr: t.publicPriceLkr,
+                              influencerCommissionLkr: t.influencerCommissionLkr,
+                              publicPriceLkr: t.publicPriceLkr,
+                              coverUrl: t.coverUrl,
+                              seasonTag: null,
+                              agency: t.agency,
+                            });
+                          }}
+                        >
+                          Agency info
+                        </button>
+                      </span>
                     </label>
                   </li>
                 );
@@ -254,6 +283,19 @@ export function InfluencerDisplayPage() {
           {msg && <p className="partner-toast">{msg}</p>}
         </form>
       )}
+
+      <InfluencerTourDetailModal
+        tour={detailTour}
+        open={!!detailTour}
+        onClose={() => setDetailTour(null)}
+        onCreate={() => {
+          if (detailTour) {
+            setDetailTour(null);
+            openCreateForTour(detailTour.id);
+          }
+        }}
+        onCopy={copyText}
+      />
     </div>
   );
 }

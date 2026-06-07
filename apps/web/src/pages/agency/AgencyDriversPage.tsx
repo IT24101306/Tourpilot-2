@@ -15,12 +15,14 @@ import {
   type AssignableTour,
   driverStatusClass,
 } from "./driverTypes";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { OpsMetricStrip } from "../../components/module/OpsMetricStrip";
 import "../../styles/dashboard.css";
 
 export function AgencyDriversPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [drivers, setDrivers] = useState<AgencyDriverRow[]>([]);
   const [inquiries, setInquiries] = useState<AssignableInquiry[]>([]);
   const [tours, setTours] = useState<AssignableTour[]>([]);
@@ -81,54 +83,80 @@ export function AgencyDriversPage() {
     setDriverModalOpen(true);
   }
 
-  async function saveDriver(e: FormEvent) {
+  function saveDriver(e: FormEvent) {
     e.preventDefault();
     if (!token || !driverForm.phone.trim()) return;
     if (!driverForm.profileLocked && !driverForm.name.trim()) return;
     if (driverForm.lookupError) return;
 
-    setDriverSaving(true);
-    setDriverStatus("");
-    try {
-      await api("/drivers", {
-        method: "POST",
-        token,
-        body: JSON.stringify({
-          name: driverForm.name.trim(),
-          licenseNo: driverForm.licenseNo.trim() || undefined,
-          phone: driverForm.phone.trim() || undefined,
-          vehicle: driverForm.vehicle.trim() || undefined,
-          status: driverForm.status,
-        }),
-      });
-      setDriverStatus(
-        "Driver added. They can log in at /login with this phone and OTP — no signup needed."
-      );
-      await refresh();
-      setTimeout(() => {
-        setDriverModalOpen(false);
-        setDriverForm(defaultDriverForm());
+    requestConfirm({
+      title: "Add driver to fleet?",
+      description: "They can log in at /login with this phone number and OTP.",
+      confirmLabel: "Add driver",
+      summary: [
+        { label: "Name", value: driverForm.name.trim() || "(from profile)" },
+        { label: "Phone", value: driverForm.phone.trim() },
+        { label: "Vehicle", value: driverForm.vehicle.trim() || "—" },
+        { label: "License", value: driverForm.licenseNo.trim() || "—" },
+        { label: "Status", value: driverForm.status },
+      ],
+      onConfirm: async () => {
+        setDriverSaving(true);
         setDriverStatus("");
-      }, 600);
-    } catch (err) {
-      setDriverStatus(err instanceof ApiError ? err.message : "Failed to save driver");
-    } finally {
-      setDriverSaving(false);
-    }
+        try {
+          await api("/drivers", {
+            method: "POST",
+            token,
+            body: JSON.stringify({
+              name: driverForm.name.trim(),
+              licenseNo: driverForm.licenseNo.trim() || undefined,
+              phone: driverForm.phone.trim() || undefined,
+              vehicle: driverForm.vehicle.trim() || undefined,
+              status: driverForm.status,
+            }),
+          });
+          setDriverStatus(
+            "Driver added. They can log in at /login with this phone and OTP — no signup needed."
+          );
+          await refresh();
+          setTimeout(() => {
+            setDriverModalOpen(false);
+            setDriverForm(defaultDriverForm());
+            setDriverStatus("");
+          }, 600);
+        } catch (err) {
+          setDriverStatus(err instanceof ApiError ? err.message : "Failed to save driver");
+        } finally {
+          setDriverSaving(false);
+        }
+      },
+    });
   }
 
-  async function updateDriverStatus(driverId: string, status: DriverFormState["status"]) {
+  function updateDriverStatus(driverId: string, status: DriverFormState["status"]) {
     if (!token) return;
-    try {
-      await api(`/drivers/${driverId}/status`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({ status }),
-      });
-      setDrivers((prev) => prev.map((d) => (d.id === driverId ? { ...d, status } : d)));
-    } catch (err) {
-      alert(err instanceof ApiError ? err.message : "Failed to update status");
-    }
+    const driver = drivers.find((d) => d.id === driverId);
+    requestConfirm({
+      title: "Update driver status?",
+      confirmLabel: "Update status",
+      summary: [
+        { label: "Driver", value: driver?.name ?? driverId },
+        { label: "Current status", value: driver?.status ?? "—" },
+        { label: "New status", value: status },
+      ],
+      onConfirm: async () => {
+        try {
+          await api(`/drivers/${driverId}/status`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ status }),
+          });
+          setDrivers((prev) => prev.map((d) => (d.id === driverId ? { ...d, status } : d)));
+        } catch (err) {
+          alert(err instanceof ApiError ? err.message : "Failed to update status");
+        }
+      },
+    });
   }
 
   const detailDriver = drivers.find((d) => d.id === detailDriverId);

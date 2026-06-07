@@ -53,6 +53,7 @@ enum InquiryProposalItemKind {
 enum InquiryMessageKind {
   TOURIST
   AGENCY
+  ADMIN
 }
 
 enum EntityType {
@@ -117,6 +118,22 @@ model User {
   agencyDriver              AgencyDriver?
   inquiryMessages           InquiryMessage[]
   authoredInquiryResponses  InquiryResponse[] @relation("InquiryResponseAuthor")
+  notifications             Notification[]
+}
+
+model Notification {
+  id        String    @id @default(cuid()) @db.VarChar(25)
+  userId    String    @db.VarChar(25)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String    @db.VarChar(40)
+  title     String
+  body      String    @db.Text
+  inquiryId String?   @db.VarChar(25)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
 
 model AgencyDriver {

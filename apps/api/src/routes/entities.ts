@@ -31,24 +31,7 @@ entitiesRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, 
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
 
-    const body = z
-      .object({
-        name: z.string().min(1, "Name is required"),
-        type: z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT"]),
-        city: z.string().optional(),
-        district: z.string().optional(),
-        description: z.string().optional(),
-        durationMin: z.number().optional(),
-        priceHint: z.number().optional(),
-        contact: z.string().optional(),
-        lat: z.number().optional(),
-        lng: z.number().optional(),
-        media: z.array(z.unknown()).optional(),
-        metadata: z
-          .record(z.union([z.string(), z.number(), z.boolean()]))
-          .optional(),
-      })
-      .parse(req.body);
+    const body = entityBodySchema.parse(req.body);
 
     const entity = await prisma.entity.create({
       data: {
@@ -91,6 +74,147 @@ entitiesRouter.get("/groups", authRequired, requireRoles("AGENCY"), async (req, 
     });
 
     res.json(groups.map(serializeGroup));
+  } catch (e) {
+    next(e);
+  }
+});
+
+const entityBodySchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  type: z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT"]),
+  city: z.string().optional(),
+  district: z.string().optional(),
+  description: z.string().optional(),
+  durationMin: z.number().optional(),
+  priceHint: z.number().optional(),
+  contact: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  media: z.array(z.unknown()).optional(),
+  metadata: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
+});
+
+entitiesRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.entity.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Entity not found" });
+
+    const body = entityBodySchema.partial().parse(req.body);
+    const entity = await prisma.entity.update({
+      where: { id: existing.id },
+      data: {
+        ...(body.name !== undefined ? { name: body.name.trim() } : {}),
+        ...(body.type !== undefined ? { type: body.type } : {}),
+        ...(body.city !== undefined ? { city: body.city?.trim() || null } : {}),
+        ...(body.district !== undefined ? { district: body.district?.trim() || null } : {}),
+        ...(body.description !== undefined ? { description: body.description?.trim() || null } : {}),
+        ...(body.durationMin !== undefined ? { durationMin: body.durationMin } : {}),
+        ...(body.priceHint !== undefined ? { priceHint: body.priceHint } : {}),
+        ...(body.contact !== undefined ? { contact: body.contact?.trim() || null } : {}),
+        ...(body.lat !== undefined ? { lat: body.lat } : {}),
+        ...(body.lng !== undefined ? { lng: body.lng } : {}),
+        ...(body.media !== undefined ? { media: asJson(body.media) } : {}),
+        ...(body.metadata !== undefined ? { metadata: asJson(body.metadata) } : {}),
+      },
+    });
+
+    res.json(serializeEntity(entity));
+  } catch (e) {
+    next(e);
+  }
+});
+
+entitiesRouter.delete("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.entity.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Entity not found" });
+
+    await prisma.entity.delete({ where: { id: existing.id } });
+    res.status(204).send();
+  } catch (e) {
+    next(e);
+  }
+});
+
+entitiesRouter.patch("/groups/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.entityGroup.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Group not found" });
+
+    const body = z
+      .object({
+        name: z.string().min(2).optional(),
+        description: z.string().optional(),
+        entityIds: z.array(z.string()).min(1).optional(),
+      })
+      .parse(req.body);
+
+    if (body.entityIds) {
+      const ownedCount = await prisma.entity.count({
+        where: { agencyId: agency.id, id: { in: body.entityIds } },
+      });
+      if (ownedCount !== body.entityIds.length) {
+        return res.status(400).json({ error: "One or more selected entities are invalid" });
+      }
+    }
+
+    const group = await prisma.$transaction(async (tx) => {
+      if (body.entityIds) {
+        await tx.entityGroupItem.deleteMany({ where: { groupId: existing.id } });
+        await tx.entityGroupItem.createMany({
+          data: body.entityIds.map((entityId, idx) => ({
+            groupId: existing.id,
+            entityId,
+            sortOrder: idx,
+          })),
+        });
+      }
+
+      return tx.entityGroup.update({
+        where: { id: existing.id },
+        data: {
+          ...(body.name !== undefined ? { name: body.name.trim() } : {}),
+          ...(body.description !== undefined
+            ? { description: body.description?.trim() || null }
+            : {}),
+        },
+        include: { items: { include: { entity: true }, orderBy: { sortOrder: "asc" } } },
+      });
+    });
+
+    res.json(serializeGroup(group));
+  } catch (e) {
+    next(e);
+  }
+});
+
+entitiesRouter.delete("/groups/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.entityGroup.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Group not found" });
+
+    await prisma.entityGroup.delete({ where: { id: existing.id } });
+    res.status(204).send();
   } catch (e) {
     next(e);
   }

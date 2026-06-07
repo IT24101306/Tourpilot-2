@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { currentPath, loginPath } from "../utils/authRedirect";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { ModuleHeader } from "../components/module/ModuleHeader";
@@ -11,6 +12,8 @@ import { daysUntilEnd } from "../lib/discoveryUtils";
 
 export function OffersPage() {
   const { token, user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get("offer");
   const [offers, setOffers] = useState<DiscoveryOffer[]>([]);
@@ -66,7 +69,7 @@ export function OffersPage() {
         subtitle="Transparent tour pricing with rewards and countdown — no hidden surprises."
       >
         {!user && (
-          <Link to="/login" className="btn btn-teal">
+          <Link to={loginPath(currentPath(location))} className="btn btn-teal">
             Log in to register
           </Link>
         )}
@@ -108,7 +111,13 @@ export function OffersPage() {
               offer={o}
               page
               cardId={`offer-${o.id}`}
-              onRegister={token ? () => register(o.id) : undefined}
+              onRegister={() => {
+                if (!token) {
+                  navigate(loginPath(`/offers?offer=${o.id}`));
+                  return;
+                }
+                void register(o.id);
+              }}
               registerLabel={token ? "Register for offer" : "Log in to register"}
             />
           ))}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { AdminCommandHub } from "../../components/admin/AdminCommandHub";
 import { ApprovalQueue } from "../../components/admin/ApprovalQueue";
@@ -15,6 +16,7 @@ type PendingAgency = {
 
 export function AdminOverviewPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [pending, setPending] = useState<PendingAgency[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,21 +43,33 @@ export function AdminOverviewPage() {
     return Object.values(stats.users).reduce((a, b) => a + b, 0);
   }, [stats]);
 
-  async function approve(id: string) {
+  function approve(agency: PendingAgency) {
     if (!token) return;
-    setWorkingId(id);
-    setStatus("");
-    try {
-      await api(`/admin/agencies/${id}/approve`, { method: "PATCH", token });
-      setPending((p) => p.filter((a) => a.id !== id));
-      setStatus("Agency approved.");
-      const s = await api<AdminStats>("/admin/stats", { token });
-      setStats(s);
-    } catch {
-      setStatus("Approval failed.");
-    } finally {
-      setWorkingId(null);
-    }
+    requestConfirm({
+      title: "Approve agency?",
+      description: "The agency becomes visible on the marketplace after approval.",
+      confirmLabel: "Approve agency",
+      summary: [
+        { label: "Agency", value: agency.name },
+        { label: "Owner", value: agency.owner.name },
+        { label: "Phone", value: agency.owner.phone },
+      ],
+      onConfirm: async () => {
+        setWorkingId(agency.id);
+        setStatus("");
+        try {
+          await api(`/admin/agencies/${agency.id}/approve`, { method: "PATCH", token });
+          setPending((p) => p.filter((a) => a.id !== agency.id));
+          setStatus("Agency approved.");
+          const s = await api<AdminStats>("/admin/stats", { token });
+          setStats(s);
+        } catch {
+          setStatus("Approval failed.");
+        } finally {
+          setWorkingId(null);
+        }
+      },
+    });
   }
 
   async function reject(reason: string, sendEmail: boolean) {

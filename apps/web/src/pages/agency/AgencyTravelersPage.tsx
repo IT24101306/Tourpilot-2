@@ -10,6 +10,7 @@ type TravelerRow = {
   id: string;
   name: string;
   phone: string;
+  email: string | null;
   latestStatus: string;
   inquiryCount: number;
 };
@@ -31,11 +32,15 @@ export function AgencyTravelersPage() {
           if (existing) {
             existing.inquiryCount += 1;
             existing.latestStatus = inq.status;
+            if (inq.tourist.email && !existing.email) {
+              existing.email = inq.tourist.email;
+            }
           } else {
             map.set(inq.tourist.id, {
               id: inq.tourist.id,
               name: inq.tourist.name,
               phone: inq.tourist.phone,
+              email: inq.tourist.email ?? null,
               latestStatus: inq.status,
               inquiryCount: 1,
             });
@@ -101,7 +106,18 @@ export function AgencyTravelersPage() {
                   </span>
                 </div>
                 <p className="ops-queue-card-meta">
-                  {t.phone} · {t.inquiryCount} booking{t.inquiryCount === 1 ? "" : "s"}
+                  <span className="traveler-contact-line">
+                    <span className="traveler-contact-label">Phone</span> {t.phone}
+                  </span>
+                  {t.email && (
+                    <span className="traveler-contact-line">
+                      <span className="traveler-contact-label">Email</span>{" "}
+                      <a href={`mailto:${t.email}`}>{t.email}</a>
+                    </span>
+                  )}
+                  <span className="traveler-contact-line muted">
+                    {t.inquiryCount} inquiry{t.inquiryCount === 1 ? "" : "ies"}
+                  </span>
                 </p>
               </div>
             </li>

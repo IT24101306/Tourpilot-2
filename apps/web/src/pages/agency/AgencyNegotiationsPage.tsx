@@ -71,7 +71,14 @@ export function AgencyNegotiationsPage() {
                         </span>
                       </div>
                       <p className="muted">
-                        {inq.tour?.title ?? "Custom trip"} · {inq.pax} guests ·{" "}
+                        {inq.type === "READY_MADE" && inq.tour?.title ? (
+                          <>
+                            <span className="inquiry-type-pill">Ready-made tour</span> {inq.tour.title}
+                          </>
+                        ) : (
+                          inq.tour?.title ?? "Custom trip"
+                        )}{" "}
+                        · {inq.pax} guests ·{" "}
                         {inq.proposal ? `${inq.proposal.items.length} option(s)` : "Awaiting proposal"}
                       </p>
                       <p className="neg-inquiry-cta">Open trip room →</p>

@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { INQUIRY_STATUSES } from "../../pages/admin/types";
 
 type Props = {
@@ -18,6 +19,7 @@ export function InquiryStatusModal({
   onClose,
   onConfirm,
 }: Props) {
+  const { requestConfirm } = useConfirmAction();
   const [status, setStatus] = useState(currentStatus);
   const [note, setNote] = useState("");
 
@@ -25,7 +27,18 @@ export function InquiryStatusModal({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    onConfirm(status, note.trim());
+    requestConfirm({
+      title: "Override inquiry status?",
+      description: "This is logged as a platform admin action.",
+      confirmLabel: "Update status",
+      summary: [
+        { label: "Inquiry", value: `${inquiryId.slice(0, 8)}…` },
+        { label: "Current status", value: currentStatus.replace(/_/g, " ") },
+        { label: "New status", value: status.replace(/_/g, " ") },
+        ...(note.trim() ? [{ label: "Note", value: note.trim() }] : []),
+      ],
+      onConfirm: () => onConfirm(status, note.trim()),
+    });
   }
 
   return (

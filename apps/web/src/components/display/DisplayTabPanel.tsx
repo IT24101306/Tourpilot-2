@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { displayTourPrice } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
 import {
@@ -77,6 +78,7 @@ const defaultOfferForm = (): DisplayOffer => ({
 });
 
 export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
+  const { requestConfirm } = useConfirmAction();
   const [activeStep, setActiveStep] = useState<DisplayStep>("hero");
   const [config, setConfig] = useState<DisplayConfig>(defaultDisplayConfig);
   const [publishedTours, setPublishedTours] = useState<PublishedTour[]>([]);
@@ -158,45 +160,67 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     updateContent({ highlights: [...config.content.highlights, ""] });
   }
 
-  async function saveSettings() {
+  function saveSettings() {
     if (!token) return;
-    setSaving(true);
-    setSaveStatus("");
-    try {
-      const data = await api<DisplayPayload>("/agencies/mine/display", {
-        method: "PUT",
-        token,
-        body: JSON.stringify({
-          influencerCommissionPct,
-          logoUrl: logoUrl.trim() || undefined,
-          enabled: config.enabled,
-          content: {
-            ...config.content,
-            highlights: config.content.highlights.map((h) => h.trim()).filter(Boolean),
-          },
-          gallery: config.gallery,
-          reviews: config.reviews.map(({ authorName, rating, body }) => ({
-            authorName,
-            rating,
-            body,
-          })),
-        }),
-      });
-      setSlug(data.slug);
-      setLogoUrl(data.logoUrl || logoUrl);
-      setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
-      setConfig({
-        enabled: data.enabled,
-        content: data.content,
-        gallery: data.gallery,
-        reviews: data.reviews,
-      });
-      setSaveStatus("Display settings saved.");
-    } catch (err) {
-      setSaveStatus(err instanceof ApiError ? err.message : "Failed to save display settings");
-    } finally {
-      setSaving(false);
-    }
+    const enabledSections = Object.entries(config.enabled)
+      .filter(([, on]) => on)
+      .map(([key]) => key)
+      .join(", ");
+
+    requestConfirm({
+      title: "Save display settings?",
+      description: "Your public agency storefront will reflect these changes.",
+      confirmLabel: "Save display",
+      summary: [
+        { label: "Storefront slug", value: slug || "(pending)" },
+        { label: "Influencer commission", value: `${influencerCommissionPct}%` },
+        { label: "Enabled sections", value: enabledSections || "None" },
+        { label: "Hero slides", value: String(config.content.heroImages.length) },
+        { label: "Packages", value: String(config.content.packages.length) },
+        { label: "Gallery items", value: String(config.gallery.length) },
+        { label: "Reviews", value: String(config.reviews.length) },
+        { label: "Offers", value: String(config.content.offers.length) },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        setSaveStatus("");
+        try {
+          const data = await api<DisplayPayload>("/agencies/mine/display", {
+            method: "PUT",
+            token,
+            body: JSON.stringify({
+              influencerCommissionPct,
+              logoUrl: logoUrl.trim() || undefined,
+              enabled: config.enabled,
+              content: {
+                ...config.content,
+                highlights: config.content.highlights.map((h) => h.trim()).filter(Boolean),
+              },
+              gallery: config.gallery,
+              reviews: config.reviews.map(({ authorName, rating, body }) => ({
+                authorName,
+                rating,
+                body,
+              })),
+            }),
+          });
+          setSlug(data.slug);
+          setLogoUrl(data.logoUrl || logoUrl);
+          setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
+          setConfig({
+            enabled: data.enabled,
+            content: data.content,
+            gallery: data.gallery,
+            reviews: data.reviews,
+          });
+          setSaveStatus("Display settings saved.");
+        } catch (err) {
+          setSaveStatus(err instanceof ApiError ? err.message : "Failed to save display settings");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   }
 
   function importTourAsPackage(tour: PublishedTour) {
@@ -226,25 +250,46 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     };
     if (!entry.title || !entry.imageUrl) return;
 
-    setConfig((prev) => {
-      const packages = [...prev.content.packages];
-      if (editPackageIndex === null) packages.push(entry);
-      else packages[editPackageIndex] = entry;
-      return { ...prev, content: { ...prev.content, packages } };
+    const isNew = editPackageIndex === null;
+    requestConfirm({
+      title: isNew ? "Add package card?" : "Update package card?",
+      confirmLabel: isNew ? "Add package" : "Save package",
+      summary: [
+        { label: "Title", value: entry.title },
+        { label: "Location", value: entry.location },
+        { label: "Price label", value: entry.priceLabel },
+      ],
+      onConfirm: () => {
+        setConfig((prev) => {
+          const packages = [...prev.content.packages];
+          if (editPackageIndex === null) packages.push(entry);
+          else packages[editPackageIndex] = entry;
+          return { ...prev, content: { ...prev.content, packages } };
+        });
+        setPackageModalOpen(false);
+      },
     });
-    setPackageModalOpen(false);
   }
 
   function removePackage(index: number) {
-    setConfig((prev) => ({
-      ...prev,
-      content: {
-        ...prev.content,
-        packages: prev.content.packages.filter((_, i) => i !== index),
+    const pkg = config.content.packages[index];
+    requestConfirm({
+      title: "Remove package?",
+      variant: "danger",
+      confirmLabel: "Remove package",
+      summary: [{ label: "Package", value: pkg?.title ?? `Item ${index + 1}` }],
+      onConfirm: () => {
+        setConfig((prev) => ({
+          ...prev,
+          content: {
+            ...prev.content,
+            packages: prev.content.packages.filter((_, i) => i !== index),
+          },
+        }));
+        setPackageModalOpen(false);
+        setEditPackageIndex(null);
       },
-    }));
-    setPackageModalOpen(false);
-    setEditPackageIndex(null);
+    });
   }
 
   function saveReview(e: FormEvent) {
@@ -256,13 +301,28 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     };
     if (!entry.authorName) return;
 
-    setConfig((prev) => {
-      const reviews = [...prev.reviews];
-      if (editReviewIndex === null) reviews.push(entry);
-      else reviews[editReviewIndex] = entry;
-      return { ...prev, reviews };
+    const isNew = editReviewIndex === null;
+    requestConfirm({
+      title: isNew ? "Add review?" : "Update review?",
+      confirmLabel: isNew ? "Add review" : "Save review",
+      summary: [
+        { label: "Author", value: entry.authorName },
+        { label: "Rating", value: `${entry.rating}/5` },
+        {
+          label: "Review",
+          value: entry.body.length > 100 ? `${entry.body.slice(0, 100)}…` : entry.body || "—",
+        },
+      ],
+      onConfirm: () => {
+        setConfig((prev) => {
+          const reviews = [...prev.reviews];
+          if (editReviewIndex === null) reviews.push(entry);
+          else reviews[editReviewIndex] = entry;
+          return { ...prev, reviews };
+        });
+        setReviewModalOpen(false);
+      },
     });
-    setReviewModalOpen(false);
   }
 
   function saveGalleryItem(e: FormEvent) {
@@ -270,15 +330,26 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     const url = galleryForm.url.trim();
     if (!url) return;
     const entry = { url, label: galleryForm.label.trim() || "Gallery" };
-    setConfig((prev) => {
-      const gallery = [...prev.gallery];
-      if (editGalleryIndex === null) gallery.push(entry);
-      else gallery[editGalleryIndex] = entry;
-      return { ...prev, gallery };
+    const isNew = editGalleryIndex === null;
+    requestConfirm({
+      title: isNew ? "Add gallery image?" : "Update gallery image?",
+      confirmLabel: isNew ? "Add image" : "Save image",
+      summary: [
+        { label: "Label", value: entry.label },
+        { label: "Image URL", value: url.length > 80 ? `${url.slice(0, 80)}…` : url },
+      ],
+      onConfirm: () => {
+        setConfig((prev) => {
+          const gallery = [...prev.gallery];
+          if (editGalleryIndex === null) gallery.push(entry);
+          else gallery[editGalleryIndex] = entry;
+          return { ...prev, gallery };
+        });
+        setGalleryForm({ url: "", label: "" });
+        setEditGalleryIndex(null);
+        setGalleryModalOpen(false);
+      },
     });
-    setGalleryForm({ url: "", label: "" });
-    setEditGalleryIndex(null);
-    setGalleryModalOpen(false);
   }
 
   function saveHeroSlide(e: FormEvent) {
@@ -289,14 +360,25 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       url,
       label: heroForm.label?.trim() || undefined,
     };
+    const isNew = editHeroIndex === null;
 
-    setConfig((prev) => {
-      const heroImages = [...prev.content.heroImages];
-      if (editHeroIndex === null) heroImages.push(entry);
-      else heroImages[editHeroIndex] = entry;
-      return { ...prev, content: { ...prev.content, heroImages } };
+    requestConfirm({
+      title: isNew ? "Add hero slide?" : "Update hero slide?",
+      confirmLabel: isNew ? "Add slide" : "Save slide",
+      summary: [
+        { label: "Label", value: entry.label || "—" },
+        { label: "Image URL", value: url.length > 80 ? `${url.slice(0, 80)}…` : url },
+      ],
+      onConfirm: () => {
+        setConfig((prev) => {
+          const heroImages = [...prev.content.heroImages];
+          if (editHeroIndex === null) heroImages.push(entry);
+          else heroImages[editHeroIndex] = entry;
+          return { ...prev, content: { ...prev.content, heroImages } };
+        });
+        setHeroModalOpen(false);
+      },
     });
-    setHeroModalOpen(false);
   }
 
   function moveHeroSlide(index: number, direction: -1 | 1) {
@@ -320,55 +402,103 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     };
     if (!entry.title) return;
 
-    setConfig((prev) => {
-      const offers = [...prev.content.offers];
-      if (editOfferIndex === null) offers.push(entry);
-      else offers[editOfferIndex] = entry;
-      return { ...prev, content: { ...prev.content, offers } };
+    const isNew = editOfferIndex === null;
+    requestConfirm({
+      title: isNew ? "Add storefront offer?" : "Update storefront offer?",
+      confirmLabel: isNew ? "Add offer" : "Save offer",
+      summary: [
+        { label: "Title", value: entry.title },
+        { label: "Badge", value: entry.badge || "—" },
+        { label: "Price label", value: entry.priceLabel || "—" },
+      ],
+      onConfirm: () => {
+        setConfig((prev) => {
+          const offers = [...prev.content.offers];
+          if (editOfferIndex === null) offers.push(entry);
+          else offers[editOfferIndex] = entry;
+          return { ...prev, content: { ...prev.content, offers } };
+        });
+        setOfferModalOpen(false);
+      },
     });
-    setOfferModalOpen(false);
   }
 
   function removeHeroSlide(index: number) {
-    setConfig((prev) => ({
-      ...prev,
-      content: {
-        ...prev.content,
-        heroImages: prev.content.heroImages.filter((_, j) => j !== index),
+    const slide = config.content.heroImages[index];
+    requestConfirm({
+      title: "Remove hero slide?",
+      variant: "danger",
+      confirmLabel: "Remove slide",
+      summary: [{ label: "Slide", value: slide?.label || `Slide ${index + 1}` }],
+      onConfirm: () => {
+        setConfig((prev) => ({
+          ...prev,
+          content: {
+            ...prev.content,
+            heroImages: prev.content.heroImages.filter((_, j) => j !== index),
+          },
+        }));
+        setHeroModalOpen(false);
+        setEditHeroIndex(null);
       },
-    }));
-    setHeroModalOpen(false);
-    setEditHeroIndex(null);
+    });
   }
 
   function removeReview(index: number) {
-    setConfig((prev) => ({
-      ...prev,
-      reviews: prev.reviews.filter((_, j) => j !== index),
-    }));
-    setReviewModalOpen(false);
-    setEditReviewIndex(null);
+    const review = config.reviews[index];
+    requestConfirm({
+      title: "Remove review?",
+      variant: "danger",
+      confirmLabel: "Remove review",
+      summary: [{ label: "Author", value: review?.authorName ?? `Review ${index + 1}` }],
+      onConfirm: () => {
+        setConfig((prev) => ({
+          ...prev,
+          reviews: prev.reviews.filter((_, j) => j !== index),
+        }));
+        setReviewModalOpen(false);
+        setEditReviewIndex(null);
+      },
+    });
   }
 
   function removeGalleryItem(index: number) {
-    setConfig((prev) => ({
-      ...prev,
-      gallery: prev.gallery.filter((_, j) => j !== index),
-    }));
-    setGalleryModalOpen(false);
-    setEditGalleryIndex(null);
+    const item = config.gallery[index];
+    requestConfirm({
+      title: "Remove gallery image?",
+      variant: "danger",
+      confirmLabel: "Remove image",
+      summary: [{ label: "Label", value: item?.label ?? `Image ${index + 1}` }],
+      onConfirm: () => {
+        setConfig((prev) => ({
+          ...prev,
+          gallery: prev.gallery.filter((_, j) => j !== index),
+        }));
+        setGalleryModalOpen(false);
+        setEditGalleryIndex(null);
+      },
+    });
   }
 
   function removeOffer(index: number) {
-    setConfig((prev) => ({
-      ...prev,
-      content: {
-        ...prev.content,
-        offers: prev.content.offers.filter((_, j) => j !== index),
+    const offer = config.content.offers[index];
+    requestConfirm({
+      title: "Remove storefront offer?",
+      variant: "danger",
+      confirmLabel: "Remove offer",
+      summary: [{ label: "Offer", value: offer?.title ?? `Offer ${index + 1}` }],
+      onConfirm: () => {
+        setConfig((prev) => ({
+          ...prev,
+          content: {
+            ...prev.content,
+            offers: prev.content.offers.filter((_, j) => j !== index),
+          },
+        }));
+        setOfferModalOpen(false);
+        setEditOfferIndex(null);
       },
-    }));
-    setOfferModalOpen(false);
-    setEditOfferIndex(null);
+    });
   }
 
   const displayPageUrl = slug ? `/agencies/${slug}` : "";

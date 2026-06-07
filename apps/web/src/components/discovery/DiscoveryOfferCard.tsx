@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { currentPath, loginPath } from "../../utils/authRedirect";
 import { CoverImage } from "../CoverImage";
 import { daysUntilEnd } from "../../lib/discoveryUtils";
+import { isFreeOffer } from "../../lib/offerPricing";
 import { OfferShareButton } from "./OfferShareButton";
 
 export type DiscoveryOffer = {
@@ -34,6 +36,30 @@ type Props = {
   cardId?: string;
 };
 
+function OfferPrice({ offer }: { offer: DiscoveryOffer }) {
+  if (isFreeOffer(offer.discountedLkr)) {
+    return (
+      <>
+        <span className="disc-offer-price-now disc-offer-price-free">FREE</span>
+        {offer.tourPriceLkr > 0 && (
+          <span className="disc-offer-price-was">LKR {offer.tourPriceLkr.toLocaleString()}</span>
+        )}
+      </>
+    );
+  }
+
+  if (offer.discountedLkr != null) {
+    return (
+      <>
+        <span className="disc-offer-price-now">From LKR {offer.discountedLkr.toLocaleString()}</span>
+        <span className="disc-offer-price-was">LKR {offer.tourPriceLkr.toLocaleString()}</span>
+      </>
+    );
+  }
+
+  return <span className="disc-offer-price-now">From LKR {offer.tourPriceLkr.toLocaleString()}</span>;
+}
+
 export function DiscoveryOfferCard({
   offer,
   onRegister,
@@ -44,6 +70,7 @@ export function DiscoveryOfferCard({
   showShare = true,
   cardId,
 }: Props) {
+  const location = useLocation();
   const daysLeft = daysUntilEnd(offer.validUntil);
   const urgency =
     daysLeft === 0 ? "Ends today" : daysLeft === 1 ? "1 day left" : `${daysLeft} days left`;
@@ -83,18 +110,7 @@ export function DiscoveryOfferCard({
           <p className="disc-offer-reward disc-offer-reward--pill">{offer.rewardText}</p>
 
           <div className="disc-offer-price disc-offer-price--stacked">
-            {offer.discountedLkr != null ? (
-              <>
-                <span className="disc-offer-price-now">
-                  From LKR {offer.discountedLkr.toLocaleString()}
-                </span>
-                <span className="disc-offer-price-was">LKR {offer.tourPriceLkr.toLocaleString()}</span>
-              </>
-            ) : (
-              <span className="disc-offer-price-now">
-                From LKR {offer.tourPriceLkr.toLocaleString()}
-              </span>
-            )}
+            <OfferPrice offer={offer} />
           </div>
 
           <div className="disc-offer-meta-row">
@@ -117,7 +133,7 @@ export function DiscoveryOfferCard({
                 {registerLabel}
               </button>
             ) : (
-              <Link to="/login" className="btn btn-primary disc-offer-cta">
+              <Link to={loginPath(currentPath(location))} className="btn btn-primary disc-offer-cta">
                 Log in to register
               </Link>
             )}
@@ -150,16 +166,7 @@ export function DiscoveryOfferCard({
       {!compact && offer.description && <p className="disc-offer-desc">{offer.description}</p>}
       <p className={`disc-offer-reward${hero ? " disc-offer-reward--hero" : ""}`}>{offer.rewardText}</p>
       <p className="disc-offer-price">
-        {offer.discountedLkr != null ? (
-          <>
-            <span className="disc-offer-price-now">
-              From LKR {offer.discountedLkr.toLocaleString()}
-            </span>
-            <span className="disc-offer-price-was">LKR {offer.tourPriceLkr.toLocaleString()}</span>
-          </>
-        ) : (
-          <span className="disc-offer-price-now">From LKR {offer.tourPriceLkr.toLocaleString()}</span>
-        )}
+        <OfferPrice offer={offer} />
       </p>
       {!hero && offer.registeredCount != null && (
         <p className="disc-offer-social muted">{offer.registeredCount} travelers registered</p>

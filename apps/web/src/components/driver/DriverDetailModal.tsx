@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../api/client";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { DashboardModal } from "../DashboardModal";
 import { DriverAvailabilityCalendar } from "./DriverAvailabilityCalendar";
 import {
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export function DriverDetailModal({ open, token, driverId, onClose, onAssign, onUpdated }: Props) {
+  const { requestConfirm } = useConfirmAction();
   const [tab, setTab] = useState<Tab>("details");
   const [driver, setDriver] = useState<DriverDetail | null>(null);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
@@ -54,46 +56,84 @@ export function DriverDetailModal({ open, token, driverId, onClose, onAssign, on
       .finally(() => setLoading(false));
   }, [open, driverId, token]);
 
-  async function updateStatus(status: DriverDetail["status"]) {
+  function updateStatus(status: DriverDetail["status"]) {
     if (!driver) return;
-    try {
-      await api(`/drivers/${driver.id}/status`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({ status }),
-      });
-      setDriver({ ...driver, status });
-      onUpdated();
-    } catch (err) {
-      setStatusMsg(err instanceof ApiError ? err.message : "Update failed");
-    }
+    requestConfirm({
+      title: "Update driver status?",
+      confirmLabel: "Update status",
+      summary: [
+        { label: "Driver", value: driver.name },
+        { label: "Current status", value: driver.status },
+        { label: "New status", value: status },
+      ],
+      onConfirm: async () => {
+        try {
+          await api(`/drivers/${driver.id}/status`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ status }),
+          });
+          setDriver({ ...driver, status });
+          onUpdated();
+        } catch (err) {
+          setStatusMsg(err instanceof ApiError ? err.message : "Update failed");
+        }
+      },
+    });
   }
 
-  async function updateAssignmentStatus(assignment: DriverAssignmentRow, status: string) {
-    try {
-      await api(`/drivers/assignments/${assignment.id}`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({ status }),
-      });
-      const refreshed = await api<DriverDetail>(`/drivers/${driverId}`, { token });
-      setDriver(refreshed);
-      onUpdated();
-    } catch (err) {
-      setStatusMsg(err instanceof ApiError ? err.message : "Update failed");
-    }
+  function updateAssignmentStatus(assignment: DriverAssignmentRow, status: string) {
+    requestConfirm({
+      title: "Update assignment status?",
+      confirmLabel: "Update status",
+      summary: [
+        { label: "Trip", value: assignment.title },
+        { label: "Current status", value: assignment.status },
+        { label: "New status", value: status },
+      ],
+      onConfirm: async () => {
+        try {
+          await api(`/drivers/assignments/${assignment.id}`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ status }),
+          });
+          const refreshed = await api<DriverDetail>(`/drivers/${driverId}`, { token });
+          setDriver(refreshed);
+          onUpdated();
+        } catch (err) {
+          setStatusMsg(err instanceof ApiError ? err.message : "Update failed");
+        }
+      },
+    });
   }
 
-  async function removeAssignment(assignmentId: string) {
-    if (!window.confirm("Remove this assignment?")) return;
-    try {
-      await api(`/drivers/assignments/${assignmentId}`, { method: "DELETE", token });
-      const refreshed = await api<DriverDetail>(`/drivers/${driverId}`, { token });
-      setDriver(refreshed);
-      onUpdated();
-    } catch (err) {
-      setStatusMsg(err instanceof ApiError ? err.message : "Remove failed");
-    }
+  function removeAssignment(assignment: DriverAssignmentRow) {
+    requestConfirm({
+      title: "Remove assignment?",
+      variant: "danger",
+      confirmLabel: "Remove assignment",
+      summary: [
+        { label: "Driver", value: driver?.name ?? "—" },
+        { label: "Trip", value: assignment.title },
+        {
+          label: "Dates",
+          value: `${formatShortDate(assignment.startDate)}${
+            assignment.endDate ? ` – ${formatShortDate(assignment.endDate)}` : ""
+          }`,
+        },
+      ],
+      onConfirm: async () => {
+        try {
+          await api(`/drivers/assignments/${assignment.id}`, { method: "DELETE", token });
+          const refreshed = await api<DriverDetail>(`/drivers/${driverId}`, { token });
+          setDriver(refreshed);
+          onUpdated();
+        } catch (err) {
+          setStatusMsg(err instanceof ApiError ? err.message : "Remove failed");
+        }
+      },
+    });
   }
 
   return (
@@ -226,7 +266,7 @@ export function DriverDetailModal({ open, token, driverId, onClose, onAssign, on
                       <button
                         type="button"
                         className="btn btn-ghost"
-                        onClick={() => removeAssignment(a.id)}
+                        onClick={() => removeAssignment(a)}
                       >
                         Remove
                       </button>

@@ -64,6 +64,18 @@ With `LOG_OTP_TO_CONSOLE=true` (default in dev), each OTP is printed in the **AP
 
 Admin password can be set via `ADMIN_SEED_PASSWORD` when running `npm run db:seed` (default `admin123`).
 
+### Email (optional)
+
+Copy `apps/api/.env.example` and configure:
+
+| Mode | Env | Behavior |
+|------|-----|----------|
+| **log** (default) | `EMAIL_MODE=log` | Prints to API console |
+| **webhook** | `EMAIL_MODE=webhook` + `EMAIL_WEBHOOK_URL` | POST JSON to your provider |
+| **smtp** | `EMAIL_MODE=smtp` + `SMTP_*` | Sends via SMTP |
+
+Set `WEB_APP_URL` for correct links in inquiry/commission emails. OTP stays in dev mode (`DEV_BYPASS_OTP`); no SMS provider required locally.
+
 ### Demo dataset
 
 `npm run db:seed:demo` fills **every** Prisma table with demo rows (users, agencies, tours, inquiries, offers, OTP challenges, refresh tokens, etc.). Safe to re-run — prints a row-count checklist when finished. Extra logins include `+94773334400` (Wild Coast agency), `+94778889900` (rejected agency), and `+94774445500` (tourist).

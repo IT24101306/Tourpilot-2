@@ -69,7 +69,7 @@ influencerRouter.get("/dashboard", authRequired, requireRoles("INFLUENCER"), asy
     const profile = await prisma.influencerProfile.findUnique({
       where: { userId: req.user!.id },
       include: {
-        user: { select: { name: true } },
+        user: { select: { name: true, walletBalance: true, email: true } },
         codes: {
           include: {
             tour: {
@@ -102,13 +102,17 @@ influencerRouter.get("/dashboard", authRequired, requireRoles("INFLUENCER"), asy
 
     const origin = String(req.headers.origin || "http://localhost:5173");
 
-    const [earnedAgg, pendingAgg, clicksAgg] = await Promise.all([
+    const [earnedAgg, pendingAgg, paidAgg, clicksAgg] = await Promise.all([
       prisma.commission.aggregate({
         where: { influencerId: profile.id, status: { in: ["APPROVED", "PAID"] } },
         _sum: { amountLkr: true },
       }),
       prisma.commission.aggregate({
         where: { influencerId: profile.id, status: "PENDING" },
+        _sum: { amountLkr: true },
+      }),
+      prisma.commission.aggregate({
+        where: { influencerId: profile.id, status: "PAID" },
         _sum: { amountLkr: true },
       }),
       prisma.referralCode.aggregate({
@@ -125,10 +129,13 @@ influencerRouter.get("/dashboard", authRequired, requireRoles("INFLUENCER"), asy
         id: profile.id,
         name: profile.user.name,
         bio: profile.bio,
+        walletBalance: Number(profile.user.walletBalance),
       },
       stats: {
         totalEarned: Number(earnedAgg._sum.amountLkr ?? 0),
         pendingCommission: Number(pendingAgg._sum.amountLkr ?? 0),
+        paidToWallet: Number(paidAgg._sum.amountLkr ?? 0),
+        walletBalance: Number(profile.user.walletBalance),
         totalClicks: Number(clicksAgg._sum.clickCount ?? 0),
         activeCodes: codes.filter((c) => c.isActive).length,
         totalInquiries,

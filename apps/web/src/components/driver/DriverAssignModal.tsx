@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, ApiError } from "../../api/client";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
 import type { AssignableInquiry, AssignableTour } from "../../pages/agency/driverTypes";
 import { toDatetimeLocalValue } from "../../pages/agency/driverTypes";
@@ -25,6 +26,7 @@ export function DriverAssignModal({
   onClose,
   onAssigned,
 }: Props) {
+  const { requestConfirm } = useConfirmAction();
   const [linkType, setLinkType] = useState<"inquiry" | "tour" | "custom">("inquiry");
   const [inquiryId, setInquiryId] = useState("");
   const [tourId, setTourId] = useState("");
@@ -57,35 +59,62 @@ export function DriverAssignModal({
     else setTitle(`Custom trip — ${inq.tourist?.name ?? "Guest"}`);
   }, [inquiryId, inquiries]);
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
     if (!startDate) {
       setStatus("Start date is required.");
       return;
     }
 
-    setSaving(true);
-    setStatus("");
-    try {
-      await api(`/drivers/${driverId}/assignments`, {
-        method: "POST",
-        token,
-        body: JSON.stringify({
-          title: linkType === "custom" ? title : undefined,
-          inquiryId: linkType === "inquiry" ? inquiryId || undefined : undefined,
-          tourId: linkType === "tour" ? tourId || undefined : undefined,
-          startDate: new Date(startDate).toISOString(),
-          endDate: endDate ? new Date(endDate).toISOString() : undefined,
-          notes: notes.trim() || undefined,
-        }),
-      });
-      onAssigned();
-      onClose();
-    } catch (err) {
-      setStatus(err instanceof ApiError ? err.message : "Failed to assign driver");
-    } finally {
-      setSaving(false);
-    }
+    const inquiry = inquiries.find((i) => i.id === inquiryId);
+    const tour = tours.find((t) => t.id === tourId);
+    const linkLabel =
+      linkType === "inquiry"
+        ? inquiry?.tour?.title ?? `Booking — ${inquiry?.tourist?.name ?? "Guest"}`
+        : linkType === "tour"
+          ? tour?.title ?? "Tour"
+          : title || "Custom trip";
+
+    requestConfirm({
+      title: "Assign driver?",
+      description: "The assignment appears on the driver calendar.",
+      confirmLabel: "Assign driver",
+      summary: [
+        { label: "Driver", value: driverName },
+        { label: "Assignment", value: linkLabel },
+        {
+          label: "Dates",
+          value: `${new Date(startDate).toLocaleString()}${
+            endDate ? ` – ${new Date(endDate).toLocaleString()}` : ""
+          }`,
+        },
+        { label: "Notes", value: notes.trim() || "—" },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        setStatus("");
+        try {
+          await api(`/drivers/${driverId}/assignments`, {
+            method: "POST",
+            token,
+            body: JSON.stringify({
+              title: linkType === "custom" ? title : undefined,
+              inquiryId: linkType === "inquiry" ? inquiryId || undefined : undefined,
+              tourId: linkType === "tour" ? tourId || undefined : undefined,
+              startDate: new Date(startDate).toISOString(),
+              endDate: endDate ? new Date(endDate).toISOString() : undefined,
+              notes: notes.trim() || undefined,
+            }),
+          });
+          onAssigned();
+          onClose();
+        } catch (err) {
+          setStatus(err instanceof ApiError ? err.message : "Failed to assign driver");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   }
 
   return (

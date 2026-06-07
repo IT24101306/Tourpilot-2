@@ -42,20 +42,35 @@ export function AuthLayout({
   );
 }
 
-export function AuthSwitch({ mode }: { mode: "login" | "register" }) {
+export function AuthSwitch({
+  mode,
+  returnTo,
+}: {
+  mode: "login" | "register";
+  returnTo?: string | null;
+}) {
+  const registerTo =
+    returnTo && returnTo.startsWith("/")
+      ? `/register?redirect=${encodeURIComponent(returnTo)}`
+      : "/register";
+  const loginTo =
+    returnTo && returnTo.startsWith("/")
+      ? `/login?redirect=${encodeURIComponent(returnTo)}`
+      : "/login";
+
   return (
     <p className="auth-switch muted">
       {mode === "login" ? (
         <>
           New here?{" "}
-          <Link to="/register" className="auth-switch-link">
+          <Link to={registerTo} className="auth-switch-link">
             Create a tourist account
           </Link>
         </>
       ) : (
         <>
           Already have an account?{" "}
-          <Link to="/login" className="auth-switch-link">
+          <Link to={loginTo} className="auth-switch-link">
             Log in with OTP
           </Link>
         </>

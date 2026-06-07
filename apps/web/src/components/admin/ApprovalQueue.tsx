@@ -6,7 +6,7 @@ type PendingAgency = {
 
 type Props = {
   items: PendingAgency[];
-  onApprove: (id: string) => void;
+  onApprove: (agency: PendingAgency) => void;
   onReject: (id: string, name: string) => void;
   approvingId?: string | null;
 };
@@ -45,7 +45,7 @@ export function ApprovalQueue({ items, onApprove, onReject, approvingId }: Props
                 type="button"
                 className="btn btn-primary"
                 disabled={approvingId === a.id}
-                onClick={() => onApprove(a.id)}
+                onClick={() => onApprove(a)}
               >
                 {approvingId === a.id ? "Working…" : "Approve"}
               </button>

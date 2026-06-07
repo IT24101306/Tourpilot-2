@@ -164,6 +164,9 @@ export async function upsertInquiryProposal(
     hadProposal ? "PROPOSAL_UPDATED" : "PROPOSAL_SENT"
   );
 
+  const { notifyProposalSent } = await import("./notifications.js");
+  void notifyProposalSent(inquiryId).catch(console.error);
+
   return proposal;
 }
 

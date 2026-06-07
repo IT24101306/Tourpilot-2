@@ -1,6 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ImageUrlField } from "../ImageUrlField";
 import { tourPublicPriceLkr } from "@tourpilot/shared";
+import type { ManagedOffer } from "../offers/OffersDashboard";
+import type { TourOfferLinkState } from "../../lib/tourOfferLink";
+import { TourOfferLinkSection } from "./TourOfferLinkSection";
 import {
   createDayPlan,
   createEntry,
@@ -30,6 +33,9 @@ type Props = {
   uploadToken?: string | null;
   /** Agency-wide % — commission is calculated from base price automatically. */
   agencyInfluencerCommissionPct?: number;
+  offers?: ManagedOffer[];
+  offerLink?: TourOfferLinkState;
+  onOfferLinkChange?: (next: TourOfferLinkState) => void;
 };
 
 export function TourFormModal({
@@ -46,6 +52,9 @@ export function TourFormModal({
   onSubmit,
   uploadToken,
   agencyInfluencerCommissionPct = 0,
+  offers,
+  offerLink,
+  onOfferLinkChange,
 }: Props) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -229,6 +238,22 @@ export function TourFormModal({
             />
             Publish on agency storefront (travelers can view and inquire)
           </label>
+
+          {offerLink && onOfferLinkChange && offers && (
+            <TourOfferLinkSection
+              offers={offers}
+              link={offerLink}
+              onChange={onOfferLinkChange}
+              uploadToken={uploadToken}
+              tourDefaults={{
+                title: form.title,
+                summary: form.summary,
+                coverUrl: form.coverUrl,
+                basePriceLkr: form.basePriceLkr,
+                isPublished: form.isPublished,
+              }}
+            />
+          )}
 
           <div className="entity-filter-row tour-entity-filters" role="search">
             <input

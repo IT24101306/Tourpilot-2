@@ -13,6 +13,7 @@ import {
   type EntityFormState,
   type EntityTypeKey,
 } from "../../components/entity/entityTypes";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 
 const TYPE_ICONS: Record<string, string> = {
@@ -53,6 +54,7 @@ function typeIcon(type: string) {
 
 export function AgencyAllEntitiesPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [entities, setEntities] = useState<AgencyEntity[]>([]);
   const [typeFilter, setTypeFilter] = useState("all");
   const [saving, setSaving] = useState(false);
@@ -99,32 +101,47 @@ export function AgencyAllEntitiesPage() {
     refresh(token).catch(console.error);
   }, [token, typeFilter]);
 
-  async function addEntity(e: FormEvent) {
+  function addEntity(e: FormEvent) {
     e.preventDefault();
     if (!token) return;
-    setSaving(true);
-    setToast("");
     const savedName = entityForm.name.trim();
-    try {
-      await api("/entities", {
-        method: "POST",
-        token,
-        body: JSON.stringify({
-          ...buildEntityPayload(entityForm),
-          media: media.length > 0 ? media : undefined,
-        }),
-      });
-      setEntityForm(defaultEntityForm());
-      setMedia([]);
-      setMediaDraft({ kind: "image", url: "", label: "" });
-      setToast(`${savedName || "Entity"} saved to your library.`);
-      await refresh(token);
-      setTimeout(() => setToast(""), 3200);
-    } catch {
-      setToast("Could not save entity. Check required fields and try again.");
-    } finally {
-      setSaving(false);
-    }
+    const payload = buildEntityPayload(entityForm);
+    requestConfirm({
+      title: "Add entity to library?",
+      description: "This place becomes available for itineraries and tour planning.",
+      confirmLabel: "Save entity",
+      summary: [
+        { label: "Name", value: savedName || "(untitled)" },
+        { label: "Type", value: entityTypeLabel(entityForm.type) },
+        { label: "Location", value: entityLocationLabel(entityForm) },
+        { label: "Media items", value: String(media.length) },
+        { label: "Details", value: entityDetailsSummary(entityForm) },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        setToast("");
+        try {
+          await api("/entities", {
+            method: "POST",
+            token,
+            body: JSON.stringify({
+              ...payload,
+              media: media.length > 0 ? media : undefined,
+            }),
+          });
+          setEntityForm(defaultEntityForm());
+          setMedia([]);
+          setMediaDraft({ kind: "image", url: "", label: "" });
+          setToast(`${savedName || "Entity"} saved to your library.`);
+          await refresh(token);
+          setTimeout(() => setToast(""), 3200);
+        } catch {
+          setToast("Could not save entity. Check required fields and try again.");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   }
 
   function addMediaItem() {

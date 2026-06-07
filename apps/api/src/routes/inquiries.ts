@@ -23,6 +23,12 @@ import {
   inquiryMessagesInclude,
   serializeInquiryMessage,
 } from "../services/inquiryMessages.js";
+import {
+  notifyCommissionApproved,
+  notifyInquiryCreated,
+  notifyInquiryStatusChange,
+  notifyProposalSent,
+} from "../services/notifications.js";
 
 export const inquiriesRouter = Router();
 
@@ -33,7 +39,16 @@ const inquiryIncludeForAgency = {
     orderBy: { createdAt: "asc" as const },
     include: {
       author: { select: { id: true, name: true, role: true } },
-      tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true, coverUrl: true } },
+      tour: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          days: true,
+          basePriceLkr: true,
+          coverUrl: true,
+        },
+      },
       itinerary: {
         include: {
           days: {
@@ -52,7 +67,7 @@ const inquiryIncludeForAgency = {
 const inquiryIncludeForTourist = {
   agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
   tourist: { select: { id: true, name: true, role: true } },
-  tour: { select: { id: true, title: true, slug: true } },
+  tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
   responses: {
     orderBy: { createdAt: "asc" as const },
     include: {
@@ -85,6 +100,7 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
         budgetBand: z.string().optional(),
         interests: z.array(z.string()).optional(),
         message: z.string().optional(),
+        email: z.string().email("A valid email address is required"),
         refCode: z.string().optional(),
       })
       .parse(req.body);
@@ -97,39 +113,72 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
       if (code?.isActive) referralCodeId = code.id;
     }
 
+    let tourId: string | undefined = body.tourId;
+    let inquiryType = body.type;
+
+    if (tourId) {
+      const tour = await prisma.tour.findFirst({
+        where: { id: tourId, agencyId: body.agencyId, isPublished: true, tourKind: "READY_MADE" },
+        select: { id: true, title: true, days: true },
+      });
+      if (!tour) {
+        return res.status(400).json({ error: "Selected tour is not available for inquiry" });
+      }
+      inquiryType = "READY_MADE";
+    } else if (inquiryType === "READY_MADE") {
+      return res.status(400).json({ error: "Select a tour for a ready-made inquiry" });
+    }
+
+    const messageBody =
+      body.message?.trim() ||
+      (tourId
+        ? `I'm interested in this ready-made tour. Please share availability and next steps.`
+        : undefined);
+
+    if (!messageBody) {
+      return res.status(400).json({ error: "Please describe your trip requirements" });
+    }
+
+    const contactEmail = body.email.trim().toLowerCase();
+
     const inquiry = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: req.user!.id },
+        data: { email: contactEmail },
+      });
+
       const created = await tx.inquiry.create({
         data: {
           touristId: req.user!.id,
           agencyId: body.agencyId,
-          tourId: body.tourId,
-          type: body.type,
+          tourId,
+          type: inquiryType,
           pax: body.pax,
           startDate: body.startDate ? new Date(body.startDate) : undefined,
           endDate: body.endDate ? new Date(body.endDate) : undefined,
           budgetBand: body.budgetBand,
           interests: body.interests ?? [],
-          message: body.message,
+          message: messageBody,
           referralCodeId,
           statusHistory: { create: { status: "NEW", actorId: req.user!.id } },
         },
         include: { agency: true, tour: true },
       });
 
-      if (body.message?.trim()) {
-        await tx.inquiryMessage.create({
-          data: {
-            inquiryId: created.id,
-            authorId: req.user!.id,
-            kind: "TOURIST",
-            body: body.message.trim(),
-            action: "INQUIRY_CREATED",
-          },
-        });
-      }
+      await tx.inquiryMessage.create({
+        data: {
+          inquiryId: created.id,
+          authorId: req.user!.id,
+          kind: "TOURIST",
+          body: messageBody,
+          action: tourId ? "TOUR_INQUIRY" : "INQUIRY_CREATED",
+        },
+      });
 
       return created;
     });
+
+    void notifyInquiryCreated(inquiry.id).catch(console.error);
 
     res.status(201).json(inquiry);
   } catch (e) {
@@ -194,21 +243,22 @@ inquiriesRouter.get("/share/:token", async (req, res, next) => {
 
 inquiriesRouter.get("/:id", authRequired, async (req, res, next) => {
   try {
+    const role = req.user!.role;
     const inquiry = await prisma.inquiry.findUnique({
       where: { id: req.params.id },
       include:
-        req.user!.role === "AGENCY"
+        role === "AGENCY" || role === "ADMIN"
           ? inquiryIncludeForAgency
           : inquiryIncludeForTourist,
     });
 
     if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
 
-    if (req.user!.role === "TOURIST" && inquiry.touristId !== req.user!.id) {
+    if (role === "TOURIST" && inquiry.touristId !== req.user!.id) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    if (req.user!.role === "AGENCY") {
+    if (role === "AGENCY") {
       const agency = await getAgencyForUser(req.user!.id);
       if (!agency || inquiry.agencyId !== agency.id) {
         return res.status(403).json({ error: "Forbidden" });
@@ -348,6 +398,8 @@ inquiriesRouter.post("/:id/reply", authRequired, requireRoles("AGENCY"), async (
       body.message.trim(),
       "PROPOSAL_SENT"
     );
+
+    void notifyProposalSent(inquiry.id).catch(console.error);
 
     res.status(201).json(serializeResponse(response));
   } catch (e) {
@@ -589,7 +641,10 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
         where: { inquiryId: inquiry.id },
         data: { status: "APPROVED" },
       });
+      void notifyCommissionApproved(inquiry.id).catch(console.error);
     }
+
+    void notifyInquiryStatusChange(inquiry.id, statusMap[action], note).catch(console.error);
 
     res.json(inquiry);
   } catch (e) {

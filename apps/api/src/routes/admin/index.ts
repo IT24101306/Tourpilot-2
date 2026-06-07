@@ -6,6 +6,12 @@ import { prisma } from "../../lib/prisma.js";
 import { authRequired, requireRoles } from "../../middleware/auth.js";
 import { asJson } from "../../utils/json.js";
 import { agencyRejectionEmail, sendPlatformEmail } from "../../services/email.js";
+import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
+import {
+  notifyAdminInquiryMessage,
+  notifyCommissionPaid,
+} from "../../services/notifications.js";
+import { creditCommissionPayout } from "../../services/wallet.js";
 
 export const adminRouter = Router();
 
@@ -448,6 +454,32 @@ adminRouter.patch("/inquiries/:id/status", async (req, res, next) => {
   }
 });
 
+adminRouter.post("/inquiries/:id/messages", async (req, res, next) => {
+  try {
+    const body = z.object({ message: z.string().min(1).max(4000) }).parse(req.body);
+
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
+
+    const message = await createInquiryMessage(
+      inquiry.id,
+      req.user!.id,
+      "ADMIN",
+      body.message,
+      "ADMIN_MESSAGE"
+    );
+
+    void notifyAdminInquiryMessage(inquiry.id, body.message).catch(console.error);
+
+    res.status(201).json(serializeInquiryMessage(message));
+  } catch (e) {
+    next(e);
+  }
+});
+
 adminRouter.get("/commissions", async (req, res, next) => {
   try {
     const status = req.query.status as CommissionStatus | undefined;
@@ -497,12 +529,35 @@ adminRouter.patch("/commissions/:id", async (req, res, next) => {
   try {
     const body = z.object({ status: commissionStatusSchema }).parse(req.body);
 
+    if (body.status === "PAID") {
+      const result = await creditCommissionPayout(req.params.id);
+      if (!result.alreadyPaid && result.user && result.amountLkr != null) {
+        await notifyCommissionPaid(
+          result.user.id,
+          result.user.name,
+          result.user.email,
+          result.amountLkr,
+          result.balance
+        );
+      }
+      const commission = await prisma.commission.findUniqueOrThrow({
+        where: { id: req.params.id },
+      });
+      return res.json({
+        ...commission,
+        amountLkr: Number(commission.amountLkr),
+        walletBalance: result.balance,
+      });
+    }
+
     const commission = await prisma.commission.update({
       where: { id: req.params.id },
       data: { status: body.status },
     });
     res.json({ ...commission, amountLkr: Number(commission.amountLkr) });
   } catch (e) {
+    const err = e as Error & { status?: number };
+    if (err.status) return res.status(err.status).json({ error: err.message });
     next(e);
   }
 });

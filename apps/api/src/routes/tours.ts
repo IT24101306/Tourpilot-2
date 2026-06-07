@@ -4,6 +4,12 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
+import {
+  getLinkedOffersByTourIds,
+  syncTourOfferLinksInTx,
+  tourOfferLinkBodySchema,
+  validateTourOfferLinkBody,
+} from "../services/tourOfferLinks.js";
 import { slugify } from "../utils/slug.js";
 
 export const toursRouter = Router();
@@ -29,6 +35,7 @@ const withPlanBodySchema = z.object({
   coverUrl: z.string().optional(),
   isPublished: z.boolean().optional(),
   dayPlans: z.array(dayPlanSchema),
+  offerLink: tourOfferLinkBodySchema,
 });
 
 type TourDb = Prisma.TransactionClient | typeof prisma;
@@ -172,7 +179,11 @@ toursRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (req
       },
     });
     const pct = Number(agency.influencerCommissionPct);
-    res.json(tours.map((t) => serializeTourListItem(t, pct)));
+    const tourIds = tours.map((t) => t.id);
+    const linkedMap = await getLinkedOffersByTourIds(agency.id, tourIds);
+    res.json(
+      tours.map((t) => serializeTourListItem(t, pct, linkedMap.get(t.id) ?? []))
+    );
   } catch (e) {
     next(e);
   }
@@ -186,7 +197,10 @@ toursRouter.get("/agency/:id", authRequired, requireRoles("AGENCY"), async (req,
     const tour = await getAgencyTour(agency.id, req.params.id);
     if (!tour) return res.status(404).json({ error: "Tour not found" });
 
-    res.json(serializeTourAgencyDetail(tour, Number(agency.influencerCommissionPct)));
+    const linkedMap = await getLinkedOffersByTourIds(agency.id, [tour.id]);
+    res.json(
+      serializeTourAgencyDetail(tour, Number(agency.influencerCommissionPct), linkedMap.get(tour.id) ?? [])
+    );
   } catch (e) {
     next(e);
   }
@@ -215,6 +229,12 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
 
     const dayCount = body.dayPlans.length;
     const kindLabel = body.tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
+    const willPublish = body.isPublished ?? body.tourKind === "READY_MADE";
+
+    if (body.offerLink) {
+      const linkErr = validateTourOfferLinkBody(body.offerLink, { isPublished: willPublish });
+      if (linkErr) return res.status(400).json({ error: linkErr });
+    }
 
     const tour = await prisma.$transaction(async (tx) => {
       const created = await tx.tour.create({
@@ -228,19 +248,34 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
           description: body.description?.trim() || null,
           coverUrl: body.coverUrl?.trim() || null,
           basePriceLkr: body.basePriceLkr ?? 0,
-          isPublished: body.isPublished ?? body.tourKind === "READY_MADE",
+          isPublished: willPublish,
         },
       });
 
       await replaceTourDayPlans(tx, agency.id, created.id, body.dayPlans);
+
+      if (body.offerLink) {
+        await syncTourOfferLinksInTx(tx, agency.id, created.id, body.offerLink);
+      }
 
       const loaded = await getAgencyTour(agency.id, created.id, tx);
       if (!loaded) throw new Error("Tour not found after create");
       return loaded;
     });
 
-    res.status(201).json(serializeTourListItem(tour, Number(agency.influencerCommissionPct)));
+    const linkedMap = await getLinkedOffersByTourIds(agency.id, [tour.id]);
+    res
+      .status(201)
+      .json(
+        serializeTourListItem(
+          tour,
+          Number(agency.influencerCommissionPct),
+          linkedMap.get(tour.id) ?? []
+        )
+      );
   } catch (e) {
+    const err = e as Error & { status?: number };
+    if (err.status === 400) return res.status(400).json({ error: err.message });
     next(e);
   }
 });
@@ -276,6 +311,13 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
       if (clash) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
     }
 
+    const willPublish = body.isPublished ?? existing.isPublished;
+
+    if (body.offerLink) {
+      const linkErr = validateTourOfferLinkBody(body.offerLink, { isPublished: willPublish });
+      if (linkErr) return res.status(400).json({ error: linkErr });
+    }
+
     const tour = await prisma.$transaction(async (tx) => {
       await tx.tour.update({
         where: { id: existing.id },
@@ -294,13 +336,26 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
 
       await replaceTourDayPlans(tx, agency.id, existing.id, body.dayPlans);
 
+      if (body.offerLink) {
+        await syncTourOfferLinksInTx(tx, agency.id, existing.id, body.offerLink);
+      }
+
       const loaded = await getAgencyTour(agency.id, existing.id, tx);
       if (!loaded) throw new Error("Tour not found after update");
       return loaded;
     });
 
-    res.json(serializeTourListItem(tour, Number(agency.influencerCommissionPct)));
+    const linkedMap = await getLinkedOffersByTourIds(agency.id, [tour.id]);
+    res.json(
+      serializeTourListItem(
+        tour,
+        Number(agency.influencerCommissionPct),
+        linkedMap.get(tour.id) ?? []
+      )
+    );
   } catch (e) {
+    const err = e as Error & { status?: number };
+    if (err.status === 400) return res.status(400).json({ error: err.message });
     next(e);
   }
 });
@@ -504,6 +559,8 @@ toursRouter.post("/:id/days", authRequired, requireRoles("AGENCY"), async (req, 
   }
 });
 
+type LinkedOfferLite = { id: string; title: string; isActive: boolean };
+
 function serializeTourListItem(
   tour: {
     id: string;
@@ -530,7 +587,8 @@ function serializeTourListItem(
       }>;
     }>;
   },
-  commissionPctOverride?: number
+  commissionPctOverride?: number,
+  linkedOffers: LinkedOfferLite[] = []
 ) {
   const pricing = attachTourPricing(tour, commissionPctOverride);
   return {
@@ -560,14 +618,16 @@ function serializeTourListItem(
         entityType: i.entity?.type,
       })),
     })),
+    linkedOffers,
   };
 }
 
 function serializeTourAgencyDetail(
   tour: Parameters<typeof serializeTourListItem>[0],
-  commissionPctOverride?: number
+  commissionPctOverride?: number,
+  linkedOffers: LinkedOfferLite[] = []
 ) {
-  return serializeTourListItem(tour, commissionPctOverride);
+  return serializeTourListItem(tour, commissionPctOverride, linkedOffers);
 }
 
 function serializeTourDetail(tour: {

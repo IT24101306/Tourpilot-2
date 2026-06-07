@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { AgencyEntity, AgencyGroup } from "./types";
 
@@ -19,6 +20,7 @@ const TYPE_ICONS: Record<string, string> = {
 
 export function AgencyGroupsPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [groups, setGroups] = useState<AgencyGroup[]>([]);
   const [entities, setEntities] = useState<AgencyEntity[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export function AgencyGroupsPage() {
     }
   }
 
-  async function createGroup(e: FormEvent) {
+  function createGroup(e: FormEvent) {
     e.preventDefault();
     if (!token || !groupForm.name.trim()) return;
     if (groupForm.entityIds.length === 0) {
@@ -83,29 +85,53 @@ export function AgencyGroupsPage() {
       return;
     }
 
-    setSaving(true);
-    setStatus("");
-    try {
-      const created = await api<AgencyGroup>("/entities/groups", {
-        method: "POST",
-        token,
-        body: JSON.stringify({
-          name: groupForm.name.trim(),
-          description: groupForm.description.trim() || undefined,
-          entityIds: groupForm.entityIds,
-        }),
-      });
-      setGroupForm({ name: "", description: "", entityIds: [] });
-      setEntitySearch("");
-      await refresh();
-      setSelectedGroupId(created.id);
-      setStatus("Group created.");
-      setTimeout(() => setStatus(""), 2500);
-    } catch (err) {
-      setStatus(err instanceof ApiError ? err.message : "Failed to create group");
-    } finally {
-      setSaving(false);
-    }
+    const entityNames = entities
+      .filter((e) => groupForm.entityIds.includes(e.id))
+      .map((e) => e.name)
+      .join(", ");
+
+    requestConfirm({
+      title: "Create entity group?",
+      description: "Reuse this bundle when building itineraries and tours.",
+      confirmLabel: "Create group",
+      summary: [
+        { label: "Name", value: groupForm.name.trim() },
+        {
+          label: "Description",
+          value: groupForm.description.trim() || "—",
+        },
+        { label: "Entities", value: `${groupForm.entityIds.length} selected` },
+        {
+          label: "Includes",
+          value: entityNames.length > 120 ? `${entityNames.slice(0, 120)}…` : entityNames,
+        },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        setStatus("");
+        try {
+          const created = await api<AgencyGroup>("/entities/groups", {
+            method: "POST",
+            token,
+            body: JSON.stringify({
+              name: groupForm.name.trim(),
+              description: groupForm.description.trim() || undefined,
+              entityIds: groupForm.entityIds,
+            }),
+          });
+          setGroupForm({ name: "", description: "", entityIds: [] });
+          setEntitySearch("");
+          await refresh();
+          setSelectedGroupId(created.id);
+          setStatus("Group created.");
+          setTimeout(() => setStatus(""), 2500);
+        } catch (err) {
+          setStatus(err instanceof ApiError ? err.message : "Failed to create group");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   }
 
   function toggleEntity(id: string) {

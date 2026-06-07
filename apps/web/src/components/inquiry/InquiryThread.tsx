@@ -1,6 +1,6 @@
 export type ThreadMessage = {
   id: string;
-  kind: "TOURIST" | "AGENCY";
+  kind: "TOURIST" | "AGENCY" | "ADMIN";
   body: string;
   action: string | null;
   createdAt: string;
@@ -26,7 +26,10 @@ export function InquiryThread({ messages, compact, hideTitle }: Props) {
             className={`inquiry-thread-item inquiry-thread-item--${msg.kind.toLowerCase()}`}
           >
             <div className="inquiry-thread-item-head">
-              <strong>{msg.author.name}</strong>
+              <strong>{displayAuthor(msg)}</strong>
+              {msg.kind === "ADMIN" && (
+                <span className="inquiry-thread-role-badge">Platform</span>
+              )}
               <span className="muted">{formatWhen(msg.createdAt)}</span>
               {msg.action && (
                 <span className={`inquiry-thread-badge inquiry-thread-badge--${badgeClass(msg.action)}`}>
@@ -42,7 +45,14 @@ export function InquiryThread({ messages, compact, hideTitle }: Props) {
   );
 }
 
+function displayAuthor(msg: ThreadMessage) {
+  if (msg.kind === "ADMIN") return "TourPilot Admin";
+  return msg.author.name;
+}
+
 function actionLabel(action: string) {
+  if (action === "ADMIN_MESSAGE") return "Platform note";
+  if (action === "TOUR_INQUIRY") return "Tour inquiry";
   if (action === "INQUIRY_CREATED") return "Trip request";
   if (action === "REVISION_REQUESTED") return "Requested changes";
   if (action === "PROPOSAL_SENT") return "Proposal sent";
@@ -53,8 +63,9 @@ function actionLabel(action: string) {
 }
 
 function badgeClass(action: string) {
+  if (action === "ADMIN_MESSAGE") return "admin";
   if (action === "REVISION_REQUESTED") return "warn";
-  if (action === "ACCEPTED" || action === "PROPOSAL_SENT") return "ok";
+  if (action === "ACCEPTED" || action === "PROPOSAL_SENT" || action === "TOUR_INQUIRY") return "ok";
   if (action === "DECLINED") return "late";
   return "neutral";
 }

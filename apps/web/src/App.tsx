@@ -1,4 +1,5 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { currentPath, loginPath } from "./utils/authRedirect";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
@@ -45,6 +46,9 @@ import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
 import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
 import { AdminDriversPage } from "./pages/admin/AdminDriversPage";
 import { AdminCmsPage } from "./pages/admin/AdminCmsPage";
+import { AdminInfluencersPage } from "./pages/admin/AdminInfluencersPage";
+import { AdminItinerariesPage } from "./pages/admin/AdminItinerariesPage";
+import { AdminTripRoomPage } from "./pages/admin/AdminTripRoomPage";
 import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
@@ -62,8 +66,9 @@ import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
 
 function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[] }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <div className="section">Loading…</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={loginPath(currentPath(location))} replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
@@ -191,12 +196,15 @@ export default function App() {
             <Route path="agencies" element={<AdminAgenciesPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="inquiries" element={<AdminInquiriesPage />} />
+            <Route path="inquiries/:inquiryId/trip-room" element={<AdminTripRoomPage />} />
             <Route path="tours" element={<AdminToursPage />} />
             <Route path="commissions" element={<AdminCommissionsPage />} />
             <Route path="ledger" element={<AdminLedgerPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="drivers" element={<AdminDriversPage />} />
+            <Route path="influencers" element={<AdminInfluencersPage />} />
+            <Route path="itineraries" element={<AdminItinerariesPage />} />
             <Route path="cms" element={<AdminCmsPage />} />
           </Route>
 

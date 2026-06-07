@@ -10,26 +10,31 @@ type Props = {
   existingCode?: ReferralCode;
   onCreate: () => void;
   onCopy: (text: string, label: string) => void;
+  onViewDetail: () => void;
 };
 
-export function InfluencerTourCard({ tour, existingCode, onCreate, onCopy }: Props) {
+export function InfluencerTourCard({ tour, existingCode, onCreate, onCopy, onViewDetail }: Props) {
   return (
     <article className="partner-tour-card">
-      <CoverImage src={tour.coverUrl} fallback={MEDIA.agencyCover} className="partner-tour-cover" />
-      <div className="partner-tour-body">
-        <span className="partner-tour-agency">{tour.agency.name}</span>
-        <h3>{tour.title}</h3>
-        <p className="partner-tour-meta muted">
-          {tour.days} days · LKR {tour.publicPriceLkr.toLocaleString()} listed
-          {tour.seasonTag ? ` · ${tour.seasonTag}` : ""}
-        </p>
-        {tour.influencerCommissionLkr > 0 && (
-          <p className="partner-tour-commission">
-            You earn <strong>LKR {tour.influencerCommissionLkr.toLocaleString()}</strong> per booking
+      <button type="button" className="partner-tour-card-open" onClick={onViewDetail}>
+        <CoverImage src={tour.coverUrl} fallback={MEDIA.agencyCover} className="partner-tour-cover" />
+        <div className="partner-tour-body">
+          <span className="partner-tour-agency">{tour.agency.name}</span>
+          <span className="partner-tour-title">{tour.title}</span>
+          <p className="partner-tour-meta muted">
+            {tour.days} days · LKR {tour.publicPriceLkr.toLocaleString()} listed
+            {tour.seasonTag ? ` · ${tour.seasonTag}` : ""}
           </p>
-        )}
-        {tour.summary && <p className="partner-tour-summary">{tour.summary}</p>}
-        <div className="partner-tour-actions">
+          {tour.influencerCommissionLkr > 0 && (
+            <p className="partner-tour-commission">
+              You earn <strong>LKR {tour.influencerCommissionLkr.toLocaleString()}</strong> per booking
+            </p>
+          )}
+          {tour.summary && <p className="partner-tour-summary">{tour.summary}</p>}
+          <span className="partner-tour-view-hint">View tour & agency →</span>
+        </div>
+      </button>
+      <div className="partner-tour-actions">
           <Link
             to={`/tours/${tour.agency.slug}/${tour.slug}`}
             className="btn btn-ghost"
@@ -52,7 +57,6 @@ export function InfluencerTourCard({ tour, existingCode, onCreate, onCopy }: Pro
             </button>
           )}
         </div>
-      </div>
     </article>
   );
 }

@@ -104,7 +104,10 @@ export function AdminInquiriesPage() {
                     <span className="gov-status-badge">{i.status.replace(/_/g, " ")}</span>
                   </td>
                   <td className="gov-table-actions">
-                    <Link to={`/trips/${i.id}`} className="btn btn-ghost btn-nav" target="_blank">
+                    <Link
+                      to={`/dashboard/admin/inquiries/${i.id}/trip-room`}
+                      className="btn btn-ghost btn-nav"
+                    >
                       Trip room
                     </Link>
                     <button

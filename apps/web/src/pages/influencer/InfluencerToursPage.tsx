@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { InfluencerTourCard } from "../../components/influencer/InfluencerTourCard";
+import { InfluencerTourDetailModal } from "../../components/influencer/InfluencerTourDetailModal";
 import { useInfluencerDashboard } from "./types";
-import type { ReferralCode } from "./types";
+import type { InfluencerTour, ReferralCode } from "./types";
 
 export function InfluencerToursPage() {
   const { tours, data, loading, openCreateForTour, copyText } = useInfluencerDashboard();
   const [agencyFilter, setAgencyFilter] = useState("all");
+  const [detailTour, setDetailTour] = useState<InfluencerTour | null>(null);
 
   const agencies = useMemo(() => {
     const map = new Map<string, string>();
@@ -69,10 +71,20 @@ export function InfluencerToursPage() {
               existingCode={codesByTourId.get(tour.id)}
               onCreate={() => openCreateForTour(tour.id)}
               onCopy={copyText}
+              onViewDetail={() => setDetailTour(tour)}
             />
           ))}
         </div>
       )}
+
+      <InfluencerTourDetailModal
+        tour={detailTour}
+        existingCode={detailTour ? codesByTourId.get(detailTour.id) : undefined}
+        open={!!detailTour}
+        onClose={() => setDetailTour(null)}
+        onCreate={() => detailTour && openCreateForTour(detailTour.id)}
+        onCopy={copyText}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, NavLink, useParams, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { loginPath } from "../utils/authRedirect";
 import { CoverImage } from "../components/CoverImage";
 import { navLinkClass } from "../utils/navLinkClass";
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
@@ -141,9 +142,17 @@ function PackageCard({
 
 export function AgencyDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get("ref");
+  const inquireTourId = searchParams.get("inquireTour");
+  const focusInquiryForm =
+    Boolean(inquireTourId) || location.hash === "#request-custom-tour";
   const { token } = useAuth();
+  const agencyReturnPath = slug
+    ? `/agencies/${slug}${refCode ? `?ref=${encodeURIComponent(refCode)}` : ""}`
+    : "/agencies";
   const [agency, setAgency] = useState<Agency | null>(null);
   const [offerMsg, setOfferMsg] = useState("");
 
@@ -157,6 +166,19 @@ export function AgencyDetailPage() {
       }).catch(() => {});
     }
   }, [slug, refCode]);
+
+  const inquireTour = useMemo(() => {
+    if (!inquireTourId || !agency?.tours) return null;
+    const match = agency.tours.find((t) => t.id === inquireTourId);
+    if (!match) return null;
+    return {
+      id: match.id,
+      title: match.title,
+      slug: match.slug,
+      days: match.days,
+      basePriceLkr: match.basePriceLkr,
+    };
+  }, [agency?.tours, inquireTourId]);
 
   const enabled = agency?.display?.enabled ?? defaultDisplayConfig().enabled;
   const content = agency?.display?.content ?? defaultDisplayConfig().content;
@@ -200,7 +222,7 @@ export function AgencyDetailPage() {
 
   async function registerForOffer(offerId: string) {
     if (!token) {
-      setOfferMsg("Log in to register for this offer.");
+      navigate(loginPath(agencyReturnPath));
       return;
     }
     if (!slug) return;
@@ -387,12 +409,7 @@ export function AgencyDetailPage() {
                     offer={{ ...offer, agencyName: agency.name, agencySlug: agency.slug }}
                     compact
                     onRegister={
-                      offer.spotsLeft > 0
-                        ? () => {
-                            if (token) void registerForOffer(offer.id);
-                            else setOfferMsg("Log in to register for this offer.");
-                          }
-                        : undefined
+                      offer.spotsLeft > 0 ? () => void registerForOffer(offer.id) : undefined
                     }
                     registerLabel={offer.spotsLeft > 0 ? "Register for offer" : "Offer full"}
                   />
@@ -442,7 +459,14 @@ export function AgencyDetailPage() {
       </div>
 
       {inquiryEnabled && (
-        <AgencyInquirySection agencyId={agency.id} agencyName={agency.name} refCode={refCode} />
+        <AgencyInquirySection
+          agencyId={agency.id}
+          agencyName={agency.name}
+          agencySlug={agency.slug}
+          refCode={refCode}
+          tour={inquireTour}
+          focusOnMount={focusInquiryForm}
+        />
       )}
     </div>
   );

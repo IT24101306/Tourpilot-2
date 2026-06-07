@@ -43,10 +43,12 @@ export type InfluencerCommission = {
 };
 
 export type InfluencerDashboardData = {
-  profile: { id: string; name: string; bio: string | null };
+  profile: { id: string; name: string; bio: string | null; walletBalance: number };
   stats: {
     totalEarned: number;
     pendingCommission: number;
+    paidToWallet: number;
+    walletBalance: number;
     totalClicks: number;
     activeCodes: number;
     totalInquiries: number;

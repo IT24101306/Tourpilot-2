@@ -2,6 +2,8 @@ import { FormEvent, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { NotificationBell } from "./NotificationBell";
+import { ConfirmActionProvider, useConfirmAction } from "./confirm/ConfirmActionContext";
 import "../styles/dashboard.css";
 
 const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
@@ -18,21 +20,24 @@ const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/agency/display", label: "Display" },
 ];
 export function AgencyDashboardLayout() {
+  return (
+    <ConfirmActionProvider>
+      <AgencyDashboardLayoutInner />
+    </ConfirmActionProvider>
+  );
+}
+
+function AgencyDashboardLayoutInner() {
   const { user, token, refreshUser } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const agencyStatus = user?.agency?.status;
   const [topupOpen, setTopupOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
   const [topupStatus, setTopupStatus] = useState("");
   const [topupLoading, setTopupLoading] = useState(false);
 
-  async function handleTopup(e: FormEvent) {
-    e.preventDefault();
-    const value = Number(topupAmount);
-    if (!token || !Number.isFinite(value) || value <= 0) {
-      setTopupStatus("Enter a valid amount.");
-      return;
-    }
-
+  async function executeTopup(value: number) {
+    if (!token) return;
     setTopupLoading(true);
     setTopupStatus("");
     try {
@@ -55,6 +60,23 @@ export function AgencyDashboardLayout() {
     }
   }
 
+  function handleTopup(e: FormEvent) {
+    e.preventDefault();
+    const value = Number(topupAmount);
+    if (!token || !Number.isFinite(value) || value <= 0) {
+      setTopupStatus("Enter a valid amount.");
+      return;
+    }
+
+    requestConfirm({
+      title: "Confirm wallet topup",
+      description: "Funds will be added to your agency wallet immediately.",
+      confirmLabel: "Add funds",
+      summary: [{ label: "Amount", value: `LKR ${value.toLocaleString()}` }],
+      onConfirm: () => executeTopup(value),
+    });
+  }
+
   return (
     <div className="agency-dashboard">
       <header className="topbar topbar--site">
@@ -68,13 +90,7 @@ export function AgencyDashboardLayout() {
           <button type="button" className="btn btn-primary" onClick={() => setTopupOpen(true)}>
             Topup
           </button>
-          <button type="button" className="agency-icon-btn" aria-label="Notifications">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 01-3.46 0" />
-            </svg>
-            <span className="agency-icon-dot" aria-hidden="true" />
-          </button>
+          <NotificationBell />
           <Link to="/" className="btn btn-ghost">
             Back to Site
           </Link>

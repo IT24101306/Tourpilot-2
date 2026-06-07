@@ -57,6 +57,9 @@ type ThreadSourceInquiry = {
   id: string;
   message: string | null;
   createdAt: Date;
+  tourId?: string | null;
+  type?: string;
+  tour?: { id: string; title: string } | null;
   tourist?: ThreadAuthor | null;
   agency?: ThreadAuthor | null;
   responses?: Array<{
@@ -87,16 +90,19 @@ export function buildInquiryThread(inquiry: ThreadSourceInquiry) {
 
   const stored = inquiry.messages ?? [];
   const hasStoredInitial = stored.some(
-    (m) => m.kind === "TOURIST" && m.action === "INQUIRY_CREATED"
+    (m) =>
+      m.kind === "TOURIST" &&
+      (m.action === "INQUIRY_CREATED" || m.action === "TOUR_INQUIRY")
   );
 
   const initialBody = inquiry.message?.trim();
+  const isTourInquiry = Boolean(inquiry.tourId || inquiry.tour);
   if (initialBody && !hasStoredInitial) {
     push({
       id: `inquiry-request-${inquiry.id}`,
       kind: "TOURIST",
       body: initialBody,
-      action: "INQUIRY_CREATED",
+      action: isTourInquiry ? "TOUR_INQUIRY" : "INQUIRY_CREATED",
       createdAt: inquiry.createdAt,
       author: inquiry.tourist
         ? {

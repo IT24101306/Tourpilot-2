@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { AUTH_RETURN_PARAM, resolvePostLoginPath } from "../utils/authRedirect";
 import { isValidInternationalPhone, toStoredPhone } from "@tourpilot/shared";
 import { api } from "../api/client";
 import { useAuth, type AuthUser } from "../context/AuthContext";
@@ -11,6 +12,8 @@ type Step = "details" | "otp";
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get(AUTH_RETURN_PARAM);
   const { setSession } = useAuth();
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
@@ -69,7 +72,7 @@ export function RegisterPage() {
         body: JSON.stringify({ challengeId, phone, otp }),
       });
       setSession(data.token, data.user);
-      navigate(data.redirectTo || "/profile");
+      navigate(resolvePostLoginPath(returnTo, data.redirectTo || "/profile"), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -82,7 +85,7 @@ export function RegisterPage() {
       title="Create your account"
       subtitle="Sign up with your name and phone (including country code). We verify you with a one-time code — no password."
     >
-      <AuthSwitch mode="register" />
+      <AuthSwitch mode="register" returnTo={returnTo} />
 
       {error && <p className="form-error">{error}</p>}
 

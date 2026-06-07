@@ -46,6 +46,12 @@ export function InfluencerOverviewPage() {
             hint: `LKR ${stats.pendingCommission.toLocaleString()} awaiting`,
           },
           {
+            id: "wallet",
+            label: "Wallet",
+            value: Math.round(stats.walletBalance),
+            hint: `LKR ${stats.paidToWallet.toLocaleString()} paid in`,
+          },
+          {
             id: "clicks",
             label: "Link clicks",
             value: stats.totalClicks,

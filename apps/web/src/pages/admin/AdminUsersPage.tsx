@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { WalletAdjustModal } from "../../components/admin/WalletAdjustModal";
 import type { AdminUser } from "./types";
@@ -9,6 +10,7 @@ const ROLES = ["", "TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"] as cons
 
 export function AdminUsersPage() {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [rows, setRows] = useState<AdminUser[]>([]);
   const [role, setRole] = useState("");
   const [q, setQ] = useState("");
@@ -33,20 +35,38 @@ export function AdminUsersPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  async function toggleActive(u: AdminUser) {
+  function toggleActive(u: AdminUser) {
     if (!token) return;
-    setSaving(true);
-    try {
-      await api(`/admin/users/${u.id}`, {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({ isActive: !u.isActive }),
-      });
-      setMsg(u.isActive ? "User deactivated." : "User activated.");
-      await load();
-    } finally {
-      setSaving(false);
-    }
+    const nextActive = !u.isActive;
+    requestConfirm({
+      title: nextActive ? "Enable user?" : "Disable user?",
+      description: nextActive
+        ? "The user can sign in and use the platform again."
+        : "The user will be blocked from signing in.",
+      confirmLabel: nextActive ? "Enable user" : "Disable user",
+      variant: nextActive ? "default" : "danger",
+      summary: [
+        { label: "User", value: u.name },
+        { label: "Role", value: u.role },
+        { label: "Phone", value: u.phone },
+        { label: "Current status", value: u.isActive ? "Active" : "Disabled" },
+        { label: "New status", value: nextActive ? "Active" : "Disabled" },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await api(`/admin/users/${u.id}`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ isActive: nextActive }),
+          });
+          setMsg(nextActive ? "User activated." : "User deactivated.");
+          await load();
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   }
 
   async function adjust(amount: number, note: string) {

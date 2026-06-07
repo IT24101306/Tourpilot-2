@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { ModuleHeader } from "../module/ModuleHeader";
+import { isFreeOffer, offerPriceFromTours } from "../../lib/offerPricing";
 import { offerShareFeedback, offerShareUrl, shareOffer } from "../../lib/offerShare";
 
 export type ManagedOffer = {
@@ -50,6 +52,7 @@ type OfferDraft = {
   validUntil: string;
   tourPriceLkr: number;
   discountedLkr: number | "";
+  isFreeTour: boolean;
   isActive: boolean;
   tourIds: string[];
 };
@@ -89,6 +92,7 @@ function emptyDraft(): OfferDraft {
     validUntil: toLocalDateTimeValue(in7),
     tourPriceLkr: 0,
     discountedLkr: "",
+    isFreeTour: false,
     isActive: true,
     tourIds: [],
   };
@@ -105,9 +109,16 @@ function offerToDraft(o: ManagedOffer): OfferDraft {
     validUntil: toLocalDateTimeValue(new Date(o.validUntil)),
     tourPriceLkr: o.tourPriceLkr,
     discountedLkr: o.discountedLkr ?? "",
+    isFreeTour: isFreeOffer(o.discountedLkr),
     isActive: o.isActive,
     tourIds: o.tourIds ?? [],
   };
+}
+
+function resolveDiscountedLkr(draft: OfferDraft): number | undefined | null {
+  if (draft.isFreeTour) return 0;
+  if (draft.discountedLkr === "") return undefined;
+  return Number(draft.discountedLkr);
 }
 
 export function OffersDashboard({
@@ -125,6 +136,7 @@ export function OffersDashboard({
   backLink,
 }: OffersDashboardProps) {
   const { token } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [offers, setOffers] = useState<ManagedOffer[]>([]);
   const [tours, setTours] = useState<OfferTourLite[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -174,66 +186,109 @@ export function OffersDashboard({
     setDraft(emptyDraft());
   }
 
-  async function submitCreate() {
-    if (!token) return;
-    setBusy(true);
-    setMsg("");
-    try {
-      await api(listPath, {
-        method: "POST",
-        token,
-        body: JSON.stringify({
-          title: draft.title,
-          description: draft.description || undefined,
-          imageUrl: draft.imageUrl.trim() || "",
-          rewardText: draft.rewardText,
-          registrationCap: Number(draft.registrationCap),
-          validFrom: new Date(draft.validFrom).toISOString(),
-          validUntil: new Date(draft.validUntil).toISOString(),
-          tourPriceLkr: Number(draft.tourPriceLkr),
-          discountedLkr: draft.discountedLkr === "" ? undefined : Number(draft.discountedLkr),
-          tourIds: draft.tourIds,
-        }),
-      });
-      setMsg("Offer created.");
-      await refresh();
-      resetNew();
-    } catch (e) {
-      setMsg(e instanceof ApiError ? e.message : "Create failed");
-    } finally {
-      setBusy(false);
-    }
+  function offerDraftSummary(mode: "create" | "update") {
+    const linkedTours = tours
+      .filter((t) => draft.tourIds.includes(t.id))
+      .map((t) => t.title)
+      .join(", ");
+    return [
+      { label: "Action", value: mode === "create" ? "Create offer" : "Update offer" },
+      { label: "Title", value: draft.title.trim() || "(untitled)" },
+      { label: "Reward", value: draft.rewardText.trim() || "—" },
+      { label: "Cap", value: String(draft.registrationCap) },
+      {
+        label: "Valid",
+        value: `${new Date(draft.validFrom).toLocaleDateString()} – ${new Date(draft.validUntil).toLocaleDateString()}`,
+      },
+      {
+        label: "Price",
+        value: draft.isFreeTour
+          ? "Free tour"
+          : `LKR ${Number(draft.tourPriceLkr).toLocaleString()}${
+              draft.discountedLkr !== "" ? ` → ${Number(draft.discountedLkr).toLocaleString()}` : ""
+            }`,
+      },
+      { label: "Tours", value: linkedTours || "None selected" },
+      { label: "Status", value: draft.isActive ? "Active" : "Inactive" },
+    ];
   }
 
-  async function submitUpdate() {
+  function submitCreate() {
+    if (!token) return;
+    requestConfirm({
+      title: "Create offer?",
+      description: "Review the offer details before publishing to travelers.",
+      confirmLabel: "Create offer",
+      summary: offerDraftSummary("create"),
+      onConfirm: async () => {
+        setBusy(true);
+        setMsg("");
+        try {
+          await api(listPath, {
+            method: "POST",
+            token,
+            body: JSON.stringify({
+              title: draft.title,
+              description: draft.description || undefined,
+              imageUrl: draft.imageUrl.trim() || "",
+              rewardText: draft.rewardText,
+              registrationCap: Number(draft.registrationCap),
+              validFrom: new Date(draft.validFrom).toISOString(),
+              validUntil: new Date(draft.validUntil).toISOString(),
+              tourPriceLkr: Number(draft.tourPriceLkr),
+              discountedLkr: resolveDiscountedLkr(draft),
+              tourIds: draft.tourIds,
+            }),
+          });
+          setMsg("Offer created.");
+          await refresh();
+          resetNew();
+        } catch (e) {
+          setMsg(e instanceof ApiError ? e.message : "Create failed");
+        } finally {
+          setBusy(false);
+        }
+      },
+    });
+  }
+
+  function submitUpdate() {
     if (!token || !selectedId) return;
-    setBusy(true);
-    setMsg("");
-    try {
-      await api(updatePath(selectedId), {
-        method: "PATCH",
-        token,
-        body: JSON.stringify({
-          title: draft.title,
-          description: draft.description === "" ? null : draft.description,
-          imageUrl: draft.imageUrl.trim() || null,
-          rewardText: draft.rewardText,
-          registrationCap: Number(draft.registrationCap),
-          validFrom: new Date(draft.validFrom).toISOString(),
-          validUntil: new Date(draft.validUntil).toISOString(),
-          tourPriceLkr: Number(draft.tourPriceLkr),
-          discountedLkr: draft.discountedLkr === "" ? null : Number(draft.discountedLkr),
-          isActive: draft.isActive,
-          tourIds: draft.tourIds,
-        }),
-      });
-      setMsg("Offer updated.");
-      await refresh();
-    } catch (e) {
-      setMsg(e instanceof ApiError ? e.message : "Update failed");
-    } finally {
-      setBusy(false);
-    }
+    requestConfirm({
+      title: "Save offer changes?",
+      description: "Existing registrations keep their spot; terms apply to new sign-ups.",
+      confirmLabel: "Save changes",
+      summary: offerDraftSummary("update"),
+      onConfirm: async () => {
+        setBusy(true);
+        setMsg("");
+        try {
+          await api(updatePath(selectedId), {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({
+              title: draft.title,
+              description: draft.description === "" ? null : draft.description,
+              imageUrl: draft.imageUrl.trim() || null,
+              rewardText: draft.rewardText,
+              registrationCap: Number(draft.registrationCap),
+              validFrom: new Date(draft.validFrom).toISOString(),
+              validUntil: new Date(draft.validUntil).toISOString(),
+              tourPriceLkr: Number(draft.tourPriceLkr),
+              discountedLkr: draft.isFreeTour ? 0 : draft.discountedLkr === "" ? null : Number(draft.discountedLkr),
+              isActive: draft.isActive,
+              tourIds: draft.tourIds,
+            }),
+          });
+          setMsg("Offer updated.");
+          await refresh();
+        } catch (e) {
+          setMsg(e instanceof ApiError ? e.message : "Update failed");
+        } finally {
+          setBusy(false);
+        }
+      },
+    });
   }
 
   async function loadRegistrations() {
@@ -248,26 +303,35 @@ export function OffersDashboard({
     }
   }
 
-  async function deleteSelected() {
+  function deleteSelected() {
     if (!token || !selectedId) return;
     const offerTitle = selected?.title ?? "this offer";
-    // eslint-disable-next-line no-alert
-    const ok = window.confirm(`Delete "${offerTitle}"? This will also remove all registrations.`);
-    if (!ok) return;
-
-    setBusy(true);
-    setMsg("");
-    try {
-      await api(deletePath(selectedId), { method: "DELETE", token });
-      setMsg("Offer deleted.");
-      setSelectedId(null);
-      setRegistrations(null);
-      await refresh();
-    } catch (e) {
-      setMsg(e instanceof ApiError ? e.message : "Delete failed");
-    } finally {
-      setBusy(false);
-    }
+    requestConfirm({
+      title: "Delete offer?",
+      description: "This cannot be undone. All registrations will be removed.",
+      variant: "danger",
+      confirmLabel: "Delete offer",
+      summary: [
+        { label: "Offer", value: offerTitle },
+        { label: "Registrations", value: String(selected?.registeredCount ?? 0), tone: "warning" },
+        { label: "Linked tours", value: String(selected?.tourIds.length ?? 0) },
+      ],
+      onConfirm: async () => {
+        setBusy(true);
+        setMsg("");
+        try {
+          await api(deletePath(selectedId), { method: "DELETE", token });
+          setMsg("Offer deleted.");
+          setSelectedId(null);
+          setRegistrations(null);
+          await refresh();
+        } catch (e) {
+          setMsg(e instanceof ApiError ? e.message : "Delete failed");
+        } finally {
+          setBusy(false);
+        }
+      },
+    });
   }
 
   return (
@@ -303,7 +367,9 @@ export function OffersDashboard({
                     <span className="gov-offer-pick-main">
                       <strong>{o.title}</strong>
                       <span className="muted">
-                        {o.isActive ? "Active" : "Inactive"} · {o.registeredCount} registered
+                        {o.isActive ? "Active" : "Inactive"}
+                        {isFreeOffer(o.discountedLkr) ? " · Free tour" : ""} · {o.registeredCount}{" "}
+                        registered
                       </span>
                     </span>
                     <span className="gov-offer-pick-spots">{o.spotsLeft} left</span>
@@ -444,31 +510,61 @@ export function OffersDashboard({
                 </label>
               )}
 
+              <label className="field" style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={draft.isFreeTour}
+                  onChange={(e) => {
+                    const isFreeTour = e.target.checked;
+                    setDraft((d) => {
+                      const tourPriceLkr =
+                        isFreeTour && d.tourPriceLkr === 0
+                          ? offerPriceFromTours(d.tourIds, tours)
+                          : d.tourPriceLkr;
+                      return {
+                        ...d,
+                        isFreeTour,
+                        discountedLkr: isFreeTour ? 0 : "",
+                        tourPriceLkr,
+                        rewardText:
+                          isFreeTour && !d.rewardText.trim()
+                            ? "Free tour for registered travelers"
+                            : d.rewardText,
+                      };
+                    });
+                  }}
+                />
+                <span>Free tour offer — registered travelers pay LKR 0</span>
+              </label>
+
               <label className="field">
-                <span>Tour price (LKR)</span>
+                <span>Regular tour price (LKR)</span>
                 <input
                   type="number"
                   min={0}
                   value={draft.tourPriceLkr}
                   onChange={(e) => setDraft((d) => ({ ...d, tourPriceLkr: Number(e.target.value) }))}
+                  placeholder="Shown as the original price"
                 />
               </label>
 
-              <label className="field">
-                <span>Discounted (LKR)</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={draft.discountedLkr}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      discountedLkr: e.target.value === "" ? "" : Number(e.target.value),
-                    }))
-                  }
-                  placeholder="(optional)"
-                />
-              </label>
+              {!draft.isFreeTour && (
+                <label className="field">
+                  <span>Discounted (LKR)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={draft.discountedLkr}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        discountedLkr: e.target.value === "" ? "" : Number(e.target.value),
+                      }))
+                    }
+                    placeholder="(optional)"
+                  />
+                </label>
+              )}
 
               <label className="field" style={{ gridColumn: "1 / -1" }}>
                 <span>Applies to tours</span>
@@ -477,7 +573,13 @@ export function OffersDashboard({
                   value={draft.tourIds}
                   onChange={(e) => {
                     const next = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    setDraft((d) => ({ ...d, tourIds: next }));
+                    setDraft((d) => {
+                      const tourPriceLkr =
+                        d.isFreeTour && d.tourPriceLkr === 0
+                          ? offerPriceFromTours(next, tours)
+                          : d.tourPriceLkr;
+                      return { ...d, tourIds: next, tourPriceLkr };
+                    });
                   }}
                   style={{ height: 180 }}
                 >

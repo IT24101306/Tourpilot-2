@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { currentPath, loginPath } from "../../utils/authRedirect";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function SaveTourButton({ tourId, className = "", showLabel = false, onChange }: Props) {
+  const location = useLocation();
   const { user, token } = useAuth();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -61,7 +63,7 @@ export function SaveTourButton({ tourId, className = "", showLabel = false, onCh
   if (!user) {
     return (
       <Link
-        to="/login"
+        to={loginPath(currentPath(location))}
         className={`save-tour-btn save-tour-btn--guest ${className}`}
         title="Log in to save"
         onClick={stopNav}

@@ -366,6 +366,27 @@ export async function seedExtendedData(ctx: DemoContext) {
   }
 
   // —— More offers ——
+  const freeOffer = await prisma.offer.findFirst({
+    where: { agencyId: ctx.agency1.id, title: "Free Cultural Triangle Weekend" },
+  });
+  if (!freeOffer) {
+    await prisma.offer.create({
+      data: {
+        agencyId: ctx.agency1.id,
+        title: "Free Cultural Triangle Weekend",
+        description: "Limited complimentary seats for registered travelers.",
+        rewardText: "Free tour for registered travelers",
+        registrationCap: 10,
+        validFrom: daysAgo(2),
+        validUntil: daysFromNow(14),
+        tourPriceLkr: 89500,
+        discountedLkr: 0,
+        isActive: true,
+        tours: { create: [{ tourId: ctx.tour1.id }] },
+      },
+    });
+  }
+
   const expiredOffer = await prisma.offer.findFirst({
     where: { agencyId: ctx.agency1.id, title: "Monsoon Flash Sale (Ended)" },
   });

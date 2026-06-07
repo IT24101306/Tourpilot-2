@@ -2,6 +2,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../../api/client";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
 import { InquiryThread, type ThreadMessage } from "./InquiryThread";
+import { InquiryTourChip } from "./InquiryTourChip";
+import { useAuth } from "../../context/AuthContext";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { TourFormModal } from "../tour/TourFormModal";
 import {
   buildItineraryFromTourForm,
@@ -56,7 +59,7 @@ type InquiryDetail = {
   createdAt: string;
   proposalEditable?: boolean;
   tourist?: { name: string; phone: string };
-  tour?: { title: string } | null;
+  tour?: { id: string; title: string; slug: string; days?: number; basePriceLkr?: number } | null;
   proposal?: {
     id: string;
     message: string;
@@ -90,6 +93,8 @@ export function InquiryReplyModal({
   onClose,
   onSent,
 }: Props) {
+  const { user } = useAuth();
+  const { requestConfirm } = useConfirmAction();
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
   const [tours, setTours] = useState<TourOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -152,6 +157,12 @@ export function InquiryReplyModal({
                 },
               }))
           );
+        } else if (inq.type === "READY_MADE" && inq.tour?.id) {
+          setMessage(
+            `Thank you for your interest in "${inq.tour.title}". Here are the details for your trip…`
+          );
+          setSelectedTourIds(new Set([inq.tour.id]));
+          setCustomDrafts([]);
         } else {
           setMessage("");
           setSelectedTourIds(new Set());
@@ -207,24 +218,46 @@ export function InquiryReplyModal({
       title: itinerary.title,
       itinerary,
     };
+    const activityCount = itinerary.days.reduce((sum, day) => sum + day.items.length, 0);
 
-    if (editingCustomKey) {
-      setCustomDrafts((prev) => prev.map((d) => (d.key === editingCustomKey ? draft : d)));
-    } else {
-      setCustomDrafts((prev) => [...prev, draft]);
-    }
+    requestConfirm({
+      title: editingCustomKey ? "Update custom itinerary?" : "Add custom itinerary?",
+      description: "Included in your proposal when you send or update it.",
+      confirmLabel: editingCustomKey ? "Update itinerary" : "Add itinerary",
+      summary: [
+        { label: "Title", value: draft.title },
+        { label: "Days", value: String(itinerary.days.length) },
+        { label: "Activities", value: String(activityCount) },
+      ],
+      onConfirm: () => {
+        if (editingCustomKey) {
+          setCustomDrafts((prev) => prev.map((d) => (d.key === editingCustomKey ? draft : d)));
+        } else {
+          setCustomDrafts((prev) => [...prev, draft]);
+        }
 
-    setCustomModalOpen(false);
-    setEditingCustomKey(null);
-    setCustomForm(defaultTourForm());
-    setCustomFormStatus("");
+        setCustomModalOpen(false);
+        setEditingCustomKey(null);
+        setCustomForm(defaultTourForm());
+        setCustomFormStatus("");
+      },
+    });
   }
 
   function removeCustom(key: string) {
-    setCustomDrafts((prev) => prev.filter((d) => d.key !== key));
+    const draft = customDrafts.find((d) => d.key === key);
+    requestConfirm({
+      title: "Remove custom itinerary?",
+      variant: "danger",
+      confirmLabel: "Remove",
+      summary: [{ label: "Itinerary", value: draft?.title ?? "Custom tour" }],
+      onConfirm: () => {
+        setCustomDrafts((prev) => prev.filter((d) => d.key !== key));
+      },
+    });
   }
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
     if (!inquiryId || !message.trim()) return;
 
@@ -233,26 +266,53 @@ export function InquiryReplyModal({
       return;
     }
 
-    setSaving(true);
-    setError("");
-    try {
-      await api(`/inquiries/${inquiryId}/proposal`, {
-        method: "PUT",
-        token,
-        body: JSON.stringify({
-          message: message.trim(),
-          readyMadeTourIds: Array.from(selectedTourIds),
-          customItineraries: customDrafts.map((d) => d.itinerary),
-        }),
-      });
+    const readyMadeTitles = tours
+      .filter((t) => selectedTourIds.has(t.id))
+      .map((t) => t.title)
+      .join(", ");
 
-      onSent();
-      onClose();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to send proposal");
-    } finally {
-      setSaving(false);
-    }
+    requestConfirm({
+      title: inquiry?.proposal ? "Update proposal?" : "Send proposal?",
+      description: "The tourist will receive these tour options in the trip room.",
+      confirmLabel: inquiry?.proposal ? "Update proposal" : "Send proposal",
+      summary: [
+        { label: "Tourist", value: inquiry?.tourist?.name ?? "Guest" },
+        { label: "Ready-made tours", value: readyMadeTitles || "None" },
+        {
+          label: "Custom itineraries",
+          value:
+            customDrafts.length > 0
+              ? customDrafts.map((d) => d.title).join(", ")
+              : "None",
+        },
+        {
+          label: "Message preview",
+          value: message.trim().length > 120 ? `${message.trim().slice(0, 120)}…` : message.trim(),
+        },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        setError("");
+        try {
+          await api(`/inquiries/${inquiryId}/proposal`, {
+            method: "PUT",
+            token,
+            body: JSON.stringify({
+              message: message.trim(),
+              readyMadeTourIds: Array.from(selectedTourIds),
+              customItineraries: customDrafts.map((d) => d.itinerary),
+            }),
+          });
+
+          onSent();
+          onClose();
+        } catch (err) {
+          setError(err instanceof ApiError ? err.message : "Failed to send proposal");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   }
 
   const totalSelections = selectedTourIds.size + customDrafts.length;
@@ -292,9 +352,22 @@ export function InquiryReplyModal({
         {inquiry && !loading && (
           <>
             <div className="inquiry-request-box">
+              {inquiry.tour && user?.agency?.slug && (
+                <InquiryTourChip
+                  tour={{
+                    id: inquiry.tour.id,
+                    title: inquiry.tour.title,
+                    slug: inquiry.tour.slug,
+                    days: inquiry.tour.days ?? 0,
+                    basePriceLkr: inquiry.tour.basePriceLkr,
+                  }}
+                  agencySlug={user.agency.slug}
+                  compact
+                />
+              )}
               <p>
                 <strong>Request</strong> · {inquiry.pax} travelers ·{" "}
-                {inquiry.type.replace("_", " ")}
+                {inquiry.type === "READY_MADE" ? "Ready-made tour" : "Custom trip"}
               </p>
               {inquiry.startDate && (
                 <p className="muted">

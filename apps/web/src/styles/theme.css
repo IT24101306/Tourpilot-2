@@ -1951,6 +1951,28 @@ textarea {
   margin: 6px 0 0;
   font-size: 0.82rem;
   color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.traveler-contact-line {
+  display: block;
+}
+
+.traveler-contact-label {
+  font-weight: 700;
+  color: var(--ink, #1a1a1a);
+  margin-right: 6px;
+}
+
+.traveler-contact-line a {
+  color: var(--green-dark, #0f5f3a);
+  text-decoration: none;
+}
+
+.traveler-contact-line a:hover {
+  text-decoration: underline;
 }
 
 .module-operations .ops-queue-card-action {
@@ -3400,6 +3422,11 @@ textarea {
   font-weight: 800;
 }
 
+.disc-offer-price-free {
+  color: var(--teal-dark);
+  letter-spacing: 0.04em;
+}
+
 .disc-offer-price-was {
   font-size: 0.82rem;
   font-weight: 600;
@@ -4709,6 +4736,219 @@ textarea {
   margin-top: 3px;
 }
 
+.tour-offer-link {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2, #f8fafc);
+}
+
+.tour-offer-link-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-offer-link-toggle input {
+  margin-top: 3px;
+}
+
+.tour-offer-link-hint {
+  margin: 8px 0 0 26px;
+  font-size: 0.82rem;
+}
+
+.tour-offer-link-warn {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: #fff8e6;
+  border: 1px solid #f5d78e;
+  color: #7a5c00;
+  font-size: 0.82rem;
+}
+
+.cat-offer-badge {
+  border: 1px solid #c8e6d0;
+  background: #eef8f1;
+  color: var(--green-dark, #1a5c36);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cat-offer-badge:hover {
+  background: #dff0e4;
+}
+
+.notify-bell-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.notify-bell-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notify-bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, 90vw);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 120;
+  padding: 10px 0;
+}
+
+.notify-bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notify-bell-empty {
+  padding: 12px;
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.notify-bell-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notify-bell-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.notify-bell-item:hover {
+  background: var(--surface-2, #f8fafc);
+}
+
+.notify-bell-item strong {
+  font-size: 0.86rem;
+}
+
+.notify-bell-item span {
+  color: var(--muted, #64748b);
+}
+
+.drv-earnings-recent {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--white);
+}
+
+.drv-earnings-recent ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.gov-cell-sub {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+}
+
+.tour-offer-link-body {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.tour-offer-link-existing {
+  border: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.tour-offer-link-existing legend {
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.tour-offer-link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tour-offer-link-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.tour-offer-link-create {
+  margin-bottom: 10px;
+}
+
+.tour-offer-link-new {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.tour-offer-link-new .field.full,
+.tour-offer-link-new .image-url-field--full {
+  grid-column: 1 / -1;
+}
+
+.tour-offer-link-dates {
+  display: contents;
+}
+
+@media (max-width: 640px) {
+  .tour-offer-link-new {
+    grid-template-columns: 1fr;
+  }
+}
+
 .mini-btn--danger {
   color: #b42318;
   border-color: #f5c4c0;
@@ -4966,10 +5206,13 @@ textarea {
   color: var(--teal-dark);
 }
 
-.partner-tour-body h3 {
+.partner-tour-body h3,
+.partner-tour-title {
   margin: 0;
   font-family: var(--font-heading);
   font-size: 1.05rem;
+  font-weight: 700;
+  display: block;
 }
 
 .partner-tour-meta {
@@ -4985,11 +5228,195 @@ textarea {
   flex: 1;
 }
 
+.partner-tour-card-open {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.partner-tour-card-open:hover .partner-tour-view-hint {
+  color: var(--teal-dark);
+}
+
+.partner-tour-view-hint {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.partner-tour-commission {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+
+.partner-tour-commission strong {
+  color: var(--teal-dark);
+}
+
 .partner-tour-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 0;
+  padding: 0 16px 16px;
+}
+
+.influencer-tour-detail-dialog {
+  width: min(640px, 100%);
+}
+
+.influencer-tour-detail-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.influencer-tour-detail-cover {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+.influencer-tour-detail-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 16px;
+  margin: 14px 0 0;
+}
+
+.influencer-tour-detail-facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.influencer-tour-detail-facts dt {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.influencer-tour-detail-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.influencer-tour-detail-earn {
+  color: var(--teal-dark);
+}
+
+.influencer-tour-detail-summary {
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.influencer-tour-detail-agency {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-2, #f8faf9);
+}
+
+.influencer-tour-detail-agency-title {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.influencer-tour-detail-agency-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.influencer-tour-detail-agency-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.influencer-tour-detail-tagline {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+
+.influencer-tour-detail-agency-meta {
+  margin: 6px 0 0;
+  font-size: 0.84rem;
+}
+
+.influencer-tour-detail-agency-desc {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.influencer-tour-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.partner-code-tour-btn {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2, #f8faf9);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.partner-code-tour-btn:hover {
+  border-color: var(--teal);
+}
+
+.partner-code-tour-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.influencer-display-tour-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.influencer-display-info-btn {
+  font-size: 0.78rem;
+  padding: 4px 10px;
 }
 
 .partner-code-list,

@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useConfirmAction } from "../confirm/ConfirmActionContext";
 
 type Props = {
   userName: string;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function WalletAdjustModal({ userName, open, loading, onClose, onConfirm }: Props) {
+  const { requestConfirm } = useConfirmAction();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
@@ -18,7 +20,22 @@ export function WalletAdjustModal({ userName, open, loading, onClose, onConfirm 
     e.preventDefault();
     const value = Number(amount);
     if (!Number.isFinite(value) || value === 0 || note.trim().length < 3) return;
-    onConfirm(value, note.trim());
+    requestConfirm({
+      title: "Apply wallet adjustment?",
+      description: "A ledger entry will be recorded for this user.",
+      confirmLabel: "Apply adjustment",
+      variant: value < 0 ? "danger" : "default",
+      summary: [
+        { label: "User", value: userName },
+        {
+          label: "Amount",
+          value: `${value < 0 ? "−" : "+"}LKR ${Math.abs(value).toLocaleString()}`,
+          tone: value < 0 ? "warning" : "default",
+        },
+        { label: "Note", value: note.trim() },
+      ],
+      onConfirm: () => onConfirm(value, note.trim()),
+    });
   }
 
   return (

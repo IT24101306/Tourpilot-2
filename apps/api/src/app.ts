@@ -16,6 +16,7 @@ import { driverRouter } from "./routes/driver.js";
 import { driversRouter } from "./routes/drivers.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { savedToursRouter } from "./routes/savedTours.js";
+import { notificationsRouter } from "./routes/notifications.js";
 
 export function createApp() {
   const app = express();
@@ -44,6 +45,7 @@ export function createApp() {
   app.use("/api/drivers", driversRouter);
   app.use("/api/uploads", uploadsRouter);
   app.use("/api/saved-tours", savedToursRouter);
+  app.use("/api/notifications", notificationsRouter);
 
   app.use(
     (

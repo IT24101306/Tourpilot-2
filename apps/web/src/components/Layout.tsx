@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 import { navLinkClass } from "../utils/navLinkClass";
 
 export function PublicLayout() {
@@ -33,6 +34,7 @@ export function PublicLayout() {
           <div className="nav-actions">
             {user ? (
               <>
+                <NotificationBell />
                 <NavLink to="/profile" className={navLinkClass}>
                   Profile
                 </NavLink>

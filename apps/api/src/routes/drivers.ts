@@ -265,6 +265,75 @@ driversRouter.put("/me/blocked-dates", authRequired, requireRoles("DRIVER"), asy
   }
 });
 
+driversRouter.get("/me/earnings", authRequired, requireRoles("DRIVER"), async (req, res, next) => {
+  try {
+    const agencyDriver = await getAgencyDriverForUser(req.user!.id);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: req.user!.id },
+      include: { driverProfile: true },
+    });
+
+    if (!agencyDriver) {
+      return res.json({
+        walletBalance: Number(user.walletBalance),
+        thisWeekLkr: 0,
+        completedTrips: 0,
+        upcomingTrips: 0,
+        vehicle: user.driverProfile?.vehicle ?? null,
+        licenseNo: user.driverProfile?.licenseNo ?? null,
+        status: user.driverProfile?.status ?? "available",
+        metadata: user.driverProfile?.metadata ?? null,
+      });
+    }
+
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    const assignments = await prisma.driverAssignment.findMany({
+      where: { agencyDriverId: agencyDriver.id },
+      select: {
+        id: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        title: true,
+        inquiry: { select: { pax: true } },
+      },
+    });
+
+    const completed = assignments.filter((a) => a.status === "Completed");
+    const thisWeekCompleted = completed.filter((a) => {
+      const d = new Date(a.endDate ?? a.startDate);
+      return d >= weekStart;
+    });
+
+    const thisWeekLkr = thisWeekCompleted.length * 4500;
+
+    res.json({
+      walletBalance: Number(user.walletBalance),
+      thisWeekLkr,
+      completedTrips: completed.length,
+      upcomingTrips: assignments.filter(
+        (a) => a.status === "Scheduled" || a.status === "On Route"
+      ).length,
+      vehicle: user.driverProfile?.vehicle ?? agencyDriver.vehicle,
+      licenseNo: user.driverProfile?.licenseNo ?? null,
+      status: user.driverProfile?.status ?? "available",
+      metadata: user.driverProfile?.metadata ?? null,
+      recentCompleted: thisWeekCompleted.slice(0, 5).map((a) => ({
+        id: a.id,
+        title: a.title,
+        date: a.endDate ?? a.startDate,
+        pax: a.inquiry?.pax ?? null,
+      })),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 driversRouter.get("/me/assignments", authRequired, requireRoles("DRIVER"), async (req, res, next) => {
   try {
     const agencyDriver = await getAgencyDriverForUser(req.user!.id);

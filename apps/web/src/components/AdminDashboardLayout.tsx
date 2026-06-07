@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
+import { ConfirmActionProvider } from "./confirm/ConfirmActionContext";
 
 const ADMIN_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/admin", label: "Overview", end: true },
@@ -7,6 +8,8 @@ const ADMIN_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/admin/inquiries", label: "Inquiries" },
   { to: "/dashboard/admin/tours", label: "Tours" },
   { to: "/dashboard/admin/commissions", label: "Commissions" },
+  { to: "/dashboard/admin/influencers", label: "Influencers" },
+  { to: "/dashboard/admin/itineraries", label: "Itineraries" },
   { to: "/dashboard/admin/ledger", label: "Ledger" },
   { to: "/dashboard/admin/offers", label: "Offers" },
   { to: "/dashboard/admin/reviews", label: "Reviews" },
@@ -16,6 +19,7 @@ const ADMIN_TABS: { to: string; label: string; end?: boolean }[] = [
 
 export function AdminDashboardLayout() {
   return (
+    <ConfirmActionProvider>
     <div className="agency-dashboard admin-dashboard">
       <header className="topbar topbar--site">
         <div className="topbar-brand">
@@ -51,5 +55,6 @@ export function AdminDashboardLayout() {
         <Outlet />
       </section>
     </div>
+    </ConfirmActionProvider>
   );
 }
