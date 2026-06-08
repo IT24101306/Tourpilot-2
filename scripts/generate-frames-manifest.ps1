@@ -45,9 +45,11 @@ $manifest = [ordered]@{
   files  = @($files)
 }
 
+$assetsMp4 = Join-Path $projectRoot "assets\hero-scroll.mp4"
 $mp4 = Join-Path $heroDir "hero-scroll.mp4"
 $webm = Join-Path $heroDir "hero-scroll.webm"
-if (Test-Path $mp4) { $manifest.videoMp4 = "HERO SECTION IMAGES/hero-scroll.mp4" }
+if (Test-Path $assetsMp4) { $manifest.videoMp4 = "assets/hero-scroll.mp4" }
+elseif (Test-Path $mp4) { $manifest.videoMp4 = "HERO SECTION IMAGES/hero-scroll.mp4" }
 if (Test-Path $webm) { $manifest.video = "HERO SECTION IMAGES/hero-scroll.webm" }
 
 $json = ($manifest | ConvertTo-Json -Compress)

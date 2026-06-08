@@ -17,6 +17,13 @@
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body class="page-landing">
+    <div class="hud-cursor" id="hud-cursor" aria-hidden="true">
+      <span class="hud-cursor__ring hud-cursor__ring--outer"></span>
+      <span class="hud-cursor__ring hud-cursor__ring--mid"></span>
+      <span class="hud-cursor__ring hud-cursor__ring--inner"></span>
+      <span class="hud-cursor__dot"></span>
+    </div>
+
     <div id="loader" class="cmd-loader" aria-live="polite" aria-busy="true">
       <div class="cmd-window">
         <div class="cmd-titlebar">
@@ -41,9 +48,11 @@
         <a href="index.html" class="nav-logo">
           <span class="nav-logo-text">IYYO</span>
         </a>
-        <ul class="nav-links">
-          <li><a href="about.html">About Us</a></li>
+        <ul class="nav-links nav-links--side-left" aria-label="Projects">
           <li><a href="projects.html">Projects</a></li>
+        </ul>
+        <ul class="nav-links nav-links--side-right" aria-label="About and contact">
+          <li><a href="about.html">About Us</a></li>
           <li><a href="mailto:hello@iyyo.solutions">Contact Us</a></li>
         </ul>
         <button
@@ -64,6 +73,23 @@
       </ul>
     </nav>
 
+    <a href="index.html" class="site-mark" aria-label="IYYO Solutions home">
+      <img src="assets/iyyo-logo.png" alt="" width="64" height="64" decoding="async" />
+    </a>
+
+    <aside class="corner-hud" aria-hidden="true">
+      <div class="corner-hud__frame">
+        <div class="corner-hud__copy">
+          <p class="corner-hud__title">IYYO // SOLUTIONS</p>
+          <p class="corner-hud__meta">V8.9.4 · BUILD 2826-Q4</p>
+        </div>
+      </div>
+    </aside>
+
+    <p class="site-copyright">
+      © 2026. ALL RIGHTS RESERVED @IYYO SOLUTIONS (PVT) LTD
+    </p>
+
     <main id="main" class="main hidden" tabindex="-1">
       <section
         class="scroll-experience"
@@ -73,12 +99,20 @@
         <div class="pin-viewport" id="pin-viewport">
           <div class="chamber" id="chamber">
             <div class="robot-stage" id="robot-stage">
+              <video
+                id="hero-video"
+                class="hero-scroll-video"
+                muted
+                playsinline
+                preload="auto"
+                aria-hidden="true"
+              ></video>
               <canvas id="robot-canvas" aria-label="IYYO robot product view"></canvas>
             </div>
 
             <div class="story-ui" id="story-ui">
               <div class="story-card white-glass" id="story-card">
-                <time class="story-clock" id="story-clock" datetime=""></time>
+                <span class="story-clock" id="story-clock">scroll</span>
                 <div class="story-text-wrap" id="story-text-wrap">
                   <h2 class="story-title" id="story-title">Intelligence in form.</h2>
                   <p class="story-copy" id="story-copy">
@@ -98,6 +132,7 @@
     <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="js/cursor.js"></script>
     <script src="js/frames.manifest.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/main.js"></script>

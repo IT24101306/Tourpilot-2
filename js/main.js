@@ -6,6 +6,7 @@
 const FRAME_FOLDER_DEFAULT = "HERO SECTION IMAGES";
 const SCROLL_SECTION_ID = "projects";
 const MANIFEST_URL = "js/frames.manifest.json";
+const HERO_VIDEO_FALLBACK = "assets/hero-scroll.mp4";
 const MAX_CANVAS_W = 1920;
 /* Video mode = 1 request. Image fallback loads frames only while scrolling. */
 const PREFETCH_RADIUS = 10;
@@ -53,6 +54,8 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 const canvas = $("#robot-canvas");
 const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+const robotStage = $("#robot-stage");
+const heroVideoEl = $("#hero-video");
 const loader = $("#loader");
 const terminalOutput = $("#terminal-output");
 const terminalTyping = $("#terminal-typing");
@@ -78,6 +81,9 @@ let manifestVideoMp4 = null;
 let heroVideo = null;
 let useVideoMode = false;
 let renderedVideoTime = -1;
+let pendingVideoProgress = null;
+let videoSeekInFlight = false;
+const VIDEO_SEEK_EPS = 0.001;
 let lastPrefetchLower = -1;
 let lastPrefetchUpper = -1;
 let viewW = 0;
@@ -322,32 +328,187 @@ function prefetchAroundBlend(lower, upper) {
   }
 }
 
-function loadHeroVideo(src) {
+function blockHeroPlayback(video) {
+  const stop = () => {
+    if (!video.paused) video.pause();
+  };
+  video.addEventListener("play", stop);
+  video.addEventListener("playing", stop);
+  return stop;
+}
+
+function seekVideoTo(video, time) {
   return new Promise((resolve) => {
-    const video = document.createElement("video");
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = "auto";
-    video.setAttribute("playsinline", "");
-    video.src = encodeURI(src);
+    const duration = video.duration;
+    if (!Number.isFinite(duration) || duration <= 0) {
+      resolve(false);
+      return;
+    }
 
-    const finish = (ok) => {
-      video.onloadeddata = null;
-      video.onerror = null;
-      resolve(ok);
+    const target = Math.max(0, Math.min(duration - 0.001, time));
+    if (Math.abs(video.currentTime - target) <= VIDEO_SEEK_EPS) {
+      resolve(true);
+      return;
+    }
+
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      video.removeEventListener("seeked", finish);
+      clearTimeout(timer);
+      resolve(true);
     };
 
-    video.onloadeddata = () => {
-      heroVideo = video;
-      useVideoMode = true;
-      finish(true);
-    };
-    video.onerror = () => finish(false);
+    const timer = setTimeout(finish, 180);
+    video.addEventListener("seeked", finish, { once: true });
+    video.pause();
+    video.currentTime = target;
   });
 }
 
+async function isVideoScrubbable(video) {
+  const duration = video.duration;
+  if (!Number.isFinite(duration) || duration <= 0) return false;
+
+  await seekVideoTo(video, duration * 0.5);
+  const mid = video.currentTime;
+  return mid > 0.05;
+}
+
+function enableVideoStage() {
+  robotStage?.classList.add("is-video-mode");
+}
+
+function disableVideoStage() {
+  robotStage?.classList.remove("is-video-mode");
+  heroVideo = null;
+  useVideoMode = false;
+  pendingVideoProgress = null;
+  videoSeekInFlight = false;
+  renderedVideoTime = -1;
+}
+
+function videoEventAlreadyFired(video, eventName) {
+  if (eventName === "loadedmetadata") {
+    return video.readyState >= HTMLMediaElement.HAVE_METADATA;
+  }
+  if (eventName === "loadeddata") {
+    return video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
+  }
+  if (eventName === "canplay") {
+    return video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA;
+  }
+  return false;
+}
+
+function waitForVideoEvent(video, eventName, timeoutMs = 10000) {
+  if (videoEventAlreadyFired(video, eventName)) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (ok) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      video.removeEventListener(eventName, onEvent);
+      video.removeEventListener("error", onError);
+      resolve(ok);
+    };
+    const onEvent = () => done(true);
+    const onError = () => done(false);
+    const timer = setTimeout(() => done(false), timeoutMs);
+    video.addEventListener(eventName, onEvent, { once: true });
+    video.addEventListener("error", onError, { once: true });
+  });
+}
+
+function resetHeroVideoElement(video) {
+  if (!video) return;
+  video.removeAttribute("style");
+  video.pause();
+  video.removeAttribute("src");
+  video.load();
+}
+
+function primeVideoElement(video) {
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.autoplay = false;
+  video.loop = false;
+  video.controls = false;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+}
+
+async function loadHeroVideo(src) {
+  const video = heroVideoEl;
+  if (!video) return false;
+
+  const videoUrl = src.split("/").map(encodeURIComponent).join("/");
+  primeVideoElement(video);
+  blockHeroPlayback(video);
+
+  video.style.cssText =
+    "position:fixed;left:-9999px;top:0;width:320px;height:180px;opacity:0.01;visibility:visible;pointer-events:none;z-index:-1;";
+
+  try {
+    termLine("[RUN] Fetching video metadata...", "dim");
+    video.src = videoUrl;
+    video.load();
+
+    const hasMeta = await waitForVideoEvent(video, "loadedmetadata", 15000);
+    if (!hasMeta) {
+      termLine("[WARN] Hero video metadata timed out — using image frames", "warn");
+      return false;
+    }
+
+    const duration = video.duration;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!Number.isFinite(duration) || duration <= 0 || !w || !h) {
+      termLine("[WARN] Hero video metadata invalid — using image frames", "warn");
+      return false;
+    }
+
+    termLine(
+      `[OK] Video metadata — ${duration.toFixed(1)}s @ ${w}x${h}`,
+      "ok"
+    );
+
+    termLine("[RUN] Priming first frame...", "dim");
+    video.pause();
+    await seekVideoTo(video, 0);
+
+    const hasFrame = await waitForVideoEvent(video, "loadeddata", 10000);
+    if (!hasFrame) {
+      termLine("[WARN] Hero video frame decode failed — using image frames", "warn");
+      return false;
+    }
+
+    video.removeAttribute("style");
+    video.pause();
+    heroVideo = video;
+    useVideoMode = true;
+    enableVideoStage();
+    return true;
+  } catch (err) {
+    console.warn("Hero video setup failed:", err);
+    termLine("[WARN] Video setup failed — using image frames", "warn");
+    return false;
+  } finally {
+    if (!useVideoMode || heroVideo !== video) {
+      disableVideoStage();
+      resetHeroVideoElement(video);
+    }
+  }
+}
+
 async function tryLoadHeroVideo() {
-  const candidates = [manifestVideo, manifestVideoMp4].filter(Boolean);
+  const candidates = [...new Set([manifestVideoMp4, manifestVideo, HERO_VIDEO_FALLBACK].filter(Boolean))];
   if (!candidates.length) return false;
 
   for (const src of candidates) {
@@ -414,6 +575,8 @@ async function bootstrapMedia() {
     return;
   }
 
+  disableVideoStage();
+  termLine("[WARN] Hero video unavailable — falling back to image frames", "warn");
   await bootstrapInitialFrames();
 }
 
@@ -520,19 +683,41 @@ function drawCover(source) {
   drawCoverImage(source, 1);
 }
 
-function drawVideoAt(progress) {
-  if (!heroVideo || heroVideo.readyState < 2) return;
+async function pumpVideoSeek() {
+  if (!heroVideo || videoSeekInFlight || pendingVideoProgress === null) return;
 
   const duration = heroVideo.duration;
   if (!Number.isFinite(duration) || duration <= 0) return;
 
+  const progress = pendingVideoProgress;
   const time = Math.max(0, Math.min(duration - 0.001, progress * duration));
-  if (Math.abs(time - renderedVideoTime) > 0.004) {
-    heroVideo.currentTime = time;
-    renderedVideoTime = time;
+
+  if (Math.abs(heroVideo.currentTime - time) <= VIDEO_SEEK_EPS) {
+    renderedVideoTime = heroVideo.currentTime;
+    pendingVideoProgress = null;
+    return;
   }
 
-  drawCover(heroVideo);
+  videoSeekInFlight = true;
+  await seekVideoTo(heroVideo, time);
+  renderedVideoTime = heroVideo.currentTime;
+  videoSeekInFlight = false;
+
+  if (
+    pendingVideoProgress !== null &&
+    Math.abs(pendingVideoProgress - progress) > 0.0001
+  ) {
+    pumpVideoSeek();
+    return;
+  }
+
+  pendingVideoProgress = null;
+}
+
+function scrubVideoAt(progress) {
+  if (!heroVideo || heroVideo.readyState < 2) return;
+  pendingVideoProgress = progress;
+  pumpVideoSeek();
 }
 
 function findBestLoadedIndex(targetIndex) {
@@ -550,12 +735,12 @@ function findBestLoadedIndex(targetIndex) {
 }
 
 function drawFrameAt(progress) {
-  if (!viewW || !frameCount) return;
+  if (!viewW) return;
+  if (!useVideoMode && !frameCount) return;
 
   if (useVideoMode) {
-    if (Math.abs(progress - lastRenderedProgress) < RENDER_PROGRESS_EPS) return;
     lastRenderedProgress = progress;
-    drawVideoAt(progress);
+    scrubVideoAt(progress);
     return;
   }
 
@@ -628,17 +813,11 @@ function applyStoryContent(phaseId) {
 
 function updateStoryClock() {
   if (!storyClock) return;
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, "0");
-  const m = String(now.getMinutes()).padStart(2, "0");
-  const s = String(now.getSeconds()).padStart(2, "0");
-  storyClock.textContent = `${h}:${m}:${s}`;
-  storyClock.dateTime = now.toISOString();
+  storyClock.textContent = "scroll";
 }
 
 function startStoryClock() {
   updateStoryClock();
-  window.setInterval(updateStoryClock, 1000);
 }
 
 function setStoryPhase(phaseId) {
@@ -752,6 +931,8 @@ function setupScrollTrigger() {
     fitCanvas();
     renderedVideoTime = -1;
     lastRenderedProgress = -1;
+    pendingVideoProgress = null;
+    videoSeekInFlight = false;
     drawFrameAt(currentProgress);
   });
 }
@@ -778,10 +959,17 @@ function bindScroll() {
 
 function applyScrollTrackHeight() {
   const section = $(`#${SCROLL_SECTION_ID}`);
-  if (!section || !frameCount) return;
+  if (!section) return;
+
+  const units = useVideoMode
+    ? Math.round((heroVideo?.duration || 8) * 28)
+    : frameCount;
+
+  if (!units) return;
+
   const vh = Math.min(
     SCROLL_MAX_VH,
-    Math.max(SCROLL_MIN_VH, Math.round(frameCount * SCROLL_VH_PER_FRAME))
+    Math.max(SCROLL_MIN_VH, Math.round(units * SCROLL_VH_PER_FRAME))
   );
   section.style.height = `${vh}vh`;
 }
@@ -799,6 +987,8 @@ function resetToFirstFrame() {
   targetProgress = 0;
   lastRenderedProgress = -1;
   renderedVideoTime = -1;
+  pendingVideoProgress = null;
+  videoSeekInFlight = false;
   lastPrefetchLower = -1;
   lastPrefetchUpper = -1;
   lastUiProgress = -1;
@@ -806,6 +996,10 @@ function resetToFirstFrame() {
   clearTimeout(storyChangeTimer);
   storyCard?.classList.remove("is-text-changing");
   forceScrollTop();
+  if (useVideoMode && heroVideo) {
+    heroVideo.pause();
+    heroVideo.currentTime = 0;
+  }
   drawFrameAt(0);
   updateChamberStyles(0);
   updateStoryPanels(0);
@@ -838,6 +1032,7 @@ async function init() {
     history.replaceState(null, "", location.pathname + location.search);
   }
   forceScrollTop();
+  main?.classList.remove("hidden");
 
   try {
     await runBootHeader();

@@ -17,6 +17,13 @@
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body class="page-projects">
+    <div class="hud-cursor" id="hud-cursor" aria-hidden="true">
+      <span class="hud-cursor__ring hud-cursor__ring--outer"></span>
+      <span class="hud-cursor__ring hud-cursor__ring--mid"></span>
+      <span class="hud-cursor__ring hud-cursor__ring--inner"></span>
+      <span class="hud-cursor__dot"></span>
+    </div>
+
     <nav class="site-nav is-visible" id="site-nav" aria-label="Main navigation">
       <div class="nav-inner">
         <a href="index.html" class="nav-logo">
@@ -44,6 +51,10 @@
         <li><a href="mailto:hello@iyyo.solutions">Contact Us</a></li>
       </ul>
     </nav>
+
+    <a href="index.html" class="site-mark" aria-label="IYYO Solutions home">
+      <img src="assets/iyyo-logo.png" alt="" width="64" height="64" decoding="async" />
+    </a>
 
     <main class="projects-page">
       <header class="about-banner projects-banner">
@@ -123,6 +134,7 @@
       </div>
     </footer>
 
+    <script src="js/cursor.js"></script>
     <script src="js/projects-data.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/projects.js"></script>
