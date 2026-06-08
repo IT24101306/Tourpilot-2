@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 import { config } from "../lib/config.js";
 
 type EmailPayload = {
@@ -14,12 +14,13 @@ export type EmailResult = {
   error?: string;
 };
 
-let smtpTransport: nodemailer.Transporter | null = null;
+let smtpTransport: Transporter | null = null;
 
-function getSmtpTransport() {
+async function getSmtpTransport() {
   if (smtpTransport) return smtpTransport;
   const { host, port, user, pass, secure } = config.email.smtp;
   if (!host) return null;
+  const nodemailer = (await import("nodemailer")).default;
   smtpTransport = nodemailer.createTransport({
     host,
     port,
@@ -77,7 +78,7 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
     }
   }
 
-  const transport = getSmtpTransport();
+  const transport = await getSmtpTransport();
   if (!transport) {
     return { delivered: false, mode: "smtp", error: "SMTP_HOST not configured" };
   }
