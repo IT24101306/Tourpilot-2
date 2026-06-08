@@ -28,7 +28,13 @@ export function createApp() {
   app.use("/uploads", express.static(UPLOAD_DIR));
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, service: "tourpilot-api", version: "1.0.0" });
+    res.json({
+      ok: true,
+      service: "tourpilot-api",
+      version: "1.0.0",
+      build: process.env.BUILD_SHA ?? "dev",
+      builtAt: process.env.BUILD_TIME ?? null,
+    });
   });
 
   app.use("/api/auth", authRouter);

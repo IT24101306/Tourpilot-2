@@ -16,7 +16,8 @@
     "db:migrate": "npm run db:migrate -w @tourpilot/api",
     "db:seed": "npm run db:seed -w @tourpilot/api",
     "db:seed:demo": "npm run db:seed:demo -w @tourpilot/api",
-    "db:push": "npm run db:push -w @tourpilot/api"
+    "db:push": "npm run db:push -w @tourpilot/api",
+    "deploy": "bash scripts/deploy.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
