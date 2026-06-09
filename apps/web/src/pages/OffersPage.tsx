@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { currentPath, loginPath } from "../utils/authRedirect";
-import { api, ApiError } from "../api/client";
+import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { ModuleHeader } from "../components/module/ModuleHeader";
 import {
   DiscoveryOfferCard,
   type DiscoveryOffer,
 } from "../components/discovery/DiscoveryOfferCard";
+import { OfferRegistrationModal } from "../components/discovery/OfferRegistrationModal";
 import { daysUntilEnd } from "../lib/discoveryUtils";
 
 export function OffersPage() {
@@ -19,6 +20,7 @@ export function OffersPage() {
   const [offers, setOffers] = useState<DiscoveryOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const [registerOffer, setRegisterOffer] = useState<DiscoveryOffer | null>(null);
   const scrolledRef = useRef(false);
 
   useEffect(() => {
@@ -46,19 +48,9 @@ export function OffersPage() {
     return { total: offers.length, endingSoon, openSpots };
   }, [offers]);
 
-  async function register(offerId: string) {
-    if (!token) {
-      setMsg("Log in to register for offers.");
-      return;
-    }
-    try {
-      await api(`/offers/${offerId}/register`, { method: "POST", token });
-      setMsg("You are registered — your agency will follow up.");
-      const refreshed = await api<DiscoveryOffer[]>("/offers/active");
-      setOffers(refreshed);
-    } catch (e) {
-      setMsg(e instanceof ApiError ? e.message : "Registration failed");
-    }
+  async function refreshOffers() {
+    const refreshed = await api<DiscoveryOffer[]>("/offers/active");
+    setOffers(refreshed);
   }
 
   return (
@@ -116,13 +108,24 @@ export function OffersPage() {
                   navigate(loginPath(`/offers?offer=${o.id}`));
                   return;
                 }
-                void register(o.id);
+                setRegisterOffer(o);
               }}
               registerLabel={token ? "Register for offer" : "Log in to register"}
             />
           ))}
         </div>
       )}
+
+      <OfferRegistrationModal
+        open={!!registerOffer}
+        offer={registerOffer}
+        token={token}
+        onClose={() => setRegisterOffer(null)}
+        onSuccess={() => {
+          setMsg("You are registered — your agency will follow up.");
+          void refreshOffers().catch(console.error);
+        }}
+      />
     </section>
   );
 }

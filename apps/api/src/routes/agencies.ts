@@ -82,6 +82,18 @@ const heroSlideSchema = z.object({
   label: z.string().optional(),
 });
 
+const socialLinkSchema = z.object({
+  platform: z.string().min(1),
+  url: z.string().min(1),
+  label: z.string().optional(),
+});
+
+const whoWeAreImageSchema = z.object({
+  url: storedImageUrlSchema,
+  label: z.string().optional(),
+  alt: z.string().optional(),
+});
+
 const contentSchema = z.object({
 
   heroHeadline: z.string(),
@@ -89,6 +101,14 @@ const contentSchema = z.object({
   heroSubheadline: z.string().default(""),
 
   heroImages: z.array(heroSlideSchema).max(12).default([]),
+
+  whoWeAreTitle: z.string().default("WHO WE ARE"),
+
+  whoWeAreDescription: z.string().default(""),
+
+  whoWeAreSocialLinks: z.array(socialLinkSchema).max(12).default([]),
+
+  whoWeAreImages: z.array(whoWeAreImageSchema).max(8).default([]),
 
   packagesTitle: z.string(),
 
@@ -115,6 +135,8 @@ const contentSchema = z.object({
 
 
 const enabledSchema = z.object({
+
+  whoWeAre: z.boolean().default(true),
 
   tours: z.boolean(),
 

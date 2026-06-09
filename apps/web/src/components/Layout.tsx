@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { NotificationBell } from "./NotificationBell";
+import { TourPilotBrand } from "./TourPilotBrand";
 import { navLinkClass } from "../utils/navLinkClass";
 
 export function PublicLayout() {
@@ -9,9 +10,7 @@ export function PublicLayout() {
   return (
     <div className="shell">
       <header className="topbar topbar--site">
-        <Link to="/" className="brand">
-          Tour<span>Pilot</span>
-        </Link>
+        <TourPilotBrand />
         <nav className="nav" aria-label="Primary">
           <div className="nav-links">
             <NavLink to="/agencies" className={navLinkClass}>
@@ -86,9 +85,7 @@ export function DashboardLayout({ links }: { links: { to: string; label: string 
   return (
     <div className="shell">
       <header className="topbar topbar--site">
-        <Link to="/" className="brand">
-          Tour<span>Pilot</span>
-        </Link>
+        <TourPilotBrand />
         <div className="nav nav--dashboard">
           <div className="nav-meta">
             <span className="nav-meta-name">{user?.name}</span>

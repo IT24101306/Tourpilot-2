@@ -1,12 +1,25 @@
 import { MEDIA } from "@tourpilot/shared";
 
 export type DisplaySectionFlags = {
+  whoWeAre: boolean;
   tours: boolean;
   showcase: boolean;
   reviews: boolean;
   gallery: boolean;
   offers: boolean;
   inquiry: boolean;
+};
+
+export type DisplaySocialLink = {
+  platform: string;
+  url: string;
+  label?: string;
+};
+
+export type WhoWeAreImage = {
+  url: string;
+  label?: string;
+  alt?: string;
 };
 
 export type GalleryItem = {
@@ -39,6 +52,10 @@ export type DisplayContent = {
   heroHeadline: string;
   heroSubheadline: string;
   heroImages: HeroSlide[];
+  whoWeAreTitle: string;
+  whoWeAreDescription: string;
+  whoWeAreSocialLinks: DisplaySocialLink[];
+  whoWeAreImages: WhoWeAreImage[];
   packagesTitle: string;
   packagesSubtitle: string;
   ratingScore: string;
@@ -57,6 +74,7 @@ export type DisplaySectionsPayload = {
 };
 
 export const defaultDisplayEnabled = (): DisplaySectionFlags => ({
+  whoWeAre: true,
   tours: true,
   showcase: true,
   reviews: true,
@@ -70,6 +88,10 @@ export function defaultDisplayContent(): DisplayContent {
     heroHeadline: "Find your perfect trip experience.",
     heroSubheadline: "Handcrafted journeys with local experts, transparent pricing, and routes you can trust.",
     heroImages: [],
+    whoWeAreTitle: "WHO WE ARE",
+    whoWeAreDescription: "",
+    whoWeAreSocialLinks: [],
+    whoWeAreImages: [],
     packagesTitle: "Ready-Made Packages",
     packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
     ratingScore: "4.9",
@@ -96,6 +118,7 @@ export function parseDisplaySections(raw: unknown): DisplaySectionFlags {
   if (obj.enabled && typeof obj.enabled === "object") {
     const e = obj.enabled as Record<string, unknown>;
     return {
+      whoWeAre: e.whoWeAre !== false,
       tours: e.tours !== false,
       showcase: e.showcase !== false,
       reviews: e.reviews !== false,
@@ -141,6 +164,44 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
       });
     }
     base.heroImages = heroImages.slice(0, 12);
+  }
+
+  if (typeof content.whoWeAreTitle === "string") base.whoWeAreTitle = content.whoWeAreTitle;
+  if (typeof content.whoWeAreDescription === "string") {
+    base.whoWeAreDescription = content.whoWeAreDescription;
+  }
+
+  if (Array.isArray(content.whoWeAreSocialLinks)) {
+    const links: DisplaySocialLink[] = [];
+    for (const item of content.whoWeAreSocialLinks) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as Record<string, unknown>;
+      const platform = String(row.platform || "").trim();
+      const url = String(row.url || "").trim();
+      if (!platform || !url) continue;
+      links.push({
+        platform,
+        url,
+        label: typeof row.label === "string" ? row.label.trim() : undefined,
+      });
+    }
+    base.whoWeAreSocialLinks = links.slice(0, 12);
+  }
+
+  if (Array.isArray(content.whoWeAreImages)) {
+    const images: WhoWeAreImage[] = [];
+    for (const item of content.whoWeAreImages) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as Record<string, unknown>;
+      const url = String(row.url || "").trim();
+      if (!url) continue;
+      images.push({
+        url,
+        label: typeof row.label === "string" ? row.label.trim() : undefined,
+        alt: typeof row.alt === "string" ? row.alt.trim() : undefined,
+      });
+    }
+    base.whoWeAreImages = images.slice(0, 8);
   }
 
   if (Array.isArray(content.highlights)) {

@@ -3,20 +3,13 @@ import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
+import { EntityTypeLineIcon } from "../../components/icons/LineIcons";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { AgencyEntity, AgencyGroup } from "./types";
 
 function formatType(type: string) {
   return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, " ");
 }
-
-const TYPE_ICONS: Record<string, string> = {
-  HOTEL: "🏨",
-  VIEWPOINT: "🏔️",
-  ACTIVITY: "🎯",
-  RESTAURANT: "🍽️",
-  OTHER: "📍",
-};
 
 export function AgencyGroupsPage() {
   const { token } = useAuth();
@@ -273,7 +266,7 @@ export function AgencyGroupsPage() {
                               onChange={() => toggleEntity(ent.id)}
                             />
                             <span className="groups-entity-icon" aria-hidden="true">
-                              {TYPE_ICONS[ent.type] ?? "📍"}
+                              <EntityTypeLineIcon type={ent.type} size={16} />
                             </span>
                             <span className="groups-entity-info">
                               <span className="groups-entity-name">{ent.name}</span>
@@ -351,7 +344,7 @@ export function AgencyGroupsPage() {
                 {selectedGroup.items.map((item) => (
                   <li key={item.entity.id}>
                     <span className="groups-entity-icon" aria-hidden="true">
-                      {TYPE_ICONS[item.entity.type] ?? "📍"}
+                      <EntityTypeLineIcon type={item.entity.type} size={16} />
                     </span>
                     <span>
                       <strong>{item.entity.name}</strong>

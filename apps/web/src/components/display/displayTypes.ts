@@ -1,6 +1,7 @@
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
 
 export type DisplaySectionFlags = {
+  whoWeAre: boolean;
   tours: boolean;
   showcase: boolean;
   reviews: boolean;
@@ -8,6 +9,30 @@ export type DisplaySectionFlags = {
   offers: boolean;
   inquiry: boolean;
 };
+
+export type DisplaySocialLink = {
+  platform: string;
+  url: string;
+  label?: string;
+};
+
+export type WhoWeAreImage = {
+  url: string;
+  label?: string;
+  alt?: string;
+};
+
+export const SOCIAL_PLATFORMS = [
+  { id: "instagram", label: "Instagram" },
+  { id: "facebook", label: "Facebook" },
+  { id: "youtube", label: "YouTube" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "tripadvisor", label: "TripAdvisor" },
+  { id: "whatsapp", label: "WhatsApp" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "x", label: "X (Twitter)" },
+  { id: "website", label: "Website" },
+] as const;
 
 export type DisplayReview = {
   id?: string;
@@ -46,6 +71,10 @@ export type DisplayContent = {
   heroHeadline: string;
   heroSubheadline: string;
   heroImages: HeroSlide[];
+  whoWeAreTitle: string;
+  whoWeAreDescription: string;
+  whoWeAreSocialLinks: DisplaySocialLink[];
+  whoWeAreImages: WhoWeAreImage[];
   packagesTitle: string;
   packagesSubtitle: string;
   ratingScore: string;
@@ -70,6 +99,10 @@ export const defaultDisplayContent = (): DisplayContent => ({
   heroSubheadline:
     "Handcrafted journeys with local experts, transparent pricing, and routes you can trust.",
   heroImages: [],
+  whoWeAreTitle: "WHO WE ARE",
+  whoWeAreDescription: "",
+  whoWeAreSocialLinks: [],
+  whoWeAreImages: [],
   packagesTitle: "Ready-Made Packages",
   packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
   ratingScore: "4.9",
@@ -90,6 +123,7 @@ export const defaultDisplayContent = (): DisplayContent => ({
 
 export const defaultDisplayConfig = (): DisplayConfig => ({
   enabled: {
+    whoWeAre: true,
     tours: true,
     showcase: true,
     reviews: true,

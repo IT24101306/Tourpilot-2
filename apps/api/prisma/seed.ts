@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { MEDIA, toStoredPhone } from "@tourpilot/shared";
+import { CEYLON_TRAILS_HERO_IMAGES, MEDIA, toStoredPhone } from "@tourpilot/shared";
 import { hashPassword } from "../src/services/password.js";
 
 const prisma = new PrismaClient();
@@ -108,11 +108,51 @@ async function main() {
     },
   });
 
+  const ceylonHeroContent = {
+    heroHeadline: "Find your perfect trip experience.",
+    heroSubheadline:
+      "Handcrafted journeys across Sigiriya, hill country, and the south coast — with local experts you can trust.",
+    heroImages: CEYLON_TRAILS_HERO_IMAGES.map((slide) => ({ ...slide })),
+    whoWeAreTitle: "WHO WE ARE",
+    whoWeAreDescription:
+      "Ceylon Trails is a boutique Sri Lanka tour operator based in Colombo. We design small-group and private itineraries with certified local guides, transparent pricing, and routes we know by heart — from ancient kingdoms to tea country and the south coast.",
+    whoWeAreSocialLinks: [
+      { platform: "instagram", url: "https://instagram.com/ceylontrails", label: "@ceylontrails" },
+      { platform: "facebook", url: "https://facebook.com/ceylontrails" },
+      { platform: "tripadvisor", url: "https://www.tripadvisor.com" },
+      { platform: "whatsapp", url: "https://wa.me/94771234567", label: "Chat on WhatsApp" },
+    ],
+    whoWeAreImages: [],
+    packagesTitle: "Ready-Made Packages",
+    packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
+    ratingScore: "4.9",
+    ratingSuffix: "/5",
+    highlights: [
+      "56+ guided tours delivered",
+      "100% safe routes with certified local guides",
+      "5+ years of island travel experience",
+    ],
+    ctaLabel: "Plan your trip",
+    featuredImageUrl: MEDIA.hero,
+    featuredQuote:
+      "We expected sand and silence. We found peace, stars, and people who love what they do.",
+    packages: [],
+    offers: [
+      {
+        title: "Early bird special",
+        description: "Book 30 days ahead and save on any ready-made tour.",
+        priceLabel: "Save up to 15%",
+        badge: "Limited",
+      },
+    ],
+  };
+
   await prisma.displaySettings.upsert({
     where: { agencyId: agency.id },
     update: {
       sections: {
         enabled: {
+          whoWeAre: true,
           tours: true,
           showcase: true,
           reviews: true,
@@ -120,38 +160,14 @@ async function main() {
           offers: true,
           inquiry: true,
         },
-        content: {
-          heroHeadline: "Find your perfect trip experience.",
-          packagesTitle: "Ready-Made Packages",
-          packagesSubtitle:
-            "Curated routes with local guides, transport, and stays included.",
-          ratingScore: "4.9",
-          ratingSuffix: "/5",
-          highlights: [
-            "56+ guided tours delivered",
-            "100% safe routes with certified local guides",
-            "5+ years of island travel experience",
-          ],
-          ctaLabel: "Plan your trip",
-          featuredImageUrl: MEDIA.hero,
-          featuredQuote:
-            "We expected sand and silence. We found peace, stars, and people who love what they do.",
-          packages: [],
-          offers: [
-            {
-              title: "Early bird special",
-              description: "Book 30 days ahead and save on any ready-made tour.",
-              priceLabel: "Save up to 15%",
-              badge: "Limited",
-            },
-          ],
-        },
+        content: ceylonHeroContent,
       },
     },
     create: {
       agencyId: agency.id,
       sections: {
         enabled: {
+          whoWeAre: true,
           tours: true,
           showcase: true,
           reviews: true,
@@ -159,32 +175,7 @@ async function main() {
           offers: true,
           inquiry: true,
         },
-        content: {
-          heroHeadline: "Find your perfect trip experience.",
-          packagesTitle: "Ready-Made Packages",
-          packagesSubtitle:
-            "Curated routes with local guides, transport, and stays included.",
-          ratingScore: "4.9",
-          ratingSuffix: "/5",
-          highlights: [
-            "56+ guided tours delivered",
-            "100% safe routes with certified local guides",
-            "5+ years of island travel experience",
-          ],
-          ctaLabel: "Plan your trip",
-          featuredImageUrl: MEDIA.hero,
-          featuredQuote:
-            "We expected sand and silence. We found peace, stars, and people who love what they do.",
-          packages: [],
-          offers: [
-            {
-              title: "Early bird special",
-              description: "Book 30 days ahead and save on any ready-made tour.",
-              priceLabel: "Save up to 15%",
-              badge: "Limited",
-            },
-          ],
-        },
+        content: ceylonHeroContent,
       },
       theme: {},
     },

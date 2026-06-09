@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { displayTourPrice } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
@@ -15,14 +15,17 @@ import {
 } from "./DisplayEditorUi";
 import {
   defaultDisplayConfig,
+  SOCIAL_PLATFORMS,
   type DisplayConfig,
   type DisplayContent,
   type DisplayOffer,
   type DisplayPackage,
   type DisplayReview,
   type DisplaySectionFlags,
+  type DisplaySocialLink,
   type GalleryItem,
   type HeroSlide,
+  type WhoWeAreImage,
 } from "./displayTypes";
 
 type PublishedTour = {
@@ -77,6 +80,18 @@ const defaultOfferForm = (): DisplayOffer => ({
   imageUrl: "",
 });
 
+const defaultSocialForm = (): DisplaySocialLink => ({
+  platform: "instagram",
+  url: "",
+  label: "",
+});
+
+const defaultWhoWeAreImageForm = (): WhoWeAreImage => ({
+  url: "",
+  label: "",
+  alt: "",
+});
+
 export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const { requestConfirm } = useConfirmAction();
   const [activeStep, setActiveStep] = useState<DisplayStep>("hero");
@@ -94,18 +109,27 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [offerModalOpen, setOfferModalOpen] = useState(false);
   const [heroModalOpen, setHeroModalOpen] = useState(false);
+  const [socialModalOpen, setSocialModalOpen] = useState(false);
+  const [whoWeAreImageModalOpen, setWhoWeAreImageModalOpen] = useState(false);
 
   const [reviewForm, setReviewForm] = useState<DisplayReview>(defaultReviewForm);
   const [packageForm, setPackageForm] = useState<DisplayPackage>(defaultPackageForm);
   const [galleryForm, setGalleryForm] = useState<GalleryItem>({ url: "", label: "" });
   const [offerForm, setOfferForm] = useState<DisplayOffer>(defaultOfferForm);
   const [heroForm, setHeroForm] = useState<HeroSlide>({ url: "", label: "" });
+  const [socialForm, setSocialForm] = useState<DisplaySocialLink>(defaultSocialForm);
+  const [whoWeAreImageForm, setWhoWeAreImageForm] = useState<WhoWeAreImage>(defaultWhoWeAreImageForm);
 
   const [editReviewIndex, setEditReviewIndex] = useState<number | null>(null);
   const [editPackageIndex, setEditPackageIndex] = useState<number | null>(null);
   const [editOfferIndex, setEditOfferIndex] = useState<number | null>(null);
   const [editHeroIndex, setEditHeroIndex] = useState<number | null>(null);
   const [editGalleryIndex, setEditGalleryIndex] = useState<number | null>(null);
+  const [editSocialIndex, setEditSocialIndex] = useState<number | null>(null);
+  const [editWhoWeAreImageIndex, setEditWhoWeAreImageIndex] = useState<number | null>(null);
+  const displayHydratedRef = useRef(false);
+  const skipNextAutoSaveRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadDisplay = useCallback(async () => {
     if (!token) return;
@@ -138,11 +162,92 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     if (agencySlug) setSlug(agencySlug);
   }, [agencySlug]);
 
+  const persistDisplaySettings = useCallback(
+    async (nextConfig: DisplayConfig, statusMessage = "Display page updated.") => {
+      if (!token) return;
+      skipNextAutoSaveRef.current = true;
+      setSaving(true);
+      setSaveStatus("");
+      try {
+        const data = await api<DisplayPayload>("/agencies/mine/display", {
+          method: "PUT",
+          token,
+          body: JSON.stringify({
+            influencerCommissionPct,
+            logoUrl: logoUrl.trim() || undefined,
+            enabled: { ...nextConfig.enabled, whoWeAre: true },
+            content: {
+              ...nextConfig.content,
+              whoWeAreTitle: nextConfig.content.whoWeAreTitle.trim() || "WHO WE ARE",
+              whoWeAreDescription: nextConfig.content.whoWeAreDescription.trim(),
+              highlights: nextConfig.content.highlights.map((h) => h.trim()).filter(Boolean),
+            },
+            gallery: nextConfig.gallery,
+            reviews: nextConfig.reviews.map(({ authorName, rating, body }) => ({
+              authorName,
+              rating,
+              body,
+            })),
+          }),
+        });
+        setSlug(data.slug);
+        setLogoUrl(data.logoUrl || logoUrl);
+        setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
+        setConfig({
+          enabled: data.enabled,
+          content: data.content,
+          gallery: data.gallery,
+          reviews: data.reviews,
+        });
+        setSaveStatus(statusMessage);
+      } catch (err) {
+        setSaveStatus(err instanceof ApiError ? err.message : "Failed to save display settings");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [token, logoUrl, influencerCommissionPct]
+  );
+
+  useEffect(() => {
+    if (loading || saving) return;
+    if (!displayHydratedRef.current) {
+      displayHydratedRef.current = true;
+      return;
+    }
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      return;
+    }
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      void persistDisplaySettings(config, "Display page updated.");
+    }, 1500);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [config, logoUrl, influencerCommissionPct, loading, saving, persistDisplaySettings]);
+
+  async function applyAndPersist(
+    updater: (prev: DisplayConfig) => DisplayConfig,
+    statusMessage: string
+  ) {
+    let nextConfig!: DisplayConfig;
+    setConfig((prev) => {
+      nextConfig = updater(prev);
+      return nextConfig;
+    });
+    await persistDisplaySettings(nextConfig, statusMessage);
+  }
+
   function toggleSection(key: keyof DisplaySectionFlags, checked: boolean) {
-    setConfig((prev) => ({
-      ...prev,
-      enabled: { ...prev.enabled, [key]: checked },
-    }));
+    void applyAndPersist(
+      (prev) => ({
+        ...prev,
+        enabled: { ...prev.enabled, [key]: checked },
+      }),
+      "Display section updated on your public page."
+    );
   }
 
   function updateContent(patch: Partial<DisplayContent>) {
@@ -176,49 +281,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         { label: "Influencer commission", value: `${influencerCommissionPct}%` },
         { label: "Enabled sections", value: enabledSections || "None" },
         { label: "Hero slides", value: String(config.content.heroImages.length) },
+        { label: "Social links", value: String(config.content.whoWeAreSocialLinks.length) },
+        { label: "Who we are images", value: String(config.content.whoWeAreImages.length) },
         { label: "Packages", value: String(config.content.packages.length) },
         { label: "Gallery items", value: String(config.gallery.length) },
         { label: "Reviews", value: String(config.reviews.length) },
         { label: "Offers", value: String(config.content.offers.length) },
       ],
-      onConfirm: async () => {
-        setSaving(true);
-        setSaveStatus("");
-        try {
-          const data = await api<DisplayPayload>("/agencies/mine/display", {
-            method: "PUT",
-            token,
-            body: JSON.stringify({
-              influencerCommissionPct,
-              logoUrl: logoUrl.trim() || undefined,
-              enabled: config.enabled,
-              content: {
-                ...config.content,
-                highlights: config.content.highlights.map((h) => h.trim()).filter(Boolean),
-              },
-              gallery: config.gallery,
-              reviews: config.reviews.map(({ authorName, rating, body }) => ({
-                authorName,
-                rating,
-                body,
-              })),
-            }),
-          });
-          setSlug(data.slug);
-          setLogoUrl(data.logoUrl || logoUrl);
-          setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
-          setConfig({
-            enabled: data.enabled,
-            content: data.content,
-            gallery: data.gallery,
-            reviews: data.reviews,
-          });
-          setSaveStatus("Display settings saved.");
-        } catch (err) {
-          setSaveStatus(err instanceof ApiError ? err.message : "Failed to save display settings");
-        } finally {
-          setSaving(false);
-        }
+      onConfirm: () => {
+        void persistDisplaySettings(config, "Display settings saved.");
       },
     });
   }
@@ -260,12 +331,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         { label: "Price label", value: entry.priceLabel },
       ],
       onConfirm: () => {
-        setConfig((prev) => {
-          const packages = [...prev.content.packages];
-          if (editPackageIndex === null) packages.push(entry);
-          else packages[editPackageIndex] = entry;
-          return { ...prev, content: { ...prev.content, packages } };
-        });
+        void applyAndPersist(
+          (prev) => {
+            const packages = [...prev.content.packages];
+            if (editPackageIndex === null) packages.push(entry);
+            else packages[editPackageIndex] = entry;
+            return { ...prev, content: { ...prev.content, packages } };
+          },
+          isNew ? "Package added to your display page." : "Package updated on your display page."
+        );
         setPackageModalOpen(false);
       },
     });
@@ -279,13 +353,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       confirmLabel: "Remove package",
       summary: [{ label: "Package", value: pkg?.title ?? `Item ${index + 1}` }],
       onConfirm: () => {
-        setConfig((prev) => ({
-          ...prev,
-          content: {
-            ...prev.content,
-            packages: prev.content.packages.filter((_, i) => i !== index),
-          },
-        }));
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            content: {
+              ...prev.content,
+              packages: prev.content.packages.filter((_, i) => i !== index),
+            },
+          }),
+          "Package removed from your display page."
+        );
         setPackageModalOpen(false);
         setEditPackageIndex(null);
       },
@@ -314,12 +391,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         },
       ],
       onConfirm: () => {
-        setConfig((prev) => {
-          const reviews = [...prev.reviews];
-          if (editReviewIndex === null) reviews.push(entry);
-          else reviews[editReviewIndex] = entry;
-          return { ...prev, reviews };
-        });
+        void applyAndPersist(
+          (prev) => {
+            const reviews = [...prev.reviews];
+            if (editReviewIndex === null) reviews.push(entry);
+            else reviews[editReviewIndex] = entry;
+            return { ...prev, reviews };
+          },
+          isNew ? "Review added to your display page." : "Review updated on your display page."
+        );
         setReviewModalOpen(false);
       },
     });
@@ -339,12 +419,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         { label: "Image URL", value: url.length > 80 ? `${url.slice(0, 80)}…` : url },
       ],
       onConfirm: () => {
-        setConfig((prev) => {
-          const gallery = [...prev.gallery];
-          if (editGalleryIndex === null) gallery.push(entry);
-          else gallery[editGalleryIndex] = entry;
-          return { ...prev, gallery };
-        });
+        void applyAndPersist(
+          (prev) => {
+            const gallery = [...prev.gallery];
+            if (editGalleryIndex === null) gallery.push(entry);
+            else gallery[editGalleryIndex] = entry;
+            return { ...prev, gallery };
+          },
+          isNew ? "Gallery image added to your display page." : "Gallery image updated on your display page."
+        );
         setGalleryForm({ url: "", label: "" });
         setEditGalleryIndex(null);
         setGalleryModalOpen(false);
@@ -370,24 +453,140 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         { label: "Image URL", value: url.length > 80 ? `${url.slice(0, 80)}…` : url },
       ],
       onConfirm: () => {
-        setConfig((prev) => {
-          const heroImages = [...prev.content.heroImages];
-          if (editHeroIndex === null) heroImages.push(entry);
-          else heroImages[editHeroIndex] = entry;
-          return { ...prev, content: { ...prev.content, heroImages } };
-        });
+        void applyAndPersist(
+          (prev) => {
+            const heroImages = [...prev.content.heroImages];
+            if (editHeroIndex === null) heroImages.push(entry);
+            else heroImages[editHeroIndex] = entry;
+            return { ...prev, content: { ...prev.content, heroImages } };
+          },
+          isNew ? "Hero slide added to your display page." : "Hero slide updated on your display page."
+        );
         setHeroModalOpen(false);
       },
     });
   }
 
   function moveHeroSlide(index: number, direction: -1 | 1) {
-    setConfig((prev) => {
+    void applyAndPersist((prev) => {
       const heroImages = [...prev.content.heroImages];
       const next = index + direction;
       if (next < 0 || next >= heroImages.length) return prev;
       [heroImages[index], heroImages[next]] = [heroImages[next], heroImages[index]];
       return { ...prev, content: { ...prev.content, heroImages } };
+    }, "Hero slide order updated on your display page.");
+  }
+
+  function saveSocialLink(e: FormEvent) {
+    e.preventDefault();
+    const entry: DisplaySocialLink = {
+      platform: socialForm.platform.trim(),
+      url: socialForm.url.trim(),
+      label: socialForm.label?.trim() || undefined,
+    };
+    if (!entry.platform || !entry.url) return;
+
+    const isNew = editSocialIndex === null;
+    requestConfirm({
+      title: isNew ? "Add social link?" : "Update social link?",
+      confirmLabel: isNew ? "Add link" : "Save link",
+      summary: [
+        { label: "Platform", value: entry.platform },
+        { label: "URL", value: entry.url.length > 80 ? `${entry.url.slice(0, 80)}…` : entry.url },
+      ],
+      onConfirm: () => {
+        void applyAndPersist(
+          (prev) => {
+            const whoWeAreSocialLinks = [...prev.content.whoWeAreSocialLinks];
+            if (editSocialIndex === null) whoWeAreSocialLinks.push(entry);
+            else whoWeAreSocialLinks[editSocialIndex] = entry;
+            return { ...prev, content: { ...prev.content, whoWeAreSocialLinks } };
+          },
+          isNew ? "Social link added to your display page." : "Social link updated on your display page."
+        );
+        setSocialModalOpen(false);
+      },
+    });
+  }
+
+  function removeSocialLink(index: number) {
+    const link = config.content.whoWeAreSocialLinks[index];
+    requestConfirm({
+      title: "Remove social link?",
+      variant: "danger",
+      confirmLabel: "Remove link",
+      summary: [{ label: "Link", value: link?.url ?? `Item ${index + 1}` }],
+      onConfirm: () => {
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            content: {
+              ...prev.content,
+              whoWeAreSocialLinks: prev.content.whoWeAreSocialLinks.filter((_, i) => i !== index),
+            },
+          }),
+          "Social link removed from your display page."
+        );
+        setSocialModalOpen(false);
+        setEditSocialIndex(null);
+      },
+    });
+  }
+
+  function saveWhoWeAreImage(e: FormEvent) {
+    e.preventDefault();
+    const url = whoWeAreImageForm.url.trim();
+    if (!url) return;
+    const entry: WhoWeAreImage = {
+      url,
+      label: whoWeAreImageForm.label?.trim() || undefined,
+      alt: whoWeAreImageForm.alt?.trim() || undefined,
+    };
+    const isNew = editWhoWeAreImageIndex === null;
+
+    requestConfirm({
+      title: isNew ? "Add badge image?" : "Update badge image?",
+      confirmLabel: isNew ? "Add image" : "Save image",
+      summary: [
+        { label: "Label", value: entry.label || "—" },
+        { label: "Image URL", value: url.length > 80 ? `${url.slice(0, 80)}…` : url },
+      ],
+      onConfirm: () => {
+        void applyAndPersist(
+          (prev) => {
+            const whoWeAreImages = [...prev.content.whoWeAreImages];
+            if (editWhoWeAreImageIndex === null) whoWeAreImages.push(entry);
+            else whoWeAreImages[editWhoWeAreImageIndex] = entry;
+            return { ...prev, content: { ...prev.content, whoWeAreImages } };
+          },
+          isNew ? "Badge image added to your display page." : "Badge image updated on your display page."
+        );
+        setWhoWeAreImageModalOpen(false);
+      },
+    });
+  }
+
+  function removeWhoWeAreImage(index: number) {
+    const img = config.content.whoWeAreImages[index];
+    requestConfirm({
+      title: "Remove badge image?",
+      variant: "danger",
+      confirmLabel: "Remove image",
+      summary: [{ label: "Image", value: img?.label || img?.url || `Item ${index + 1}` }],
+      onConfirm: () => {
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            content: {
+              ...prev.content,
+              whoWeAreImages: prev.content.whoWeAreImages.filter((_, i) => i !== index),
+            },
+          }),
+          "Badge image removed from your display page."
+        );
+        setWhoWeAreImageModalOpen(false);
+        setEditWhoWeAreImageIndex(null);
+      },
     });
   }
 
@@ -412,12 +611,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         { label: "Price label", value: entry.priceLabel || "—" },
       ],
       onConfirm: () => {
-        setConfig((prev) => {
-          const offers = [...prev.content.offers];
-          if (editOfferIndex === null) offers.push(entry);
-          else offers[editOfferIndex] = entry;
-          return { ...prev, content: { ...prev.content, offers } };
-        });
+        void applyAndPersist(
+          (prev) => {
+            const offers = [...prev.content.offers];
+            if (editOfferIndex === null) offers.push(entry);
+            else offers[editOfferIndex] = entry;
+            return { ...prev, content: { ...prev.content, offers } };
+          },
+          isNew ? "Offer added to your display page." : "Offer updated on your display page."
+        );
         setOfferModalOpen(false);
       },
     });
@@ -431,13 +633,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       confirmLabel: "Remove slide",
       summary: [{ label: "Slide", value: slide?.label || `Slide ${index + 1}` }],
       onConfirm: () => {
-        setConfig((prev) => ({
-          ...prev,
-          content: {
-            ...prev.content,
-            heroImages: prev.content.heroImages.filter((_, j) => j !== index),
-          },
-        }));
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            content: {
+              ...prev.content,
+              heroImages: prev.content.heroImages.filter((_, j) => j !== index),
+            },
+          }),
+          "Hero slide removed from your display page."
+        );
         setHeroModalOpen(false);
         setEditHeroIndex(null);
       },
@@ -452,10 +657,13 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       confirmLabel: "Remove review",
       summary: [{ label: "Author", value: review?.authorName ?? `Review ${index + 1}` }],
       onConfirm: () => {
-        setConfig((prev) => ({
-          ...prev,
-          reviews: prev.reviews.filter((_, j) => j !== index),
-        }));
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            reviews: prev.reviews.filter((_, j) => j !== index),
+          }),
+          "Review removed from your display page."
+        );
         setReviewModalOpen(false);
         setEditReviewIndex(null);
       },
@@ -470,10 +678,13 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       confirmLabel: "Remove image",
       summary: [{ label: "Label", value: item?.label ?? `Image ${index + 1}` }],
       onConfirm: () => {
-        setConfig((prev) => ({
-          ...prev,
-          gallery: prev.gallery.filter((_, j) => j !== index),
-        }));
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            gallery: prev.gallery.filter((_, j) => j !== index),
+          }),
+          "Gallery image removed from your display page."
+        );
         setGalleryModalOpen(false);
         setEditGalleryIndex(null);
       },
@@ -488,13 +699,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       confirmLabel: "Remove offer",
       summary: [{ label: "Offer", value: offer?.title ?? `Offer ${index + 1}` }],
       onConfirm: () => {
-        setConfig((prev) => ({
-          ...prev,
-          content: {
-            ...prev.content,
-            offers: prev.content.offers.filter((_, j) => j !== index),
-          },
-        }));
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            content: {
+              ...prev.content,
+              offers: prev.content.offers.filter((_, j) => j !== index),
+            },
+          }),
+          "Offer removed from your display page."
+        );
         setOfferModalOpen(false);
         setEditOfferIndex(null);
       },
@@ -514,34 +728,36 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   return (
     <article className="agent-tab-panel display-editor">
-      <div className="display-editor-toolbar">
-        <div>
-          <h2>Display page</h2>
-          <p className="muted">Edit your public agency page one section at a time.</p>
-        </div>
-        <div className="display-editor-toolbar-actions">
-          {displayPageUrl && (
-            <a
-              href={displayPageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-ghost"
+      <div className="display-editor-chrome">
+        <div className="display-editor-toolbar">
+          <div>
+            <h2>Display page</h2>
+            <p className="muted">Edit your public agency page one section at a time.</p>
+          </div>
+          <div className="display-editor-toolbar-actions">
+            {displayPageUrl && (
+              <a
+                href={displayPageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+              >
+                Preview page ↗
+              </a>
+            )}
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={saving}
+              onClick={saveSettings}
             >
-              Preview page ↗
-            </a>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={saving}
-            onClick={saveSettings}
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <DisplayStepNav active={activeStep} onChange={setActiveStep} />
+        <DisplayStepNav active={activeStep} onChange={setActiveStep} />
+      </div>
 
       <div className="display-step-content">
         {activeStep === "hero" && (
@@ -643,6 +859,135 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                   }}
                 >
                   + Add slide
+                </button>
+              </DisplaySectionActions>
+            </div>
+          </DisplayStepPanel>
+        )}
+
+        {activeStep === "whoWeAre" && (
+          <DisplayStepPanel
+            title="Who we are"
+            description="Shown directly below your hero — introduce your agency, link social profiles, and add trust badges like TripAdvisor screenshots."
+          >
+            <DisplayFieldHint>
+              This section appears on every agency storefront, directly below the hero banner.
+            </DisplayFieldHint>
+
+            <div className="display-field-stack display-field-stack--spaced">
+              <label>
+                Section title
+                <input
+                  value={content.whoWeAreTitle}
+                  onChange={(e) => updateContent({ whoWeAreTitle: e.target.value })}
+                  maxLength={40}
+                  placeholder="WHO WE ARE"
+                />
+              </label>
+              <label>
+                Description
+                <textarea
+                  rows={4}
+                  value={content.whoWeAreDescription}
+                  onChange={(e) => updateContent({ whoWeAreDescription: e.target.value })}
+                  placeholder="A short introduction about your agency, team, and what makes your trips special."
+                  maxLength={600}
+                />
+                <DisplayFieldHint>
+                  Keep it brief — 2–4 sentences works best. If left empty, your agency profile description may appear instead.
+                </DisplayFieldHint>
+              </label>
+            </div>
+
+            <div className="display-list-block">
+              <p className="display-subsection-label">Social links</p>
+              <p className="muted display-subsection-desc">
+                Instagram, Facebook, TripAdvisor, WhatsApp, or your website.
+              </p>
+              {content.whoWeAreSocialLinks.length === 0 ? (
+                <p className="display-empty-hint">No social links yet.</p>
+              ) : (
+                <div className="display-compact-list">
+                  {content.whoWeAreSocialLinks.map((link, i) => (
+                    <DisplayCompactRow
+                      key={`${link.platform}-${i}`}
+                      title={
+                        SOCIAL_PLATFORMS.find((p) => p.id === link.platform)?.label ?? link.platform
+                      }
+                      meta={
+                        <span className="muted">
+                          {link.label?.trim() || link.url}
+                        </span>
+                      }
+                      onEdit={() => {
+                        setEditSocialIndex(i);
+                        setSocialForm({
+                          platform: link.platform,
+                          url: link.url,
+                          label: link.label || "",
+                        });
+                        setSocialModalOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              <DisplaySectionActions>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={content.whoWeAreSocialLinks.length >= 12}
+                  onClick={() => {
+                    setEditSocialIndex(null);
+                    setSocialForm(defaultSocialForm());
+                    setSocialModalOpen(true);
+                  }}
+                >
+                  + Add social link
+                </button>
+              </DisplaySectionActions>
+            </div>
+
+            <div className="display-list-block">
+              <p className="display-subsection-label">Trust badges & review images</p>
+              <p className="muted display-subsection-desc">
+                Upload screenshots — TripAdvisor reviews, awards, press mentions, etc.
+              </p>
+              {content.whoWeAreImages.length === 0 ? (
+                <p className="display-empty-hint">No images yet.</p>
+              ) : (
+                <div className="display-compact-list">
+                  {content.whoWeAreImages.map((img, i) => (
+                    <DisplayCompactRow
+                      key={`${img.url}-${i}`}
+                      thumb={<img src={img.url} alt="" className="display-compact-row-thumb" />}
+                      title={img.label?.trim() || `Image ${i + 1}`}
+                      meta={<span className="muted">{img.alt?.trim() || "Badge image"}</span>}
+                      onEdit={() => {
+                        setEditWhoWeAreImageIndex(i);
+                        setWhoWeAreImageForm({
+                          url: img.url,
+                          label: img.label || "",
+                          alt: img.alt || "",
+                        });
+                        setWhoWeAreImageModalOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              <DisplaySectionActions>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={content.whoWeAreImages.length >= 8}
+                  onClick={() => {
+                    setEditWhoWeAreImageIndex(null);
+                    setWhoWeAreImageForm(defaultWhoWeAreImageForm());
+                    setWhoWeAreImageModalOpen(true);
+                  }}
+                >
+                  + Add image
                 </button>
               </DisplaySectionActions>
             </div>
@@ -1219,6 +1564,114 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               onClick={() => removeHeroSlide(editHeroIndex)}
             >
               Remove slide
+            </button>
+          )}
+        </form>
+      </DashboardModal>
+
+      <DashboardModal
+        open={socialModalOpen}
+        title={editSocialIndex === null ? "Add social link" : "Edit social link"}
+        subtitle="Links appear as pills in the Who we are section on your public page."
+        onClose={() => setSocialModalOpen(false)}
+      >
+        <form onSubmit={saveSocialLink}>
+          <div className="entity-form-grid">
+            <ModalField label="Platform">
+              <select
+                value={socialForm.platform}
+                onChange={(e) => setSocialForm({ ...socialForm, platform: e.target.value })}
+                required
+                autoFocus
+              >
+                {SOCIAL_PLATFORMS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </ModalField>
+            <ModalField label="URL" full>
+              <input
+                type="url"
+                value={socialForm.url}
+                onChange={(e) => setSocialForm({ ...socialForm, url: e.target.value })}
+                placeholder="https://instagram.com/yourpage"
+                required
+              />
+            </ModalField>
+            <ModalField label="Custom label (optional)" full>
+              <input
+                type="text"
+                value={socialForm.label || ""}
+                onChange={(e) => setSocialForm({ ...socialForm, label: e.target.value })}
+                placeholder="Follow us on Instagram"
+              />
+            </ModalField>
+          </div>
+          <ModalActions
+            onCancel={() => setSocialModalOpen(false)}
+            submitLabel={editSocialIndex === null ? "Add link" : "Save link"}
+          />
+          {editSocialIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removeSocialLink(editSocialIndex)}
+            >
+              Remove link
+            </button>
+          )}
+        </form>
+      </DashboardModal>
+
+      <DashboardModal
+        open={whoWeAreImageModalOpen}
+        title={editWhoWeAreImageIndex === null ? "Add badge image" : "Edit badge image"}
+        subtitle="TripAdvisor screenshots, awards, or press logos shown beside your intro."
+        onClose={() => setWhoWeAreImageModalOpen(false)}
+      >
+        <form onSubmit={saveWhoWeAreImage}>
+          <div className="entity-form-grid">
+            <ModalField label="Image" full>
+              <ImageUrlField
+                label=""
+                className="image-url-field--embedded"
+                value={whoWeAreImageForm.url}
+                onChange={(url) => setWhoWeAreImageForm({ ...whoWeAreImageForm, url })}
+                token={token}
+              />
+            </ModalField>
+            <ModalField label="Caption (optional)" full>
+              <input
+                type="text"
+                value={whoWeAreImageForm.label || ""}
+                onChange={(e) =>
+                  setWhoWeAreImageForm({ ...whoWeAreImageForm, label: e.target.value })
+                }
+                placeholder="TripAdvisor reviews"
+              />
+            </ModalField>
+            <ModalField label="Alt text (optional)" full>
+              <input
+                type="text"
+                value={whoWeAreImageForm.alt || ""}
+                onChange={(e) => setWhoWeAreImageForm({ ...whoWeAreImageForm, alt: e.target.value })}
+                placeholder="Screenshot of 5-star TripAdvisor reviews"
+              />
+            </ModalField>
+          </div>
+          <ModalActions
+            onCancel={() => setWhoWeAreImageModalOpen(false)}
+            submitLabel={editWhoWeAreImageIndex === null ? "Add image" : "Save image"}
+          />
+          {editWhoWeAreImageIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removeWhoWeAreImage(editWhoWeAreImageIndex)}
+            >
+              Remove image
             </button>
           )}
         </form>

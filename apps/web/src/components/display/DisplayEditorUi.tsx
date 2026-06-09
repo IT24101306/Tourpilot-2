@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 
-export type DisplayStep = "hero" | "packages" | "showcase" | "gallery" | "settings";
+export type DisplayStep = "hero" | "whoWeAre" | "packages" | "showcase" | "gallery" | "settings";
 
 export const DISPLAY_STEPS: { id: DisplayStep; label: string; hint: string }[] = [
   { id: "hero", label: "Hero", hint: "Banner, logo & headline" },
+  { id: "whoWeAre", label: "Who we are", hint: "About, social & badges" },
   { id: "packages", label: "Packages", hint: "Tour cards on your page" },
   { id: "showcase", label: "Showcase", hint: "Rating, quotes & reviews" },
   { id: "gallery", label: "Gallery & offers", hint: "Photos & promo cards" },

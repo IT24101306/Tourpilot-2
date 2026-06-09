@@ -546,12 +546,14 @@ model OfferTour {
 }
 
 model OfferRegistration {
-  id        String   @id @default(cuid()) @db.VarChar(25)
-  offerId   String   @db.VarChar(25)
-  offer     Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  userId    String   @db.VarChar(25)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid()) @db.VarChar(25)
+  offerId         String   @db.VarChar(25)
+  offer           Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  userId          String   @db.VarChar(25)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  screenshotUrl   String   @default("") @db.Text
+  termsAcceptedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   @@unique([offerId, userId])
 }

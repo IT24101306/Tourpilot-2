@@ -422,7 +422,11 @@ export async function seedExtendedData(ctx: DemoContext) {
   await prisma.offerRegistration.upsert({
     where: { offerId_userId: { offerId: ctx.agencyOffer.id, userId: tourist4.id } },
     update: {},
-    create: { offerId: ctx.agencyOffer.id, userId: tourist4.id },
+    create: {
+      offerId: ctx.agencyOffer.id,
+      userId: tourist4.id,
+      screenshotUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=400",
+    },
   });
 
   // —— Referrals ——

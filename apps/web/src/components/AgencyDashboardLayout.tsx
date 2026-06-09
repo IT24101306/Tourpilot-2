@@ -2,8 +2,10 @@ import { FormEvent, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "./NotificationBell";
 import { ConfirmActionProvider, useConfirmAction } from "./confirm/ConfirmActionContext";
+import { TourPilotBrand } from "./TourPilotBrand";
 import "../styles/dashboard.css";
 
 const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
@@ -16,7 +18,6 @@ const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/agency/travelers", label: "Travelers" },
   { to: "/dashboard/agency/all", label: "ALL" },
   { to: "/dashboard/agency/groups", label: "Groups" },
-  { to: "/dashboard/agency/offers", label: "Offers" },
   { to: "/dashboard/agency/display", label: "Display" },
 ];
 export function AgencyDashboardLayout() {
@@ -28,7 +29,7 @@ export function AgencyDashboardLayout() {
 }
 
 function AgencyDashboardLayoutInner() {
-  const { user, token, refreshUser } = useAuth();
+  const { user, token, refreshUser, logout } = useAuth();
   const { requestConfirm } = useConfirmAction();
   const agencyStatus = user?.agency?.status;
   const [topupOpen, setTopupOpen] = useState(false);
@@ -79,22 +80,36 @@ function AgencyDashboardLayoutInner() {
 
   return (
     <div className="agency-dashboard">
-      <header className="topbar topbar--site">
+      <div className="agency-dash-chrome">
+      <header className="topbar topbar--agency-dash">
         <div className="topbar-brand">
-          <Link to="/" className="brand">
-            Tour<span>Pilot</span>
-          </Link>
-          <span className="topbar-context">Agent dashboard</span>
+          <TourPilotBrand onDark />
+          <span className="topbar-context">
+            {user?.agency?.name
+              ? `${user.agency.name} agency dashboard`
+              : "Agency dashboard"}
+          </span>
         </div>
-        <div className="topbar-actions">
-          <button type="button" className="btn btn-primary" onClick={() => setTopupOpen(true)}>
-            Topup
-          </button>
-          <NotificationBell />
-          <Link to="/" className="btn btn-ghost">
-            Back to Site
-          </Link>
-        </div>
+        <nav className="nav nav--light" aria-label="Dashboard utilities">
+          <div className="nav-actions nav-actions--light">
+            <button type="button" className="nav-link-light" onClick={() => setTopupOpen(true)}>
+              Topup
+            </button>
+            <NavLink to="/dashboard/agency/offers" className={navLinkLightClass}>
+              Offers
+            </NavLink>
+            <NavLink to="/profile" className={navLinkLightClass}>
+              Profile
+            </NavLink>
+            <NotificationBell />
+            <Link to="/" className="nav-link-light">
+              Site
+            </Link>
+            <button type="button" className="nav-link-light" onClick={logout}>
+              Log out
+            </button>
+          </div>
+        </nav>
       </header>
 
       <nav className="agency-tabs" aria-label="Dashboard tabs">
@@ -109,6 +124,7 @@ function AgencyDashboardLayoutInner() {
           </NavLink>
         ))}
       </nav>
+      </div>
 
       <section className="agency-content">
         {agencyStatus === "PENDING" && (

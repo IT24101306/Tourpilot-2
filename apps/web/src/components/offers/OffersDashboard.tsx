@@ -38,6 +38,8 @@ type OfferRegistration = {
   id: string;
   offerId: string;
   userId: string;
+  screenshotUrl: string;
+  termsAcceptedAt: string;
   createdAt: string;
   user: { id: string; name: string; phone: string; createdAt: string };
 };
@@ -633,6 +635,16 @@ export function OffersDashboard({
                       <span>
                         <strong>{r.user.name}</strong>
                         <span className="muted gov-reg-phone">{r.user.phone}</span>
+                        {r.screenshotUrl && (
+                          <a
+                            href={r.screenshotUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="gov-reg-screenshot"
+                          >
+                            View screenshot
+                          </a>
+                        )}
                       </span>
                       <span className="muted">{new Date(r.createdAt).toLocaleString()}</span>
                     </li>

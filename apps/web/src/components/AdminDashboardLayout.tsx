@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { ConfirmActionProvider } from "./confirm/ConfirmActionContext";
+import { TourPilotBrand } from "./TourPilotBrand";
 
 const ADMIN_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/admin", label: "Overview", end: true },
@@ -21,21 +22,22 @@ export function AdminDashboardLayout() {
   return (
     <ConfirmActionProvider>
     <div className="agency-dashboard admin-dashboard">
-      <header className="topbar topbar--site">
+      <div className="agency-dash-chrome">
+      <header className="topbar topbar--agency-dash">
         <div className="topbar-brand">
-          <Link to="/" className="brand">
-            Tour<span>Pilot</span>
-          </Link>
+          <TourPilotBrand onDark />
           <span className="topbar-context">Platform admin</span>
         </div>
-        <div className="topbar-actions">
-          <Link to="/profile" className="btn btn-ghost btn-nav">
-            Account
-          </Link>
-          <Link to="/" className="btn btn-ghost btn-nav">
-            Public site
-          </Link>
-        </div>
+        <nav className="nav nav--light" aria-label="Admin utilities">
+          <div className="nav-actions nav-actions--light">
+            <Link to="/profile" className="nav-link-light">
+              Account
+            </Link>
+            <Link to="/" className="nav-link-light">
+              Public site
+            </Link>
+          </div>
+        </nav>
       </header>
 
       <nav className="agency-tabs admin-tabs" aria-label="Admin sections">
@@ -50,6 +52,7 @@ export function AdminDashboardLayout() {
           </NavLink>
         ))}
       </nav>
+      </div>
 
       <section className="agency-content admin-content">
         <Outlet />

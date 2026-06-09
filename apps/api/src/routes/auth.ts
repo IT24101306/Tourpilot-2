@@ -138,6 +138,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
             agencyId: agency.id,
             sections: {
               enabled: {
+                whoWeAre: true,
                 tours: true,
                 showcase: true,
                 reviews: true,
@@ -147,6 +148,10 @@ authRouter.post("/verify-registration", async (req, res, next) => {
               },
               content: {
                 heroHeadline: "Find your perfect trip experience.",
+                whoWeAreTitle: "WHO WE ARE",
+                whoWeAreDescription: "",
+                whoWeAreSocialLinks: [],
+                whoWeAreImages: [],
                 packagesTitle: "Ready-Made Packages",
                 packagesSubtitle:
                   "Curated routes with local guides, transport, and stays included.",

@@ -184,6 +184,7 @@ async function main() {
 
   const displayContent = {
     enabled: {
+      whoWeAre: true,
       tours: true,
       showcase: true,
       reviews: true,
@@ -193,6 +194,10 @@ async function main() {
     },
     content: {
       heroHeadline: "Find your perfect trip experience.",
+      whoWeAreTitle: "WHO WE ARE",
+      whoWeAreDescription: "",
+      whoWeAreSocialLinks: [],
+      whoWeAreImages: [],
       packagesTitle: "Ready-Made Packages",
       packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
       ratingScore: "4.9",
@@ -665,7 +670,11 @@ async function main() {
     await prisma.offerRegistration.upsert({
       where: { offerId_userId: { offerId, userId } },
       update: {},
-      create: { offerId, userId },
+      create: {
+        offerId,
+        userId,
+        screenshotUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=400",
+      },
     });
   }
 

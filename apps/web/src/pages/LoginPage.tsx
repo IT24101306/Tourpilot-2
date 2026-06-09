@@ -141,6 +141,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout
+      fullScreen
       title="Log in"
       subtitle={
         step === "password"

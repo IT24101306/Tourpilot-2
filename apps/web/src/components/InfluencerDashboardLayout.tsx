@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CreateReferralCodeModal } from "./influencer/CreateReferralCodeModal";
+import { TourPilotBrand } from "./TourPilotBrand";
 import {
   InfluencerDashboardContext,
   useInfluencerDashboardProvider,
@@ -22,21 +23,22 @@ export function InfluencerDashboardLayout() {
   return (
     <InfluencerDashboardContext.Provider value={value}>
       <div className="agency-dashboard influencer-dashboard">
-        <header className="topbar topbar--site">
+        <div className="agency-dash-chrome">
+        <header className="topbar topbar--agency-dash">
           <div className="topbar-brand">
-            <Link to="/" className="brand">
-              Tour<span>Pilot</span>
-            </Link>
+            <TourPilotBrand onDark />
             <span className="topbar-context">Partner growth</span>
           </div>
-          <div className="topbar-actions">
-            <Link to="/profile" className="btn btn-ghost">
-              Profile
-            </Link>
-            <Link to="/" className="btn btn-ghost">
-              Public site
-            </Link>
-          </div>
+          <nav className="nav nav--light" aria-label="Partner utilities">
+            <div className="nav-actions nav-actions--light">
+              <Link to="/profile" className="nav-link-light">
+                Profile
+              </Link>
+              <Link to="/" className="nav-link-light">
+                Public site
+              </Link>
+            </div>
+          </nav>
         </header>
 
         <nav className="agency-tabs" aria-label="Influencer dashboard tabs">
@@ -51,6 +53,7 @@ export function InfluencerDashboardLayout() {
             </NavLink>
           ))}
         </nav>
+        </div>
 
         <section className="agency-content">
           {value.error && <p className="partner-toast partner-toast--error">{value.error}</p>}

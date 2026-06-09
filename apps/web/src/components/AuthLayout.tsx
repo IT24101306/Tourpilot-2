@@ -1,21 +1,45 @@
 import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { TourPilotBrand } from "./TourPilotBrand";
 
 export function AuthLayout({
   title,
   subtitle,
   children,
+  fullScreen = false,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
+  fullScreen?: boolean;
 }) {
+  if (fullScreen) {
+    return (
+      <div className="auth-page auth-page--fullscreen">
+        <div className="auth-page__backdrop" aria-hidden="true" />
+        <header className="auth-page__top">
+          <TourPilotBrand onImage />
+        </header>
+        <div className="auth-card auth-card--floating">
+          <div className="auth-box auth-box--floating auth-glass">
+            <div className="auth-glass__shine" aria-hidden="true" />
+            <div className="auth-glass__content">
+              <h2 style={{ margin: "0 0 8px" }}>{title}</h2>
+              <p className="muted auth-glass__subtitle" style={{ marginBottom: 20 }}>
+                {subtitle}
+              </p>
+              {children}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-page">
       <div className="auth-hero">
-        <Link to="/" className="brand">
-          Tour<span>Pilot</span>
-        </Link>
+        <TourPilotBrand />
         <div
           className="hero-image"
           style={{

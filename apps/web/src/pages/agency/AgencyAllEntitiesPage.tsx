@@ -14,21 +14,14 @@ import {
   type EntityTypeKey,
 } from "../../components/entity/entityTypes";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
+import { EntityTypeLineIcon } from "../../components/icons/LineIcons";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 
-const TYPE_ICONS: Record<string, string> = {
-  HOTEL: "",
-  VIEWPOINT: "",
-  ACTIVITY: "",
-  RESTAURANT: "",
-  OTHER: "",
-};
-
-const PICKER_TYPES: { value: EntityTypeKey; label: string; icon: string }[] = [
-  { value: "HOTEL", label: "Hotel", icon: "" },
-  { value: "VIEWPOINT", label: "Viewpoint", icon: "" },
-  { value: "ACTIVITY", label: "Activity", icon: "" },
-  { value: "RESTAURANT", label: "Restaurant", icon: "" },
+const PICKER_TYPES: { value: EntityTypeKey; label: string }[] = [
+  { value: "HOTEL", label: "Hotel" },
+  { value: "VIEWPOINT", label: "Viewpoint" },
+  { value: "ACTIVITY", label: "Activity" },
+  { value: "RESTAURANT", label: "Restaurant" },
 ];
 
 type EntityMediaItem =
@@ -48,10 +41,6 @@ type AgencyEntity = {
   metadata?: Record<string, unknown> | null;
 };
 
-function typeIcon(type: string) {
-  return TYPE_ICONS[type] ?? "📍";
-}
-
 export function AgencyAllEntitiesPage() {
   const { token } = useAuth();
   const { requestConfirm } = useConfirmAction();
@@ -69,14 +58,14 @@ export function AgencyAllEntitiesPage() {
   });
 
   const filterTabs = useMemo(() => {
-    const tabs: { value: string; label: string; icon: string }[] = [
-      { value: "all", label: "All", icon: "📋" },
-      ...PICKER_TYPES.map((t) => ({ value: t.value, label: t.label, icon: t.icon })),
+    const tabs: { value: string; label: string }[] = [
+      { value: "all", label: "All" },
+      ...PICKER_TYPES.map((t) => ({ value: t.value, label: t.label })),
     ];
     const legacyTypes = new Set(entities.map((e) => e.type));
     for (const t of legacyTypes) {
       if (!ALLOWED_ENTITY_TYPES.includes(t as EntityTypeKey)) {
-        tabs.push({ value: t, label: entityTypeLabel(t), icon: typeIcon(t) });
+        tabs.push({ value: t, label: entityTypeLabel(t) });
       }
     }
     return tabs;
@@ -188,7 +177,9 @@ export function AgencyAllEntitiesPage() {
               className={`entities-type-tab ${typeFilter === t.value ? "active" : ""}`}
               onClick={() => setTypeFilter(t.value)}
             >
-              <span aria-hidden="true">{t.icon}</span>
+              <span aria-hidden="true">
+                <EntityTypeLineIcon type={t.value} size={16} />
+              </span>
               {t.label}
               {count > 0 && <span className="entities-type-count">{count}</span>}
             </button>
@@ -314,7 +305,7 @@ export function AgencyAllEntitiesPage() {
           {entities.length === 0 ? (
             <div className="entities-empty">
               <span className="entities-empty-icon" aria-hidden="true">
-                📍
+                <EntityTypeLineIcon type="OTHER" size={28} />
               </span>
               <p>
                 <strong>No entities yet</strong>
@@ -344,7 +335,9 @@ export function AgencyAllEntitiesPage() {
                       </td>
                       <td>
                         <span className={`entities-type-badge type-${ent.type.toLowerCase()}`}>
-                          <span aria-hidden="true">{typeIcon(ent.type)}</span>
+                          <span aria-hidden="true">
+                            <EntityTypeLineIcon type={ent.type} size={14} />
+                          </span>
                           {entityTypeLabel(ent.type)}
                         </span>
                       </td>

@@ -1,8 +1,10 @@
+import { useState, type MouseEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { currentPath, loginPath } from "../../utils/authRedirect";
 import { CoverImage } from "../CoverImage";
-import { daysUntilEnd } from "../../lib/discoveryUtils";
 import { isFreeOffer } from "../../lib/offerPricing";
+import { OfferCountdown } from "./OfferCountdown";
+import { OfferRegistrantsModal } from "./OfferRegistrantsModal";
 import { OfferShareButton } from "./OfferShareButton";
 
 export type DiscoveryOffer = {
@@ -71,9 +73,12 @@ export function DiscoveryOfferCard({
   cardId,
 }: Props) {
   const location = useLocation();
-  const daysLeft = daysUntilEnd(offer.validUntil);
-  const urgency =
-    daysLeft === 0 ? "Ends today" : daysLeft === 1 ? "1 day left" : `${daysLeft} days left`;
+  const [registrantsOpen, setRegistrantsOpen] = useState(false);
+
+  function openRegistrants(e: MouseEvent<HTMLElement>) {
+    if ((e.target as HTMLElement).closest("a, button")) return;
+    setRegistrantsOpen(true);
+  }
 
   const tourHref =
     offer.agencySlug && offer.tourSlug
@@ -84,11 +89,12 @@ export function DiscoveryOfferCard({
     return (
       <article
         id={cardId}
-        className="disc-offer-card disc-offer-card--page"
+        className="disc-offer-card disc-offer-card--page disc-offer-card--clickable"
+        onClick={openRegistrants}
       >
         <div className="disc-offer-media">
           <CoverImage src={offer.imageUrl} className="disc-offer-media-img" alt="" />
-          <span className="disc-offer-urgency disc-offer-urgency--overlay">{urgency}</span>
+          <OfferCountdown validUntil={offer.validUntil} overlay />
           {offer.spotsLeft <= 10 && (
             <span className="disc-offer-scarcity disc-offer-scarcity--overlay">
               {offer.spotsLeft === 0 ? "Full" : `${offer.spotsLeft} spots left`}
@@ -139,12 +145,19 @@ export function DiscoveryOfferCard({
             )}
           </div>
         </div>
+
+        <OfferRegistrantsModal
+          open={registrantsOpen}
+          offer={offer}
+          onClose={() => setRegistrantsOpen(false)}
+        />
       </article>
     );
   }
 
   const cardClass = [
     "disc-offer-card",
+    "disc-offer-card--clickable",
     compact && "disc-offer-card--compact",
     hero && "disc-offer-card--hero",
   ]
@@ -152,14 +165,18 @@ export function DiscoveryOfferCard({
     .join(" ");
 
   return (
-    <article id={cardId} className={cardClass}>
+    <article
+      id={cardId}
+      className={cardClass}
+      onClick={openRegistrants}
+    >
       <div className="disc-offer-top">
-        <span className="disc-offer-urgency">{urgency}</span>
+        <OfferCountdown validUntil={offer.validUntil} />
         <span className="disc-offer-top-end">
           {!hero && offer.spotsLeft <= 5 && (
             <span className="disc-offer-scarcity">Only {offer.spotsLeft} spots</span>
           )}
-          {showShare && <OfferShareButton offer={offer} compact={hero} />}
+          {showShare && <OfferShareButton offer={offer} />}
         </span>
       </div>
       <h3>{offer.title}</h3>
@@ -176,6 +193,12 @@ export function DiscoveryOfferCard({
           {registerLabel}
         </button>
       )}
+
+      <OfferRegistrantsModal
+        open={registrantsOpen}
+        offer={offer}
+        onClose={() => setRegistrantsOpen(false)}
+      />
     </article>
   );
 }

@@ -1,3 +1,4 @@
+import { EntityTypeLineIcon } from "../icons/LineIcons";
 import {
   ENTITY_TYPE_OPTIONS,
   FIELDS_BY_TYPE,
@@ -12,13 +13,6 @@ type Props = {
   typePicker?: "select" | "chips";
   showName?: boolean;
   nameRequired?: boolean;
-};
-
-const TYPE_ICONS: Record<EntityTypeKey, string> = {
-  HOTEL: "🏨",
-  VIEWPOINT: "🏔️",
-  ACTIVITY: "🎯",
-  RESTAURANT: "🍽️",
 };
 
 export function EntityFormFields({
@@ -67,7 +61,7 @@ export function EntityFormFields({
                   onClick={() => onTypeChange(t.value)}
                 >
                   <span className="entities-type-chip-icon" aria-hidden="true">
-                    {TYPE_ICONS[t.value]}
+                    <EntityTypeLineIcon type={t.value} size={16} />
                   </span>
                   {t.label}
                 </button>

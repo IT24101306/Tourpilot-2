@@ -2,17 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { loginPath } from "../utils/authRedirect";
 import { CoverImage } from "../components/CoverImage";
-import { navLinkClass } from "../utils/navLinkClass";
+import { navLinkLightClass } from "../utils/navLinkClass";
+import { NotificationBell } from "../components/NotificationBell";
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
-import { api, ApiError } from "../api/client";
+import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import {
   DiscoveryOfferCard,
   type DiscoveryOffer,
 } from "../components/discovery/DiscoveryOfferCard";
+import { OfferRegistrationModal } from "../components/discovery/OfferRegistrationModal";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
+import { LineCheckIcon, LineUserIcon } from "../components/icons/LineIcons";
+import { TourPilotBrand } from "../components/TourPilotBrand";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
+import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav";
+import { AgencyWhoWeAreSection } from "../components/display/AgencyWhoWeAreSection";
 import {
   defaultDisplayConfig,
   resolveHeroSlides,
@@ -149,12 +155,23 @@ export function AgencyDetailPage() {
   const inquireTourId = searchParams.get("inquireTour");
   const focusInquiryForm =
     Boolean(inquireTourId) || location.hash === "#request-custom-tour";
-  const { token } = useAuth();
+  const { token, user, logout } = useAuth();
   const agencyReturnPath = slug
     ? `/agencies/${slug}${refCode ? `?ref=${encodeURIComponent(refCode)}` : ""}`
     : "/agencies";
   const [agency, setAgency] = useState<Agency | null>(null);
   const [offerMsg, setOfferMsg] = useState("");
+  const [registerOffer, setRegisterOffer] = useState<DiscoveryOffer | null>(null);
+  const [navSolid, setNavSolid] = useState(false);
+
+  useEffect(() => {
+    function onScroll() {
+      setNavSolid(window.scrollY > 48);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -216,25 +233,21 @@ export function AgencyDetailPage() {
     );
   }
 
+  function scrollToOffers() {
+    document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   function scrollToInquiry() {
     document.getElementById("request-custom-tour")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  async function registerForOffer(offerId: string) {
+  function openOfferRegistration(offer: DiscoveryOffer) {
     if (!token) {
       navigate(loginPath(agencyReturnPath));
       return;
     }
-    if (!slug) return;
     setOfferMsg("");
-    try {
-      await api(`/offers/${offerId}/register`, { method: "POST", token });
-      setOfferMsg("You are registered — the agency will follow up.");
-      const refreshed = await api<Agency>(`/agencies/${slug}`);
-      setAgency(refreshed);
-    } catch (e) {
-      setOfferMsg(e instanceof ApiError ? e.message : "Registration failed");
-    }
+    setRegisterOffer(offer);
   }
 
   const [col1, col2, col3] = splitGalleryColumns(gallery);
@@ -251,21 +264,44 @@ export function AgencyDetailPage() {
       ? `${agency.reviewCount}+ traveler reviews`
       : content.highlights[0] || "Trusted local journeys";
 
+  const hasOffers = loyaltyOffers.length > 0 || cmsOffers.length > 0;
+  const hasScenicContent =
+    (showOffers && hasOffers) || showTours || showShowcase;
+  const hasGallery = showGallery && gallery.length > 0;
+  const heroSectionLinks: { id: string; label: string }[] = [
+    { id: "who-we-are", label: "Who we are" },
+  ];
+  if (showOffers && hasOffers) heroSectionLinks.push({ id: "offers", label: "Offers" });
+  if (showTours) heroSectionLinks.push({ id: "packages", label: "Packages" });
+  if (showShowcase && showReviews) heroSectionLinks.push({ id: "reviews", label: "Reviews" });
+  if (hasGallery) heroSectionLinks.push({ id: "gallery", label: "Gallery" });
+  if (inquiryEnabled) heroSectionLinks.push({ id: "request-custom-tour", label: "Inquire" });
+
   return (
     <div className="agency-display">
-      <header className="topbar topbar--site">
-        <Link to="/" className="brand">
-          Tour<span>Pilot</span>
-        </Link>
-        <nav className="nav" aria-label="Agency storefront">
-          <div className="nav-actions">
-            <NavLink to="/agencies" className={navLinkClass}>
-              All agencies
-            </NavLink>
-            {inquiryEnabled && (
-              <button type="button" className="btn btn-teal" onClick={scrollToInquiry}>
-                Plan a trip
-              </button>
+      <header
+        className={`topbar topbar--site topbar--hero${navSolid ? " topbar--hero-solid" : ""}`}
+      >
+        <TourPilotBrand onImage />
+        <nav className="nav nav--light" aria-label="Agency storefront">
+          <div className="nav-actions nav-actions--light">
+            <NotificationBell />
+            {user ? (
+              <>
+                <NavLink to="/profile" className="agency-icon-btn" aria-label="Profile">
+                  <LineUserIcon />
+                </NavLink>
+                <button type="button" className="nav-link-light" onClick={logout}>
+                  Log out
+                </button>
+              </>
+            ) : (
+              <NavLink
+                to={loginPath(agencyReturnPath)}
+                className={navLinkLightClass}
+              >
+                Login
+              </NavLink>
             )}
           </div>
         </nav>
@@ -297,46 +333,116 @@ export function AgencyDetailPage() {
           </div>
 
           <div className="agency-hero-banner__actions">
+            {showOffers && hasOffers && (
+              <button type="button" className="agency-hero-banner__cta" onClick={scrollToOffers}>
+                View offers
+              </button>
+            )}
             {inquiryEnabled && (
-              <button type="button" className="agency-hero-banner__cta" onClick={scrollToInquiry}>
+              <button type="button" className="agency-hero-banner__ghost" onClick={scrollToInquiry}>
                 {content.ctaLabel || "Plan your trip"}
               </button>
             )}
-            {showTours && packages.length > 0 && (
-              <a href="#packages" className="agency-hero-banner__ghost">
-                Browse packages
-              </a>
-            )}
           </div>
         </div>
+        <AgencyHeroSectionNav links={heroSectionLinks} />
       </section>
 
-      <div className="agency-display-inner">
-        {showTours && (
-          <section className="agency-section" id="packages">
-            <div className="agency-display-section-head">
-              <h2>{content.packagesTitle}</h2>
-              <p>{content.packagesSubtitle}</p>
-            </div>
-            {packages.length === 0 ? (
-              <p className="muted">No packages published yet.</p>
-            ) : (
-              <div className="agency-package-grid">
-                {packages.map((pkg, i) => (
-                  <PackageCard
-                    key={`${pkg.tourId ?? pkg.title}-${i}`}
-                    pkg={pkg}
-                    tour={pkg.tourId ? tourById.get(pkg.tourId) : undefined}
-                    agencySlug={agency.slug}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+      <div className="agency-display-body">
+        <div className="agency-display-band agency-display-band--white">
+          <div className="agency-display-inner agency-display-inner--who">
+            <AgencyWhoWeAreSection
+              title={content.whoWeAreTitle}
+              description={content.whoWeAreDescription}
+              socialLinks={content.whoWeAreSocialLinks}
+              images={content.whoWeAreImages}
+              fallbackDescription={agency.description}
+            />
+          </div>
+        </div>
 
-        {showShowcase && (
-          <section className="agency-showcase">
+        {hasScenicContent && (
+        <div className="agency-display-band agency-display-band--scenic">
+          <div className="agency-display-inner">
+          {showOffers && hasOffers && (
+            <section className="agency-section agency-offers" id="offers">
+              <div className="agency-display-section-head">
+                <h2>Special offers</h2>
+                <p>Limited deals and promotions from {agency.name}.</p>
+              </div>
+              {offerMsg && <p className="agency-offer-status">{offerMsg}</p>}
+              {loyaltyOffers.length > 0 && (
+                <div className="agency-loyalty-offers disc-offer-grid">
+                  {loyaltyOffers.map((offer) => (
+                    <DiscoveryOfferCard
+                      key={offer.id}
+                      offer={{ ...offer, agencyName: agency.name, agencySlug: agency.slug }}
+                      compact
+                      onRegister={
+                        offer.spotsLeft > 0
+                          ? () =>
+                              openOfferRegistration({
+                                ...offer,
+                                agencyName: agency.name,
+                                agencySlug: agency.slug,
+                              })
+                          : undefined
+                      }
+                      registerLabel={offer.spotsLeft > 0 ? "Register for offer" : "Offer full"}
+                    />
+                  ))}
+                </div>
+              )}
+              {cmsOffers.length > 0 && (
+                <div className="agency-offers-grid">
+                  {cmsOffers.map((offer: DisplayOffer, i) => (
+                    <article key={i} className="agency-offer-card">
+                      {offer.imageUrl && (
+                        <div
+                          className="agency-offer-card-cover"
+                          style={{ backgroundImage: `url(${offer.imageUrl})` }}
+                        />
+                      )}
+                      <div className="agency-offer-card-body">
+                        {offer.badge && <span className="agency-offer-badge">{offer.badge}</span>}
+                        <h3>{offer.title}</h3>
+                        <p>{offer.description}</p>
+                        {offer.priceLabel && (
+                          <p className="agency-offer-price">{offer.priceLabel}</p>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {showTours && (
+            <section className="agency-section" id="packages">
+              <div className="agency-display-section-head">
+                <h2>{content.packagesTitle}</h2>
+                <p>{content.packagesSubtitle}</p>
+              </div>
+              {packages.length === 0 ? (
+                <p className="muted">No packages published yet.</p>
+              ) : (
+                <div className="agency-package-grid">
+                  {packages.map((pkg, i) => (
+                    <PackageCard
+                      key={`${pkg.tourId ?? pkg.title}-${i}`}
+                      pkg={pkg}
+                      tour={pkg.tourId ? tourById.get(pkg.tourId) : undefined}
+                      agencySlug={agency.slug}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {showShowcase && (
+            <section className="agency-showcase" id={showReviews ? "reviews" : undefined}>
             <div className="agency-showcase-trust">
               <div className="agency-showcase-rating-block">
                 <div className="agency-showcase-rating">
@@ -350,7 +456,7 @@ export function AgencyDetailPage() {
                 {content.highlights.slice(0, 4).map((line, i) => (
                   <li key={i}>
                     <span className="agency-highlight-icon" aria-hidden="true">
-                      ✓
+                      <LineCheckIcon size={14} />
                     </span>
                     {line}
                   </li>
@@ -391,83 +497,57 @@ export function AgencyDetailPage() {
                 </div>
               )}
             </div>
-          </section>
+            </section>
+          )}
+          </div>
+        </div>
         )}
 
-        {showOffers && (loyaltyOffers.length > 0 || cmsOffers.length > 0) && (
-          <section className="agency-section agency-offers">
-            <div className="agency-display-section-head">
-              <h2>Special offers</h2>
-              <p>Limited deals and promotions from {agency.name}.</p>
+        {hasGallery && (
+          <div className="agency-display-band agency-display-band--white">
+            <div className="agency-display-inner">
+              <section className="agency-section agency-gallery-section" id="gallery">
+                <div className="agency-display-section-head">
+                  <h2>Gallery</h2>
+                  <p>Moments from the road with {agency.name}.</p>
+                </div>
+                <div className="agency-gallery-wall">
+                  <GalleryColumn items={col1} sizeClass="wide" />
+                  <GalleryColumn items={col2} sizeClass="tall" />
+                  <GalleryColumn items={col3} sizeClass="short" />
+                </div>
+              </section>
             </div>
-            {offerMsg && <p className="agency-offer-status">{offerMsg}</p>}
-            {loyaltyOffers.length > 0 && (
-              <div className="agency-loyalty-offers disc-offer-grid">
-                {loyaltyOffers.map((offer) => (
-                  <DiscoveryOfferCard
-                    key={offer.id}
-                    offer={{ ...offer, agencyName: agency.name, agencySlug: agency.slug }}
-                    compact
-                    onRegister={
-                      offer.spotsLeft > 0 ? () => void registerForOffer(offer.id) : undefined
-                    }
-                    registerLabel={offer.spotsLeft > 0 ? "Register for offer" : "Offer full"}
-                  />
-                ))}
-              </div>
-            )}
-            {cmsOffers.length > 0 && (
-              <div className="agency-offers-grid">
-                {cmsOffers.map((offer: DisplayOffer, i) => (
-                  <article key={i} className="agency-offer-card">
-                    {offer.imageUrl && (
-                      <div
-                        className="agency-offer-card-cover"
-                        style={{ backgroundImage: `url(${offer.imageUrl})` }}
-                      />
-                    )}
-                    <div className="agency-offer-card-body">
-                      {offer.badge && <span className="agency-offer-badge">{offer.badge}</span>}
-                      <h3>{offer.title}</h3>
-                      <p>{offer.description}</p>
-                      {offer.priceLabel && <p className="agency-offer-price">{offer.priceLabel}</p>}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+          </div>
         )}
 
-        {showGallery && gallery.length > 0 && (
-          <section className="agency-section agency-gallery-section">
-            <div className="agency-display-section-head">
-              <h2>Gallery</h2>
-              <p>Moments from the road with {agency.name}.</p>
-            </div>
-            <div className="agency-gallery-wall">
-              <GalleryColumn items={col1} sizeClass="wide" />
-              <GalleryColumn items={col2} sizeClass="tall" />
-              <GalleryColumn items={col3} sizeClass="short" />
-            </div>
-          </section>
-        )}
-
-        {agency.description && (
-          <p className="agency-display-about">{agency.description}</p>
+        {inquiryEnabled && (
+          <div className="agency-display-band agency-display-band--green">
+            <AgencyInquirySection
+              agencyId={agency.id}
+              agencyName={agency.name}
+              agencySlug={agency.slug}
+              refCode={refCode}
+              tour={inquireTour}
+              focusOnMount={focusInquiryForm}
+            />
+          </div>
         )}
       </div>
 
-      {inquiryEnabled && (
-        <AgencyInquirySection
-          agencyId={agency.id}
-          agencyName={agency.name}
-          agencySlug={agency.slug}
-          refCode={refCode}
-          tour={inquireTour}
-          focusOnMount={focusInquiryForm}
-        />
-      )}
+      <OfferRegistrationModal
+        open={!!registerOffer}
+        offer={registerOffer}
+        token={token}
+        onClose={() => setRegisterOffer(null)}
+        onSuccess={() => {
+          if (!slug) return;
+          setOfferMsg("You are registered — the agency will follow up.");
+          void api<Agency>(`/agencies/${slug}`)
+            .then(setAgency)
+            .catch(console.error);
+        }}
+      />
     </div>
   );
 }

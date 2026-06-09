@@ -367,7 +367,7 @@
   padding: 0;
 }
 
-.agency-tabs {
+.agency-panel-tabs {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -510,6 +510,31 @@
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   padding: 20px;
+}
+
+.entity-dialog form .dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 16px;
+  padding-top: 16px;
+  padding-bottom: 4px;
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+
+.entity-dialog form .display-modal-delete {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 10px;
+  background: #fff;
+}
+
+.entity-dialog .image-url-preview-wrap {
+  max-width: 100%;
+  max-height: 180px;
+  aspect-ratio: auto;
 }
 
 .driver-calendar-dialog {
@@ -1084,6 +1109,15 @@
   border-radius: 14px;
   background: linear-gradient(180deg, #f4fbf6 0%, #eef8f1 100%);
   box-shadow: 0 8px 24px rgba(26, 107, 69, 0.08);
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.display-save-bar .display-save-btn,
+.display-save-bar button {
+  pointer-events: auto;
 }
 
 .display-save-bar-copy strong {
@@ -1284,6 +1318,17 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding-bottom: 8px;
+}
+
+.display-editor-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 0 4px;
+  padding: 0 0 16px;
+  background: #f4f8f6;
+  border-bottom: 1px solid rgba(0, 40, 15, 0.08);
 }
 
 .display-editor-toolbar {
@@ -2501,8 +2546,10 @@
 }
 
 .entities-type-chip-icon {
-  font-size: 1rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green);
 }
 
 .entities-media-add {
@@ -2748,8 +2795,10 @@
 }
 
 .entities-empty-icon {
-  font-size: 2.5rem;
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green);
   margin-bottom: 12px;
 }
 
@@ -2842,4 +2891,24 @@
 
 .confirm-action-actions {
   margin-top: 4px;
+}
+
+/* Agency dashboard — green-accent cards (loads after theme) */
+.agency-dashboard .display-step-panel,
+.agency-dashboard .entities-form-card,
+.agency-dashboard .entities-list-card,
+.agency-dashboard .display-save-bar {
+  border: 1px solid rgba(0, 175, 2, 0.22);
+  border-left: 4px solid var(--green);
+  box-shadow: 0 10px 32px rgba(0, 140, 2, 0.14), 0 2px 10px rgba(0, 100, 10, 0.08);
+}
+
+.agency-dashboard .display-step-panel-head h3::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--green);
+  margin-bottom: 8px;
 }

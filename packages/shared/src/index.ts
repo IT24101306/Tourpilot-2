@@ -48,6 +48,7 @@ export {
 } from "./phone.js";
 
 export {
+  CEYLON_TRAILS_HERO_IMAGES,
   DEFAULT_TOUR_COVER_URL,
   MEDIA,
   isUsableImageUrl,

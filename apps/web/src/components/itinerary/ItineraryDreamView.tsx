@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { EntityTypeLineIcon } from "../icons/LineIcons";
 import { ModuleHeader } from "../module/ModuleHeader";
 import type { ItineraryView } from "../../types/itinerary";
 
@@ -7,16 +8,6 @@ const KIND_LABEL: Record<string, string> = {
   REQUIRED: "Included",
   OPTIONAL: "Optional upgrade",
   UPGRADE: "Premium add-on",
-};
-
-const ENTITY_ICON: Record<string, string> = {
-  HOTEL: "🏨",
-  VIEWPOINT: "🏔",
-  ACTIVITY: "🎯",
-  RESTAURANT: "🍽",
-  TRANSPORT: "🚐",
-  FREE_TIME: "☀",
-  OTHER: "✦",
 };
 
 type Props = {
@@ -116,7 +107,7 @@ export function ItineraryDreamView({
                           className={`itin-moment itin-moment--${item.kind.toLowerCase()}`}
                         >
                           <span className="itin-moment-icon" aria-hidden="true">
-                            {ENTITY_ICON[item.entity?.type ?? "OTHER"] ?? "✦"}
+                            <EntityTypeLineIcon type={item.entity?.type ?? "OTHER"} size={16} />
                           </span>
                           <div className="itin-moment-body">
                             <div className="itin-moment-head">

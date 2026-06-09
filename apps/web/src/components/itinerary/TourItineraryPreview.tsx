@@ -1,3 +1,5 @@
+import { EntityTypeLineIcon } from "../icons/LineIcons";
+
 type TourDay = {
   dayNumber: number;
   title: string | null;
@@ -7,16 +9,6 @@ type TourDay = {
     priceLkr: number | null;
     entity: { name: string; type?: string } | null;
   }>;
-};
-
-const ENTITY_ICON: Record<string, string> = {
-  HOTEL: "🏨",
-  VIEWPOINT: "🏔",
-  ACTIVITY: "🎯",
-  RESTAURANT: "🍽",
-  TRANSPORT: "🚐",
-  FREE_TIME: "☀",
-  OTHER: "✦",
 };
 
 type Props = {
@@ -48,7 +40,7 @@ export function TourItineraryPreview({ days, title = "Your journey, day by day" 
                     className={`itin-moment itin-moment--${item.kind.toLowerCase()}`}
                   >
                     <span className="itin-moment-icon" aria-hidden="true">
-                      {ENTITY_ICON[item.entity?.type ?? "OTHER"] ?? "✦"}
+                      <EntityTypeLineIcon type={item.entity?.type ?? "OTHER"} size={16} />
                     </span>
                     <div className="itin-moment-body">
                       <strong>{item.entity?.name || item.label}</strong>

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { currentPath, loginPath, registerPath } from "../../utils/authRedirect";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { LineCheckIcon } from "../icons/LineIcons";
 import {
   defaultTourInquiryMessage,
   InquiryTourChip,
@@ -167,15 +168,21 @@ export function AgencyInquirySection({
             </p>
             <ul className="agency-inquiry-trust" aria-hidden="true">
               <li>
-                <span className="agency-inquiry-trust-icon">✓</span>
+                <span className="agency-inquiry-trust-icon">
+                  <LineCheckIcon size={14} />
+                </span>
                 No payment required to inquire
               </li>
               <li>
-                <span className="agency-inquiry-trust-icon">✓</span>
+                <span className="agency-inquiry-trust-icon">
+                  <LineCheckIcon size={14} />
+                </span>
                 Direct reply from the agency team
               </li>
               <li>
-                <span className="agency-inquiry-trust-icon">✓</span>
+                <span className="agency-inquiry-trust-icon">
+                  <LineCheckIcon size={14} />
+                </span>
                 Refine the itinerary together
               </li>
             </ul>

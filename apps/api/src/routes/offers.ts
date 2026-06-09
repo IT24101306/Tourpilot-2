@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { z } from "zod";
+import { storedImageUrlSchema } from "../lib/imageUrlSchema.js";
 import { prisma } from "../lib/prisma.js";
 import {
   applyOfferUpdate,
@@ -14,6 +16,11 @@ import {
 import { authRequired, requireRoles } from "../middleware/auth.js";
 
 export const offersRouter = Router();
+
+const offerRegisterBodySchema = z.object({
+  screenshotUrl: storedImageUrlSchema,
+  termsAccepted: z.literal(true),
+});
 
 offersRouter.get("/active", async (_req, res, next) => {
   try {
@@ -67,8 +74,44 @@ offersRouter.get("/", authRequired, requireRoles("ADMIN"), async (_req, res, nex
   }
 });
 
+/** Public: registered tourists for an active offer (name + avatar for social proof). */
+offersRouter.get("/:id/registrations", async (req, res, next) => {
+  try {
+    const offer = await prisma.offer.findFirst({
+      where: { id: req.params.id, isActive: true },
+    });
+    if (!offer) {
+      return res.status(404).json({ error: "Offer not found" });
+    }
+
+    const regs = await prisma.offerRegistration.findMany({
+      where: { offerId: offer.id },
+      include: {
+        user: { select: { id: true, name: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    res.json(
+      regs.map((r) => ({
+        id: r.id,
+        registeredAt: r.createdAt,
+        user: {
+          id: r.user.id,
+          name: r.user.name,
+          avatarUrl: r.user.avatarUrl,
+        },
+      }))
+    );
+  } catch (e) {
+    next(e);
+  }
+});
+
 offersRouter.post("/:id/register", authRequired, async (req, res, next) => {
   try {
+    const body = offerRegisterBodySchema.parse(req.body);
+    const now = new Date();
     const offer = await prisma.offer.findUnique({
       where: { id: req.params.id },
       include: { _count: { select: { registrations: true } } },
@@ -78,12 +121,21 @@ offersRouter.post("/:id/register", authRequired, async (req, res, next) => {
       return res.status(404).json({ error: "Offer not found" });
     }
 
+    if (offer.validFrom > now || offer.validUntil < now) {
+      return res.status(410).json({ error: "This offer is no longer available" });
+    }
+
     if (offer._count.registrations >= offer.registrationCap) {
       return res.status(409).json({ error: "Offer registration cap reached" });
     }
 
     const reg = await prisma.offerRegistration.create({
-      data: { offerId: offer.id, userId: req.user!.id },
+      data: {
+        offerId: offer.id,
+        userId: req.user!.id,
+        screenshotUrl: body.screenshotUrl,
+        termsAcceptedAt: now,
+      },
     });
 
     res.status(201).json(reg);
