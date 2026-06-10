@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { currentPath, loginPath } from "./utils/authRedirect";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CurrencyProvider } from "./context/CurrencyContext";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
@@ -76,6 +77,7 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
 export default function App() {
   return (
     <AuthProvider>
+      <CurrencyProvider>
       <BrowserRouter>
         <Routes>
           <Route element={<PublicLayout />}>
@@ -211,6 +213,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </CurrencyProvider>
     </AuthProvider>
   );
 }

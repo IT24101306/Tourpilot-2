@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import { serializeItineraryEntity } from "../lib/entitySerialize.js";
 import { resolveReferralCommissionLkr } from "../lib/referralCommission.js";
 import { createInquiryItinerary, itineraryBodySchema } from "../routes/inquiryResponses.js";
 import { createInquiryMessage } from "./inquiryMessages.js";
@@ -236,7 +237,12 @@ export function serializeProposal(proposal: {
           kind: string;
           priceLkr: unknown;
           priceOnRequest: boolean;
-          entity: { name: string; type: string } | null;
+          entity: {
+            name: string;
+            type: string;
+            description: string | null;
+            media: unknown;
+          } | null;
         }>;
       }>;
     } | null;
@@ -269,7 +275,7 @@ export function serializeProposal(proposal: {
                 kind: li.kind,
                 priceLkr: li.priceLkr != null ? Number(li.priceLkr) : null,
                 priceOnRequest: li.priceOnRequest,
-                entity: li.entity,
+                entity: serializeItineraryEntity(li.entity),
               })),
             })),
           }

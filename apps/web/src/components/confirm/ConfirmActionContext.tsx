@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { lockBodyScroll, unlockBodyScroll } from "../../lib/scrollLock";
 
 export type ConfirmSummaryItem = {
   label: string;
@@ -56,8 +57,7 @@ function ConfirmActionDialog({
 }) {
   useEffect(() => {
     if (!request?.open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockBodyScroll();
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !loading) onCancel();
@@ -65,7 +65,7 @@ function ConfirmActionDialog({
 
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlockBodyScroll();
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [request?.open, loading, onCancel]);

@@ -4,11 +4,14 @@ export { commissionLkrFromBase, tourCommissionLkr, tourPublicPriceLkr };
 
 type TourWithAgency = {
   basePriceLkr: unknown;
+  influencerCommissionPct?: unknown | null;
   influencerCommissionLkr?: unknown;
   agency?: { influencerCommissionPct?: unknown } | null;
 };
 
 export function agencyCommissionPct(tour: TourWithAgency, fallbackPct?: number | null): number {
+  const fromTour = tour.influencerCommissionPct;
+  if (fromTour != null && Number(fromTour) >= 0) return Number(fromTour);
   const fromAgency = tour.agency?.influencerCommissionPct;
   if (fromAgency != null && Number(fromAgency) >= 0) return Number(fromAgency);
   if (fallbackPct != null && Number(fallbackPct) >= 0) return Number(fallbackPct);

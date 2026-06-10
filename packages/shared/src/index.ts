@@ -47,6 +47,8 @@ export {
   toStoredPhone,
 } from "./phone.js";
 
+export { MAX_AGENCY_HERO_SLIDES } from "./displayLimits.js";
+
 export {
   CEYLON_TRAILS_HERO_IMAGES,
   DEFAULT_TOUR_COVER_URL,
@@ -62,6 +64,45 @@ export {
   tourPublicPriceLkr,
   type TourPriceFields,
 } from "./tourPricing.js";
+
+export {
+  describeOfferRewardTier,
+  formatOfferMonthLabel,
+  offerRewardTierCompactLabel,
+  offerRewardTierForEveryone,
+  offerRewardTierHeadline,
+  summarizeOfferRewardTiers,
+  OFFER_MONTH_ABBREVS,
+  parseOfferMonthParts,
+  parseOfferRewardTiers,
+  type OfferRewardTier,
+} from "./offerTypes.js";
+
+export {
+  buildEntityMediaStore,
+  entityMainImageUrl,
+  normalizeEntityMedia,
+  type EntityMediaBundle,
+  type EntityMediaItem,
+  type EntityMediaKind,
+} from "./entityMedia.js";
+
+export {
+  calendarDaysBetween,
+  endDateFromStartAndTourDays,
+  formatTourDaysNights,
+  tourNightsFromDays,
+} from "./tourDuration.js";
+
+export {
+  DISPLAY_CURRENCIES,
+  LKR_PER_USD,
+  convertLkrToDisplay,
+  formatDisplayMoney,
+  formatFromLkr,
+  isDisplayCurrency,
+  type DisplayCurrency,
+} from "./currency.js";
 
 export {
   AGENCY_BUSINESS_TYPES,

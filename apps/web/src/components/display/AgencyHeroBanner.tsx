@@ -64,6 +64,20 @@ export function AgencyHeroBanner({ slides }: Props) {
     phase: "from" | "to";
   } | null>(null);
 
+  const slideSignature = useMemo(
+    () => slides.map((s) => `${s.url}|${s.label ?? ""}`).join("\n"),
+    [slides]
+  );
+
+  useEffect(() => {
+    activeRef.current = 0;
+    expandFinishedRef.current = false;
+    setActiveIndex(0);
+    setLeavingIndex(null);
+    setExpand(null);
+    stripRefs.current = [];
+  }, [slideSignature]);
+
   const finishExpand = useCallback((index: number) => {
     if (expandFinishedRef.current) return;
     expandFinishedRef.current = true;
@@ -175,7 +189,7 @@ export function AgencyHeroBanner({ slides }: Props) {
         <div className="agency-hero-banner__stage">
           {tiles.map((tile, i) => (
             <div
-              key={tile.url}
+              key={`hero-frame-${i}-${tile.url}`}
               className={`agency-hero-banner__frame${i === activeIndex ? " is-active" : ""}${
                 i === leavingIndex ? " is-leaving" : ""
               }${expand && i === leavingIndex ? " is-expand-out" : ""}`}
@@ -206,7 +220,7 @@ export function AgencyHeroBanner({ slides }: Props) {
         >
           {tiles.map((tile, i) => (
             <button
-              key={`${tile.url}-strip`}
+              key={`hero-strip-${i}-${tile.url}`}
               ref={(el) => {
                 stripRefs.current[i] = el;
               }}

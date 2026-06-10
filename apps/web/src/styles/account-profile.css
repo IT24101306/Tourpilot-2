@@ -393,3 +393,75 @@ a.account-bento-tile:hover {
     min-height: 72px;
   }
 }
+
+.account-currency-panel {
+  margin-top: 24px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.account-currency-panel__title {
+  margin: 0 0 8px;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+}
+
+.account-currency-panel__lead {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.account-currency-panel__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-currency-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fafcfb;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.account-currency-option.is-active {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
+.account-currency-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.account-currency-option__label {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.account-currency-option__hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.account-currency-panel__status {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .account-currency-panel__options {
+    grid-template-columns: 1fr;
+  }
+}

@@ -18,7 +18,7 @@ export type AuthUser = {
   email?: string | null;
   avatarUrl?: string | null;
   walletBalance: number;
-  touristProfile?: { loyaltyPoints: number } | null;
+  touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: { id: string; name: string; slug: string; status: string } | null;
   agencyDriver?: {
     id: string;

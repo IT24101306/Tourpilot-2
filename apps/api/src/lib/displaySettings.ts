@@ -1,4 +1,4 @@
-import { MEDIA } from "@tourpilot/shared";
+import { MAX_AGENCY_HERO_SLIDES, MEDIA } from "@tourpilot/shared";
 
 export type DisplaySectionFlags = {
   whoWeAre: boolean;
@@ -163,7 +163,7 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
         label: typeof row.label === "string" ? row.label.trim() : undefined,
       });
     }
-    base.heroImages = heroImages.slice(0, 12);
+    base.heroImages = heroImages.slice(0, MAX_AGENCY_HERO_SLIDES);
   }
 
   if (typeof content.whoWeAreTitle === "string") base.whoWeAreTitle = content.whoWeAreTitle;

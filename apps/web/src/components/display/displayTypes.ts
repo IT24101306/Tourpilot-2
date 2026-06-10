@@ -149,7 +149,10 @@ export function resolveHeroSlides(
   fallbacks: { coverUrl?: string | null; featuredImageUrl?: string | null }
 ): HeroSlide[] {
   const custom = content.heroImages
-    .map((s) => ({ url: s.url.trim(), label: s.label?.trim() }))
+    .map((s) => ({
+      url: resolveImageUrl(s.url.trim()),
+      label: s.label?.trim(),
+    }))
     .filter((s) => s.url);
 
   if (custom.length > 0) return custom;

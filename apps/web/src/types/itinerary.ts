@@ -4,7 +4,12 @@ export type ItineraryLineItem = {
   priceLkr: number | null;
   priceOnRequest: boolean;
   notes?: string | null;
-  entity?: { name: string; type: string } | null;
+  entity?: {
+    name: string;
+    type: string;
+    description?: string | null;
+    media?: unknown;
+  } | null;
 };
 
 export type ItineraryDay = {

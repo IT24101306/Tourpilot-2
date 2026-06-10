@@ -1,6 +1,11 @@
 import { Router } from "express";
 
-import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+import {
+  DEFAULT_TOUR_COVER_URL,
+  MAX_AGENCY_HERO_SLIDES,
+  MEDIA,
+  resolveImageUrl,
+} from "@tourpilot/shared";
 
 import { z } from "zod";
 
@@ -10,7 +15,7 @@ import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth
 
 import { asJson } from "../utils/json.js";
 
-import { storedImageUrlSchema } from "../lib/imageUrlSchema.js";
+import { storedImageUrlSchema, storedImageUrlWithFallback } from "../lib/imageUrlSchema.js";
 import {
   buildSectionsPayload,
   parseDisplayPayload,
@@ -100,7 +105,10 @@ const contentSchema = z.object({
 
   heroSubheadline: z.string().default(""),
 
-  heroImages: z.array(heroSlideSchema).max(12).default([]),
+  heroImages: z
+    .array(heroSlideSchema)
+    .max(MAX_AGENCY_HERO_SLIDES, `You can add up to ${MAX_AGENCY_HERO_SLIDES} hero slides`)
+    .default([]),
 
   whoWeAreTitle: z.string().default("WHO WE ARE"),
 
@@ -122,7 +130,7 @@ const contentSchema = z.object({
 
   ctaLabel: z.string(),
 
-  featuredImageUrl: storedImageUrlSchema,
+  featuredImageUrl: storedImageUrlWithFallback(MEDIA.hero),
 
   featuredQuote: z.string(),
 
@@ -557,7 +565,10 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
       where: { id: agency.id },
 
-      include: { reviews: { where: { isVisible: true }, orderBy: { createdAt: "desc" } } },
+      include: {
+        reviews: { where: { isVisible: true }, orderBy: { createdAt: "desc" } },
+        displaySettings: true,
+      },
 
     });
 
@@ -567,6 +578,8 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
       where: { id: agency.id },
       select: { influencerCommissionPct: true },
     });
+
+    const savedDisplay = parseDisplayPayload(updated.displaySettings?.sections);
 
     res.json({
 
@@ -578,9 +591,9 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
       influencerCommissionPct: Number(withPct.influencerCommissionPct),
 
-      enabled: body.enabled,
+      enabled: savedDisplay.enabled,
 
-      content: body.content,
+      content: savedDisplay.content,
 
       gallery: galleryItems,
 
@@ -646,6 +659,8 @@ agenciesRouter.post("/mine/offers", authRequired, requireRoles("AGENCY"), async 
         description: body.description,
         imageUrl: body.imageUrl,
         rewardText: body.rewardText,
+        offerMonth: body.offerMonth ?? null,
+        rewardTiers: body.rewardTiers ?? [],
         registrationCap: body.registrationCap,
         validFrom,
         validUntil,

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EntityTypeLineIcon } from "../icons/LineIcons";
 import { ModuleHeader } from "../module/ModuleHeader";
+import { ItineraryExploreView } from "./ItineraryExploreView";
 import type { ItineraryView } from "../../types/itinerary";
 
 const KIND_LABEL: Record<string, string> = {
@@ -87,55 +87,28 @@ export function ItineraryDreamView({
           <blockquote className="itin-notes">{itinerary.notes}</blockquote>
         )}
 
-        <div className="itin-layout">
-          <div className="itin-timeline">
+        <div className="itin-layout itin-layout--dream">
+          <div className="itin-layout-main">
             {!itinerary.days?.length ? (
               <p className="muted">Itinerary days will appear here once added.</p>
             ) : (
-              itinerary.days.map((day) => (
-                <article key={day.dayNumber} className="itin-day">
-                  <div className="itin-day-marker">
-                    <span className="itin-day-dot" aria-hidden="true" />
-                    <span className="itin-day-num">Day {day.dayNumber}</span>
-                  </div>
-                  <div className="itin-day-content">
-                    {day.title && <h3 className="itin-day-title">{day.title}</h3>}
-                    <ul className="itin-moments">
-                      {day.lineItems.map((item, i) => (
-                        <li
-                          key={`${day.dayNumber}-${i}`}
-                          className={`itin-moment itin-moment--${item.kind.toLowerCase()}`}
-                        >
-                          <span className="itin-moment-icon" aria-hidden="true">
-                            <EntityTypeLineIcon type={item.entity?.type ?? "OTHER"} size={16} />
-                          </span>
-                          <div className="itin-moment-body">
-                            <div className="itin-moment-head">
-                              <strong>{item.entity?.name || item.label}</strong>
-                              <span className="itin-moment-kind">
-                                {KIND_LABEL[item.kind] ?? item.kind}
-                              </span>
-                            </div>
-                            {item.label && item.entity?.name && (
-                              <p className="itin-moment-label">{item.label}</p>
-                            )}
-                            {item.notes && (
-                              <p className="itin-moment-notes">{item.notes}</p>
-                            )}
-                            <p className="itin-moment-price">
-                              {item.priceLkr != null
-                                ? `LKR ${item.priceLkr.toLocaleString()}`
-                                : item.priceOnRequest
-                                  ? "Price on request"
-                                  : "Included in package"}
-                            </p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </article>
-              ))
+              <ItineraryExploreView
+                days={itinerary.days.map((day) => ({
+                  dayNumber: day.dayNumber,
+                  title: day.title,
+                  items: day.lineItems.map((item, i) => ({
+                    key: `${day.dayNumber}-${i}`,
+                    kind: item.kind,
+                    label: item.label,
+                    priceLkr: item.priceLkr,
+                    priceOnRequest: item.priceOnRequest,
+                    notes: item.notes,
+                    entity: item.entity,
+                  })),
+                }))}
+                kindLabels={KIND_LABEL}
+                showPrices
+              />
             )}
           </div>
 

@@ -1,5 +1,10 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { displayTourPrice } from "@tourpilot/shared";
+import {
+  displayTourPrice,
+  isUsableImageUrl,
+  MAX_AGENCY_HERO_SLIDES,
+  MEDIA,
+} from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
@@ -130,6 +135,14 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const displayHydratedRef = useRef(false);
   const skipNextAutoSaveRef = useRef(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistSeqRef = useRef(0);
+
+  function cancelPendingAutoSave() {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+  }
 
   const loadDisplay = useCallback(async () => {
     if (!token) return;
@@ -165,10 +178,23 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const persistDisplaySettings = useCallback(
     async (nextConfig: DisplayConfig, statusMessage = "Display page updated.") => {
       if (!token) return;
+      const seq = ++persistSeqRef.current;
+      cancelPendingAutoSave();
       skipNextAutoSaveRef.current = true;
       setSaving(true);
       setSaveStatus("");
       try {
+        const heroImages = nextConfig.content.heroImages
+          .map((slide) => ({
+            url: slide.url.trim(),
+            ...(slide.label?.trim() ? { label: slide.label.trim() } : {}),
+          }))
+          .filter((slide) => isUsableImageUrl(slide.url));
+
+        const featuredImageUrl = isUsableImageUrl(nextConfig.content.featuredImageUrl)
+          ? nextConfig.content.featuredImageUrl.trim()
+          : MEDIA.hero;
+
         const data = await api<DisplayPayload>("/agencies/mine/display", {
           method: "PUT",
           token,
@@ -178,6 +204,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             enabled: { ...nextConfig.enabled, whoWeAre: true },
             content: {
               ...nextConfig.content,
+              heroImages,
+              featuredImageUrl,
               whoWeAreTitle: nextConfig.content.whoWeAreTitle.trim() || "WHO WE ARE",
               whoWeAreDescription: nextConfig.content.whoWeAreDescription.trim(),
               highlights: nextConfig.content.highlights.map((h) => h.trim()).filter(Boolean),
@@ -190,6 +218,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             })),
           }),
         });
+        if (seq !== persistSeqRef.current) return;
         setSlug(data.slug);
         setLogoUrl(data.logoUrl || logoUrl);
         setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
@@ -201,9 +230,10 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         });
         setSaveStatus(statusMessage);
       } catch (err) {
+        if (seq !== persistSeqRef.current) return;
         setSaveStatus(err instanceof ApiError ? err.message : "Failed to save display settings");
       } finally {
-        setSaving(false);
+        if (seq === persistSeqRef.current) setSaving(false);
       }
     },
     [token, logoUrl, influencerCommissionPct]
@@ -232,6 +262,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     updater: (prev: DisplayConfig) => DisplayConfig,
     statusMessage: string
   ) {
+    cancelPendingAutoSave();
+    skipNextAutoSaveRef.current = true;
     let nextConfig!: DisplayConfig;
     setConfig((prev) => {
       nextConfig = updater(prev);
@@ -439,11 +471,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     e.preventDefault();
     const url = heroForm.url.trim();
     if (!url) return;
+    const isNew = editHeroIndex === null;
+    if (isNew && config.content.heroImages.length >= MAX_AGENCY_HERO_SLIDES) {
+      setSaveStatus(`You can add up to ${MAX_AGENCY_HERO_SLIDES} hero slides.`);
+      return;
+    }
     const entry: HeroSlide = {
       url,
       label: heroForm.label?.trim() || undefined,
     };
-    const isNew = editHeroIndex === null;
 
     requestConfirm({
       title: isNew ? "Add hero slide?" : "Update hero slide?",
@@ -452,8 +488,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         { label: "Label", value: entry.label || "—" },
         { label: "Image URL", value: url.length > 80 ? `${url.slice(0, 80)}…` : url },
       ],
-      onConfirm: () => {
-        void applyAndPersist(
+      onConfirm: async () => {
+        await applyAndPersist(
           (prev) => {
             const heroImages = [...prev.content.heroImages];
             if (editHeroIndex === null) heroImages.push(entry);
@@ -463,6 +499,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           isNew ? "Hero slide added to your display page." : "Hero slide updated on your display page."
         );
         setHeroModalOpen(false);
+        setEditHeroIndex(null);
+        setHeroForm({ url: "", label: "" });
       },
     });
   }
@@ -798,7 +836,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             <div className="display-list-block">
               <p className="display-subsection-label">Banner slides</p>
               <p className="muted display-subsection-desc">
-                Add 2+ images for automatic scrolling. First slide is also used on discovery cards.
+                Add up to {MAX_AGENCY_HERO_SLIDES} images for automatic scrolling (2+ recommended).
+                First slide is also used on discovery cards.
               </p>
               {content.heroImages.length === 0 ? (
                 <p className="display-empty-hint">No slides yet — add your first banner image.</p>
@@ -851,7 +890,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  disabled={content.heroImages.length >= 12}
+                  disabled={content.heroImages.length >= MAX_AGENCY_HERO_SLIDES}
                   onClick={() => {
                     setEditHeroIndex(null);
                     setHeroForm({ url: "", label: "" });
@@ -860,6 +899,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 >
                   + Add slide
                 </button>
+                {content.heroImages.length >= MAX_AGENCY_HERO_SLIDES && (
+                  <p className="muted display-limit-hint">
+                    Maximum of {MAX_AGENCY_HERO_SLIDES} slides reached.
+                  </p>
+                )}
               </DisplaySectionActions>
             </div>
           </DisplayStepPanel>

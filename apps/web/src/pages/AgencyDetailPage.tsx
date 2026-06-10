@@ -4,13 +4,12 @@ import { loginPath } from "../utils/authRedirect";
 import { CoverImage } from "../components/CoverImage";
 import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "../components/NotificationBell";
-import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+import { DEFAULT_TOUR_COVER_URL, formatTourDaysNights, resolveImageUrl } from "@tourpilot/shared";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import {
-  DiscoveryOfferCard,
-  type DiscoveryOffer,
-} from "../components/discovery/DiscoveryOfferCard";
+import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
+import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
+import { FormatLkr } from "../components/currency/FormatLkr";
 import { OfferRegistrationModal } from "../components/discovery/OfferRegistrationModal";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
@@ -126,11 +125,17 @@ function PackageCard({
       {tour && (
         <SaveTourButton tourId={tour.id} className="agency-package-save" />
       )}
-      {tour && <span className="agency-package-days">{tour.days} days</span>}
+      {tour && <span className="agency-package-days">{formatTourDaysNights(tour.days)}</span>}
       <div className="agency-package-card-body">
         <h3>{pkg.title}</h3>
         <p>{pkg.location}</p>
-        <strong>{pkg.priceLabel}</strong>
+        <strong>
+          {tour ? (
+            <FormatLkr amount={tour.basePriceLkr} prefix="from" />
+          ) : (
+            pkg.priceLabel
+          )}
+        </strong>
         {href && <span className="agency-package-cta">View itinerary →</span>}
       </div>
     </>
@@ -201,13 +206,13 @@ export function AgencyDetailPage() {
   const content = agency?.display?.content ?? defaultDisplayConfig().content;
   const heroSlides = useMemo(
     () =>
-      agency
-        ? resolveHeroSlides(content, {
+      agency?.display?.content
+        ? resolveHeroSlides(agency.display.content, {
             coverUrl: agency.coverUrl,
-            featuredImageUrl: content.featuredImageUrl,
+            featuredImageUrl: agency.display.content.featuredImageUrl,
           })
         : [],
-    [agency, content]
+    [agency]
   );
   const packages = content.packages;
   const cmsOffers = content.offers;
@@ -264,9 +269,11 @@ export function AgencyDetailPage() {
       ? `${agency.reviewCount}+ traveler reviews`
       : content.highlights[0] || "Trusted local journeys";
 
-  const hasOffers = loyaltyOffers.length > 0 || cmsOffers.length > 0;
+  const hasLoyaltyOffers = showOffers && loyaltyOffers.length > 0;
+  const hasCmsOffers = showOffers && cmsOffers.length > 0;
+  const hasOffers = hasLoyaltyOffers || hasCmsOffers;
   const hasScenicContent =
-    (showOffers && hasOffers) || showTours || showShowcase;
+    hasCmsOffers || showTours || showShowcase;
   const hasGallery = showGallery && gallery.length > 0;
   const heroSectionLinks: { id: string; label: string }[] = [
     { id: "who-we-are", label: "Who we are" },
@@ -361,60 +368,58 @@ export function AgencyDetailPage() {
           </div>
         </div>
 
+        {hasLoyaltyOffers && (
+          <div className="agency-display-band agency-display-band--offers-spotlight">
+            <div className="agency-display-inner agency-display-inner--offers">
+              <AgencyOffersFlipShowcase
+                offers={loyaltyOffers.map((offer) => ({
+                  ...offer,
+                  agencyName: agency.name,
+                  agencySlug: agency.slug,
+                }))}
+                agencyName={agency.name}
+                statusMsg={offerMsg || undefined}
+                onRegister={(offer) =>
+                  openOfferRegistration({
+                    ...offer,
+                    agencyName: agency.name,
+                    agencySlug: agency.slug,
+                  })
+                }
+              />
+            </div>
+          </div>
+        )}
+
         {hasScenicContent && (
         <div className="agency-display-band agency-display-band--scenic">
           <div className="agency-display-inner">
-          {showOffers && hasOffers && (
-            <section className="agency-section agency-offers" id="offers">
+          {hasCmsOffers && (
+            <section className="agency-section agency-offers" id="offers-cms">
               <div className="agency-display-section-head">
-                <h2>Special offers</h2>
-                <p>Limited deals and promotions from {agency.name}.</p>
+                <h2>More promotions</h2>
+                <p>Additional deals from {agency.name}.</p>
               </div>
-              {offerMsg && <p className="agency-offer-status">{offerMsg}</p>}
-              {loyaltyOffers.length > 0 && (
-                <div className="agency-loyalty-offers disc-offer-grid">
-                  {loyaltyOffers.map((offer) => (
-                    <DiscoveryOfferCard
-                      key={offer.id}
-                      offer={{ ...offer, agencyName: agency.name, agencySlug: agency.slug }}
-                      compact
-                      onRegister={
-                        offer.spotsLeft > 0
-                          ? () =>
-                              openOfferRegistration({
-                                ...offer,
-                                agencyName: agency.name,
-                                agencySlug: agency.slug,
-                              })
-                          : undefined
-                      }
-                      registerLabel={offer.spotsLeft > 0 ? "Register for offer" : "Offer full"}
-                    />
-                  ))}
-                </div>
-              )}
-              {cmsOffers.length > 0 && (
-                <div className="agency-offers-grid">
-                  {cmsOffers.map((offer: DisplayOffer, i) => (
-                    <article key={i} className="agency-offer-card">
-                      {offer.imageUrl && (
-                        <div
-                          className="agency-offer-card-cover"
-                          style={{ backgroundImage: `url(${offer.imageUrl})` }}
-                        />
+              <div className="agency-offers-grid">
+                {cmsOffers.map((offer: DisplayOffer, i) => (
+                  <article key={i} className="agency-offer-card">
+                    {offer.imageUrl && (
+                      <div
+                        className="agency-offer-card-cover"
+                        style={{ backgroundImage: `url(${offer.imageUrl})` }}
+                      />
+                    )}
+                    <div className="agency-offer-card-body">
+                      {offer.badge && <span className="agency-offer-badge">{offer.badge}</span>}
+                      <h3>{offer.title}</h3>
+                      <p>{offer.description}</p>
+                      {offer.priceLabel && (
+                        <p className="agency-offer-price">{offer.priceLabel}</p>
                       )}
-                      <div className="agency-offer-card-body">
-                        {offer.badge && <span className="agency-offer-badge">{offer.badge}</span>}
-                        <h3>{offer.title}</h3>
-                        <p>{offer.description}</p>
-                        {offer.priceLabel && (
-                          <p className="agency-offer-price">{offer.priceLabel}</p>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
+                    </div>
+                  </article>
+                ))}
+              </div>
             </section>
           )}
 

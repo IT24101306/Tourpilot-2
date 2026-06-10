@@ -166,6 +166,8 @@ offersRouter.post("/", authRequired, requireRoles("ADMIN"), async (req, res, nex
         description: body.description,
         imageUrl: body.imageUrl,
         rewardText: body.rewardText,
+        offerMonth: body.offerMonth ?? null,
+        rewardTiers: body.rewardTiers ?? [],
         registrationCap: body.registrationCap,
         validFrom,
         validUntil,

@@ -3,7 +3,12 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { buildDisplayPayload, parseInfluencerDisplay } from "../lib/influencerDisplay.js";
 import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
-import { attachTourPricing } from "../lib/tourPricing.js";
+import {
+  agencyActiveOfferWhere,
+  loadActiveOffers,
+  serializeActiveOffer,
+} from "../lib/offers.js";
+import { agencyCommissionPct, attachTourPricing } from "../lib/tourPricing.js";
 import { buildReferralSharePath, buildReferralShareUrl } from "../lib/referralShare.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
 
@@ -177,11 +182,11 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
       include: { agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } } },
     });
 
-    const agencyCommissionPct = Number(tour?.agency.influencerCommissionPct ?? 0);
-
     if (!tour) {
       return res.status(400).json({ error: "Tour not found or not available for promotion" });
     }
+
+    const tourCommissionPct = agencyCommissionPct(tour);
 
     const existingForTour = await prisma.referralCode.findFirst({
       where: { influencerId: profile.id, tourId: tour.id, isActive: true },
@@ -207,7 +212,7 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
         where: { id: existingForTour.id },
         data: {
           ...(body.code ? { code: codeValue } : {}),
-          commissionPct: agencyCommissionPct,
+          commissionPct: tourCommissionPct,
         },
         include: {
           tour: {
@@ -229,7 +234,7 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
         influencerId: profile.id,
         tourId: tour.id,
         code: codeValue,
-        commissionPct: agencyCommissionPct,
+        commissionPct: tourCommissionPct,
       },
       include: {
         tour: {
@@ -286,10 +291,13 @@ influencerRouter.get("/mine/display", authRequired, requireRoles("INFLUENCER"), 
       codes.filter((c): c is typeof c & { tourId: string } => Boolean(c.tourId)).map((c) => [c.tourId, c.code])
     );
 
+    const activeOffers = await loadActiveOffers(agencyActiveOfferWhere());
+
     res.json({
       slug: profile.slug,
       publicPath: `/influencers/${profile.slug}`,
       display,
+      availableOffers: activeOffers.map(serializeActiveOffer),
       availableTours: tours.map((t) => {
         const pricing = attachTourPricing(t);
         return {
@@ -322,6 +330,7 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
         headline: z.string().min(1).max(200),
         tagline: z.string().max(500),
         tourIds: z.array(z.string()).max(48),
+        offerIds: z.array(z.string()).max(24),
       })
       .parse(req.body);
 
@@ -333,13 +342,25 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
       },
       select: { id: true },
     });
-    const validIds = new Set(validTours.map((t) => t.id));
-    const tourIds = body.tourIds.filter((id) => validIds.has(id));
+    const validTourIds = new Set(validTours.map((t) => t.id));
+    const tourIds = body.tourIds.filter((id) => validTourIds.has(id));
+
+    const now = new Date();
+    const validOffers = await prisma.offer.findMany({
+      where: {
+        id: { in: body.offerIds },
+        ...agencyActiveOfferWhere(now),
+      },
+      select: { id: true },
+    });
+    const validOfferIds = new Set(validOffers.map((o) => o.id));
+    const offerIds = body.offerIds.filter((id) => validOfferIds.has(id));
 
     const content = {
       headline: body.headline.trim(),
       tagline: body.tagline.trim(),
       tourIds,
+      offerIds,
     };
 
     await prisma.influencerProfile.update({

@@ -1,5 +1,5 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
@@ -23,6 +23,13 @@ import {
   type TourKind,
 } from "../../components/tour/tourFormTypes";
 import { displayTourPrice } from "../../lib/tourPricing";
+import {
+  clearTourBuilderDraft,
+  loadTourBuilderDraft,
+  saveTourBuilderDraft,
+  TOUR_BUILDER_RESUME_PARAM,
+  tourBuilderAllPath,
+} from "../../lib/tourBuilderDraft";
 import { AgencyTour } from "./types";
 
 type EntityRow = {
@@ -46,6 +53,8 @@ export function AgencyToursPage() {
   const { token, user } = useAuth();
   const { requestConfirm } = useConfirmAction();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const resumedTourDraftRef = useRef(false);
   const [tours, setTours] = useState<AgencyTour[]>([]);
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [groups, setGroups] = useState<GroupRow[]>([]);
@@ -92,6 +101,33 @@ export function AgencyToursPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [token, refresh]);
+
+  useEffect(() => {
+    if (resumedTourDraftRef.current) return;
+    if (searchParams.get(TOUR_BUILDER_RESUME_PARAM) !== "1") return;
+
+    const draft = loadTourBuilderDraft();
+    resumedTourDraftRef.current = true;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete(TOUR_BUILDER_RESUME_PARAM);
+    setSearchParams(nextParams, { replace: true });
+
+    if (!draft) return;
+
+    setModalMode(draft.modalMode);
+    setModalKind(draft.modalKind);
+    setEditingTourId(draft.editingTourId);
+    setTourForm(draft.form);
+    setOfferLink(draft.offerLink);
+    setInitialLinkedOfferIds(draft.initialLinkedOfferIds);
+    setTourStatus("");
+    setModalOpen(true);
+
+    if (token) {
+      refresh().catch(console.error);
+    }
+  }, [searchParams, setSearchParams, token, refresh]);
 
   const entityOptions: EntityOption[] = useMemo(
     () =>
@@ -140,6 +176,7 @@ export function AgencyToursPage() {
   const expandedTour = expandedId ? tours.find((t) => t.id === expandedId) : null;
 
   function openCreate(kind: TourKind) {
+    clearTourBuilderDraft();
     setModalMode("create");
     setModalKind(kind);
     setEditingTourId(null);
@@ -151,6 +188,19 @@ export function AgencyToursPage() {
     setOfferLink(emptyTourOfferLink());
     setInitialLinkedOfferIds([]);
     setModalOpen(true);
+  }
+
+  function goAddNewEntity() {
+    saveTourBuilderDraft({
+      form: tourForm,
+      modalMode,
+      modalKind,
+      editingTourId,
+      offerLink,
+      initialLinkedOfferIds,
+    });
+    setModalOpen(false);
+    navigate(tourBuilderAllPath());
   }
 
   function openEdit(tour: AgencyTour) {
@@ -204,6 +254,7 @@ export function AgencyToursPage() {
         );
       }
 
+      clearTourBuilderDraft();
       await refresh();
       setTimeout(() => {
         setModalOpen(false);
@@ -536,6 +587,7 @@ export function AgencyToursPage() {
         offers={offers}
         offerLink={offerLink}
         onOfferLinkChange={setOfferLink}
+        onAddNewEntity={goAddNewEntity}
       />
     </div>
   );

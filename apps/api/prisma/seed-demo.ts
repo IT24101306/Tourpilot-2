@@ -395,7 +395,11 @@ async function main() {
     priceHint: 18000,
     durationMin: 720,
     contact: "+94771110001",
-    media: [{ kind: "image", url: MEDIA.cultural, label: "Pool view" }],
+    description: "Eco-lodge at the foot of Sigiriya with pool and cultural shows.",
+    media: {
+      mainImageUrl: MEDIA.cultural,
+      items: [{ kind: "image", url: MEDIA.nature, label: "Garden view" }],
+    },
   });
 
   const viewpoint = await ensureEntity(agency1.id, "Pidurangala Sunrise Hike", {
@@ -404,6 +408,8 @@ async function main() {
     district: "Matale",
     priceHint: 3500,
     durationMin: 180,
+    description: "Climb before dawn for panoramic views of Sigiriya Rock at sunrise.",
+    media: { mainImageUrl: MEDIA.nature, items: [] },
   });
 
   const restaurant = await ensureEntity(agency1.id, "Curry Leaf Restaurant", {
@@ -412,6 +418,8 @@ async function main() {
     district: "Kandy",
     priceHint: 2800,
     durationMin: 90,
+    description: "Traditional rice and curry with lake-view terrace seating.",
+    media: { mainImageUrl: MEDIA.cultural, items: [] },
     metadata: { avgPricePerPerson: 2800, openHoursDays: "Daily 11:00–22:00" },
   });
 
@@ -422,6 +430,7 @@ async function main() {
     priceHint: 12500,
     durationMin: 240,
     description: "Morning boat trip with marine naturalist guide.",
+    media: { mainImageUrl: MEDIA.nature, items: [] },
   });
 
   const ellaHotel = await ensureEntity(agency1.id, "Ella Mount View Lodge", {
@@ -631,7 +640,12 @@ async function main() {
         title: "Early Bird Cultural Triangle",
         description: "Register before slots fill — limited seats each week.",
         imageUrl: MEDIA.cultural,
-        rewardText: "LKR 5,000 off your booking",
+        rewardText: "Unlock group rewards as more travelers join",
+        offerMonth: new Date().toISOString().slice(0, 7),
+        rewardTiers: [
+          { registrationsRequired: 50, winnersCount: 2, rewardLabel: "free dinners" },
+          { registrationsRequired: 100, winnersCount: 1, rewardLabel: "a free tour" },
+        ],
         registrationCap: 100,
         validFrom: daysAgo(1),
         validUntil: daysFromNow(14),

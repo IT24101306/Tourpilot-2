@@ -53,6 +53,8 @@ export type AgencyTour = {
   days: number;
   tourKind: "READY_MADE" | "CUSTOM";
   basePriceLkr: number;
+  influencerCommissionPct?: number;
+  tourInfluencerCommissionPct?: number | null;
   influencerCommissionLkr?: number;
   publicPriceLkr?: number;
   coverUrl?: string | null;

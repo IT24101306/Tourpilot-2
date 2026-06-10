@@ -355,7 +355,7 @@ function serializeUser(user: {
   email: string | null;
   avatarUrl: string | null;
   walletBalance: unknown;
-  touristProfile?: { loyaltyPoints: number } | null;
+  touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: { id: string; name: string; slug: string; status: string } | null;
   agencyDriver?: {
     id: string;
@@ -373,7 +373,10 @@ function serializeUser(user: {
     avatarUrl: user.avatarUrl,
     walletBalance: Number(user.walletBalance),
     touristProfile: user.touristProfile
-      ? { loyaltyPoints: user.touristProfile.loyaltyPoints }
+      ? {
+          loyaltyPoints: user.touristProfile.loyaltyPoints,
+          displayCurrency: user.touristProfile.displayCurrency ?? "USD",
+        }
       : null,
     agency: user.agency
       ? {

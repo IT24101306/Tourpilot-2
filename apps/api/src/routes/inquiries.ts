@@ -17,6 +17,7 @@ import {
   serializeProposal,
   upsertInquiryProposal,
 } from "../services/inquiryProposal.js";
+import { serializeItineraryEntity } from "../lib/entitySerialize.js";
 import {
   buildInquiryThread,
   createInquiryMessage,
@@ -765,7 +766,12 @@ function serializeItinerary(itinerary: {
       priceLkr: unknown;
       priceOnRequest: boolean;
       notes: string | null;
-      entity: { name: string; type: string } | null;
+      entity: {
+        name: string;
+        type: string;
+        description: string | null;
+        media: unknown;
+      } | null;
     }>;
   }>;
 }) {
@@ -779,6 +785,7 @@ function serializeItinerary(itinerary: {
       lineItems: d.lineItems.map((li) => ({
         ...li,
         priceLkr: li.priceLkr != null ? Number(li.priceLkr) : null,
+        entity: serializeItineraryEntity(li.entity),
       })),
     })),
   };

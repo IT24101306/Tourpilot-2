@@ -1,4 +1,5 @@
 import { commissionLkrFromBase } from "@tourpilot/shared";
+import { agencyCommissionPct } from "./tourPricing.js";
 import { prisma } from "./prisma.js";
 
 /** Influencer earns agency % of the tour base price (ready-made); else % of booking total. */
@@ -12,6 +13,7 @@ export async function resolveReferralCommissionLkr(
       tour: {
         select: {
           basePriceLkr: true,
+          influencerCommissionPct: true,
           agency: { select: { influencerCommissionPct: true } },
         },
       },
@@ -21,7 +23,7 @@ export async function resolveReferralCommissionLkr(
 
   if (ref.tour) {
     const base = Number(ref.tour.basePriceLkr);
-    const pct = Number(ref.tour.agency.influencerCommissionPct);
+    const pct = agencyCommissionPct(ref.tour);
     const fromTourBase = commissionLkrFromBase(base, pct);
     if (fromTourBase > 0) return fromTourBase;
   }

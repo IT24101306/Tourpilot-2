@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useFormatMoney } from "../../context/CurrencyContext";
 import { displayTourPrice } from "../../lib/tourPricing";
 import type { ProposalItem } from "../../types/negotiation";
 
@@ -9,6 +10,8 @@ type Props = {
 };
 
 export function ProposalCards({ items, agencySlug, compare = true }: Props) {
+  const { format, formatFrom } = useFormatMoney();
+
   if (!items.length) {
     return (
       <div className="neg-proposal-empty">
@@ -28,7 +31,7 @@ export function ProposalCards({ items, agencySlug, compare = true }: Props) {
               <span className="neg-proposal-tag">Ready-made</span>
               <h4>{item.tour.title}</h4>
               <p className="neg-proposal-meta">
-                {item.tour.days} days · from LKR {displayTourPrice(item.tour).toLocaleString()}
+                {item.tour.days} days · {formatFrom(displayTourPrice(item.tour)).toLowerCase()}
               </p>
               {agencySlug && (
                 <Link
@@ -45,7 +48,7 @@ export function ProposalCards({ items, agencySlug, compare = true }: Props) {
               <span className="neg-proposal-tag">Custom</span>
               <h4>{item.itinerary.title || "Custom itinerary"}</h4>
               <p className="neg-proposal-meta price">
-                Up to LKR {item.itinerary.grandMax.toLocaleString()}
+                Up to {format(item.itinerary.grandMax)}
               </p>
               {item.itinerary.shareToken && (
                 <Link to={`/itinerary/${item.itinerary.shareToken}`} className="neg-proposal-link">

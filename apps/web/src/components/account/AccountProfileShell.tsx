@@ -8,7 +8,8 @@ import type {
   AccountHighlight,
   AccountStat,
 } from "./accountProfileUtils";
-import { formatPhone, initials, roleLabel, roleModule } from "./accountProfileUtils";
+import { useFormatMoney } from "../../context/CurrencyContext";
+import { formatPhone, initials, roleLabel, roleModule, lkr } from "./accountProfileUtils";
 
 type Props = {
   name: string;
@@ -39,6 +40,7 @@ export function AccountProfileShell({
   variant = "page",
   children,
 }: Props) {
+  const { format: formatMoney } = useFormatMoney();
   const moduleId = roleModule(role) as
     | "operations"
     | "negotiation"
@@ -78,7 +80,7 @@ export function AccountProfileShell({
             <div className="account-profile-wallet">
               <span className="account-profile-wallet-label">Wallet balance</span>
               <strong className="account-profile-wallet-value">
-                LKR {walletBalance.toLocaleString()}
+                {role === "TOURIST" ? formatMoney(walletBalance) : lkr(walletBalance)}
               </strong>
             </div>
           </div>

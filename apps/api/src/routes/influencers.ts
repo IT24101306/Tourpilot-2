@@ -2,6 +2,11 @@ import { Router } from "express";
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
 import { parseInfluencerDisplay } from "../lib/influencerDisplay.js";
+import {
+  activeOfferWhere,
+  offerIncludeActive,
+  serializeActiveOffer,
+} from "../lib/offers.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
 
 export const influencersRouter = Router();
@@ -23,6 +28,8 @@ influencersRouter.get("/:slug", async (req, res, next) => {
 
     const display = parseInfluencerDisplay(profile.display, profile.user.name);
     const tourIds = display.tourIds;
+    const offerIds = display.offerIds;
+    const now = new Date();
 
     const tours =
       tourIds.length === 0
@@ -38,8 +45,21 @@ influencersRouter.get("/:slug", async (req, res, next) => {
             },
           });
 
-    const order = new Map(tourIds.map((id, i) => [id, i]));
-    tours.sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+    const tourOrder = new Map(tourIds.map((id, i) => [id, i]));
+    tours.sort((a, b) => (tourOrder.get(a.id) ?? 99) - (tourOrder.get(b.id) ?? 99));
+
+    const offers =
+      offerIds.length === 0
+        ? []
+        : await prisma.offer.findMany({
+            where: {
+              id: { in: offerIds },
+              ...activeOfferWhere(now),
+            },
+            include: offerIncludeActive,
+          });
+    const offerOrder = new Map(offerIds.map((id, i) => [id, i]));
+    offers.sort((a, b) => (offerOrder.get(a.id) ?? 99) - (offerOrder.get(b.id) ?? 99));
 
     const codeByTourId = new Map(
       profile.codes
@@ -69,6 +89,7 @@ influencersRouter.get("/:slug", async (req, res, next) => {
           tourPath: `/tours/${t.agency.slug}/${t.slug}${refCode ? `?ref=${refCode}` : ""}`,
         };
       }),
+      offers: offers.map(serializeActiveOffer),
     });
   } catch (e) {
     next(e);

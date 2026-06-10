@@ -4,11 +4,14 @@ import { currentPath, loginPath, registerPath } from "../../utils/authRedirect";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { LineCheckIcon } from "../icons/LineIcons";
+import { useFormatMoney } from "../../context/CurrencyContext";
 import {
   defaultTourInquiryMessage,
   InquiryTourChip,
   type InquiryTourRef,
 } from "./InquiryTourChip";
+import { InquiryTripDates } from "./InquiryTripDates";
+import { endDateFromStartAndTourDays } from "@tourpilot/shared";
 
 type Props = {
   agencyId: string;
@@ -32,6 +35,7 @@ export function AgencyInquirySection({
   const location = useLocation();
   const returnTo = currentPath(location);
   const { token, user, refreshUser } = useAuth();
+  const { format } = useFormatMoney();
   const [email, setEmail] = useState("");
   const [pax, setPax] = useState(2);
   const [startDate, setStartDate] = useState("");
@@ -57,6 +61,12 @@ export function AgencyInquirySection({
       setMessage(defaultTourInquiryMessage(tour));
     }
   }, [tour?.id]);
+
+  useEffect(() => {
+    if (!tour?.days || !startDate) return;
+    const autoEnd = endDateFromStartAndTourDays(startDate, tour.days);
+    if (autoEnd && autoEnd !== endDate) setEndDate(autoEnd);
+  }, [tour?.days, startDate]);
 
   useEffect(() => {
     if (!focusOnMount) return;
@@ -247,7 +257,7 @@ export function AgencyInquirySection({
 
               <fieldset className="agency-inquiry-fieldset" disabled={!canSubmit}>
                 <legend className="agency-inquiry-legend">Trip details</legend>
-                <div className="agency-inquiry-grid agency-inquiry-grid--trip">
+                <div className="agency-inquiry-trip-block">
                   <div className="inquiry-field inquiry-field--compact">
                     <label htmlFor="inquiry-pax">Travelers</label>
                     <input
@@ -260,25 +270,13 @@ export function AgencyInquirySection({
                       required
                     />
                   </div>
-                  <div className="inquiry-field">
-                    <label htmlFor="inquiry-start">Start date</label>
-                    <input
-                      id="inquiry-start"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="inquiry-field">
-                    <label htmlFor="inquiry-end">End date</label>
-                    <input
-                      id="inquiry-end"
-                      type="date"
-                      value={endDate}
-                      min={startDate || undefined}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
+                  <InquiryTripDates
+                    startDate={startDate}
+                    endDate={endDate}
+                    onStartDateChange={setStartDate}
+                    onEndDateChange={setEndDate}
+                    tourDays={tour?.days}
+                  />
                 </div>
               </fieldset>
 
@@ -294,7 +292,7 @@ export function AgencyInquirySection({
                       type="text"
                       value={budgetBand}
                       onChange={(e) => setBudgetBand(e.target.value)}
-                      placeholder="e.g. LKR 150,000 – 200,000"
+                      placeholder={`e.g. ${format(150_000)} – ${format(200_000)}`}
                     />
                   </div>
                   <div className="inquiry-field">

@@ -79,6 +79,21 @@ entitiesRouter.get("/groups", authRequired, requireRoles("AGENCY"), async (req, 
   }
 });
 
+const entityMediaItemSchema = z.object({
+  kind: z.enum(["image", "video", "link"]),
+  url: z.string().min(1),
+  label: z.string().optional(),
+  role: z.literal("main").optional(),
+});
+
+const entityMediaSchema = z.union([
+  z.array(z.unknown()),
+  z.object({
+    mainImageUrl: z.string().nullable().optional(),
+    items: z.array(entityMediaItemSchema).optional().default([]),
+  }),
+]);
+
 const entityBodySchema = z.object({
   name: z.string().min(1, "Name is required"),
   type: z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT"]),
@@ -90,7 +105,7 @@ const entityBodySchema = z.object({
   contact: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
-  media: z.array(z.unknown()).optional(),
+  media: entityMediaSchema.optional(),
   metadata: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 

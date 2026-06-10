@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { formatTourDaysNights } from "@tourpilot/shared";
+import { useFormatMoney } from "../../context/CurrencyContext";
 
 export type InquiryTourRef = {
   id: string;
@@ -16,6 +18,7 @@ type Props = {
 };
 
 export function InquiryTourChip({ tour, agencySlug, compact }: Props) {
+  const { formatFrom } = useFormatMoney();
   const price = tour.publicPriceLkr ?? tour.basePriceLkr;
   const tourHref = `/tours/${agencySlug}/${tour.slug}`;
 
@@ -25,8 +28,8 @@ export function InquiryTourChip({ tour, agencySlug, compact }: Props) {
       <div className="inquiry-tour-chip-main">
         <strong>{tour.title}</strong>
         <span className="muted">
-          {tour.days} day{tour.days === 1 ? "" : "s"}
-          {price != null ? ` · from LKR ${price.toLocaleString()}` : ""}
+          {formatTourDaysNights(tour.days)}
+          {price != null ? ` · ${formatFrom(price).toLowerCase()}` : ""}
         </span>
       </div>
       <Link to={tourHref} className="inquiry-tour-chip-link">
@@ -37,5 +40,5 @@ export function InquiryTourChip({ tour, agencySlug, compact }: Props) {
 }
 
 export function defaultTourInquiryMessage(tour: InquiryTourRef): string {
-  return `I'm interested in the "${tour.title}" package (${tour.days} day${tour.days === 1 ? "" : "s"}). Please share availability and next steps.`;
+  return `I'm interested in the "${tour.title}" package (${formatTourDaysNights(tour.days)}). Please share availability and next steps.`;
 }

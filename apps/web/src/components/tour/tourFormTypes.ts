@@ -17,6 +17,8 @@ export type TourFormState = {
   summary: string;
   description: string;
   basePriceLkr: number;
+  /** null = use agency default from Display settings */
+  influencerCommissionPct: number | null;
   coverUrl: string;
   isPublished: boolean;
   days: DayPlan[];
@@ -45,6 +47,7 @@ export type AgencyTourDetail = {
   tourKind: TourKind;
   basePriceLkr: number;
   influencerCommissionPct?: number;
+  tourInfluencerCommissionPct?: number | null;
   influencerCommissionLkr?: number;
   publicPriceLkr?: number;
   coverUrl?: string | null;
@@ -66,6 +69,7 @@ export function defaultTourForm(): TourFormState {
     summary: "",
     description: "",
     basePriceLkr: 0,
+    influencerCommissionPct: null,
     coverUrl: "",
     isPublished: false,
     days: [createDayPlan(1)],
@@ -96,6 +100,7 @@ export function tourToFormState(tour: AgencyTourDetail): TourFormState {
     summary: tour.summary ?? "",
     description: tour.description ?? "",
     basePriceLkr: tour.basePriceLkr,
+    influencerCommissionPct: tour.tourInfluencerCommissionPct ?? null,
     coverUrl: tour.coverUrl ?? "",
     isPublished: tour.isPublished,
     days,
@@ -204,6 +209,7 @@ export function buildTourPlanPayload(form: TourFormState, tourKind: TourKind) {
     title: form.title.trim(),
     tourKind,
     basePriceLkr: form.basePriceLkr,
+    influencerCommissionPct: form.influencerCommissionPct,
     summary: form.summary.trim() || undefined,
     description: form.description.trim() || undefined,
     coverUrl: form.coverUrl.trim() || undefined,

@@ -5,6 +5,7 @@ export type InfluencerDisplayContent = {
   headline: string;
   tagline: string;
   tourIds: string[];
+  offerIds: string[];
 };
 
 export function defaultInfluencerDisplay(name: string): InfluencerDisplayContent {
@@ -13,6 +14,7 @@ export function defaultInfluencerDisplay(name: string): InfluencerDisplayContent
     headline: `${first}'s Sri Lanka picks`,
     tagline: "Ready-made tours I recommend — book through the links below.",
     tourIds: [],
+    offerIds: [],
   };
 }
 
@@ -33,6 +35,12 @@ export function parseInfluencerDisplay(raw: unknown, name: string): InfluencerDi
       .filter(Boolean)
       .slice(0, 48);
   }
+  if (Array.isArray(obj.offerIds)) {
+    base.offerIds = obj.offerIds
+      .map((id) => (typeof id === "string" ? id.trim() : ""))
+      .filter(Boolean)
+      .slice(0, 24);
+  }
   return base;
 }
 
@@ -41,5 +49,6 @@ export function buildDisplayPayload(content: InfluencerDisplayContent): Prisma.I
     headline: content.headline,
     tagline: content.tagline,
     tourIds: content.tourIds,
+    offerIds: content.offerIds,
   });
 }

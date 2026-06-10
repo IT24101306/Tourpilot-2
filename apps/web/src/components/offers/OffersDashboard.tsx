@@ -5,8 +5,10 @@ import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { ModuleHeader } from "../module/ModuleHeader";
+import { formatOfferMonthLabel, type OfferRewardTier } from "@tourpilot/shared";
 import { isFreeOffer, offerPriceFromTours } from "../../lib/offerPricing";
 import { offerShareFeedback, offerShareUrl, shareOffer } from "../../lib/offerShare";
+import { OfferRewardTiersEditor } from "./OfferRewardTiersEditor";
 
 export type ManagedOffer = {
   id: string;
@@ -14,6 +16,8 @@ export type ManagedOffer = {
   description: string | null;
   imageUrl: string | null;
   rewardText: string;
+  offerMonth: string | null;
+  rewardTiers: OfferRewardTier[];
   registrationCap: number;
   validFrom: string;
   validUntil: string;
@@ -49,6 +53,8 @@ type OfferDraft = {
   description: string;
   imageUrl: string;
   rewardText: string;
+  offerMonth: string | null;
+  rewardTiers: OfferRewardTier[];
   registrationCap: number;
   validFrom: string;
   validUntil: string;
@@ -81,6 +87,11 @@ function toLocalDateTimeValue(d: Date) {
   )}`;
 }
 
+function currentOfferMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function emptyDraft(): OfferDraft {
   const now = new Date();
   const in7 = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -89,6 +100,11 @@ function emptyDraft(): OfferDraft {
     description: "",
     imageUrl: "",
     rewardText: "",
+    offerMonth: currentOfferMonth(),
+    rewardTiers: [
+      { registrationsRequired: 50, winnersCount: 50, rewardLabel: "free dinners" },
+      { registrationsRequired: 100, winnersCount: 1, rewardLabel: "a free tour" },
+    ],
     registrationCap: 50,
     validFrom: toLocalDateTimeValue(now),
     validUntil: toLocalDateTimeValue(in7),
@@ -106,6 +122,8 @@ function offerToDraft(o: ManagedOffer): OfferDraft {
     description: o.description ?? "",
     imageUrl: o.imageUrl ?? "",
     rewardText: o.rewardText,
+    offerMonth: o.offerMonth,
+    rewardTiers: o.rewardTiers ?? [],
     registrationCap: o.registrationCap,
     validFrom: toLocalDateTimeValue(new Date(o.validFrom)),
     validUntil: toLocalDateTimeValue(new Date(o.validUntil)),
@@ -234,6 +252,8 @@ export function OffersDashboard({
               description: draft.description || undefined,
               imageUrl: draft.imageUrl.trim() || "",
               rewardText: draft.rewardText,
+              offerMonth: draft.offerMonth,
+              rewardTiers: draft.rewardTiers,
               registrationCap: Number(draft.registrationCap),
               validFrom: new Date(draft.validFrom).toISOString(),
               validUntil: new Date(draft.validUntil).toISOString(),
@@ -273,6 +293,8 @@ export function OffersDashboard({
               description: draft.description === "" ? null : draft.description,
               imageUrl: draft.imageUrl.trim() || null,
               rewardText: draft.rewardText,
+              offerMonth: draft.offerMonth,
+              rewardTiers: draft.rewardTiers,
               registrationCap: Number(draft.registrationCap),
               validFrom: new Date(draft.validFrom).toISOString(),
               validUntil: new Date(draft.validUntil).toISOString(),
@@ -370,8 +392,14 @@ export function OffersDashboard({
                       <strong>{o.title}</strong>
                       <span className="muted">
                         {o.isActive ? "Active" : "Inactive"}
+                        {formatOfferMonthLabel(o.offerMonth)
+                          ? ` · ${formatOfferMonthLabel(o.offerMonth)}`
+                          : ""}
                         {isFreeOffer(o.discountedLkr) ? " · Free tour" : ""} · {o.registeredCount}{" "}
                         registered
+                        {(o.rewardTiers?.length ?? 0) > 0
+                          ? ` · ${o.rewardTiers!.length} reward tier${o.rewardTiers!.length === 1 ? "" : "s"}`
+                          : ""}
                       </span>
                     </span>
                     <span className="gov-offer-pick-spots">{o.spotsLeft} left</span>
@@ -445,11 +473,20 @@ export function OffersDashboard({
               </label>
 
               <label className="field">
-                <span>Reward text</span>
+                <span>Headline / summary</span>
                 <input
                   value={draft.rewardText}
                   onChange={(e) => setDraft((d) => ({ ...d, rewardText: e.target.value }))}
-                  placeholder="LKR 5,000 off your booking"
+                  placeholder="Unlock group rewards as more travelers join"
+                />
+              </label>
+
+              <label className="field">
+                <span>Dedicated month</span>
+                <input
+                  type="month"
+                  value={draft.offerMonth ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, offerMonth: e.target.value || null }))}
                 />
               </label>
 
@@ -500,6 +537,15 @@ export function OffersDashboard({
                   onChange={(e) => setDraft((d) => ({ ...d, registrationCap: Number(e.target.value) }))}
                 />
               </label>
+
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <OfferRewardTiersEditor
+                  tiers={draft.rewardTiers}
+                  onChange={(rewardTiers) => setDraft((d) => ({ ...d, rewardTiers }))}
+                  registrationCap={draft.registrationCap}
+                  previewRegisteredCount={selected?.registeredCount ?? 0}
+                />
+              </div>
 
               {selectedId && (
                 <label className="field" style={{ display: "flex", alignItems: "center", gap: 8 }}>

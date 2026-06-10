@@ -71,8 +71,17 @@ export const ENTITY_TYPE_OPTIONS: { value: EntityTypeKey; label: string }[] = [
 ];
 
 /** Fields shown per type (name + type selector always shown separately). */
+const DESCRIPTION_FIELD: FieldDef = {
+  key: "description",
+  label: "Description",
+  input: "textarea",
+  placeholder: "What makes this place special for travelers?",
+  fullWidth: true,
+};
+
 export const FIELDS_BY_TYPE: Record<EntityTypeKey, FieldDef[]> = {
   HOTEL: [
+    DESCRIPTION_FIELD,
     { key: "rooms", label: "Number of rooms", input: "number", placeholder: "24" },
     { key: "starRating", label: "Star rating", input: "number", placeholder: "4", min: 1, max: 5 },
     { key: "priceHint", label: "Price per night (LKR)", input: "number", placeholder: "8500" },
@@ -88,7 +97,7 @@ export const FIELDS_BY_TYPE: Record<EntityTypeKey, FieldDef[]> = {
     { key: "otherInfo", label: "Other info", input: "textarea", fullWidth: true },
   ],
   ACTIVITY: [
-    { key: "description", label: "Description", input: "textarea", fullWidth: true },
+    DESCRIPTION_FIELD,
     { key: "priceHint", label: "Price per person (LKR)", input: "number", placeholder: "3500" },
     { key: "minGroupSize", label: "Min group size", input: "number", placeholder: "2" },
     { key: "maxGroupSize", label: "Max group size", input: "number", placeholder: "12" },
@@ -98,7 +107,7 @@ export const FIELDS_BY_TYPE: Record<EntityTypeKey, FieldDef[]> = {
     { key: "contact", label: "Contact no", input: "tel", placeholder: "0771234567" },
   ],
   VIEWPOINT: [
-    { key: "description", label: "Description", input: "textarea", fullWidth: true },
+    DESCRIPTION_FIELD,
     { key: "priceHint", label: "Price (LKR)", input: "number", placeholder: "500" },
     {
       key: "bestTimeToVisit",
@@ -111,6 +120,7 @@ export const FIELDS_BY_TYPE: Record<EntityTypeKey, FieldDef[]> = {
     { key: "otherInfo", label: "Other info", input: "textarea", fullWidth: true },
   ],
   RESTAURANT: [
+    DESCRIPTION_FIELD,
     { key: "location", label: "Location", placeholder: "City / address", fullWidth: true },
     { key: "cuisineType", label: "Cuisine type", placeholder: "Sri Lankan, seafood, vegan…" },
     { key: "priceHint", label: "Average price per person (LKR)", input: "number", placeholder: "2500" },
@@ -151,6 +161,8 @@ export function buildEntityPayload(form: EntityFormState) {
     type: form.type,
   };
 
+  if (trim(form.description)) payload.description = trim(form.description);
+
   if (form.type === "HOTEL") {
     if (num(form.rooms) != null) metadata.rooms = num(form.rooms)!;
     if (num(form.starRating) != null) metadata.starRating = num(form.starRating)!;
@@ -160,7 +172,6 @@ export function buildEntityPayload(form: EntityFormState) {
   }
 
   if (form.type === "ACTIVITY") {
-    if (trim(form.description)) payload.description = trim(form.description);
     if (num(form.priceHint) != null) {
       payload.priceHint = num(form.priceHint);
       metadata.pricePerPerson = num(form.priceHint)!;
@@ -172,7 +183,6 @@ export function buildEntityPayload(form: EntityFormState) {
   }
 
   if (form.type === "VIEWPOINT") {
-    if (trim(form.description)) payload.description = trim(form.description);
     if (num(form.priceHint) != null) payload.priceHint = num(form.priceHint);
     if (trim(form.bestTimeToVisit)) metadata.bestTimeToVisit = trim(form.bestTimeToVisit);
     if (trim(form.contact)) payload.contact = trim(form.contact);

@@ -1143,15 +1143,602 @@ button.agency-hero-banner__ghost {
   font-size: 0.9rem;
 }
 
-.agency-loyalty-offers {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+/* —— Offers spotlight (flip carousel) —— */
+.agency-display-band--offers-spotlight {
+  position: relative;
+  background: linear-gradient(165deg, #041a10 0%, #0a3320 42%, #062818 100%);
+  overflow: hidden;
 }
 
-.agency-loyalty-offers .disc-offer-card {
+.agency-display-band--offers-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74, 222, 128, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 80%, rgba(0, 175, 2, 0.12) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.agency-display-inner--offers {
+  position: relative;
+  z-index: 1;
+  padding-top: clamp(56px, 8vh, 88px);
+  padding-bottom: clamp(64px, 9vh, 96px);
+}
+
+.agency-offer-showcase {
+  max-width: 1040px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.agency-offer-showcase__glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(960px, 94vw);
+  height: 280px;
+  transform: translate(-50%, -45%);
+  background: radial-gradient(ellipse, rgba(74, 222, 128, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(40px);
+}
+
+.agency-offer-showcase__head {
+  margin-bottom: clamp(28px, 4vh, 40px);
+}
+
+.agency-offer-showcase__eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4ade80;
+  margin-bottom: 10px;
+}
+
+.agency-offer-showcase__head h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 12px;
+  letter-spacing: -0.03em;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+.agency-offer-showcase__head p {
+  margin: 0 auto;
+  max-width: 48ch;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.agency-offer-showcase__head strong {
+  color: #fff;
+}
+
+.agency-offer-showcase__status {
+  max-width: 520px;
+  margin: 0 auto 20px;
+  text-align: center;
+}
+
+.agency-offer-showcase__month-cal {
+  margin: 0 auto 18px;
+  max-width: min(960px, 100%);
+}
+
+.offer-month-calendar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  text-align: left;
+}
+
+.offer-month-calendar__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #4ade80;
+}
+
+.offer-month-calendar__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.offer-month-calendar__dedicated {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.offer-month-calendar__dedicated strong {
+  color: #fff;
+  font-weight: 800;
+}
+
+.offer-month-calendar__strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.offer-month-calendar__year {
+  flex-shrink: 0;
+  margin-right: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.offer-month-calendar__month {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  padding: 3px 5px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.45);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.offer-month-calendar__month.is-active {
+  color: #052e16;
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  box-shadow: 0 2px 10px rgba(74, 222, 128, 0.35);
+}
+
+.agency-offer-flip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: clamp(8px, 2vw, 20px);
+}
+
+.agency-offer-flip__stage {
+  perspective: 1400px;
+  min-height: 320px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.agency-offer-flip__card {
+  width: 100%;
+  max-width: 960px;
+  display: grid;
+  grid-template-columns: minmax(220px, 42%) 1fr;
+  grid-template-rows: none;
+  min-height: 300px;
+  max-height: 380px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.08),
+    0 24px 64px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(74, 222, 128, 0.15);
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1),
+    opacity 0.35s ease;
+  text-align: left;
+}
+
+.agency-offer-flip__card.is-flip-out {
+  transform: rotateY(-88deg) scale(0.96);
+  opacity: 0;
+}
+
+.agency-offer-flip__card.is-flip-in {
+  animation: agency-offer-flip-in 0.7s cubic-bezier(0.4, 0.2, 0.2, 1) forwards;
+}
+
+@keyframes agency-offer-flip-in {
+  from {
+    transform: rotateY(88deg) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.agency-offer-flip__media {
+  position: relative;
+  overflow: hidden;
+  background: #0a3320;
+}
+
+.agency-offer-flip__img {
+  width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.agency-offer-flip__media-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 26, 16, 0.15) 0%, rgba(4, 26, 16, 0.55) 100%);
+  pointer-events: none;
+}
+
+.agency-offer-flip__countdown-wrap {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+}
+
+.agency-offer-flip__countdown {
+  font-size: 0.8rem !important;
+  padding: 6px 14px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: var(--ad-green) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.agency-offer-flip__body {
+  padding: clamp(16px, 2.5vw, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  min-height: 0;
+}
+
+.agency-offer-flip__body-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agency-offer-flip__body-top h3 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 2.5vw, 1.55rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ad-ink);
+  flex: 1;
+}
+
+.agency-offer-flip__share {
+  flex-shrink: 0;
+  max-width: min(11.5rem, 42%);
+}
+
+.agency-offer-flip__share .disc-offer-share-btn--labeled {
+  padding: 6px 10px;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+}
+
+.agency-offer-flip__share .disc-offer-share-btn__label {
+  max-width: 9rem;
+}
+
+.agency-offer-flip__tiers-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agency-offer-flip__tiers-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ad-muted);
+}
+
+.agency-offer-flip__roadmap .offer-reward-roadmap__track-base {
+  background: #d8e8df;
+}
+
+.agency-offer-flip__roadmap.is-interactive {
+  background: #f4faf7;
+  border-color: #d0e8da;
+}
+
+.agency-offer-flip__roadmap .offer-reward-roadmap__summary {
+  font-size: 0.76rem;
+}
+
+.agency-offer-flip__roadmap .offer-reward-roadmap__footnote {
+  font-size: 0.72rem;
+}
+
+.agency-offer-flip__desc {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ad-muted);
+}
+
+.agency-offer-flip__reward {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e8f8ea 0%, #dff5e2 100%);
+  border: 1px solid #a8d9b0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #0a5c28;
+}
+
+.agency-offer-flip__goal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agency-offer-flip__goal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agency-offer-flip__goal-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ad-muted);
+}
+
+.agency-offer-flip__goal-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ad-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.agency-offer-flip__goal-value span {
+  font-weight: 600;
+  color: var(--ad-muted);
+}
+
+.agency-offer-flip__progress {
+  height: 10px;
+  border-radius: 999px;
+  background: #e8f0ec;
+  overflow: hidden;
+}
+
+.agency-offer-flip__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #00af02 0%, #4ade80 100%);
+  transition: width 0.5s ease;
+}
+
+.agency-offer-flip__goal-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ad-muted);
+}
+
+.agency-offer-flip__price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.agency-offer-flip__price {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ad-green);
+}
+
+.agency-offer-flip__price--free {
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+}
+
+.agency-offer-flip__price-was {
+  font-size: 0.9rem;
+  color: var(--ad-muted);
+  text-decoration: line-through;
+}
+
+.agency-offer-flip__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.agency-offer-flip__cta {
+  flex: 1;
+  min-width: 200px;
+  min-height: 48px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #00af02 0%, #00c902 100%);
+  box-shadow: 0 10px 28px rgba(0, 175, 2, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.agency-offer-flip__cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px rgba(0, 175, 2, 0.38);
+}
+
+.agency-offer-flip__cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.agency-offer-flip__registrants-link {
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ad-green);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.agency-offer-flip__nav {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.agency-offer-flip__nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.agency-offer-flip__nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.agency-offer-flip__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.agency-offer-flip__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.agency-offer-flip__dot.is-active {
+  width: 24px;
+  border-radius: 999px;
+  background: #4ade80;
+}
+
+@media (max-width: 720px) {
+  .agency-offer-flip {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .agency-offer-flip__nav {
+    display: none;
+  }
+
+  .agency-offer-flip__stage {
+    min-height: auto;
+  }
+
+  .agency-offer-flip__card {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(160px, 28vh) auto;
+    max-height: none;
+    min-height: auto;
+  }
+
+  .agency-offer-showcase__month-cal {
+    margin-bottom: 14px;
+  }
+
+  .offer-month-calendar {
+    padding: 10px 12px;
+  }
+
+  .offer-month-calendar__month {
+    min-width: 1.85rem;
+    font-size: 0.64rem;
+  }
+
+  .agency-offer-flip__share {
+    max-width: 100%;
+  }
+
+  .agency-offer-flip__share .disc-offer-share-btn__label {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agency-offer-flip__card {
+    transition: none;
+  }
+
+  .agency-offer-flip__card.is-flip-out,
+  .agency-offer-flip__card.is-flip-in {
+    transform: none;
+    opacity: 1;
+    animation: none;
+  }
 }
 
 /* —— Gallery —— */
@@ -1476,7 +2063,69 @@ button.agency-hero-banner__ghost {
 }
 
 .agency-inquiry-grid--trip {
-  grid-template-columns: minmax(100px, 0.55fr) 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
+}
+
+.agency-inquiry-trip-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inquiry-trip-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inquiry-duration-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #eef8f1;
+  border: 1px solid #a8d4b8;
+  font-size: 0.92rem;
+  color: #0f3d24;
+}
+
+.inquiry-duration-summary__value {
+  font-weight: 800;
+  color: #0a5c28;
+}
+
+.inquiry-duration-summary__sep {
+  color: #5a8a6a;
+  font-weight: 700;
+}
+
+.inquiry-duration-summary__package {
+  flex-basis: 100%;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #3d6b4f;
+}
+
+.agency-display-band--green .agency-inquiry-card .inquiry-duration-summary {
+  background: #fff;
+  border-color: #8fc99a;
+  box-shadow: 0 2px 10px rgba(10, 51, 32, 0.08);
+}
+
+.agency-display-band--green .agency-inquiry-card .inquiry-duration-summary__value {
+  color: #0a5c28;
+}
+
+.agency-display-band--green .agency-inquiry-card .inquiry-duration-summary__sep {
+  color: #5a8a6a;
+}
+
+.agency-display-band--green .agency-inquiry-card .inquiry-duration-summary__package {
+  color: #3d6b4f;
 }
 
 .agency-inquiry-grid--prefs {

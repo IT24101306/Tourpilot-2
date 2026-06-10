@@ -30,6 +30,7 @@ const withPlanBodySchema = z.object({
   title: z.string().min(1),
   tourKind: z.enum(["READY_MADE", "CUSTOM"]),
   basePriceLkr: z.number().nonnegative().optional(),
+  influencerCommissionPct: z.number().min(0).max(50).nullable().optional(),
   summary: z.string().optional(),
   description: z.string().optional(),
   coverUrl: z.string().optional(),
@@ -248,6 +249,9 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
           description: body.description?.trim() || null,
           coverUrl: body.coverUrl?.trim() || null,
           basePriceLkr: body.basePriceLkr ?? 0,
+          ...(body.influencerCommissionPct !== undefined
+            ? { influencerCommissionPct: body.influencerCommissionPct }
+            : {}),
           isPublished: willPublish,
         },
       });
@@ -330,6 +334,9 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
           description: body.description?.trim() || null,
           coverUrl: body.coverUrl?.trim() || null,
           basePriceLkr: body.basePriceLkr ?? Number(existing.basePriceLkr),
+          ...(body.influencerCommissionPct !== undefined
+            ? { influencerCommissionPct: body.influencerCommissionPct }
+            : {}),
           ...(body.isPublished !== undefined ? { isPublished: body.isPublished } : {}),
         },
       });
@@ -571,6 +578,7 @@ function serializeTourListItem(
     days: number;
     tourKind: string;
     basePriceLkr: unknown;
+    influencerCommissionPct?: unknown | null;
     coverUrl?: string | null;
     seasonTag?: string | null;
     districtTags?: unknown;
@@ -591,6 +599,8 @@ function serializeTourListItem(
   linkedOffers: LinkedOfferLite[] = []
 ) {
   const pricing = attachTourPricing(tour, commissionPctOverride);
+  const tourInfluencerCommissionPct =
+    tour.influencerCommissionPct != null ? Number(tour.influencerCommissionPct) : null;
   return {
     id: tour.id,
     title: tour.title,
@@ -600,6 +610,7 @@ function serializeTourListItem(
     days: tour.days,
     tourKind: tour.tourKind,
     ...pricing,
+    tourInfluencerCommissionPct,
     coverUrl: tour.coverUrl ?? null,
     seasonTag: tour.seasonTag ?? null,
     districtTags: tour.districtTags ?? null,

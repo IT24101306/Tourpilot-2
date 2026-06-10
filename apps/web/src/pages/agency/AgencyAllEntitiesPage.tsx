@@ -1,8 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
-import { ImageUrlField } from "../../components/ImageUrlField";
 import { EntityFormFields } from "../../components/entity/EntityFormFields";
+import { EntityMediaFields } from "../../components/entity/EntityMediaFields";
+import { buildEntityMediaStore, type EntityMediaItem } from "@tourpilot/shared";
 import {
   ALLOWED_ENTITY_TYPES,
   buildEntityPayload,
@@ -16,6 +18,11 @@ import {
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { EntityTypeLineIcon } from "../../components/icons/LineIcons";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import {
+  TOUR_BUILDER_RETURN_PARAM,
+  TOUR_BUILDER_RETURN_VALUE,
+  tourBuilderResumePath,
+} from "../../lib/tourBuilderDraft";
 
 const PICKER_TYPES: { value: EntityTypeKey; label: string }[] = [
   { value: "HOTEL", label: "Hotel" },
@@ -23,11 +30,6 @@ const PICKER_TYPES: { value: EntityTypeKey; label: string }[] = [
   { value: "ACTIVITY", label: "Activity" },
   { value: "RESTAURANT", label: "Restaurant" },
 ];
-
-type EntityMediaItem =
-  | { kind: "image"; url: string; label?: string }
-  | { kind: "video"; url: string; label?: string }
-  | { kind: "link"; url: string; label?: string };
 
 type AgencyEntity = {
   id: string;
@@ -44,18 +46,18 @@ type AgencyEntity = {
 export function AgencyAllEntitiesPage() {
   const { token } = useAuth();
   const { requestConfirm } = useConfirmAction();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnToTourBuilder =
+    searchParams.get(TOUR_BUILDER_RETURN_PARAM) === TOUR_BUILDER_RETURN_VALUE;
   const [entities, setEntities] = useState<AgencyEntity[]>([]);
   const [typeFilter, setTypeFilter] = useState("all");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
 
   const [entityForm, setEntityForm] = useState<EntityFormState>(defaultEntityForm());
-  const [media, setMedia] = useState<EntityMediaItem[]>([]);
-  const [mediaDraft, setMediaDraft] = useState<{ kind: EntityMediaItem["kind"]; url: string; label: string }>({
-    kind: "image",
-    url: "",
-    label: "",
-  });
+  const [mainImageUrl, setMainImageUrl] = useState("");
+  const [gallery, setGallery] = useState<EntityMediaItem[]>([]);
 
   const filterTabs = useMemo(() => {
     const tabs: { value: string; label: string }[] = [
@@ -103,7 +105,8 @@ export function AgencyAllEntitiesPage() {
         { label: "Name", value: savedName || "(untitled)" },
         { label: "Type", value: entityTypeLabel(entityForm.type) },
         { label: "Location", value: entityLocationLabel(entityForm) },
-        { label: "Media items", value: String(media.length) },
+        { label: "Main image", value: mainImageUrl.trim() ? "Yes" : "No" },
+        { label: "Extra media", value: String(gallery.length) },
         { label: "Details", value: entityDetailsSummary(entityForm) },
       ],
       onConfirm: async () => {
@@ -115,14 +118,18 @@ export function AgencyAllEntitiesPage() {
             token,
             body: JSON.stringify({
               ...payload,
-              media: media.length > 0 ? media : undefined,
+              media: buildEntityMediaStore(mainImageUrl, gallery),
             }),
           });
           setEntityForm(defaultEntityForm());
-          setMedia([]);
-          setMediaDraft({ kind: "image", url: "", label: "" });
-          setToast(`${savedName || "Entity"} saved to your library.`);
+          setMainImageUrl("");
+          setGallery([]);
           await refresh(token);
+          if (returnToTourBuilder) {
+            navigate(tourBuilderResumePath());
+            return;
+          }
+          setToast(`${savedName || "Entity"} saved to your library.`);
           setTimeout(() => setToast(""), 3200);
         } catch {
           setToast("Could not save entity. Check required fields and try again.");
@@ -133,23 +140,27 @@ export function AgencyAllEntitiesPage() {
     });
   }
 
-  function addMediaItem() {
-    const url = mediaDraft.url.trim();
-    if (!url) return;
-    setMedia((m) => [
-      ...m,
-      { kind: mediaDraft.kind, url, ...(mediaDraft.label.trim() ? { label: mediaDraft.label.trim() } : {}) },
-    ]);
-    setMediaDraft((d) => ({ ...d, url: "", label: "" }));
-  }
-
   return (
     <div className="module-shell module-catalog entities-studio">
       <ModuleHeader
         module="catalog"
         title="Entity library"
-        subtitle="Hotels, viewpoints, activities, and restaurants — the building blocks of your tours."
+        subtitle={
+          returnToTourBuilder
+            ? "Add an entity for your package in progress — you'll return to Tours when you save."
+            : "Hotels, viewpoints, activities, and restaurants — the building blocks of your tours."
+        }
       />
+
+      {returnToTourBuilder && (
+        <div className="tour-builder-return-banner" role="status">
+          <span>
+            You're adding an entity for a <strong>package you're building</strong>. Save the
+            entity below to return to your tour, or{" "}
+            <Link to={tourBuilderResumePath()}>go back without adding</Link>.
+          </span>
+        </div>
+      )}
 
       <header className="entities-studio-hero cat-studio-hero">
         <div className="entities-studio-stats">
@@ -207,86 +218,13 @@ export function AgencyAllEntitiesPage() {
             </div>
           </div>
 
-          <div className="entities-form-section">
-            <h4>Media gallery</h4>
-            <p className="entities-section-hint muted">Optional images, videos, and links for this entity.</p>
-            <div className="entities-media-add">
-              <div className="field">
-                <label htmlFor="media-kind">Kind</label>
-                <select
-                  id="media-kind"
-                  value={mediaDraft.kind}
-                  onChange={(e) =>
-                    setMediaDraft((d) => ({ ...d, kind: e.target.value as EntityMediaItem["kind"] }))
-                  }
-                >
-                  <option value="image">Image</option>
-                  <option value="video">Video</option>
-                  <option value="link">Link</option>
-                </select>
-              </div>
-              <div className="field grow">
-                {mediaDraft.kind === "image" ? (
-                  <ImageUrlField
-                    label="Image"
-                    className="image-url-field--embedded"
-                    value={mediaDraft.url}
-                    onChange={(url) => setMediaDraft((d) => ({ ...d, url }))}
-                    token={token}
-                    placeholder="Paste a link or upload from your device"
-                  />
-                ) : (
-                  <>
-                    <label htmlFor="media-url">URL</label>
-                    <input
-                      id="media-url"
-                      placeholder={
-                        mediaDraft.kind === "video"
-                          ? "https://youtube.com/… or video URL"
-                          : "https://…"
-                      }
-                      value={mediaDraft.url}
-                      onChange={(e) => setMediaDraft((d) => ({ ...d, url: e.target.value }))}
-                    />
-                  </>
-                )}
-              </div>
-              <div className="field">
-                <label htmlFor="media-label">Label</label>
-                <input
-                  id="media-label"
-                  placeholder="Optional"
-                  value={mediaDraft.label}
-                  onChange={(e) => setMediaDraft((d) => ({ ...d, label: e.target.value }))}
-                />
-              </div>
-              <button type="button" className="btn btn-ghost entities-media-add-btn" onClick={addMediaItem}>
-                Add
-              </button>
-            </div>
-
-            {media.length > 0 && (
-              <ul className="entities-media-list">
-                {media.map((m, idx) => (
-                  <li key={`${m.kind}-${m.url}-${idx}`} className="entities-media-item">
-                    <span className={`entities-media-badge ${m.kind}`}>{m.kind}</span>
-                    <div className="entities-media-text">
-                      {m.label && <strong>{m.label}</strong>}
-                      <span className="muted">{m.url}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="entities-media-remove"
-                      onClick={() => setMedia((arr) => arr.filter((_, i) => i !== idx))}
-                      aria-label="Remove media"
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <EntityMediaFields
+            mainImageUrl={mainImageUrl}
+            onMainImageChange={setMainImageUrl}
+            gallery={gallery}
+            onGalleryChange={setGallery}
+            token={token}
+          />
 
           <div className="entities-form-footer">
             {toast && <p className="entities-toast">{toast}</p>}

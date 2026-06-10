@@ -741,6 +741,38 @@
   margin: 0 0 12px;
 }
 
+.tour-add-entity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--panel, #f8fbf9);
+  border: 1px dashed var(--line, #dbe6e0);
+}
+
+.tour-add-entity-row .muted {
+  font-size: 0.85rem;
+  max-width: 28rem;
+}
+
+.tour-builder-return-banner {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 12px);
+  background: #eef8f2;
+  border: 1px solid #c5e6d4;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.tour-builder-return-banner a {
+  font-weight: 700;
+  color: var(--teal, #0d6b52);
+}
+
 @media (max-width: 720px) {
   .tour-entity-filters {
     grid-template-columns: 1fr;
@@ -1095,6 +1127,86 @@
   margin-top: 10px;
   padding-top: 0;
   border-top: none;
+}
+
+.offer-tiers-editor__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.offer-tiers-editor__title {
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.offer-tiers-editor__hint {
+  margin: 0 0 12px;
+  font-size: 0.84rem;
+}
+
+.offer-tiers-editor__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.offer-tiers-editor__row {
+  display: grid;
+  grid-template-columns: 1fr 0.7fr 1.4fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafcfb;
+}
+
+.offer-tiers-editor__reward {
+  min-width: 0;
+}
+
+.offer-tiers-editor__everyone {
+  grid-column: 1 / -2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.offer-tiers-editor__preview {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--line);
+  background: #f6fbf8;
+}
+
+.offer-tiers-editor__preview-title {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .offer-tiers-editor__row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .offer-tiers-editor__reward,
+  .offer-tiers-editor__everyone {
+    grid-column: 1 / -1;
+  }
 }
 
 .display-save-bar {

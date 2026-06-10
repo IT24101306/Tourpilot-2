@@ -9,6 +9,7 @@ import type {
   AccountHighlight,
   AccountStat,
 } from "../components/account/accountProfileUtils";
+import { CurrencyPreferencePanel } from "../components/account/CurrencyPreferencePanel";
 import { lkr, roleLabel } from "../components/account/accountProfileUtils";
 import { useAuth } from "../context/AuthContext";
 import type { InfluencerDashboardData } from "./influencer/types";
@@ -229,6 +230,7 @@ export function ProfilePage() {
       {loadingExtra && user.role === "TOURIST" && (
         <p className="muted">Refreshing your travel activity…</p>
       )}
+      {user.role === "TOURIST" && <CurrencyPreferencePanel />}
     </AccountProfileShell>
   );
 }

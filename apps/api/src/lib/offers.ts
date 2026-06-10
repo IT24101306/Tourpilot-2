@@ -1,14 +1,33 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+import {
+  DEFAULT_TOUR_COVER_URL,
+  parseOfferRewardTiers,
+  resolveImageUrl,
+  type OfferRewardTier,
+} from "@tourpilot/shared";
 import { optionalImageUrlSchema } from "./imageUrlSchema.js";
 import { prisma } from "./prisma.js";
+
+const offerMonthSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}$/, "offerMonth must be YYYY-MM")
+  .optional()
+  .nullable();
+
+const rewardTierSchema = z.object({
+  registrationsRequired: z.number().int().positive(),
+  winnersCount: z.number().int().positive(),
+  rewardLabel: z.string().min(1),
+});
 
 export const offerCreateBodySchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   imageUrl: optionalImageUrlSchema,
   rewardText: z.string(),
+  offerMonth: offerMonthSchema,
+  rewardTiers: z.array(rewardTierSchema).optional().default([]),
   registrationCap: z.number().int().positive(),
   validFrom: z.string().datetime(),
   validUntil: z.string().datetime(),
@@ -22,6 +41,8 @@ export const offerUpdateBodySchema = z.object({
   description: z.string().nullable().optional(),
   imageUrl: optionalImageUrlSchema.optional(),
   rewardText: z.string().optional(),
+  offerMonth: offerMonthSchema,
+  rewardTiers: z.array(rewardTierSchema).optional(),
   registrationCap: z.number().int().positive().optional(),
   validFrom: z.string().datetime().optional(),
   validUntil: z.string().datetime().optional(),
@@ -38,6 +59,10 @@ export function resolveOfferImageUrl(
   return resolveImageUrl(offerImageUrl, resolveImageUrl(tourCoverUrl, DEFAULT_TOUR_COVER_URL));
 }
 
+function serializeRewardTiers(value: unknown): OfferRewardTier[] {
+  return parseOfferRewardTiers(value);
+}
+
 export function serializeOfferAdmin(o: OfferWithAdminInclude) {
   return {
     id: o.id,
@@ -45,6 +70,8 @@ export function serializeOfferAdmin(o: OfferWithAdminInclude) {
     description: o.description,
     imageUrl: o.imageUrl,
     rewardText: o.rewardText,
+    offerMonth: o.offerMonth,
+    rewardTiers: serializeRewardTiers(o.rewardTiers),
     registrationCap: o.registrationCap,
     validFrom: o.validFrom,
     validUntil: o.validUntil,
@@ -57,35 +84,17 @@ export function serializeOfferAdmin(o: OfferWithAdminInclude) {
   };
 }
 
-export function serializeActiveOffer(o: {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  rewardText: string;
-  registrationCap: number;
-  validUntil: Date;
-  tourPriceLkr: unknown;
-  discountedLkr: unknown;
-  _count: { registrations: number };
-  tours: Array<{
-    tour: {
-      id: string;
-      title: string;
-      slug: string;
-      coverUrl: string | null;
-      basePriceLkr: unknown;
-      agency: { name: string; slug: string };
-    };
-  }>;
-}) {
+export function serializeActiveOffer(o: OfferWithActiveInclude) {
   const primary = o.tours[0]?.tour;
+  const agency = o.agency ?? primary?.agency ?? null;
 
   return {
     id: o.id,
     title: o.title,
     description: o.description,
     rewardText: o.rewardText,
+    offerMonth: o.offerMonth,
+    rewardTiers: serializeRewardTiers(o.rewardTiers),
     registrationCap: o.registrationCap,
     validUntil: o.validUntil,
     tourPriceLkr: Number(o.tourPriceLkr),
@@ -94,8 +103,9 @@ export function serializeActiveOffer(o: {
     registeredCount: o._count.registrations,
     imageUrl: resolveOfferImageUrl(o.imageUrl, primary?.coverUrl),
     offerImageUrl: o.imageUrl,
-    agencyName: primary?.agency.name ?? null,
-    agencySlug: primary?.agency.slug ?? null,
+    agency: agency ? { id: agency.id, name: agency.name, slug: agency.slug } : null,
+    agencyName: agency?.name ?? null,
+    agencySlug: agency?.slug ?? null,
     tourSlug: primary?.slug ?? null,
     tours: o.tours.map((t) => ({
       ...t.tour,
@@ -199,6 +209,10 @@ export async function applyOfferUpdate(
         ...(body.description !== undefined ? { description: body.description } : {}),
         ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
         ...(body.rewardText !== undefined ? { rewardText: body.rewardText } : {}),
+        ...(body.offerMonth !== undefined ? { offerMonth: body.offerMonth } : {}),
+        ...(body.rewardTiers !== undefined
+          ? { rewardTiers: body.rewardTiers as Prisma.InputJsonValue }
+          : {}),
         ...(body.registrationCap !== undefined ? { registrationCap: body.registrationCap } : {}),
         ...(body.validFrom !== undefined ? { validFrom: nextValidFrom } : {}),
         ...(body.validUntil !== undefined ? { validUntil: nextValidUntil } : {}),
@@ -212,6 +226,7 @@ export async function applyOfferUpdate(
 }
 
 export const offerIncludeActive = {
+  agency: { select: { id: true, name: true, slug: true } },
   tours: {
     include: {
       tour: {
@@ -221,10 +236,41 @@ export const offerIncludeActive = {
           slug: true,
           coverUrl: true,
           basePriceLkr: true,
-          agency: { select: { name: true, slug: true } },
+          agency: { select: { id: true, name: true, slug: true } },
         },
       },
     },
   },
   _count: { select: { registrations: true } },
 } as const;
+
+export type OfferWithActiveInclude = Prisma.OfferGetPayload<{
+  include: typeof offerIncludeActive;
+}>;
+
+export function activeOfferWhere(now = new Date()): Prisma.OfferWhereInput {
+  return {
+    isActive: true,
+    validFrom: { lte: now },
+    validUntil: { gte: now },
+  };
+}
+
+/** Active offers from agencies (direct or via linked tours). */
+export function agencyActiveOfferWhere(now = new Date()): Prisma.OfferWhereInput {
+  return {
+    ...activeOfferWhere(now),
+    OR: [{ agencyId: { not: null } }, { tours: { some: {} } }],
+  };
+}
+
+export async function loadActiveOffers(
+  where: Prisma.OfferWhereInput = activeOfferWhere(),
+  db: typeof prisma = prisma
+) {
+  return db.offer.findMany({
+    where,
+    include: offerIncludeActive,
+    orderBy: [{ validUntil: "asc" }, { title: "asc" }],
+  });
+}

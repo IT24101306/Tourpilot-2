@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { CoverImage } from "../components/CoverImage";
 import { TourItineraryPreview } from "../components/itinerary/TourItineraryPreview";
+import { formatTourDaysNights } from "@tourpilot/shared";
+import { FormatLkr } from "../components/currency/FormatLkr";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 
 export function TourDetailPage() {
@@ -20,6 +23,7 @@ export function TourDetailPage() {
       basePriceLkr: number;
       publicPriceLkr?: number;
       seasonTag: string | null;
+      coverUrl?: string | null;
       agency: { name: string; slug: string };
       tourDays: Array<{
         dayNumber: number;
@@ -28,7 +32,12 @@ export function TourDetailPage() {
           kind: string;
           label: string | null;
           priceLkr: number | null;
-          entity: { name: string } | null;
+          entity: {
+            name: string;
+            type?: string;
+            description?: string | null;
+            media?: unknown;
+          } | null;
         }>;
       }>;
     }>(`/tours/public/${agencySlug}/${tourSlug}`);
@@ -46,36 +55,66 @@ export function TourDetailPage() {
     }).catch(() => {});
   }, [refCode]);
 
-  if (!tour) return <section className="section">Loading…</section>;
+  if (!tour) {
+    return (
+      <div className="tour-detail">
+        <div className="tour-detail-main">Loading…</div>
+      </div>
+    );
+  }
+
+  const inquireHref = (() => {
+    const params = new URLSearchParams();
+    params.set("inquireTour", tour.id);
+    if (refCode) params.set("ref", refCode);
+    return `/agencies/${tour.agency.slug}?${params.toString()}#request-custom-tour`;
+  })();
 
   return (
-    <section className="section tour-detail-page" style={{ maxWidth: 900, margin: "0 auto" }}>
-      <Link to={`/agencies/${tour.agency.slug}`} className="muted">
-        ← {tour.agency.name}
-      </Link>
-      <div className="tour-detail-head">
-        <h1 className="tour-detail-title">{tour.title}</h1>
-        <SaveTourButton tourId={tour.id} showLabel className="tour-detail-save" />
+    <div className="tour-detail">
+      <header className="tour-detail-hero-strip">
+        <CoverImage src={tour.coverUrl} className="tour-detail-hero-strip__bg" alt="" />
+        <div className="tour-detail-hero-strip__shade" aria-hidden="true" />
+        <div className="tour-detail-hero-strip__inner">
+          <div className="tour-detail-hero-strip__copy">
+            <div className="tour-detail-hero-strip__top">
+              <Link to={`/agencies/${tour.agency.slug}`} className="tour-detail-eyebrow">
+                {tour.agency.name}
+              </Link>
+              <span className="tour-detail-meta">
+                {formatTourDaysNights(tour.days)}
+                {tour.seasonTag && ` · ${tour.seasonTag}`}
+              </span>
+            </div>
+            <h1 className="tour-detail-title">{tour.title}</h1>
+            {(tour.description || tour.summary) && (
+              <p className="tour-detail-desc">{tour.description || tour.summary}</p>
+            )}
+          </div>
+          <div className="tour-detail-hero-strip__aside">
+            <p className="tour-detail-price">
+              <FormatLkr amount={tour.publicPriceLkr ?? tour.basePriceLkr} prefix="from" />
+            </p>
+            <SaveTourButton tourId={tour.id} showLabel className="tour-detail-save" />
+          </div>
+        </div>
+      </header>
+
+      <div className="tour-detail-main">
+        <TourItineraryPreview days={tour.tourDays} />
+
+        <footer className="tour-detail-foot">
+          <div className="tour-detail-foot__copy">
+            <p className="tour-detail-foot__label">Interested?</p>
+            <p className="tour-detail-foot__text">
+              Inquire with {tour.agency.name} — no payment required.
+            </p>
+          </div>
+          <Link to={inquireHref} className="btn btn-primary tour-detail-foot__btn">
+            Inquire this tour
+          </Link>
+        </footer>
       </div>
-      <p className="price" style={{ fontSize: "1.25rem" }}>
-        From LKR {(tour.publicPriceLkr ?? tour.basePriceLkr).toLocaleString()}
-      </p>
-      {tour.seasonTag && <p className="muted">Best season: {tour.seasonTag}</p>}
-      <p style={{ marginTop: 16 }}>{tour.description || tour.summary}</p>
-
-      <TourItineraryPreview days={tour.tourDays} />
-
-      <Link
-        to={(() => {
-          const params = new URLSearchParams();
-          params.set("inquireTour", tour.id);
-          if (refCode) params.set("ref", refCode);
-          return `/agencies/${tour.agency.slug}?${params.toString()}#request-custom-tour`;
-        })()}
-        className="btn btn-primary"
-      >
-        Inquire this tour
-      </Link>
-    </section>
+    </div>
   );
 }

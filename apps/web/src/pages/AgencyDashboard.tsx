@@ -10,6 +10,7 @@ import {
   type EntityFormState,
   type EntityTypeKey,
 } from "../components/entity/entityTypes";
+import { buildEntityMediaStore, type EntityMediaItem } from "@tourpilot/shared";
 import type { ManagedOffer } from "../components/offers/OffersDashboard";
 import { TourFormModal } from "../components/tour/TourFormModal";
 import {
@@ -65,6 +66,8 @@ export function AgencyDashboard() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [entityModalOpen, setEntityModalOpen] = useState(false);
   const [entityForm, setEntityForm] = useState<EntityFormState>(defaultEntityForm());
+  const [entityMainImageUrl, setEntityMainImageUrl] = useState("");
+  const [entityGallery, setEntityGallery] = useState<EntityMediaItem[]>([]);
   const [entityStatus, setEntityStatus] = useState("");
   const [entitySaving, setEntitySaving] = useState(false);
   const [replyInquiryId, setReplyInquiryId] = useState<string | null>(null);
@@ -367,13 +370,18 @@ export function AgencyDashboard() {
       await api("/entities", {
         method: "POST",
         token,
-        body: JSON.stringify(buildEntityPayload(entityForm)),
+        body: JSON.stringify({
+          ...buildEntityPayload(entityForm),
+          media: buildEntityMediaStore(entityMainImageUrl, entityGallery),
+        }),
       });
       setEntityStatus("Saved successfully.");
       await refresh(token);
       setTimeout(() => {
         setEntityModalOpen(false);
         setEntityForm(defaultEntityForm());
+        setEntityMainImageUrl("");
+        setEntityGallery([]);
         setEntityStatus("");
       }, 500);
     } catch (err) {
@@ -980,10 +988,15 @@ export function AgencyDashboard() {
       <EntityFormModal
         open={entityModalOpen}
         form={entityForm}
+        mainImageUrl={entityMainImageUrl}
+        gallery={entityGallery}
+        token={token}
         status={entityStatus}
         saving={entitySaving}
         onClose={() => setEntityModalOpen(false)}
         onChange={setEntityForm}
+        onMainImageChange={setEntityMainImageUrl}
+        onGalleryChange={setEntityGallery}
         onSubmit={addEntity}
       />
 

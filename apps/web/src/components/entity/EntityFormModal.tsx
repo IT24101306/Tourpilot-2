@@ -1,14 +1,21 @@
 import { FormEvent } from "react";
+import type { EntityMediaItem } from "@tourpilot/shared";
 import { type EntityFormState, type EntityTypeKey } from "./entityTypes";
 import { EntityFormFields } from "./EntityFormFields";
+import { EntityMediaFields } from "./EntityMediaFields";
 
 type Props = {
   open: boolean;
   form: EntityFormState;
+  mainImageUrl: string;
+  gallery: EntityMediaItem[];
+  token?: string | null;
   status: string;
   saving: boolean;
   onClose: () => void;
   onChange: (next: EntityFormState) => void;
+  onMainImageChange: (url: string) => void;
+  onGalleryChange: (items: EntityMediaItem[]) => void;
   onSubmit: (e: FormEvent) => void;
 };
 
@@ -19,7 +26,20 @@ const titleByType: Record<EntityTypeKey, string> = {
   RESTAURANT: "Add restaurant",
 };
 
-export function EntityFormModal({ open, form, status, saving, onClose, onChange, onSubmit }: Props) {
+export function EntityFormModal({
+  open,
+  form,
+  mainImageUrl,
+  gallery,
+  token,
+  status,
+  saving,
+  onClose,
+  onChange,
+  onMainImageChange,
+  onGalleryChange,
+  onSubmit,
+}: Props) {
   if (!open) return null;
 
   return (
@@ -43,6 +63,14 @@ export function EntityFormModal({ open, form, status, saving, onClose, onChange,
           <div className="entity-form-grid">
             <EntityFormFields form={form} onChange={onChange} typePicker="select" />
           </div>
+
+          <EntityMediaFields
+            mainImageUrl={mainImageUrl}
+            onMainImageChange={onMainImageChange}
+            gallery={gallery}
+            onGalleryChange={onGalleryChange}
+            token={token}
+          />
 
           <div className="dialog-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>

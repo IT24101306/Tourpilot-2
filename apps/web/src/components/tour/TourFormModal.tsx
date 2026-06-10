@@ -36,6 +36,8 @@ type Props = {
   offers?: ManagedOffer[];
   offerLink?: TourOfferLinkState;
   onOfferLinkChange?: (next: TourOfferLinkState) => void;
+  /** Save draft and open ALL tab to add a catalog entity, then return to this package. */
+  onAddNewEntity?: () => void;
 };
 
 export function TourFormModal({
@@ -55,6 +57,7 @@ export function TourFormModal({
   offers,
   offerLink,
   onOfferLinkChange,
+  onAddNewEntity,
 }: Props) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -108,9 +111,10 @@ export function TourFormModal({
 
   if (!open) return null;
 
+  const effectiveCommissionPct = form.influencerCommissionPct ?? agencyInfluencerCommissionPct;
   const listedPrice = tourPublicPriceLkr({
     basePriceLkr: form.basePriceLkr,
-    influencerCommissionPct: agencyInfluencerCommissionPct,
+    influencerCommissionPct: effectiveCommissionPct,
   });
 
   const kindLabel = tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
@@ -197,12 +201,31 @@ export function TourFormModal({
                 placeholder="89500"
               />
             </FormField>
+            <FormField label="Influencer commission %">
+              <input
+                type="number"
+                min={0}
+                max={50}
+                step={0.5}
+                value={form.influencerCommissionPct ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onChange({
+                    ...form,
+                    influencerCommissionPct: v === "" ? null : Number(v),
+                  });
+                }}
+                placeholder={`Default (${agencyInfluencerCommissionPct}%)`}
+                aria-label="Influencer commission percentage"
+              />
+            </FormField>
             <p className="tour-listed-price muted full" style={{ gridColumn: "1 / -1", margin: 0 }}>
               Tourists see <strong>LKR {listedPrice.toLocaleString()}</strong> (your price +{" "}
-              {agencyInfluencerCommissionPct > 0
-                ? `${agencyInfluencerCommissionPct}% influencer commission`
+              {effectiveCommissionPct > 0
+                ? `${effectiveCommissionPct}% influencer commission`
                 : "no influencer commission"}
-              ). Set the % in Display settings.
+              ). Leave blank to use the agency default ({agencyInfluencerCommissionPct}%) from Display
+              settings.
             </p>
             <ImageUrlField
               label="Cover image"
@@ -253,6 +276,17 @@ export function TourFormModal({
                 isPublished: form.isPublished,
               }}
             />
+          )}
+
+          {onAddNewEntity && (
+            <div className="tour-add-entity-row">
+              <button type="button" className="btn btn-teal" onClick={onAddNewEntity}>
+                + Add new entity
+              </button>
+              <span className="muted">
+                Opens the ALL tab to add a place, then brings you back to this package.
+              </span>
+            </div>
           )}
 
           <div className="entity-filter-row tour-entity-filters" role="search">

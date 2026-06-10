@@ -119,6 +119,7 @@
 }
 
 /* Standalone public pages (outside .shell layout) */
+.tour-detail,
 .tour-detail-page {
   font-family: var(--font-body);
 }

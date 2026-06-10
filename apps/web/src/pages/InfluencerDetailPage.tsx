@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { CoverImage } from "../components/CoverImage";
 import { DEFAULT_TOUR_COVER_URL } from "@tourpilot/shared";
+import { FormatLkr } from "../components/currency/FormatLkr";
+import {
+  DiscoveryOfferCard,
+  type DiscoveryOffer,
+} from "../components/discovery/DiscoveryOfferCard";
 import { api } from "../api/client";
 import "../styles/influencer-display.css";
 
@@ -25,10 +30,12 @@ type Storefront = {
   headline: string;
   tagline: string;
   tours: StorefrontTour[];
+  offers: DiscoveryOffer[];
 };
 
 export function InfluencerDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [store, setStore] = useState<Storefront | null>(null);
   const [missing, setMissing] = useState(false);
   const [shareMsg, setShareMsg] = useState("");
@@ -37,7 +44,7 @@ export function InfluencerDetailPage() {
     if (!slug) return;
     setMissing(false);
     api<Storefront>(`/influencers/${slug}`)
-      .then(setStore)
+      .then((data) => setStore({ ...data, offers: data.offers ?? [] }))
       .catch(() => setMissing(true));
   }, [slug]);
 
@@ -115,6 +122,24 @@ export function InfluencerDetailPage() {
           </div>
         </div>
 
+        {(storefront.offers?.length ?? 0) > 0 && (
+          <section className="influencer-display-packages influencer-display-offers">
+            <h2>Special offers</h2>
+            <div className="disc-offer-grid disc-offer-grid--page influencer-display-offer-grid">
+              {storefront.offers.map((o) => (
+                <DiscoveryOfferCard
+                  key={o.id}
+                  offer={o}
+                  page
+                  cardId={`offer-${o.id}`}
+                  onRegister={() => navigate(`/offers?offer=${o.id}`)}
+                  registerLabel="Register for offer"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="influencer-display-packages">
           <h2>Featured tours</h2>
           {storefront.tours.length === 0 ? (
@@ -132,7 +157,7 @@ export function InfluencerDetailPage() {
                     <span className="influencer-display-card-agency">{t.agency.name}</span>
                     <h3>{t.title}</h3>
                     <p className="muted">
-                      {t.days} days · from LKR {t.publicPriceLkr.toLocaleString()}
+                      {t.days} days · <FormatLkr amount={t.publicPriceLkr} prefix="from" />
                     </p>
                     {t.summary && <p className="influencer-display-card-summary">{t.summary}</p>}
                     <span className="influencer-display-card-cta">View tour →</span>

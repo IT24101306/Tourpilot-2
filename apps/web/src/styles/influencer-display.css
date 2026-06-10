@@ -94,6 +94,24 @@
   color: var(--teal, #0d6b52);
 }
 
+.influencer-display-section-title {
+  margin: 24px 0 10px;
+  font-size: 1.05rem;
+}
+
+.influencer-display-section-hint {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+}
+
+.influencer-display-offers {
+  margin-bottom: 40px;
+}
+
+.influencer-display-offer-grid {
+  text-align: left;
+}
+
 /* —— Public storefront —— */
 .influencer-display-public {
   min-height: 100vh;

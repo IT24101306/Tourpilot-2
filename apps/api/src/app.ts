@@ -17,6 +17,7 @@ import { driversRouter } from "./routes/drivers.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { savedToursRouter } from "./routes/savedTours.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { touristRouter } from "./routes/tourist.js";
 
 export function createApp() {
   const app = express();
@@ -52,6 +53,7 @@ export function createApp() {
   app.use("/api/uploads", uploadsRouter);
   app.use("/api/saved-tours", savedToursRouter);
   app.use("/api/notifications", notificationsRouter);
+  app.use("/api/tourist", touristRouter);
 
   app.use(
     (
@@ -61,7 +63,13 @@ export function createApp() {
       _next: express.NextFunction
     ) => {
       if (err.name === "ZodError") {
-        return res.status(400).json({ error: "Validation failed", details: err.issues });
+        const issues = err.issues as Array<{ path: (string | number)[]; message: string }>;
+        const first = issues[0];
+        const field = first?.path?.length ? first.path.join(".") : "input";
+        const message = first?.message
+          ? `${field}: ${first.message}`
+          : "Validation failed";
+        return res.status(400).json({ error: message, details: issues });
       }
       const status = err.status || 500;
       res.status(status).json({ error: err.message || "Internal Server Error" });

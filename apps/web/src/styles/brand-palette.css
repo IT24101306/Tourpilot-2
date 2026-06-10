@@ -1,0 +1,122 @@
+/**
+ * Brand palette (4 colours + black) for new UI elements.
+ * Existing screens keep legacy --green / --teal tokens; use --brand-* for new work.
+ *
+ * Swatches (top → bottom, left → right in reference):
+ *   dark green bar | light grey surface | bright green CTA | teal accent
+ */
+:root {
+  --brand-dark-green: #0b3022;
+  --brand-surface: #e4e8e7;
+  --brand-accent-green: #14b81d;
+  --brand-accent-teal: #1fa19d;
+  --brand-black: #000000;
+
+  /* Readable text on brand backgrounds */
+  --brand-on-dark: #ffffff;
+  --brand-on-surface: var(--brand-black);
+  --brand-on-accent-green: var(--brand-black);
+  --brand-on-accent-teal: #ffffff;
+}
+
+/* —— Layout bands (headers, sections) —— */
+.brand-band-dark {
+  background: var(--brand-dark-green);
+  color: var(--brand-on-dark);
+}
+
+.brand-band-surface {
+  background: var(--brand-surface);
+  color: var(--brand-on-surface);
+}
+
+/* —— Buttons & CTAs —— */
+.brand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: var(--radius-md, 12px);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.brand-btn:hover {
+  filter: brightness(1.06);
+}
+
+.brand-btn:active {
+  transform: translateY(1px);
+}
+
+.brand-btn--primary {
+  background: var(--brand-accent-green);
+  color: var(--brand-on-accent-green);
+}
+
+.brand-btn--secondary {
+  background: var(--brand-accent-teal);
+  color: var(--brand-on-accent-teal);
+}
+
+.brand-btn--dark {
+  background: var(--brand-dark-green);
+  color: var(--brand-on-dark);
+}
+
+.brand-btn--ghost {
+  background: transparent;
+  color: var(--brand-black);
+  border: 1px solid color-mix(in srgb, var(--brand-black) 18%, transparent);
+}
+
+/* —— Text & accents —— */
+.brand-text-dark {
+  color: var(--brand-dark-green);
+}
+
+.brand-text-accent {
+  color: var(--brand-accent-teal);
+}
+
+.brand-text-black {
+  color: var(--brand-black);
+}
+
+.brand-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.brand-pill--green {
+  background: color-mix(in srgb, var(--brand-accent-green) 18%, var(--brand-surface));
+  color: var(--brand-dark-green);
+}
+
+.brand-pill--teal {
+  background: color-mix(in srgb, var(--brand-accent-teal) 20%, var(--brand-surface));
+  color: var(--brand-dark-green);
+}
+
+.brand-card {
+  background: var(--brand-surface);
+  color: var(--brand-on-surface);
+  border: 1px solid color-mix(in srgb, var(--brand-black) 8%, transparent);
+  border-radius: var(--radius-lg, 18px);
+}
+
+.brand-card--on-dark {
+  background: color-mix(in srgb, var(--brand-surface) 12%, var(--brand-dark-green));
+  border-color: color-mix(in srgb, var(--brand-surface) 22%, transparent);
+  color: var(--brand-on-dark);
+}

@@ -1,9 +1,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { formatOfferMonthLabel } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { InfluencerTourDetailModal } from "../../components/influencer/InfluencerTourDetailModal";
+import { isFreeOffer } from "../../lib/offerPricing";
 import { useInfluencerDashboard, type InfluencerTour } from "./types";
 
 type DisplayTour = {
@@ -20,11 +22,27 @@ type DisplayTour = {
   referralCode: string | null;
 };
 
+type DisplayOffer = {
+  id: string;
+  title: string;
+  description: string | null;
+  rewardText: string;
+  offerMonth?: string | null;
+  tourPriceLkr: number;
+  discountedLkr: number | null;
+  spotsLeft: number;
+  registeredCount?: number;
+  validUntil: string;
+  agency?: { id: string; name: string; slug: string } | null;
+  agencyName?: string | null;
+};
+
 type DisplayData = {
   slug: string;
   publicPath: string;
-  display: { headline: string; tagline: string; tourIds: string[] };
+  display: { headline: string; tagline: string; tourIds: string[]; offerIds: string[] };
   availableTours: DisplayTour[];
+  availableOffers: DisplayOffer[];
 };
 
 export function InfluencerDisplayPage() {
@@ -37,7 +55,9 @@ export function InfluencerDisplayPage() {
   const [headline, setHeadline] = useState("");
   const [tagline, setTagline] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedOfferIds, setSelectedOfferIds] = useState<Set<string>>(new Set());
   const [tours, setTours] = useState<DisplayTour[]>([]);
+  const [offers, setOffers] = useState<DisplayOffer[]>([]);
   const [agencyFilter, setAgencyFilter] = useState("all");
   const [detailTour, setDetailTour] = useState<InfluencerTour | null>(null);
 
@@ -50,7 +70,9 @@ export function InfluencerDisplayPage() {
       setHeadline(data.display.headline);
       setTagline(data.display.tagline);
       setSelectedIds(new Set(data.display.tourIds));
+      setSelectedOfferIds(new Set(data.display.offerIds ?? []));
       setTours(data.availableTours);
+      setOffers(data.availableOffers ?? []);
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Failed to load display settings");
     } finally {
@@ -65,16 +87,45 @@ export function InfluencerDisplayPage() {
   const agencies = useMemo(() => {
     const map = new Map<string, string>();
     tours.forEach((t) => map.set(t.agency.id, t.agency.name));
+    offers.forEach((o) => {
+      if (o.agency) map.set(o.agency.id, o.agency.name);
+    });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [tours]);
+  }, [tours, offers]);
 
   const filteredTours = useMemo(() => {
     if (agencyFilter === "all") return tours;
     return tours.filter((t) => t.agency.id === agencyFilter);
   }, [tours, agencyFilter]);
 
+  const filteredOffers = useMemo(() => {
+    if (agencyFilter === "all") return offers;
+    return offers.filter((o) => o.agency?.id === agencyFilter);
+  }, [offers, agencyFilter]);
+
+  function offerAgencyName(o: DisplayOffer) {
+    return o.agency?.name ?? o.agencyName ?? "Agency";
+  }
+
+  function offerPriceLabel(o: DisplayOffer) {
+    if (isFreeOffer(o.discountedLkr)) return "FREE tour";
+    if (o.discountedLkr != null) {
+      return `LKR ${o.discountedLkr.toLocaleString()} (was ${o.tourPriceLkr.toLocaleString()})`;
+    }
+    return `from LKR ${o.tourPriceLkr.toLocaleString()}`;
+  }
+
   function toggleTour(id: string) {
     setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleOffer(id: string) {
+    setSelectedOfferIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -89,10 +140,11 @@ export function InfluencerDisplayPage() {
     setMsg("");
     try {
       const tourIds = tours.filter((t) => selectedIds.has(t.id)).map((t) => t.id);
+      const offerIds = offers.filter((o) => selectedOfferIds.has(o.id)).map((o) => o.id);
       await api("/influencer/mine/display", {
         method: "PUT",
         token,
-        body: JSON.stringify({ headline, tagline, tourIds }),
+        body: JSON.stringify({ headline, tagline, tourIds, offerIds }),
       });
       setMsg("Display page saved.");
     } catch (err) {
@@ -140,7 +192,7 @@ export function InfluencerDisplayPage() {
       <ModuleHeader
         module="partner"
         title="Display page"
-        subtitle="Choose tours to feature on your public page. Visitors can open packages with your referral link when you have a code."
+        subtitle="Choose tours and agency offers to feature on your public page. Visitors can book tours with your referral link or register for special offers."
       >
         {slug && (
           <>
@@ -210,9 +262,13 @@ export function InfluencerDisplayPage() {
                 ))}
               </select>
             </label>
-            <span className="muted">{selectedIds.size} selected</span>
+            <span className="muted">
+              {selectedIds.size} tour{selectedIds.size === 1 ? "" : "s"} · {selectedOfferIds.size} offer
+              {selectedOfferIds.size === 1 ? "" : "s"}
+            </span>
           </div>
 
+          <h3 className="influencer-display-section-title">Tours</h3>
           <ul className="influencer-display-tour-list">
             {filteredTours.length === 0 ? (
               <li className="muted">No tours match this filter.</li>
@@ -266,6 +322,50 @@ export function InfluencerDisplayPage() {
                         >
                           Agency info
                         </button>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+
+          <h3 className="influencer-display-section-title">Agency offers</h3>
+          <p className="muted influencer-display-section-hint">
+            Active limited-time offers from travel agencies. Featured offers appear on your public page
+            so followers can register.
+          </p>
+          <ul className="influencer-display-tour-list">
+            {filteredOffers.length === 0 ? (
+              <li className="muted" style={{ padding: "12px 14px" }}>
+                No active agency offers match this filter.
+              </li>
+            ) : (
+              filteredOffers.map((o) => {
+                const checked = selectedOfferIds.has(o.id);
+                const monthLabel = formatOfferMonthLabel(o.offerMonth);
+                return (
+                  <li key={o.id}>
+                    <label
+                      className={`influencer-display-tour-row${checked ? " influencer-display-tour-row--on" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleOffer(o.id)}
+                      />
+                      <span className="influencer-display-tour-main">
+                        <strong>{o.title}</strong>
+                        <span className="muted">
+                          {offerAgencyName(o)}
+                          {monthLabel ? ` · ${monthLabel}` : ""} · {offerPriceLabel(o)}
+                        </span>
+                        <span className="muted">{o.rewardText}</span>
+                      </span>
+                      <span className="influencer-display-tour-side">
+                        <span className="influencer-display-ref ok">
+                          {o.spotsLeft === 0 ? "Full" : `${o.spotsLeft} spots left`}
+                        </span>
                       </span>
                     </label>
                   </li>

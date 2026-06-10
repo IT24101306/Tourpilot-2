@@ -5,19 +5,27 @@ import { CoverImage } from "../CoverImage";
 import { isFreeOffer } from "../../lib/offerPricing";
 import { OfferCountdown } from "./OfferCountdown";
 import { OfferRegistrantsModal } from "./OfferRegistrantsModal";
+import { formatOfferMonthLabel } from "@tourpilot/shared";
+import { OfferRewardRoadmap } from "./OfferRewardRoadmap";
 import { OfferShareButton } from "./OfferShareButton";
+import type { OfferRewardTier } from "@tourpilot/shared";
+import { useFormatMoney } from "../../context/CurrencyContext";
 
 export type DiscoveryOffer = {
   id: string;
   title: string;
   description: string | null;
   rewardText: string;
+  offerMonth?: string | null;
+  rewardTiers?: OfferRewardTier[];
   tourPriceLkr: number;
   discountedLkr: number | null;
   spotsLeft: number;
   registeredCount?: number;
+  registrationCap?: number;
   validUntil: string;
   imageUrl?: string;
+  agency?: { id: string; name: string; slug: string } | null;
   agencyName?: string | null;
   agencySlug?: string | null;
   tourSlug?: string | null;
@@ -38,13 +46,21 @@ type Props = {
   cardId?: string;
 };
 
-function OfferPrice({ offer }: { offer: DiscoveryOffer }) {
+function OfferPrice({
+  offer,
+  format,
+  formatFrom,
+}: {
+  offer: DiscoveryOffer;
+  format: (amountLkr: number) => string;
+  formatFrom: (amountLkr: number) => string;
+}) {
   if (isFreeOffer(offer.discountedLkr)) {
     return (
       <>
         <span className="disc-offer-price-now disc-offer-price-free">FREE</span>
         {offer.tourPriceLkr > 0 && (
-          <span className="disc-offer-price-was">LKR {offer.tourPriceLkr.toLocaleString()}</span>
+          <span className="disc-offer-price-was">{format(offer.tourPriceLkr)}</span>
         )}
       </>
     );
@@ -53,13 +69,13 @@ function OfferPrice({ offer }: { offer: DiscoveryOffer }) {
   if (offer.discountedLkr != null) {
     return (
       <>
-        <span className="disc-offer-price-now">From LKR {offer.discountedLkr.toLocaleString()}</span>
-        <span className="disc-offer-price-was">LKR {offer.tourPriceLkr.toLocaleString()}</span>
+        <span className="disc-offer-price-now">{formatFrom(offer.discountedLkr)}</span>
+        <span className="disc-offer-price-was">{format(offer.tourPriceLkr)}</span>
       </>
     );
   }
 
-  return <span className="disc-offer-price-now">From LKR {offer.tourPriceLkr.toLocaleString()}</span>;
+  return <span className="disc-offer-price-now">{formatFrom(offer.tourPriceLkr)}</span>;
 }
 
 export function DiscoveryOfferCard({
@@ -73,6 +89,7 @@ export function DiscoveryOfferCard({
   cardId,
 }: Props) {
   const location = useLocation();
+  const { format, formatFrom } = useFormatMoney();
   const [registrantsOpen, setRegistrantsOpen] = useState(false);
 
   function openRegistrants(e: MouseEvent<HTMLElement>) {
@@ -113,10 +130,28 @@ export function DiscoveryOfferCard({
 
           {offer.description && <p className="disc-offer-desc">{offer.description}</p>}
 
+          {formatOfferMonthLabel(offer.offerMonth) && (
+            <p className="disc-offer-month">Dedicated to {formatOfferMonthLabel(offer.offerMonth)}</p>
+          )}
+
           <p className="disc-offer-reward disc-offer-reward--pill">{offer.rewardText}</p>
 
+          {(offer.rewardTiers?.length ?? 0) > 0 && (
+            <OfferRewardRoadmap
+              tiers={offer.rewardTiers!}
+              registeredCount={offer.registeredCount ?? 0}
+              registrationCap={
+                offer.registrationCap ??
+                (offer.registeredCount != null && offer.spotsLeft != null
+                  ? offer.registeredCount + offer.spotsLeft
+                  : undefined)
+              }
+              interactive
+            />
+          )}
+
           <div className="disc-offer-price disc-offer-price--stacked">
-            <OfferPrice offer={offer} />
+            <OfferPrice offer={offer} format={format} formatFrom={formatFrom} />
           </div>
 
           <div className="disc-offer-meta-row">
@@ -128,7 +163,9 @@ export function DiscoveryOfferCard({
           </div>
 
           <div className="disc-offer-actions">
-            {showShare && <OfferShareButton offer={offer} />}
+            {showShare && (
+              <OfferShareButton offer={offer} label="Share with your friends" />
+            )}
             {tourHref && (
               <Link to={tourHref} className="btn btn-ghost disc-offer-secondary">
                 View tour
@@ -183,7 +220,7 @@ export function DiscoveryOfferCard({
       {!compact && offer.description && <p className="disc-offer-desc">{offer.description}</p>}
       <p className={`disc-offer-reward${hero ? " disc-offer-reward--hero" : ""}`}>{offer.rewardText}</p>
       <p className="disc-offer-price">
-        <OfferPrice offer={offer} />
+        <OfferPrice offer={offer} format={format} formatFrom={formatFrom} />
       </p>
       {!hero && offer.registeredCount != null && (
         <p className="disc-offer-social muted">{offer.registeredCount} travelers registered</p>
