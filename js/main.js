@@ -27,25 +27,28 @@ const phases = [
 
 const STORY_CONTENT = {
   intro: {
-    eyebrow: "IYYO · Series One",
-    title: "Intelligence in form.",
+    eyebrow: "IYYO Solutions",
+    title: "Digital products, built right.",
     copy:
-      "Scroll to evolve the machine in place — precision, structure, orbit.",
+      "Websites, software, and e-commerce — engineered with quality, speed, and reliability.",
   },
   rotate: {
-    eyebrow: "Precision",
-    title: "Every angle considered.",
-    copy: "",
+    eyebrow: "What we do",
+    title: "Design & development.",
+    copy:
+      "From brand websites to custom platforms, we ship work that performs in the real world.",
   },
   dismantle: {
-    eyebrow: "Architecture",
-    title: "Engineered to separate.",
-    copy: "",
+    eyebrow: "How we work",
+    title: "Clear process. Fast delivery.",
+    copy:
+      "Structured builds, transparent communication, and solutions your team can actually use.",
   },
   orbit: {
-    eyebrow: "Modularity",
-    title: "Parts in controlled orbit.",
-    copy: "",
+    eyebrow: "Let's build",
+    title: "Ready when you are.",
+    copy:
+      "Scroll through our showcase — then explore projects or get in touch to start yours.",
   },
 };
 
@@ -64,8 +67,12 @@ const chamber = $("#chamber");
 const storyUi = $("#story-ui");
 const storyClock = $("#story-clock");
 const storyCard = $("#story-card");
+const storyTextWrap = $("#story-text-wrap");
+const storyEyebrow = $("#story-eyebrow");
 const storyTitle = $("#story-title");
 const storyCopy = $("#story-copy");
+
+const BUDDY_WAKE_MESSAGE = "scroll to wake Buddy";
 
 const frames = [];
 const frameLoadPromises = new Map();
@@ -97,6 +104,7 @@ let renderQueued = false;
 let scrollIdleTimer = null;
 let currentStoryPhase = null;
 let storyChangeTimer = null;
+let buddyAwakened = false;
 let pumpScheduled = false;
 let bootstrapping = false;
 
@@ -798,6 +806,16 @@ function applyStoryContent(phaseId) {
   const data = STORY_CONTENT[phaseId];
   if (!data) return;
 
+  if (storyEyebrow) {
+    if (data.eyebrow) {
+      storyEyebrow.textContent = data.eyebrow;
+      storyEyebrow.hidden = false;
+    } else {
+      storyEyebrow.textContent = "";
+      storyEyebrow.hidden = true;
+    }
+  }
+
   if (storyTitle) storyTitle.textContent = data.title;
 
   if (storyCopy) {
@@ -813,11 +831,34 @@ function applyStoryContent(phaseId) {
 
 function updateStoryClock() {
   if (!storyClock) return;
-  storyClock.textContent = "scroll";
+  storyClock.textContent = buddyAwakened ? "scroll ↓" : BUDDY_WAKE_MESSAGE;
+}
+
+function showBuddyWakeState() {
+  buddyAwakened = false;
+  currentStoryPhase = null;
+  storyCard?.classList.add("is-buddy-sleeping");
+  if (storyTextWrap) storyTextWrap.hidden = true;
+  updateStoryClock();
+}
+
+function awakenBuddy(progress) {
+  if (buddyAwakened) return;
+  buddyAwakened = true;
+  storyCard?.classList.remove("is-buddy-sleeping");
+  if (storyTextWrap) storyTextWrap.hidden = false;
+  currentStoryPhase = null;
+  updateStoryClock();
+  updateStoryPanels(progress);
+}
+
+function maybeAwakenBuddy(progress) {
+  if (buddyAwakened || progress <= 0.001) return;
+  awakenBuddy(progress);
 }
 
 function startStoryClock() {
-  updateStoryClock();
+  showBuddyWakeState();
 }
 
 function setStoryPhase(phaseId) {
@@ -850,8 +891,9 @@ function renderFrame(progress) {
 }
 
 function renderUi(progress) {
+  maybeAwakenBuddy(progress);
   updateChamberStyles(progress);
-  updateStoryPanels(progress);
+  if (buddyAwakened) updateStoryPanels(progress);
 }
 
 function queueRender(progress) {
@@ -940,6 +982,7 @@ function setupScrollTrigger() {
 function bindScroll() {
   if (typeof gsap !== "undefined" && typeof ScrollTrigger !== "undefined") {
     lenis = setupLenis();
+    window.iyyoLenis = lenis;
     setupScrollTrigger();
     ScrollTrigger.refresh();
   } else {
@@ -1002,7 +1045,12 @@ function resetToFirstFrame() {
   }
   drawFrameAt(0);
   updateChamberStyles(0);
-  updateStoryPanels(0);
+  if (buddyAwakened) {
+    currentStoryPhase = null;
+    updateStoryPanels(0);
+  } else {
+    showBuddyWakeState();
+  }
 }
 
 function revealExperience() {

@@ -5,6 +5,7 @@
   const mobile = document.getElementById("nav-menu-mobile");
 
   nav?.classList.add("is-visible");
+  document.querySelector(".site-mark-wrap")?.classList.add("is-visible");
   document.querySelector(".site-mark")?.classList.add("is-visible");
   document.querySelector(".corner-hud")?.classList.add("is-visible");
   document.querySelector(".site-copyright")?.classList.add("is-visible");

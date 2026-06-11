@@ -1,29 +1,36 @@
-/** About page — accordion panels */
+/** About panel — accordion panels */
 (function () {
-  const accordion = document.getElementById("about-accordion");
-  if (!accordion) return;
+  function initAboutAccordion() {
+    const accordion = document.getElementById("about-accordion");
+    if (!accordion || accordion.dataset.bound === "true") return;
 
-  accordion.querySelectorAll(".about-accordion-trigger").forEach((trigger) => {
-    trigger.addEventListener("click", () => {
-      const item = trigger.closest(".about-accordion-item");
-      const panel = item?.querySelector(".about-accordion-panel");
-      if (!item || !panel) return;
+    accordion.dataset.bound = "true";
 
-      const isOpen = item.classList.contains("is-open");
+    accordion.querySelectorAll(".about-accordion-trigger").forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        const item = trigger.closest(".about-accordion-item");
+        const panel = item?.querySelector(".about-accordion-panel");
+        if (!item || !panel) return;
 
-      accordion.querySelectorAll(".about-accordion-item").forEach((other) => {
-        other.classList.remove("is-open");
-        const btn = other.querySelector(".about-accordion-trigger");
-        const otherPanel = other.querySelector(".about-accordion-panel");
-        btn?.setAttribute("aria-expanded", "false");
-        if (otherPanel) otherPanel.hidden = true;
+        const isOpen = item.classList.contains("is-open");
+
+        accordion.querySelectorAll(".about-accordion-item").forEach((other) => {
+          other.classList.remove("is-open");
+          const btn = other.querySelector(".about-accordion-trigger");
+          const otherPanel = other.querySelector(".about-accordion-panel");
+          btn?.setAttribute("aria-expanded", "false");
+          if (otherPanel) otherPanel.hidden = true;
+        });
+
+        if (!isOpen) {
+          item.classList.add("is-open");
+          trigger.setAttribute("aria-expanded", "true");
+          panel.hidden = false;
+        }
       });
-
-      if (!isOpen) {
-        item.classList.add("is-open");
-        trigger.setAttribute("aria-expanded", "true");
-        panel.hidden = false;
-      }
     });
-  });
+  }
+
+  window.initAboutAccordion = initAboutAccordion;
+  initAboutAccordion();
 })();

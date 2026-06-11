@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="IYYO Solutions projects — websites, software, e-commerce, and digital campaigns."
+      content="IYYO Solutions products — websites, software, e-commerce, and digital campaigns."
     />
-    <title>Projects — IYYO Solutions</title>
+    <title>Products — IYYO Solutions</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/styles.css" />
   </head>
-  <body class="page-projects">
+  <body class="page-projects projects-is-loading">
     <div class="hud-cursor" id="hud-cursor" aria-hidden="true">
       <span class="hud-cursor__ring hud-cursor__ring--outer"></span>
       <span class="hud-cursor__ring hud-cursor__ring--mid"></span>
@@ -30,9 +30,9 @@
           <span class="nav-logo-text">IYYO</span>
         </a>
         <ul class="nav-links">
-          <li><a href="about.html">About Us</a></li>
-          <li><a href="projects.html" aria-current="page">Projects</a></li>
-          <li><a href="mailto:hello@iyyo.solutions">Contact Us</a></li>
+          <li><a href="index.html#about">/about</a></li>
+          <li><a href="projects.html" aria-current="page">/products</a></li>
+          <li><a href="contact.html">/contact</a></li>
         </ul>
         <button
           type="button"
@@ -46,9 +46,9 @@
         </button>
       </div>
       <ul class="nav-links-mobile" id="nav-menu-mobile" hidden>
-        <li><a href="about.html">About Us</a></li>
-        <li><a href="projects.html">Projects</a></li>
-        <li><a href="mailto:hello@iyyo.solutions">Contact Us</a></li>
+        <li><a href="index.html#about">/about</a></li>
+        <li><a href="projects.html">/products</a></li>
+        <li><a href="contact.html">/contact</a></li>
       </ul>
     </nav>
 
@@ -57,11 +57,28 @@
     </a>
 
     <main class="projects-page">
-      <header class="about-banner projects-banner">
-        <div class="about-banner-media projects-banner-media" aria-hidden="true"></div>
-        <div class="about-banner-overlay" aria-hidden="true"></div>
-        <h1 class="about-banner-title" data-animate="hero">Projects</h1>
-      </header>
+      <section class="projects-hero is-playing" id="projects-hero" aria-label="Products showcase">
+        <video
+          id="projects-hero-video"
+          class="projects-hero-video"
+          src="assets/projects-hero.mp4"
+          muted
+          playsinline
+          preload="auto"
+          aria-hidden="true"
+        ></video>
+        <div class="story-ui projects-hero-ui" id="projects-hero-ui" aria-hidden="true" hidden>
+          <div class="story-card white-glass projects-hero-glass projects-hero-glass--compact">
+            <div class="projects-hero-clock" id="projects-hero-clock" aria-hidden="true">
+              <span class="projects-hero-clock__hand projects-hero-clock__hand--minute"></span>
+              <span class="projects-hero-clock__hand projects-hero-clock__hand--second"></span>
+            </div>
+          </div>
+        </div>
+        <h1 class="projects-hero-title" id="projects-hero-title" hidden aria-hidden="true">
+          Products
+        </h1>
+      </section>
 
       <section class="projects-section" aria-labelledby="projects-grid-heading">
         <div class="projects-section-head">
@@ -103,6 +120,7 @@
             <img class="project-panel-image" id="project-panel-image" alt="" />
           </div>
           <p class="project-panel-category" id="project-panel-category"></p>
+          <p class="project-panel-status" id="project-panel-status"></p>
           <h2 class="project-panel-title" id="project-panel-title"></h2>
           <p class="project-panel-year" id="project-panel-year"></p>
           <p class="project-panel-description" id="project-panel-description"></p>
@@ -126,9 +144,9 @@
       <div class="footer-inner">
         <span class="footer-logo">IYYO</span>
         <nav class="footer-links" aria-label="Footer">
-          <a href="projects.html">Projects</a>
-          <a href="about.html">About Us</a>
-          <a href="mailto:hello@iyyo.solutions">Contact Us</a>
+          <a href="projects.html">/products</a>
+          <a href="index.html#about">/about</a>
+          <a href="contact.html">/contact</a>
         </nav>
         <span class="footer-note">© IYYO Solutions</span>
       </div>
@@ -137,6 +155,8 @@
     <script src="js/cursor.js"></script>
     <script src="js/projects-data.js"></script>
     <script src="js/nav.js"></script>
+    <script src="js/hero-clock.js"></script>
+    <script src="js/projects-hero.js"></script>
     <script src="js/projects.js"></script>
     <script src="js/page-animations.js"></script>
   </body>

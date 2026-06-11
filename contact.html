@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Contact IYYO Solutions — websites, software, e-commerce, and digital services."
+    />
+    <title>Contact Us — IYYO Solutions</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600&family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="page-contact contact-is-loading">
+    <div class="hud-cursor" id="hud-cursor" aria-hidden="true">
+      <span class="hud-cursor__ring hud-cursor__ring--outer"></span>
+      <span class="hud-cursor__ring hud-cursor__ring--mid"></span>
+      <span class="hud-cursor__ring hud-cursor__ring--inner"></span>
+      <span class="hud-cursor__dot"></span>
+    </div>
+
+    <nav class="site-nav is-visible" id="site-nav" aria-label="Main navigation">
+      <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
+          <span class="nav-logo-text">IYYO</span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="index.html#about">/about</a></li>
+          <li><a href="projects.html">/products</a></li>
+          <li><a href="contact.html" aria-current="page">/contact</a></li>
+        </ul>
+        <button
+          type="button"
+          class="nav-toggle"
+          id="nav-toggle"
+          aria-expanded="false"
+          aria-controls="nav-menu-mobile"
+          aria-label="Open menu"
+        >
+          <span></span><span></span>
+        </button>
+      </div>
+      <ul class="nav-links-mobile" id="nav-menu-mobile" hidden>
+        <li><a href="index.html#about">/about</a></li>
+        <li><a href="projects.html">/products</a></li>
+        <li><a href="contact.html">/contact</a></li>
+      </ul>
+    </nav>
+
+    <a href="index.html" class="site-mark" aria-label="IYYO Solutions home">
+      <img src="assets/iyyo-logo.png" alt="" width="64" height="64" decoding="async" />
+    </a>
+
+    <main class="contact-page">
+      <section class="contact-hero is-playing" id="contact-hero" aria-label="Contact showcase">
+        <video
+          id="contact-video"
+          class="contact-hero-video"
+          src="assets/contact-transition.mp4"
+          muted
+          playsinline
+          preload="auto"
+          aria-hidden="true"
+        ></video>
+
+        <div class="story-ui contact-hero-clock-ui" id="contact-hero-clock-ui" aria-hidden="true" hidden>
+          <div class="story-card white-glass projects-hero-glass projects-hero-glass--compact">
+            <div class="projects-hero-clock" id="contact-hero-clock" aria-hidden="true">
+              <span class="projects-hero-clock__hand projects-hero-clock__hand--minute"></span>
+              <span class="projects-hero-clock__hand projects-hero-clock__hand--second"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-hero-ui" id="contact-hero-ui" aria-hidden="true">
+          <div class="contact-hero-ui__inner">
+            <p class="contact-body__eyebrow">IYYO · Contact</p>
+            <h1 class="contact-body__title">Get in touch</h1>
+
+            <div class="contact-primary-grid" role="list">
+              <a
+                class="contact-ui__card white-glass"
+                href="https://wa.me/94771234567"
+                target="_blank"
+                rel="noreferrer"
+                role="listitem"
+              >
+                <span class="contact-ui__card-label">WhatsApp</span>
+                <span class="contact-ui__card-value">Message us</span>
+                <span class="contact-ui__card-hint">Fast replies on chat</span>
+              </a>
+              <a
+                class="contact-ui__card white-glass"
+                href="mailto:hello@iyyo.solutions"
+                role="listitem"
+              >
+                <span class="contact-ui__card-label">Email</span>
+                <span class="contact-ui__card-value">hello@iyyo.solutions</span>
+                <span class="contact-ui__card-hint">Send a message</span>
+              </a>
+              <a
+                class="contact-ui__card white-glass"
+                href="https://www.linkedin.com/company/iyyosolutions"
+                target="_blank"
+                rel="noreferrer"
+                role="listitem"
+              >
+                <span class="contact-ui__card-label">LinkedIn</span>
+                <span class="contact-ui__card-value">IYYO Solutions</span>
+                <span class="contact-ui__card-hint">Connect with us</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <section class="contact-body" id="contact-body" aria-label="More contact options">
+        <div class="contact-body__inner">
+          <div class="contact-social-section" data-contact-rise>
+            <p class="contact-social-label">Follow IYYO</p>
+            <div class="contact-social-row" role="list">
+              <a
+                class="contact-social-icon"
+                href="https://facebook.com/iyyosolutions"
+                target="_blank"
+                rel="noreferrer"
+                role="listitem"
+                aria-label="Facebook"
+              >FB</a>
+              <a
+                class="contact-social-icon"
+                href="https://instagram.com/iyyosolutions"
+                target="_blank"
+                rel="noreferrer"
+                role="listitem"
+                aria-label="Instagram"
+              >IG</a>
+              <a
+                class="contact-social-icon"
+                href="https://x.com/iyyosolutions"
+                target="_blank"
+                rel="noreferrer"
+                role="listitem"
+                aria-label="X"
+              >X</a>
+              <a
+                class="contact-social-icon"
+                href="https://youtube.com/@iyyosolutions"
+                target="_blank"
+                rel="noreferrer"
+                role="listitem"
+                aria-label="YouTube"
+              >YT</a>
+              <a
+                class="contact-social-icon"
+                href="https://tiktok.com/@iyyosolutions"
+                target="_blank"
+                rel="noreferrer"
+                role="listitem"
+                aria-label="TikTok"
+              >TT</a>
+            </div>
+          </div>
+
+          <section class="contact-extra" aria-labelledby="contact-location-heading" data-contact-rise>
+            <h2 class="contact-extra__heading" id="contact-location-heading">Location</h2>
+            <p class="contact-extra__copy">
+              Based in Sri Lanka, working with clients locally and internationally.
+              Remote collaboration, clear timelines, and direct communication from day one.
+            </p>
+          </section>
+
+          <section class="contact-extra" aria-labelledby="contact-services-heading" data-contact-rise>
+            <h2 class="contact-extra__heading" id="contact-services-heading">How we can help</h2>
+            <ul class="contact-extra__list">
+              <li>Website design &amp; development</li>
+              <li>Custom software &amp; e-commerce</li>
+              <li>Social media &amp; digital advertising</li>
+              <li>SEO, branding &amp; IT consultation</li>
+            </ul>
+          </section>
+
+          <section class="contact-extra contact-extra--cta" aria-labelledby="contact-response-heading" data-contact-rise>
+            <h2 class="contact-extra__heading" id="contact-response-heading">Response time</h2>
+            <p class="contact-extra__copy">
+              We typically reply within one business day. For urgent requests, WhatsApp is the
+              fastest way to reach the team.
+            </p>
+            <a class="contact-extra__link" href="mailto:hello@iyyo.solutions">hello@iyyo.solutions</a>
+          </section>
+
+          <section class="contact-inquiry" id="contact-inquiry" aria-labelledby="contact-inquiry-heading" data-contact-rise>
+            <h2 class="contact-inquiry__heading" id="contact-inquiry-heading">Send an inquiry</h2>
+            <p class="contact-inquiry__copy">
+              Tell us about your project — we will get back to you with next steps.
+            </p>
+            <form class="contact-form" id="contact-inquiry-form" novalidate>
+              <div class="contact-form__row">
+                <div class="contact-form__field">
+                  <label class="contact-form__label" for="contact-name">Name</label>
+                  <input
+                    class="contact-form__input"
+                    type="text"
+                    id="contact-name"
+                    name="name"
+                    autocomplete="name"
+                    placeholder="Your name"
+                    required
+                  />
+                </div>
+                <div class="contact-form__field">
+                  <label class="contact-form__label" for="contact-email">Email</label>
+                  <input
+                    class="contact-form__input"
+                    type="email"
+                    id="contact-email"
+                    name="email"
+                    autocomplete="email"
+                    placeholder="you@company.com"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="contact-form__field contact-form__field--full">
+                <label class="contact-form__label" for="contact-subject">Subject</label>
+                <input
+                  class="contact-form__input"
+                  type="text"
+                  id="contact-subject"
+                  name="subject"
+                  placeholder="What can we help with?"
+                  required
+                />
+              </div>
+              <div class="contact-form__field contact-form__field--full">
+                <label class="contact-form__label" for="contact-message">Message</label>
+                <textarea
+                  class="contact-form__textarea"
+                  id="contact-message"
+                  name="message"
+                  placeholder="Share a few details about your project..."
+                  required
+                ></textarea>
+              </div>
+              <button class="contact-form__submit" type="submit">Send inquiry</button>
+            </form>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <p class="site-copyright contact-copyright" id="contact-copyright" hidden>
+      © 2026. ALL RIGHTS RESERVED @IYYO SOLUTIONS (PVT) LTD
+    </p>
+
+    <script src="js/cursor.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/hero-clock.js"></script>
+    <script src="js/contact.js"></script>
+  </body>
+</html>

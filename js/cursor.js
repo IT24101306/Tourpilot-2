@@ -8,7 +8,7 @@
   document.body.classList.add("has-hud-cursor");
 
   const interactive =
-    "a, button, [role='button'], input, textarea, select, label, summary, .project-card, .nav-toggle, .about-accordion-trigger";
+    "a, button, [role='button'], input, textarea, select, label, summary, .project-card, .contact-ui__card, .contact-social-icon, .contact-form__submit, .about-panel-close, .nav-toggle, .about-accordion-trigger, .site-mark-toggle, .site-mark-menu__link";
 
   let visible = false;
 

@@ -1,43 +1,148 @@
 /** IYYO Solutions — project catalogue */
+const createProjectPlaceholder = (title, subtitle, startColor, endColor) =>
+  `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="${title}">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${startColor}" />
+          <stop offset="100%" stop-color="${endColor}" />
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="900" fill="url(#bg)" />
+      <rect x="72" y="72" width="1056" height="756" rx="40" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.16)" />
+      <text x="112" y="220" fill="#ffffff" font-family="Outfit, Arial, sans-serif" font-size="58" font-weight="700">${title}</text>
+      <text x="112" y="292" fill="rgba(255,255,255,0.84)" font-family="Outfit, Arial, sans-serif" font-size="30" font-weight="400">${subtitle}</text>
+      <path d="M112 360H788" stroke="rgba(255,255,255,0.26)" stroke-width="4" stroke-linecap="round" />
+      <text x="112" y="432" fill="rgba(255,255,255,0.68)" font-family="Outfit, Arial, sans-serif" font-size="24" letter-spacing="3">IYYO SOLUTIONS</text>
+    </svg>
+  `)}`;
+
 const IYYO_PROJECTS = [
   {
     id: "medwaste",
-    title: "MedWaste",
-    category: "Website Design & Development",
+    title: "medwaste.lk — Website",
+    category: "B2B Healthcare Solutions (Pvt) Ltd",
     image: "assets/projects/medwaste.png",
     summary:
-      "Trusted pharmaceutical waste management solutions provider in Sri Lanka.",
-    description:
-      "IYYO designed and developed a professional website for MedWaste — a nationwide pharmaceutical waste disposal service. The site communicates safety, compliance, and environmental responsibility with a clear service structure and strong calls to action.",
-    services: ["UI/UX Design", "Front-end Development", "Content Structure"],
-    deliverables: ["Responsive website", "Service pages", "Contact integration"],
+      "Public-facing digital platform for Sri Lanka's premier pharmaceutical waste disposal specialist.",
+    descriptionHtml: `
+      <p>We designed and developed the public-facing digital platform for MedWaste — Sri Lanka's premier pharmaceutical waste disposal specialist, approved and monitored by the National Medicines Regulatory Authority (NMRA).</p>
+      <p>The website was built to reflect the credibility and compliance standards the brand operates under — clean, professional, and aligned with the trust that healthcare clients and regulators expect.</p>
+      <p class="project-panel-website">Website: <a href="https://medwaste.lk" target="_blank" rel="noreferrer">medwaste.lk</a></p>
+    `,
+    services: ["Web Design & Development", "UI/UX Design", "Regulatory Technology"],
+    deliverables: ["Public-facing website", "Brand-aligned interface", "Compliance-ready presentation"],
+    status: "Live",
+    website: "https://medwaste.lk",
+    year: "2025",
+  },
+  {
+    id: "medwaste-management-system",
+    title: "MedWaste — Internal Management System",
+    category: "B2B Healthcare Solutions (Pvt) Ltd",
+    image: "assets/projects/medwaste-system.png",
+    summary:
+      "Internal system for the complete lifecycle of pharmaceutical and medical waste operations.",
+    descriptionHtml: `
+      <p>Beyond the website, we designed and built a fully integrated management system that handles the complete lifecycle of pharmaceutical and medical waste — from collection request to final processing — across pharmacies, hospitals, and healthcare centres nationwide.</p>
+      <p>This wasn't a standard software project. It was a complete digital transformation of a compliance-critical operation, turning a process that relied on manual coordination into a streamlined, technology-driven system monitored against NMRA standards.</p>
+      <div class="project-panel-block">
+        <h3>What we delivered</h3>
+        <ul class="project-panel-list">
+          <li>End-to-end waste lifecycle management</li>
+          <li>Seamless tracking across multiple collection points</li>
+          <li>Multi-location operations under a single system</li>
+          <li>Technology aligned with NMRA compliance standards</li>
+        </ul>
+      </div>
+      <p>At IYYO Solutions, we don't just build products. We solve real problems.</p>
+    `,
+    services: [
+      "Custom Software Development",
+      "System Architecture",
+      "Workflow Automation",
+      "Regulatory Technology",
+    ],
+    deliverables: ["Lifecycle tracking", "Multi-point coordination", "Compliance operations"],
+    status: "Live",
     year: "2025",
   },
   {
     id: "dm-island-spice",
-    title: "DM Island Spice",
-    category: "E-commerce Solutions",
+    title: "DM Island Spice — E-commerce Platform",
+    category: "Ceylon Products Importers & Distributors (Pvt) Ltd",
     image: "assets/projects/dm-island-spice.png",
     summary:
-      "Premium Ceylon spices e-commerce store delivered across the United States.",
-    description:
-      "A warm, product-led online store for DM Island Spice featuring catalogue browsing, cart functionality, and nationwide delivery messaging. Built to showcase authentic Ceylon spices with a premium brand feel.",
-    services: ["E-commerce Development", "UI/UX Design", "Product Catalogue"],
-    deliverables: ["Online store", "Shopping cart", "Product pages"],
+      "A sophisticated, modern e-commerce platform bringing authentic Ceylon flavours to customers throughout California.",
+    descriptionHtml: `
+      <p>A sophisticated, modern e-commerce platform bringing authentic Ceylon flavours to customers throughout California through an intuitive and seamless digital experience.</p>
+      <p>This project was delivered in two phases. Phase 01 established a clean, responsive static website to showcase the brand's authenticity and commitment to quality. Phase 02 — now live — delivered a fully functional, feature-rich online store built to elevate the brand's digital presence and enhance the shopping experience.</p>
+      <div class="project-panel-block">
+        <h3>What we delivered</h3>
+        <ul class="project-panel-list">
+          <li>Fully integrated online store</li>
+          <li>Optimised product browsing and purchasing flow</li>
+          <li>Secure checkout and payment gateway integration</li>
+          <li>Mobile-first, responsive user experience</li>
+        </ul>
+      </div>
+      <p>Customers can now seamlessly explore and purchase a wide range of authentic Ceylon spices directly through the website.</p>
+      <p class="project-panel-quote">Client recognition: “Thank you IYYO Solutions for the amazing work done for the website.” — Dewni Tissera, Certified Equity Securities Advisor, John Keells Stock Brokers (via LinkedIn)</p>
+      <p class="project-panel-website">Website: <a href="https://dmislandspice.com" target="_blank" rel="noreferrer">dmislandspice.com</a></p>
+    `,
+    services: [
+      "Web Design & Development",
+      "E-commerce Development",
+      "Payment Integration",
+      "UI/UX Design",
+    ],
+    deliverables: ["Online store", "Checkout flow", "Mobile-first storefront"],
+    status: "Live",
+    website: "https://dmislandspice.com",
     year: "2025",
   },
   {
     id: "lanka-auto-parts",
-    title: "Lanka Auto Parts & Repairs",
-    category: "Website Design & Development",
+    title: "Lanka Auto Parts",
+    category: "lankaautoparts.lk",
     image: "assets/projects/lanka-auto-parts.png",
     summary:
-      "Vehicle repairs and genuine parts for Japanese, Malaysian, and international brands.",
-    description:
-      "A bold automotive service website for Lanka Auto Parts & Repairs — highlighting expertise since 2014, parts availability, and inquiry flows. Designed to build trust with clear service sections and performance stats.",
-    services: ["UI/UX Design", "Front-end Development", "Lead Generation"],
-    deliverables: ["Responsive website", "Service pages", "Inquiry forms"],
+      "A modern, user-friendly platform for the premier spare parts and vehicle repair centre.",
+    descriptionHtml: `
+      <p>We designed and developed a modern, user-friendly platform for Lanka Auto Parts — the premier spare parts and vehicle repair centre — helping them establish a strong digital footprint and connect more effectively with their customers.</p>
+      <p>By combining performance with a clean user interface, we laid a solid digital foundation for the brand. Phase 02 is in progress, where we will be integrating an advanced inquiry system directly into the platform.</p>
+      <p>At IYYO Solutions, we don't just build websites. We build complete digital experiences.</p>
+      <p class="project-panel-website">Website: <a href="https://lankaautoparts.lk" target="_blank" rel="noreferrer">lankaautoparts.lk</a></p>
+    `,
+    services: [
+      "Web Design & Development",
+      "Digital Marketplace",
+      "Social Media Management",
+      "Performance Advertising",
+    ],
+    deliverables: ["Responsive website", "Brand platform", "Inquiry system roadmap"],
+    status: "Live",
+    website: "https://lankaautoparts.lk",
     year: "2024",
+  },
+  {
+    id: "colour-lab",
+    title: "Colour Lab — POS System",
+    category: "Photo-Home Colour Lab, a Kodak Studio",
+    image: "assets/projects/colour-lab-pos.png",
+    summary:
+      "A fully customised Point of Sale system tailored to studio operations and customer flow.",
+    descriptionHtml: `
+      <p>A fully customised Point of Sale system, designed and implemented precisely to the studio's workflow and operational requirements. The system is now operating seamlessly, enhancing both staff productivity and the overall customer experience.</p>
+    `,
+    services: [
+      "POS System Development",
+      "Custom Software",
+      "Workflow Automation",
+    ],
+    deliverables: ["POS workflow", "Custom studio operations", "Live deployment"],
+    status: "Live",
+    year: "2025",
   },
   {
     id: "yasho-ballet-school",
@@ -53,55 +158,39 @@ const IYYO_PROJECTS = [
     year: "2025",
   },
   {
-    id: "crm-software",
-    title: "Custom CRM Platform",
-    category: "Custom Software Development",
-    image: "HERO SECTION IMAGES/ezgif-frame-200.webp",
+    id: "salesrep",
+    title: "SalesRep",
+    category: "Pharmaceutical marketplace",
+    image: "assets/projects/salesrep.png",
     summary:
-      "Bespoke CRM to track leads, automate follow-ups, and centralise client communication.",
-    description:
-      "We built a custom CRM around the client's sales pipeline — replacing spreadsheets with role-based dashboards, automated reminders, and integrations with email and WhatsApp. The system scales as their team grows.",
-    services: ["Custom Software", "API Integrations", "Database Design"],
-    deliverables: ["Web application", "User roles", "Integration layer"],
-    year: "2024",
+      "A pharmaceutical marketplace rethinking how procurement and sales move through the industry.",
+    descriptionHtml: `
+      <p>A pharmaceutical marketplace rethinking how procurement and sales move through the industry. Built for a sector that's needed this for a while.</p>
+    `,
+    services: [
+      "Custom Software Development",
+      "Marketplace Platform",
+      "SaaS",
+    ],
+    deliverables: ["Product strategy", "Platform architecture", "Marketplace roadmap"],
+    status: "In Development",
+    year: "2026",
+    comingSoon: true,
   },
   {
-    id: "seo-growth",
-    title: "SEO & Digital Marketing",
-    category: "SEO & Digital Marketing",
-    image: "HERO SECTION IMAGES/ezgif-frame-060.webp",
+    id: "harvester",
+    title: "Harvester",
+    category: "Commercial scraping SaaS",
+    image: "assets/projects/harvester.png",
     summary:
-      "Search optimisation and paid campaigns that increased organic traffic and qualified leads.",
-    description:
-      "IYYO audited the client's site, restructured key pages for search intent, and launched targeted Google Ads campaigns. Monthly reporting tracks rankings, click-through rates, and cost per acquisition.",
-    services: ["SEO", "Google Ads", "Analytics Setup"],
-    deliverables: ["SEO roadmap", "Optimised pages", "Monthly reports"],
-    year: "2025",
-  },
-  {
-    id: "social-management",
-    title: "Social Media Management",
-    category: "Social Media Management & Advertising",
-    image: "HERO SECTION IMAGES/ezgif-frame-120.webp",
-    summary:
-      "Ongoing management of social channels with consistent posting and community engagement.",
-    description:
-      "We handle content planning, posting, comment moderation, and monthly performance reviews for the client's social accounts — keeping their brand active and professional across platforms.",
-    services: ["Community Management", "Content Scheduling", "Performance Reporting"],
-    deliverables: ["Monthly content plan", "Managed channels", "Engagement reports"],
-    year: "2024",
-  },
-  {
-    id: "it-consultation",
-    title: "IT Infrastructure Review",
-    category: "IT Consultation",
-    image: "HERO SECTION IMAGES/ezgif-frame-220.webp",
-    summary:
-      "Technology audit and roadmap for a business upgrading its digital operations.",
-    description:
-      "IYYO assessed the client's hardware, software stack, and security posture — then delivered a prioritised roadmap for cloud migration, backup policies, and tooling that supports remote work.",
-    services: ["IT Consultation", "Security Review", "Cloud Planning"],
-    deliverables: ["Audit report", "Technology roadmap", "Vendor recommendations"],
-    year: "2025",
+      "A commercial web scraping SaaS with a spider marketplace, subscription layer, and public API.",
+    descriptionHtml: `
+      <p>A commercial web scraping SaaS with a spider marketplace, subscription layer, and public API. For businesses that need data at scale without engineering the infrastructure themselves.</p>
+    `,
+    services: ["SaaS Development", "API Development", "System Architecture"],
+    deliverables: ["Platform concept", "API foundation", "Subscription model"],
+    status: "In Development",
+    year: "2026",
+    comingSoon: true,
   },
 ];

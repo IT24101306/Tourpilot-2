@@ -9,7 +9,7 @@
 
   if (prefersReducedMotion) {
     animated.forEach((el) => el.classList.add("is-animated"));
-    document.querySelector(".about-banner, .projects-banner")?.classList.add("is-ready");
+    document.querySelector(".about-banner, .projects-banner, .contact-banner")?.classList.add("is-ready");
     document.body.classList.add("page-animations-ready");
     return;
   }
@@ -32,7 +32,7 @@
     requestAnimationFrame(() => el.classList.add("is-animated"));
   });
 
-  const banner = document.querySelector(".about-banner, .projects-banner");
+  const banner = document.querySelector(".about-banner, .projects-banner, .contact-banner");
   if (banner) {
     requestAnimationFrame(() => banner.classList.add("is-ready"));
   }

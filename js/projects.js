@@ -8,6 +8,7 @@
 
   const panelImage = document.getElementById("project-panel-image");
   const panelCategory = document.getElementById("project-panel-category");
+  const panelStatus = document.getElementById("project-panel-status");
   const panelTitle = document.getElementById("project-panel-title");
   const panelYear = document.getElementById("project-panel-year");
   const panelDescription = document.getElementById("project-panel-description");
@@ -32,9 +33,11 @@
     panelImage.src = project.image;
     panelImage.alt = project.title;
     panelCategory.textContent = project.category;
+    panelStatus.textContent = "";
+    panelStatus.hidden = true;
     panelTitle.textContent = project.title;
     panelYear.textContent = project.year;
-    panelDescription.textContent = project.description;
+    panelDescription.innerHTML = project.descriptionHtml ?? `<p>${project.description}</p>`;
     renderTags(panelServices, project.services);
     renderTags(panelDeliverables, project.deliverables);
 
@@ -57,29 +60,32 @@
   }
 
   function createCard(project, index) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "project-card";
-    btn.setAttribute("data-animate", "scale-up");
-    btn.setAttribute("role", "listitem");
-    btn.setAttribute("aria-label", `View ${project.title}`);
-    btn.dataset.projectId = project.id;
+    const card = document.createElement(project.comingSoon ? "div" : "button");
+    if (!project.comingSoon) card.type = "button";
+    card.className = `project-card${project.comingSoon ? " project-card--coming-soon" : ""}`;
+    card.setAttribute("data-animate", "scale-up");
+    card.setAttribute("role", "listitem");
+    card.setAttribute("aria-label", project.comingSoon ? `${project.title} coming soon` : `View ${project.title}`);
+    if (!project.comingSoon) card.dataset.projectId = project.id;
 
     const num = String(index + 1).padStart(2, "0");
 
-    btn.innerHTML = `
+    card.innerHTML = `
       <span class="project-card-media">
         <img src="${project.image}" alt="" loading="lazy" />
       </span>
       <span class="project-card-body">
+        ${project.comingSoon ? '<span class="project-card-badge">Coming Soon</span>' : ""}
         <span class="project-card-num">${num}</span>
         <span class="project-card-title">${project.title}</span>
         <span class="project-card-category">${project.category}</span>
       </span>
     `;
 
-    btn.addEventListener("click", () => openPanel(project));
-    return btn;
+    if (!project.comingSoon) {
+      card.addEventListener("click", () => openPanel(project));
+    }
+    return card;
   }
 
   IYYO_PROJECTS.forEach((project, index) => {
