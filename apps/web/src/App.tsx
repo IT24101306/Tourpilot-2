@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { currentPath, loginPath } from "./utils/authRedirect";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CurrencyProvider } from "./context/CurrencyContext";
+import { dashboardPathForRole } from "@tourpilot/shared";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
@@ -10,6 +11,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterProPage } from "./pages/RegisterProPage";
+import { TermsPage } from "./pages/TermsPage";
 import { AgenciesPage } from "./pages/AgenciesPage";
 import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
@@ -74,6 +76,15 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
   return <>{children}</>;
 }
 
+function HomeRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="section">Loading…</div>;
+  if (user?.role === "AGENCY" || user?.role === "INFLUENCER") {
+    return <Navigate to={dashboardPathForRole(user.role)} replace />;
+  }
+  return <LandingPage />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -81,7 +92,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<PublicLayout />}>
-            <Route index element={<LandingPage />} />
+            <Route index element={<HomeRoute />} />
             <Route path="agencies" element={<AgenciesPage />} />
             <Route path="offers" element={<OffersPage />} />
             <Route
@@ -126,6 +137,7 @@ export default function App() {
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="register/pro" element={<RegisterProPage />} />
+          <Route path="terms" element={<TermsPage />} />
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
           <Route path="influencers/:slug" element={<InfluencerDetailPage />} />
           <Route path="tours/:agencySlug/:tourSlug" element={<TourDetailPage />} />

@@ -288,7 +288,7 @@ export function AgencyGroupsPage() {
           <button
             type="submit"
             className="btn btn-primary groups-submit"
-            disabled={saving || entities.length === 0}
+            disabled={saving || !groupForm.name.trim() || groupForm.entityIds.length === 0}
           >
             {saving ? "Creating…" : "Create group"}
           </button>

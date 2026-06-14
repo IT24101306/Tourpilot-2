@@ -228,7 +228,11 @@ export function AgencyAllEntitiesPage() {
 
           <div className="entities-form-footer">
             {toast && <p className="entities-toast">{toast}</p>}
-            <button type="submit" className="btn btn-primary entities-submit-btn" disabled={saving}>
+            <button
+              type="submit"
+              className="btn btn-primary entities-submit-btn"
+              disabled={saving || !entityForm.name.trim()}
+            >
               {saving ? "Saving…" : "Save entity"}
             </button>
           </div>

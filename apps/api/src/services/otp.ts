@@ -89,3 +89,23 @@ export async function verifyOtpChallenge(
 export function createShareToken(): string {
   return crypto.randomBytes(16).toString("hex");
 }
+
+const LOGIN_TOPUP_PURPOSES = ["login", "login_pending"] as const;
+
+export async function assertLoginTopupChallenge(challengeId: string, phone: string) {
+  const challenge = await prisma.otpChallenge.findFirst({
+    where: {
+      id: challengeId,
+      phone,
+      purpose: { in: [...LOGIN_TOPUP_PURPOSES] },
+    },
+  });
+
+  if (!challenge || challenge.expiresAt < new Date()) {
+    const err = new Error("Login session expired. Go back and enter your phone again.");
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+
+  return challenge;
+}

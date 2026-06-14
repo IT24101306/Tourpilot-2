@@ -80,6 +80,11 @@ export function renumberDays(days: DayPlan[]): DayPlan[] {
   return days.map((d, i) => ({ ...d, dayNumber: i + 1 }));
 }
 
+export function isTourFormSavable(form: TourFormState): boolean {
+  if (!form.title.trim()) return false;
+  return form.days.every((day) => day.entries.some((entry) => entry.time && entry.entityId));
+}
+
 export function tourToFormState(tour: AgencyTourDetail): TourFormState {
   const days: DayPlan[] =
     tour.tourDays && tour.tourDays.length > 0

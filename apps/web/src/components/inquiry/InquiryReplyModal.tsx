@@ -494,6 +494,7 @@ export function InquiryReplyModal({
                         : "Send to tourist"
                   }
                   saving={saving}
+                  canSubmit={totalSelections > 0}
                 />
               </form>
             )}

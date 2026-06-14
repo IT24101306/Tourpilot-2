@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { NotificationBell } from "./NotificationBell";
 import { TourPilotBrand } from "./TourPilotBrand";
@@ -6,6 +6,8 @@ import { navLinkClass } from "../utils/navLinkClass";
 
 export function PublicLayout() {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+  const onProfile = pathname === "/profile";
 
   return (
     <div className="shell">
@@ -13,12 +15,16 @@ export function PublicLayout() {
         <TourPilotBrand />
         <nav className="nav" aria-label="Primary">
           <div className="nav-links">
-            <NavLink to="/agencies" className={navLinkClass}>
-              Agencies
-            </NavLink>
-            <NavLink to="/offers" className={navLinkClass}>
-              Offers
-            </NavLink>
+            {!onProfile && (
+              <>
+                <NavLink to="/agencies" className={navLinkClass}>
+                  Agencies
+                </NavLink>
+                <NavLink to="/offers" className={navLinkClass}>
+                  Offers
+                </NavLink>
+              </>
+            )}
             {user?.role === "TOURIST" && (
               <>
                 <NavLink to="/trips" className={navLinkClass}>

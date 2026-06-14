@@ -10,6 +10,7 @@ import {
   entityOptionLabel,
   filterEntityOptions,
   filterGroupOptions,
+  isTourFormSavable,
   renumberDays,
   type DayPlan,
   type EntityOption,
@@ -120,6 +121,7 @@ export function TourFormModal({
   const kindLabel = tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
   const modalTitle =
     mode === "edit" ? `Edit ${kindLabel} Tour` : `Create ${kindLabel} Tour`;
+  const canSave = isTourFormSavable(form);
 
   function updateDays(days: DayPlan[]) {
     onChange({ ...form, days: renumberDays(days) });
@@ -368,7 +370,7 @@ export function TourFormModal({
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving || !form.title.trim()}>
+            <button type="submit" className="btn btn-primary" disabled={saving || !canSave}>
               {saving ? "Saving…" : mode === "edit" ? "Update tour" : "Create tour"}
             </button>
           </div>

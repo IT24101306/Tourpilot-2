@@ -7,6 +7,7 @@ import { ImageUrlField } from "../ImageUrlField";
 import { ModuleHeader } from "../module/ModuleHeader";
 import { formatOfferMonthLabel, type OfferRewardTier } from "@tourpilot/shared";
 import { isFreeOffer, offerPriceFromTours } from "../../lib/offerPricing";
+import { isOfferDraftSavable } from "../../lib/offerForm";
 import { offerShareFeedback, offerShareUrl, shareOffer } from "../../lib/offerShare";
 import { OfferRewardTiersEditor } from "./OfferRewardTiersEditor";
 
@@ -171,6 +172,7 @@ export function OffersDashboard({
     () => (selectedId ? offers.find((o) => o.id === selectedId) ?? null : null),
     [offers, selectedId]
   );
+  const canSaveOffer = isOfferDraftSavable(draft);
 
   async function refresh() {
     if (!token) return;
@@ -645,11 +647,11 @@ export function OffersDashboard({
 
             <div className="gov-form-actions">
               {selectedId ? (
-                <button type="button" className="btn btn-primary" onClick={submitUpdate} disabled={busy}>
+                <button type="button" className="btn btn-primary" onClick={submitUpdate} disabled={busy || !canSaveOffer}>
                   Save changes
                 </button>
               ) : (
-                <button type="button" className="btn btn-primary" onClick={submitCreate} disabled={busy}>
+                <button type="button" className="btn btn-primary" onClick={submitCreate} disabled={busy || !canSaveOffer}>
                   Create offer
                 </button>
               )}

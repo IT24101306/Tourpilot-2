@@ -44,7 +44,7 @@ npm run dev
 | Role | Phone | Notes |
 |------|-------|-------|
 | Admin | +94779998888 | Password login (default seed password: `admin123`) |
-| Agency | +94771234567 | Wallet LKR 500, agency `ceylon-trails` |
+| Agency | +94771234567 | Wallet LKR 500, agency `ceylon-trails` (LANKA TOUR TRAILS) |
 | Tourist | +94771112233 | Inquiries, offers |
 | Influencer | +94774445566 | Ref code `ISLAND10` |
 | Driver | +94776655443 | Driver dashboard (OTP login) |

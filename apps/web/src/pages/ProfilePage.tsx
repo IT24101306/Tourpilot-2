@@ -10,6 +10,7 @@ import type {
   AccountStat,
 } from "../components/account/accountProfileUtils";
 import { CurrencyPreferencePanel } from "../components/account/CurrencyPreferencePanel";
+import { WalletHistoryPanel } from "../components/account/WalletHistoryPanel";
 import { lkr, roleLabel } from "../components/account/accountProfileUtils";
 import { useAuth } from "../context/AuthContext";
 import type { InfluencerDashboardData } from "./influencer/types";
@@ -93,12 +94,12 @@ export function ProfilePage() {
         value:
           inquiryCount > 0
             ? `${inquiryCount} inquir${inquiryCount === 1 ? "y" : "ies"} · ${bookingCount} booking${bookingCount === 1 ? "" : "s"}`
-            : "Discover trusted agencies",
+            : "Plan your first trip",
         description:
           inquiryCount > 0
             ? "Track inquiries, confirmed bookings, and saved tours in one place."
-            : "Curated operators, transparent itineraries, and optional add-ons.",
-        to: inquiryCount > 0 ? "/trips" : "/agencies",
+            : "Send inquiries, save tours, and manage bookings from My travel.",
+        to: "/trips",
         span: 2,
       });
 
@@ -112,9 +113,7 @@ export function ProfilePage() {
       actions.push(
         { label: "Inquiries", to: "/trips", variant: "teal" },
         { label: "Bookings", to: "/trips/bookings" },
-        { label: "Saved tours", to: "/saved" },
-        { label: "Browse agencies", to: "/agencies" },
-        { label: "Special offers", to: "/offers" }
+        { label: "Saved tours", to: "/saved" }
       );
       break;
     }
@@ -231,6 +230,7 @@ export function ProfilePage() {
         <p className="muted">Refreshing your travel activity…</p>
       )}
       {user.role === "TOURIST" && <CurrencyPreferencePanel />}
+      <WalletHistoryPanel />
     </AccountProfileShell>
   );
 }

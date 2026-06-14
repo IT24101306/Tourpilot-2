@@ -986,6 +986,53 @@ textarea {
   padding: clamp(20px, 4vw, 32px) clamp(24px, 5vw, 48px);
 }
 
+.login-wallet-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.login-wallet-panel--auth {
+  margin-top: 4px;
+}
+
+.login-wallet-panel__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.login-wallet-panel__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.login-wallet-panel__value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.login-wallet-panel__fee {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.login-wallet-panel__btn {
+  flex-shrink: 0;
+}
+
 .auth-page--fullscreen .auth-card--floating {
   position: relative;
   z-index: 2;
@@ -3487,10 +3534,111 @@ a.agency-icon-btn {
   gap: 14px;
 }
 
+.offer-register-dialog.entity-dialog {
+  max-width: min(520px, 94vw);
+}
+
+.offer-register-requirement {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0faf4 0%, #e8f6ec 100%);
+  border: 1px solid #b8dfc8;
+}
+
+.offer-register-requirement__badge {
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.offer-register-requirement__title {
+  margin: 0 0 10px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.offer-register-requirement__steps {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.offer-register-requirement__steps li + li {
+  margin-top: 6px;
+}
+
+.offer-register-upload.image-url-field {
+  margin-top: 2px;
+}
+
 .offer-register-lead {
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+.register-terms-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.register-terms-consent input {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+}
+
+.register-terms-consent__link {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--green-dark);
+}
+
+.register-terms-consent__link:hover {
+  color: var(--green);
+}
+
+.legal-page__inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.legal-page__back {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+}
+
+.legal-page__updated {
+  margin: 0 0 24px;
+  font-size: 0.85rem;
+}
+
+.legal-page__body h2 {
+  margin: 24px 0 8px;
+  font-size: 1.05rem;
+}
+
+.legal-page__body p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+  color: var(--ink);
 }
 
 .offer-register-terms {

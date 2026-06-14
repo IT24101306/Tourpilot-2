@@ -8,7 +8,7 @@
  * Run `npm run db:seed` first if the database is empty (creates core login accounts).
  */
 import { PrismaClient } from "@prisma/client";
-import { MEDIA, defaultAgencyKyc } from "@tourpilot/shared";
+import { LANKA_TOUR_TRAILS_LOGO, LANKA_TOUR_TRAILS_SOCIAL_LINKS, MEDIA, defaultAgencyKyc } from "@tourpilot/shared";
 import { hashPassword } from "../src/services/password.js";
 import { printTableCounts, seedExtendedData } from "./seed-demo-extended.js";
 
@@ -67,7 +67,7 @@ async function main() {
     update: { walletBalance: 500 },
     create: {
       phone: PHONES.agency1,
-      name: "Ceylon Trails Agency",
+      name: "Lanka Tour Trails Agency",
       role: "AGENCY",
       walletBalance: 500,
     },
@@ -93,7 +93,7 @@ async function main() {
 
   const kycApproved = {
     ...defaultAgencyKyc({
-      legalBusinessName: "Ceylon Trails (Pvt) Ltd",
+      legalBusinessName: "Lanka Tour Trails (Pvt) Ltd",
       businessEmail: "hello@ceylon-trails.demo",
     }),
     district: "Colombo",
@@ -101,7 +101,7 @@ async function main() {
     registeredAddress: "42 Galle Road, Colombo 03",
     tourismLicenseNo: "SLTDA-DEMO-001",
     ownerIdNumber: "199012345678",
-    bankAccountName: "Ceylon Trails (Pvt) Ltd",
+    bankAccountName: "Lanka Tour Trails (Pvt) Ltd",
     bankName: "Demo Bank",
     bankAccountNumber: "1234567890",
     declarationsAccepted: true,
@@ -114,20 +114,22 @@ async function main() {
       gallery,
       kyc: kycApproved,
       coverUrl: MEDIA.hero,
-      logoUrl: MEDIA.agencyCover,
+      logoUrl: LANKA_TOUR_TRAILS_LOGO,
+      name: "LANKA TOUR TRAILS",
+      tagline: "Simply unique",
       status: "APPROVED",
       avgRating: 4.8,
       reviewCount: 124,
     },
     create: {
       ownerId: agencyUser1.id,
-      name: "Ceylon Trails",
+      name: "LANKA TOUR TRAILS",
       slug: "ceylon-trails",
-      tagline: "Authentic Sri Lanka journeys",
+      tagline: "Simply unique",
       description: "Boutique tours across cultural triangle, hill country, and south coast.",
       district: "Colombo",
       coverUrl: MEDIA.hero,
-      logoUrl: MEDIA.agencyCover,
+      logoUrl: LANKA_TOUR_TRAILS_LOGO,
       influencerCommissionPct: 8,
       status: "APPROVED",
       kyc: kycApproved,
@@ -182,7 +184,7 @@ async function main() {
     });
   }
 
-  const displayContent = {
+  const lankaTourTrailsDisplayContent = {
     enabled: {
       whoWeAre: true,
       tours: true,
@@ -195,8 +197,9 @@ async function main() {
     content: {
       heroHeadline: "Find your perfect trip experience.",
       whoWeAreTitle: "WHO WE ARE",
-      whoWeAreDescription: "",
-      whoWeAreSocialLinks: [],
+      whoWeAreDescription:
+        "Lanka Tour Trails is a boutique Sri Lanka tour operator based in Colombo. We design small-group and private itineraries with certified local guides, transparent pricing, and routes we know by heart.",
+      whoWeAreSocialLinks: LANKA_TOUR_TRAILS_SOCIAL_LINKS.map((link) => ({ ...link })),
       whoWeAreImages: [],
       packagesTitle: "Ready-Made Packages",
       packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
@@ -223,13 +226,26 @@ async function main() {
     },
   };
 
-  for (const ag of [agency1, agency2]) {
-    await prisma.displaySettings.upsert({
-      where: { agencyId: ag.id },
-      update: { sections: displayContent },
-      create: { agencyId: ag.id, sections: displayContent, theme: {} },
-    });
-  }
+  const genericDisplayContent = {
+    enabled: lankaTourTrailsDisplayContent.enabled,
+    content: {
+      ...lankaTourTrailsDisplayContent.content,
+      whoWeAreDescription: "",
+      whoWeAreSocialLinks: [],
+    },
+  };
+
+  await prisma.displaySettings.upsert({
+    where: { agencyId: agency1.id },
+    update: { sections: lankaTourTrailsDisplayContent },
+    create: { agencyId: agency1.id, sections: lankaTourTrailsDisplayContent, theme: {} },
+  });
+
+  await prisma.displaySettings.upsert({
+    where: { agencyId: agency2.id },
+    update: { sections: genericDisplayContent },
+    create: { agencyId: agency2.id, sections: genericDisplayContent, theme: {} },
+  });
 
   const tourist1 = await prisma.user.upsert({
     where: { phone: PHONES.tourist1 },

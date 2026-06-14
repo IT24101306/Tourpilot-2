@@ -80,17 +80,20 @@ export function ModalActions({
   onCancel,
   submitLabel,
   saving,
+  canSubmit = true,
 }: {
   onCancel: () => void;
   submitLabel: string;
   saving?: boolean;
+  /** When false, submit stays disabled until the form has enough data. */
+  canSubmit?: boolean;
 }) {
   return (
     <div className="dialog-actions">
       <button type="button" className="btn btn-ghost" onClick={onCancel}>
         Cancel
       </button>
-      <button type="submit" className="btn btn-primary" disabled={saving}>
+      <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
         {saving ? "Saving…" : submitLabel}
       </button>
     </div>

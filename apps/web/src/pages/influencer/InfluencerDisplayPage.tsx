@@ -5,8 +5,11 @@ import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { InfluencerTourDetailModal } from "../../components/influencer/InfluencerTourDetailModal";
+import { InfluencerDisplayContentEditor } from "../../components/influencer/InfluencerDisplayContentEditor";
+import type { DisplaySocialLink, HeroSlide } from "../../components/display/displayTypes";
 import { isFreeOffer } from "../../lib/offerPricing";
 import { useInfluencerDashboard, type InfluencerTour } from "./types";
+import "../../styles/dashboard.css";
 
 type DisplayTour = {
   id: string;
@@ -40,7 +43,16 @@ type DisplayOffer = {
 type DisplayData = {
   slug: string;
   publicPath: string;
-  display: { headline: string; tagline: string; tourIds: string[]; offerIds: string[] };
+  display: {
+    headline: string;
+    tagline: string;
+    tourIds: string[];
+    offerIds: string[];
+    heroImages: HeroSlide[];
+    aboutTitle: string;
+    aboutDescription: string;
+    socialLinks: DisplaySocialLink[];
+  };
   availableTours: DisplayTour[];
   availableOffers: DisplayOffer[];
 };
@@ -54,6 +66,10 @@ export function InfluencerDisplayPage() {
   const [slug, setSlug] = useState("");
   const [headline, setHeadline] = useState("");
   const [tagline, setTagline] = useState("");
+  const [heroImages, setHeroImages] = useState<HeroSlide[]>([]);
+  const [aboutTitle, setAboutTitle] = useState("About the creator");
+  const [aboutDescription, setAboutDescription] = useState("");
+  const [socialLinks, setSocialLinks] = useState<DisplaySocialLink[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedOfferIds, setSelectedOfferIds] = useState<Set<string>>(new Set());
   const [tours, setTours] = useState<DisplayTour[]>([]);
@@ -69,6 +85,10 @@ export function InfluencerDisplayPage() {
       setSlug(data.slug);
       setHeadline(data.display.headline);
       setTagline(data.display.tagline);
+      setHeroImages(data.display.heroImages ?? []);
+      setAboutTitle(data.display.aboutTitle ?? "About the creator");
+      setAboutDescription(data.display.aboutDescription ?? "");
+      setSocialLinks(data.display.socialLinks ?? []);
       setSelectedIds(new Set(data.display.tourIds));
       setSelectedOfferIds(new Set(data.display.offerIds ?? []));
       setTours(data.availableTours);
@@ -144,7 +164,16 @@ export function InfluencerDisplayPage() {
       await api("/influencer/mine/display", {
         method: "PUT",
         token,
-        body: JSON.stringify({ headline, tagline, tourIds, offerIds }),
+        body: JSON.stringify({
+          headline,
+          tagline,
+          tourIds,
+          offerIds,
+          heroImages,
+          aboutTitle,
+          aboutDescription,
+          socialLinks,
+        }),
       });
       setMsg("Display page saved.");
     } catch (err) {
@@ -249,6 +278,18 @@ export function InfluencerDisplayPage() {
               placeholder="A line about what you recommend"
             />
           </label>
+
+          <InfluencerDisplayContentEditor
+            token={token}
+            heroImages={heroImages}
+            aboutTitle={aboutTitle}
+            aboutDescription={aboutDescription}
+            socialLinks={socialLinks}
+            onHeroImagesChange={setHeroImages}
+            onAboutTitleChange={setAboutTitle}
+            onAboutDescriptionChange={setAboutDescription}
+            onSocialLinksChange={setSocialLinks}
+          />
 
           <div className="partner-toolbar">
             <label className="partner-filter">

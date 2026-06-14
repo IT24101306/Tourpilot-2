@@ -27,10 +27,22 @@ walletRouter.post("/topup", authRequired, async (req, res, next) => {
 
 walletRouter.get("/ledger", authRequired, async (req, res, next) => {
   try {
+    const query = z
+      .object({
+        limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+        type: z
+          .enum(["LOGIN_FEE", "TOPUP", "COMMISSION", "REFUND", "ADJUSTMENT"])
+          .optional(),
+      })
+      .parse(req.query);
+
     const entries = await prisma.walletLedger.findMany({
-      where: { userId: req.user!.id },
+      where: {
+        userId: req.user!.id,
+        ...(query.type ? { type: query.type } : {}),
+      },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: query.limit,
     });
     res.json(
       entries.map((e) => ({

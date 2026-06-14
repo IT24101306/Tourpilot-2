@@ -138,7 +138,12 @@ export function CreateReferralCodeModal({
             </ModalField>
           </div>
           {error && <p style={{ color: "#9b1c1c", fontWeight: 700 }}>{error}</p>}
-          <ModalActions onCancel={onClose} submitLabel="Generate referral code" saving={saving} />
+          <ModalActions
+            onCancel={onClose}
+            submitLabel="Generate referral code"
+            saving={saving}
+            canSubmit={Boolean(tourId)}
+          />
         </form>
       )}
     </DashboardModal>

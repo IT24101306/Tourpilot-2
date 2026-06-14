@@ -9,13 +9,15 @@ export function CurrencyPreferencePanel() {
 
   return (
     <section className="account-currency-panel" aria-labelledby="currencyPrefTitle">
-      <h2 id="currencyPrefTitle" className="account-currency-panel__title">
-        Display currency
-      </h2>
-      <p className="account-currency-panel__lead muted">
-        Choose how tour and offer prices are shown across TourPilot. Amounts are converted from
-        operator prices at approximately {LKR_PER_USD} LKR = 1 USD.
-      </p>
+      <header className="account-currency-panel__head account-section-head">
+        <h2 id="currencyPrefTitle" className="account-currency-panel__title">
+          Display currency
+        </h2>
+        <p className="account-currency-panel__lead">
+          Choose how tour and offer prices are shown across TourPilot. Amounts are converted from
+          operator prices at approximately {LKR_PER_USD} LKR = 1 USD.
+        </p>
+      </header>
       <div className="account-currency-panel__options" role="radiogroup" aria-label="Display currency">
         {DISPLAY_CURRENCIES.map((code) => (
           <label

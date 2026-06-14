@@ -73,6 +73,10 @@ influencersRouter.get("/:slug", async (req, res, next) => {
       bio: profile.bio,
       headline: display.headline,
       tagline: display.tagline,
+      heroImages: display.heroImages,
+      aboutTitle: display.aboutTitle,
+      aboutDescription: display.aboutDescription,
+      socialLinks: display.socialLinks,
       tours: tours.map((t) => {
         const pricing = attachTourPricing(t);
         const refCode = codeByTourId.get(t.id);

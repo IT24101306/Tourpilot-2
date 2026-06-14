@@ -1,5 +1,71 @@
+/* Influencer storefront — extends agency-display.css */
+
+.influencer-display .agency-hero-banner--influencer {
+  min-height: min(58vh, 560px);
+  align-items: center;
+}
+
+.influencer-display .agency-hero-banner__content--centered {
+  max-width: min(760px, 100%);
+  margin: 0 auto;
+  padding:
+    clamp(96px, 12vh, 128px)
+    clamp(20px, 4vw, 40px)
+    clamp(64px, 8vh, 88px);
+  text-align: center;
+}
+
+.influencer-display .agency-display-intro--centered {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.influencer-display .agency-display-intro--centered > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.influencer-display .agency-hero-banner__copy--centered h1 {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.influencer-display .agency-hero-banner__actions--centered {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.influencer-display .agency-hero-section-nav {
+  justify-content: center;
+}
+
+.influencer-display-avatar {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.influencer-display-share-msg {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: var(--hero-text-shadow);
+}
+
+.agency-hero-banner__content .influencer-display-share-msg {
+  grid-column: 1 / -1;
+}
+
+/* —— Dashboard editor (unchanged scope) —— */
 .influencer-display-editor {
-  max-width: 720px;
+  max-width: 760px;
 }
 
 .influencer-display-url {
@@ -39,12 +105,6 @@
   justify-content: center;
   gap: 12px;
   margin-top: 20px;
-}
-
-.influencer-display-share-msg {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--teal, #0d6b52);
 }
 
 .influencer-display-tour-list {
@@ -104,128 +164,13 @@
   font-size: 0.9rem;
 }
 
-.influencer-display-offers {
-  margin-bottom: 40px;
-}
-
-.influencer-display-offer-grid {
-  text-align: left;
-}
-
-/* —— Public storefront —— */
-.influencer-display-public {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #f4faf7 0%, #fff 28%);
-}
-
-.influencer-display-public-inner {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 32px 20px 64px;
-}
-
-.influencer-display-hero {
-  margin-bottom: 40px;
-  text-align: center;
-}
-
-.influencer-display-eyebrow {
-  margin: 0 0 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--teal, #0d6b52);
-}
-
-.influencer-display-hero h1 {
-  margin: 0 0 12px;
-  font-family: var(--font-heading, Georgia, serif);
-  font-size: clamp(1.75rem, 4vw, 2.35rem);
-  line-height: 1.15;
-}
-
-.influencer-display-lead {
-  margin: 0 auto 12px;
-  max-width: 36rem;
-  font-size: 1.05rem;
-  color: var(--muted, #5a6b63);
-}
-
-.influencer-display-bio {
-  margin: 0 auto;
-  max-width: 32rem;
-}
-
-.influencer-display-packages h2 {
-  margin: 0 0 20px;
-  font-size: 1.25rem;
-  text-align: center;
-}
-
-.influencer-display-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 18px;
-}
-
-.influencer-display-card {
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid var(--line, #e2ebe6);
-  box-shadow: 0 8px 24px rgba(15, 26, 22, 0.06);
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.influencer-display-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(15, 26, 22, 0.1);
-}
-
-.influencer-display-card-cover {
-  height: 160px;
-  width: 100%;
-  object-fit: cover;
-}
-
-.influencer-display-card-body {
-  padding: 16px 18px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-
-.influencer-display-card-agency {
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--teal, #0d6b52);
-}
-
-.influencer-display-card-body h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-family: var(--font-heading, Georgia, serif);
-}
-
-.influencer-display-card-summary {
-  margin: 0;
-  font-size: 0.88rem;
-  color: var(--muted, #5a6b63);
-  line-height: 1.45;
-  flex: 1;
-}
-
-.influencer-display-card-cta {
-  margin-top: 8px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--teal, #0d6b52);
+.influencer-display-social-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eef5f2;
+  color: var(--green-dark, #0b3022);
 }

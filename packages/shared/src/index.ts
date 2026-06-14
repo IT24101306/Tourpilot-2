@@ -52,6 +52,8 @@ export { MAX_AGENCY_HERO_SLIDES } from "./displayLimits.js";
 export {
   CEYLON_TRAILS_HERO_IMAGES,
   DEFAULT_TOUR_COVER_URL,
+  LANKA_TOUR_TRAILS_LOGO,
+  LANKA_TOUR_TRAILS_SOCIAL_LINKS,
   MEDIA,
   isUsableImageUrl,
   resolveImageUrl,

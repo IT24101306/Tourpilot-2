@@ -1,5 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import { CEYLON_TRAILS_HERO_IMAGES, MEDIA, toStoredPhone } from "@tourpilot/shared";
+import {
+  CEYLON_TRAILS_HERO_IMAGES,
+  LANKA_TOUR_TRAILS_LOGO,
+  LANKA_TOUR_TRAILS_SOCIAL_LINKS,
+  MEDIA,
+  toStoredPhone,
+} from "@tourpilot/shared";
 import { hashPassword } from "../src/services/password.js";
 
 const prisma = new PrismaClient();
@@ -48,7 +54,7 @@ async function main() {
     update: {},
     create: {
       phone: agencyPhone,
-      name: "Ceylon Trails Agency",
+      name: "Lanka Tour Trails Agency",
       role: "AGENCY",
       walletBalance: 500,
     },
@@ -62,7 +68,7 @@ async function main() {
   ];
 
   const demoAgencyKyc = {
-    legalBusinessName: "Ceylon Trails (Pvt) Ltd",
+    legalBusinessName: "Lanka Tour Trails (Pvt) Ltd",
     businessType: "PRIVATE_LIMITED",
     registrationNumber: "PV 123456",
     registeredAddress: "42 Galle Road, Colombo 03, Sri Lanka",
@@ -71,7 +77,7 @@ async function main() {
     tourismLicenseNo: "SLTDA-DEMO-001",
     ownerIdType: "NIC",
     ownerIdNumber: "199012345678",
-    bankAccountName: "Ceylon Trails (Pvt) Ltd",
+    bankAccountName: "Lanka Tour Trails (Pvt) Ltd",
     bankName: "Demo Bank",
     bankAccountNumber: "1234567890",
     declarationsAccepted: true,
@@ -80,25 +86,33 @@ async function main() {
 
   const agency = await prisma.agency.upsert({
     where: { ownerId: agencyUser.id },
-    update: { gallery: demoGallery, kyc: demoAgencyKyc, kycSubmittedAt: new Date() },
+    update: {
+      gallery: demoGallery,
+      kyc: demoAgencyKyc,
+      kycSubmittedAt: new Date(),
+      name: "LANKA TOUR TRAILS",
+      tagline: "Simply unique",
+      logoUrl: LANKA_TOUR_TRAILS_LOGO,
+    },
     create: {
       ownerId: agencyUser.id,
-      name: "Ceylon Trails",
+      name: "LANKA TOUR TRAILS",
       slug: "ceylon-trails",
-      tagline: "Authentic Sri Lanka journeys",
+      tagline: "Simply unique",
       description: "Boutique tours across cultural triangle, hill country, and south coast.",
       district: "Colombo",
       influencerCommissionPct: 8,
       status: "APPROVED",
       kyc: demoAgencyKyc,
       kycSubmittedAt: new Date(),
+      logoUrl: LANKA_TOUR_TRAILS_LOGO,
       avgRating: 4.8,
       reviewCount: 124,
       contactPhone: agencyPhone,
       gallery: demoGallery,
       pageConfig: {
         sections: [
-          { type: "hero", title: "Ceylon Trails", subtitle: "Handcrafted island itineraries" },
+          { type: "hero", title: "LANKA TOUR TRAILS", subtitle: "Simply unique — handcrafted island itineraries" },
           { type: "gallery" },
           { type: "tours", title: "Ready-made tours" },
           { type: "reviews" },
@@ -115,13 +129,8 @@ async function main() {
     heroImages: CEYLON_TRAILS_HERO_IMAGES.map((slide) => ({ ...slide })),
     whoWeAreTitle: "WHO WE ARE",
     whoWeAreDescription:
-      "Ceylon Trails is a boutique Sri Lanka tour operator based in Colombo. We design small-group and private itineraries with certified local guides, transparent pricing, and routes we know by heart — from ancient kingdoms to tea country and the south coast.",
-    whoWeAreSocialLinks: [
-      { platform: "instagram", url: "https://instagram.com/ceylontrails", label: "@ceylontrails" },
-      { platform: "facebook", url: "https://facebook.com/ceylontrails" },
-      { platform: "tripadvisor", url: "https://www.tripadvisor.com" },
-      { platform: "whatsapp", url: "https://wa.me/94771234567", label: "Chat on WhatsApp" },
-    ],
+      "Lanka Tour Trails is a boutique Sri Lanka tour operator based in Colombo. We design small-group and private itineraries with certified local guides, transparent pricing, and routes we know by heart — from ancient kingdoms to tea country and the south coast.",
+    whoWeAreSocialLinks: LANKA_TOUR_TRAILS_SOCIAL_LINKS.map((link) => ({ ...link })),
     whoWeAreImages: [],
     packagesTitle: "Ready-Made Packages",
     packagesSubtitle: "Curated routes with local guides, transport, and stays included.",

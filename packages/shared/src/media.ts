@@ -18,7 +18,7 @@ export const MEDIA = {
   agencyCover: unsplash("1500530855697-b586d89ba3ee", 800),
 } as const;
 
-/** Ceylon Trails storefront hero mosaic (served from apps/web/public). */
+/** Lanka Tour Trails (demo agency) storefront hero mosaic (served from apps/web/public). */
 export const CEYLON_TRAILS_HERO_IMAGES = [
   { url: "/images/ceylon-trails/sigiriya.png", label: "Sigiriya Rock" },
   { url: "/images/ceylon-trails/leopard.png", label: "Sri Lankan Leopard" },
@@ -29,6 +29,28 @@ export const CEYLON_TRAILS_HERO_IMAGES = [
   { url: "/images/ceylon-trails/traditional-masks.png", label: "Traditional Masks" },
   { url: "/images/ceylon-trails/train-tea-country.png", label: "Tea Country Train" },
   { url: "/images/ceylon-trails/buddha-rock.png", label: "Ancient Buddha" },
+] as const;
+
+/** Lanka Tour Trails brand logo (apps/web/public). */
+export const LANKA_TOUR_TRAILS_LOGO = "/images/ceylon-trails/lanka-tour-trails-logo.png";
+
+/** Public social profiles for the Lanka Tour Trails demo agency storefront. */
+export const LANKA_TOUR_TRAILS_SOCIAL_LINKS = [
+  {
+    platform: "instagram",
+    url: "https://www.instagram.com/lankatourtrails/",
+    label: "@lankatourtrails",
+  },
+  {
+    platform: "facebook",
+    url: "https://www.facebook.com/lankatourtrails/",
+    label: "Lanka Tour Trails",
+  },
+  {
+    platform: "tripadvisor",
+    url: "https://www.tripadvisor.com/Attraction_Review-g293962-d23881364-Reviews-Lanka_Tour_Trails-Colombo_Western_Province.html",
+    label: "Reviews on TripAdvisor",
+  },
 ] as const;
 
 export const DEFAULT_TOUR_COVER_URL = MEDIA.tourCover;

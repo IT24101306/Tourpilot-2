@@ -31,7 +31,7 @@ export function OfferRegistrationModal({ open, offer, token, onClose, onSuccess 
     if (!offer || !token) return;
 
     if (!screenshotUrl.trim()) {
-      setError("Please upload one screenshot to complete registration.");
+      setError("Upload your social media story screenshot to register — it is required.");
       return;
     }
     if (!termsAccepted) {
@@ -62,24 +62,39 @@ export function OfferRegistrationModal({ open, offer, token, onClose, onSuccess 
   return (
     <DashboardModal
       open={open && !!offer}
-      title="Register for offer"
-      subtitle={offer ? offer.title : undefined}
+      title="Register for this offer"
+      subtitle={
+        offer
+          ? `${offer.title} — share this offer on your story, then upload proof below.`
+          : undefined
+      }
       onClose={onClose}
+      dialogClassName="offer-register-dialog"
     >
       <form onSubmit={handleSubmit}>
         <div className="offer-register-form">
-          <p className="muted offer-register-lead">
-            Upload one screenshot (payment proof, booking confirmation, or required promo capture)
-            and confirm you agree to the terms.
-          </p>
+          <div className="offer-register-requirement" role="note">
+            <p className="offer-register-requirement__badge">Required before you can register</p>
+            <h4 className="offer-register-requirement__title">Post this offer on your social story</h4>
+            <ol className="offer-register-requirement__steps">
+              <li>
+                Share <strong>{offer?.title ?? "this offer"}</strong> on Instagram, Facebook, or
+                TikTok as a <strong>story</strong> (or equivalent short-form post).
+              </li>
+              <li>Tag the agency or include the offer link if shown on the card.</li>
+              <li>Take a <strong>screenshot of your live story</strong> showing the post.</li>
+              <li>Upload that screenshot below — registration cannot be completed without it.</li>
+            </ol>
+          </div>
 
           <ImageUrlField
-            label="Screenshot"
+            label="Social media story screenshot"
             value={screenshotUrl}
             onChange={setScreenshotUrl}
             token={token}
-            hint="One image required — JPEG, PNG, or WebP."
-            placeholder="Upload your screenshot"
+            hint="Required — upload a clear screenshot of your story featuring this offer (JPEG, PNG, or WebP)."
+            placeholder="Upload story screenshot"
+            className="offer-register-upload"
           />
 
           <label className="offer-register-terms">
@@ -88,7 +103,7 @@ export function OfferRegistrationModal({ open, offer, token, onClose, onSuccess 
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
             />
-            <span>I agree to the terms and conditions</span>
+            <span>I agree to the terms and conditions for this offer</span>
           </label>
 
           {error && <p className="form-error">{error}</p>}
@@ -96,8 +111,9 @@ export function OfferRegistrationModal({ open, offer, token, onClose, onSuccess 
 
         <ModalActions
           onCancel={onClose}
-          submitLabel={submitting ? "Submitting…" : "Complete registration"}
+          submitLabel={submitting ? "Submitting…" : "Submit registration"}
           saving={submitting}
+          canSubmit={Boolean(screenshotUrl.trim() && termsAccepted)}
         />
       </form>
     </DashboardModal>

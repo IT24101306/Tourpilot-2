@@ -1461,6 +1461,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setPackageModalOpen(false)}
             submitLabel="Save package"
+            canSubmit={Boolean(packageForm.title.trim() && packageForm.imageUrl.trim())}
           />
           {editPackageIndex !== null && (
             <button
@@ -1510,7 +1511,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               />
             </ModalField>
           </div>
-          <ModalActions onCancel={() => setReviewModalOpen(false)} submitLabel="Save review" />
+          <ModalActions
+            onCancel={() => setReviewModalOpen(false)}
+            submitLabel="Save review"
+            canSubmit={Boolean(reviewForm.authorName.trim())}
+          />
           {editReviewIndex !== null && (
             <button
               type="button"
@@ -1558,6 +1563,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               setEditGalleryIndex(null);
             }}
             submitLabel={editGalleryIndex === null ? "Add image" : "Save image"}
+            canSubmit={Boolean(galleryForm.url.trim())}
           />
           {editGalleryIndex !== null && (
             <button
@@ -1600,6 +1606,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setHeroModalOpen(false)}
             submitLabel={editHeroIndex === null ? "Add slide" : "Save slide"}
+            canSubmit={Boolean(heroForm.url.trim())}
           />
           {editHeroIndex !== null && (
             <button
@@ -1656,6 +1663,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setSocialModalOpen(false)}
             submitLabel={editSocialIndex === null ? "Add link" : "Save link"}
+            canSubmit={Boolean(socialForm.url.trim())}
           />
           {editSocialIndex !== null && (
             <button
@@ -1708,6 +1716,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setWhoWeAreImageModalOpen(false)}
             submitLabel={editWhoWeAreImageIndex === null ? "Add image" : "Save image"}
+            canSubmit={Boolean(whoWeAreImageForm.url.trim())}
           />
           {editWhoWeAreImageIndex !== null && (
             <button
@@ -1771,7 +1780,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               />
             </ModalField>
           </div>
-          <ModalActions onCancel={() => setOfferModalOpen(false)} submitLabel="Save offer" />
+          <ModalActions
+            onCancel={() => setOfferModalOpen(false)}
+            submitLabel="Save offer"
+            canSubmit={Boolean(offerForm.title.trim())}
+          />
           {editOfferIndex !== null && (
             <button
               type="button"

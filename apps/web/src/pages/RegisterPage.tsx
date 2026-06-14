@@ -7,6 +7,7 @@ import { useAuth, type AuthUser } from "../context/AuthContext";
 import { AuthLayout, AuthSwitch } from "../components/AuthLayout";
 import { OtpStep } from "../components/OtpStep";
 import { PhoneInput } from "../components/PhoneInput";
+import { RegisterTermsConsent } from "../components/auth/RegisterTermsConsent";
 
 type Step = "details" | "otp";
 
@@ -23,12 +24,18 @@ export function RegisterPage() {
   const [challengeId, setChallengeId] = useState("");
   const [demoOtp, setDemoOtp] = useState<string | undefined>();
   const [bypassCode, setBypassCode] = useState<string | undefined>();
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleDetailsSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!termsAccepted) {
+      setError("You must agree to the Terms & Conditions to register.");
+      return;
+    }
 
     const normalizedPhone = toStoredPhone(phoneInput);
     if (!isValidInternationalPhone(normalizedPhone)) {
@@ -106,7 +113,8 @@ export function RegisterPage() {
             A tourist profile is created for you so you can save tours, send inquiries, and track
             itineraries.
           </p>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
+          <RegisterTermsConsent checked={termsAccepted} onChange={setTermsAccepted} />
+          <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
             Send OTP
           </button>
         </form>

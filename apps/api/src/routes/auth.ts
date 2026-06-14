@@ -4,7 +4,8 @@ import type { UserRole } from "@prisma/client";
 import { dashboardPathForRole } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, signAccessToken } from "../middleware/auth.js";
-import { createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
+import { assertLoginTopupChallenge, createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
+import { topUpWallet } from "../services/wallet.js";
 import { verifyPassword } from "../services/password.js";
 import { linkAgencyDriverOnDriverSignup } from "../services/agencyDriverLink.js";
 import { chargeLoginFee } from "../services/wallet.js";
@@ -234,9 +235,12 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
       if (!user.passwordHash) {
         return res.status(503).json({ error: "Admin password is not configured" });
       }
+      const topupGate = await createOtpChallenge(phone, "login_pending");
       return res.json({
         authMethod: "password",
         role: user.role,
+        walletBalance: Number(user.walletBalance),
+        topupChallengeId: topupGate.challengeId,
         redirectTo: dashboardPathForRole(user.role),
       });
     }
@@ -258,6 +262,31 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
 
 authRouter.post("/login-start", handleLoginStart);
 authRouter.post("/send-otp", handleLoginStart);
+
+authRouter.post("/login-topup", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        phone: z.string(),
+        challengeId: z.string(),
+        amount: z.number().positive(),
+      })
+      .parse(req.body);
+
+    const phone = toStoredPhone(body.phone);
+    await assertLoginTopupChallenge(body.challengeId, phone);
+
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+      return res.status(404).json({ error: "No account found for this phone" });
+    }
+
+    const result = await topUpWallet(user.id, body.amount);
+    res.json({ balance: result.balance, walletBalance: result.balance });
+  } catch (e) {
+    next(e);
+  }
+});
 
 authRouter.post("/login-password", async (req, res, next) => {
   try {

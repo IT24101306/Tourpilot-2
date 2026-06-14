@@ -30,6 +30,12 @@
   overflow: hidden;
   background: #0a1410;
   isolation: isolate;
+  --hero-text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.92),
+    0 2px 8px rgba(0, 0, 0, 0.88),
+    0 4px 16px rgba(0, 0, 0, 0.72),
+    0 8px 32px rgba(0, 0, 0, 0.58),
+    0 12px 48px rgba(0, 0, 0, 0.42);
 }
 
 .agency-hero-banner__media {
@@ -354,10 +360,6 @@
 .agency-hero-banner__copy h1,
 .agency-hero-banner__lead {
   color: #fff;
-  --hero-text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.55),
-    0 2px 10px rgba(0, 0, 0, 0.4),
-    0 6px 28px rgba(0, 0, 0, 0.28);
   text-shadow: var(--hero-text-shadow);
 }
 
@@ -493,9 +495,7 @@ button.agency-hero-banner__ghost {
   color: #fff;
   cursor: pointer;
   opacity: 0.92;
-  text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.55),
-    0 2px 10px rgba(0, 0, 0, 0.4);
+  text-shadow: var(--hero-text-shadow);
   transition: opacity 0.2s ease;
 }
 
@@ -588,14 +588,22 @@ button.agency-hero-banner__ghost {
   margin-bottom: 20px;
 }
 
-.agency-display-logo,
+.agency-display-logo {
+  width: auto;
+  max-width: min(220px, 52vw);
+  height: 56px;
+  border-radius: 0;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .agency-display-logo-fallback {
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  object-fit: cover;
   flex-shrink: 0;
-  box-shadow: 0 8px 24px rgba(15, 26, 22, 0.12);
 }
 
 .agency-display-logo-fallback {

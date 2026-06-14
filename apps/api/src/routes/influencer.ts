@@ -331,6 +331,29 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
         tagline: z.string().max(500),
         tourIds: z.array(z.string()).max(48),
         offerIds: z.array(z.string()).max(24),
+        heroImages: z
+          .array(
+            z.object({
+              url: z.string().url().max(500),
+              label: z.string().max(80).optional(),
+            })
+          )
+          .max(10)
+          .optional()
+          .default([]),
+        aboutTitle: z.string().max(80).optional().default("About the creator"),
+        aboutDescription: z.string().max(1200).optional().default(""),
+        socialLinks: z
+          .array(
+            z.object({
+              platform: z.string().min(1).max(32),
+              url: z.string().url().max(500),
+              label: z.string().max(80).optional(),
+            })
+          )
+          .max(12)
+          .optional()
+          .default([]),
       })
       .parse(req.body);
 
@@ -356,12 +379,19 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
     const validOfferIds = new Set(validOffers.map((o) => o.id));
     const offerIds = body.offerIds.filter((id) => validOfferIds.has(id));
 
-    const content = {
-      headline: body.headline.trim(),
-      tagline: body.tagline.trim(),
-      tourIds,
-      offerIds,
-    };
+    const content = parseInfluencerDisplay(
+      {
+        headline: body.headline.trim(),
+        tagline: body.tagline.trim(),
+        tourIds,
+        offerIds,
+        heroImages: body.heroImages,
+        aboutTitle: body.aboutTitle,
+        aboutDescription: body.aboutDescription,
+        socialLinks: body.socialLinks,
+      },
+      profile.user.name
+    );
 
     await prisma.influencerProfile.update({
       where: { id: profile.id },

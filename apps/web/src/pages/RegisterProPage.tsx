@@ -14,6 +14,7 @@ import { AuthLayout } from "../components/AuthLayout";
 import { OtpStep } from "../components/OtpStep";
 import { PhoneInput } from "../components/PhoneInput";
 import { AgencyKycForm } from "../components/agency/AgencyKycForm";
+import { RegisterTermsConsent } from "../components/auth/RegisterTermsConsent";
 
 type Step = "details" | "kyc" | "otp";
 
@@ -31,6 +32,7 @@ export function RegisterProPage() {
   const [challengeId, setChallengeId] = useState("");
   const [demoOtp, setDemoOtp] = useState<string | undefined>();
   const [bypassCode, setBypassCode] = useState<string | undefined>();
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,6 +47,11 @@ export function RegisterProPage() {
   function handleDetailsSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!termsAccepted) {
+      setError("You must agree to the Terms & Conditions to register.");
+      return;
+    }
 
     const normalizedPhone = toStoredPhone(phoneInput);
     if (!isValidInternationalPhone(normalizedPhone)) {
@@ -74,6 +81,11 @@ export function RegisterProPage() {
   async function handleKycSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!termsAccepted) {
+      setError("You must agree to the Terms & Conditions to register.");
+      return;
+    }
 
     if (!agencyKyc.declarationsAccepted) {
       setError("Please confirm the declarations to continue.");
@@ -169,7 +181,8 @@ export function RegisterProPage() {
               />
             </>
           )}
-          <button type="submit" className="btn btn-primary" disabled={loading}>
+          <RegisterTermsConsent checked={termsAccepted} onChange={setTermsAccepted} />
+          <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
             {role === "AGENCY" ? "Continue to verification" : "Send OTP"}
           </button>
         </form>
@@ -178,6 +191,11 @@ export function RegisterProPage() {
       {step === "kyc" && role === "AGENCY" && (
         <form className="form-grid agency-kyc-register" onSubmit={handleKycSubmit}>
           <AgencyKycForm value={agencyKyc} onChange={setAgencyKyc} disabled={loading} />
+          <RegisterTermsConsent
+            checked={termsAccepted}
+            onChange={setTermsAccepted}
+            id="register-terms-kyc"
+          />
           <div className="agency-kyc-register-actions">
             <button
               type="button"
@@ -190,7 +208,7 @@ export function RegisterProPage() {
             >
               Back
             </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+            <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
               Send OTP
             </button>
           </div>

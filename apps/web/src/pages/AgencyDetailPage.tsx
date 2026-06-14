@@ -319,7 +319,7 @@ export function AgencyDetailPage() {
         <div className="agency-hero-banner__content">
           <div className="agency-display-intro agency-display-intro--hero">
             {agency.logoUrl ? (
-              <img src={agency.logoUrl} alt="" className="agency-display-logo" />
+              <img src={agency.logoUrl} alt={agency.name} className="agency-display-logo" />
             ) : (
               <div className="agency-display-logo-fallback">{agency.name.charAt(0)}</div>
             )}

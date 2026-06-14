@@ -1,12 +1,20 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { dashboardPathForRole, isValidInternationalPhone, toStoredPhone } from "@tourpilot/shared";
+import {
+  dashboardPathForRole,
+  isValidInternationalPhone,
+  LOGIN_FEE_LKR,
+  toStoredPhone,
+  type UserRole,
+} from "@tourpilot/shared";
 import { AUTH_RETURN_PARAM, resolvePostLoginPath } from "../utils/authRedirect";
 import { api, ApiError } from "../api/client";
 import { useAuth, type AuthUser } from "../context/AuthContext";
 import { AuthLayout, AuthSwitch } from "../components/AuthLayout";
 import { OtpStep } from "../components/OtpStep";
 import { PhoneInput } from "../components/PhoneInput";
+import { WalletTopupPanel } from "../components/wallet/WalletTopupPanel";
+import "../styles/dashboard.css";
 
 type Step = "phone" | "otp" | "password";
 
@@ -16,32 +24,93 @@ type LoginStartResponse =
       challengeId: string;
       otp?: string;
       bypassOtp?: string;
+      role?: UserRole;
+      walletBalance?: number;
     }
   | {
       authMethod: "password";
       role: "ADMIN";
+      walletBalance?: number;
+      topupChallengeId?: string;
     };
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get(AUTH_RETURN_PARAM);
-  const { setSession } = useAuth();
+  const { user, token, refreshUser, setSession } = useAuth();
 
-  function afterLogin(user: AuthUser, apiRedirect?: string) {
-    const fallback = apiRedirect || dashboardPathForRole(user.role);
+  function afterLogin(authUser: AuthUser, apiRedirect?: string) {
+    if (authUser.role === "AGENCY" || authUser.role === "INFLUENCER") {
+      navigate(dashboardPathForRole(authUser.role), { replace: true });
+      return;
+    }
+    const fallback = apiRedirect || dashboardPathForRole(authUser.role);
     navigate(resolvePostLoginPath(returnTo, fallback), { replace: true });
   }
+
   const [step, setStep] = useState<Step>("phone");
   const [phoneInput, setPhoneInput] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [challengeId, setChallengeId] = useState("");
+  const [topupChallengeId, setTopupChallengeId] = useState("");
+  const [loginRole, setLoginRole] = useState<UserRole | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [demoOtp, setDemoOtp] = useState<string | undefined>();
   const [bypassCode, setBypassCode] = useState<string | undefined>();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const activeTopupChallengeId = topupChallengeId || challengeId;
+  const showWalletPanel =
+    (user != null && token != null) ||
+    (walletBalance != null && activeTopupChallengeId !== "");
+
+  const panelBalance = walletBalance ?? user?.walletBalance ?? 0;
+  const panelFee =
+    loginRole != null
+      ? LOGIN_FEE_LKR[loginRole]
+      : user?.role != null
+        ? LOGIN_FEE_LKR[user.role]
+        : undefined;
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === "AGENCY" || user.role === "INFLUENCER") {
+      navigate(dashboardPathForRole(user.role), { replace: true });
+    }
+  }, [user, navigate]);
+
+  async function runTopup(amount: number) {
+    if (user && token) {
+      const result = await api<{ balance: number }>("/wallet/topup", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ amount }),
+      });
+      await refreshUser();
+      setWalletBalance(result.balance);
+      return result.balance;
+    }
+
+    if (!phone || !activeTopupChallengeId) {
+      throw new Error("Enter your phone number first.");
+    }
+
+    const result = await api<{ balance: number; walletBalance: number }>("/auth/login-topup", {
+      method: "POST",
+      body: JSON.stringify({
+        phone,
+        challengeId: activeTopupChallengeId,
+        amount,
+      }),
+    });
+    const next = result.walletBalance ?? result.balance;
+    setWalletBalance(next);
+    return next;
+  }
 
   async function handlePhoneSubmit(e: FormEvent) {
     e.preventDefault();
@@ -66,11 +135,17 @@ export function LoginPage() {
         setOtp("");
         setDemoOtp(undefined);
         setBypassCode(undefined);
+        setLoginRole(data.role);
+        setWalletBalance(data.walletBalance ?? 0);
+        setTopupChallengeId(data.topupChallengeId ?? "");
         setStep("password");
         return;
       }
 
       setChallengeId(data.challengeId);
+      setTopupChallengeId(data.challengeId);
+      setLoginRole(data.role ?? null);
+      setWalletBalance(data.walletBalance ?? 0);
       setDemoOtp(data.otp);
       setBypassCode(data.bypassOtp);
       if (data.bypassOtp) setOtp(data.bypassOtp);
@@ -136,6 +211,10 @@ export function LoginPage() {
     setStep("phone");
     setOtp("");
     setPassword("");
+    setChallengeId("");
+    setTopupChallengeId("");
+    setLoginRole(null);
+    setWalletBalance(null);
     setError("");
   }
 
@@ -151,23 +230,25 @@ export function LoginPage() {
     >
       <AuthSwitch mode="login" returnTo={returnTo} />
 
+      {showWalletPanel && (
+        <WalletTopupPanel
+          balance={panelBalance}
+          feeHint={panelFee}
+          onTopup={runTopup}
+          className="login-wallet-panel--auth"
+        />
+      )}
+
       {error && <p className="form-error">{error}</p>}
 
       {step === "phone" && (
         <form className="form-grid" onSubmit={handlePhoneSubmit}>
-          <PhoneInput
-            value={phoneInput}
-            onChange={setPhoneInput}
-            id="login-phone"
-          />
+          <PhoneInput value={phoneInput} onChange={setPhoneInput} id="login-phone" />
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? "Checking…" : "Continue"}
           </button>
-          <p className="muted phone-input-hint" style={{ margin: 0 }}>
-           
-          </p>
+          <p className="muted phone-input-hint" style={{ margin: 0 }} />
 
-          
           {error && error.includes("No account") && (
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
               <Link
