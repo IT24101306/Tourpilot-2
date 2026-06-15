@@ -38,6 +38,41 @@
     0 12px 48px rgba(0, 0, 0, 0.42);
 }
 
+/* Frosted blur band along full left edge behind hero copy */
+.agency-hero-banner:not(.agency-hero-banner--influencer)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: min(62vw, 720px);
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    rgba(6, 14, 11, 0.34) 0%,
+    rgba(6, 14, 11, 0.2) 36%,
+    rgba(6, 14, 11, 0.07) 58%,
+    transparent 100%
+  );
+  backdrop-filter: blur(10px) saturate(1.05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.05);
+  mask-image: linear-gradient(
+    to right,
+    #000 0%,
+    #000 28%,
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 0%,
+    #000 28%,
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent 100%
+  );
+}
+
 .agency-hero-banner__media {
   position: absolute;
   inset: 0;
@@ -2368,6 +2403,12 @@ button.agency-hero-banner__ghost {
 
   .agency-hero-banner {
     min-height: min(94vh, 860px);
+  }
+
+  .agency-hero-banner:not(.agency-hero-banner--influencer)::before {
+    width: min(78vw, 100%);
+    backdrop-filter: blur(8px) saturate(1.04);
+    -webkit-backdrop-filter: blur(8px) saturate(1.04);
   }
 
   .agency-hero-section-nav {
