@@ -13,6 +13,12 @@ export type InfluencerSocialLink = {
   label?: string;
 };
 
+export type InfluencerTourDisplaySettings = {
+  termsAcceptedAt?: string;
+  hideAgencyName?: boolean;
+  displayPriceLkr?: number;
+};
+
 export type InfluencerDisplayContent = {
   headline: string;
   tagline: string;
@@ -22,6 +28,7 @@ export type InfluencerDisplayContent = {
   aboutTitle: string;
   aboutDescription: string;
   socialLinks: InfluencerSocialLink[];
+  tourSettings: Record<string, InfluencerTourDisplaySettings>;
 };
 
 const SOCIAL_PLATFORMS = new Set([
@@ -47,6 +54,7 @@ export function defaultInfluencerDisplay(name: string): InfluencerDisplayContent
     aboutTitle: "About the creator",
     aboutDescription: "",
     socialLinks: [],
+    tourSettings: {},
   };
 }
 
@@ -81,6 +89,26 @@ function parseSocialLinks(raw: unknown): InfluencerSocialLink[] {
   return links;
 }
 
+function parseTourSettings(raw: unknown): Record<string, InfluencerTourDisplaySettings> {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, InfluencerTourDisplaySettings> = {};
+  for (const [tourId, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!tourId.trim() || !value || typeof value !== "object") continue;
+    const row = value as Record<string, unknown>;
+    const settings: InfluencerTourDisplaySettings = {};
+    if (typeof row.termsAcceptedAt === "string" && row.termsAcceptedAt.trim()) {
+      settings.termsAcceptedAt = row.termsAcceptedAt.trim();
+    }
+    if (row.hideAgencyName === true) settings.hideAgencyName = true;
+    if (row.displayPriceLkr != null) {
+      const price = Number(row.displayPriceLkr);
+      if (Number.isFinite(price) && price > 0) settings.displayPriceLkr = Math.round(price);
+    }
+    if (Object.keys(settings).length > 0) out[tourId.trim()] = settings;
+  }
+  return out;
+}
+
 export function parseInfluencerDisplay(raw: unknown, name: string): InfluencerDisplayContent {
   const base = defaultInfluencerDisplay(name);
   if (!raw || typeof raw !== "object") return base;
@@ -112,6 +140,7 @@ export function parseInfluencerDisplay(raw: unknown, name: string): InfluencerDi
     base.aboutDescription = obj.aboutDescription.trim().slice(0, 1200);
   }
   base.socialLinks = parseSocialLinks(obj.socialLinks);
+  base.tourSettings = parseTourSettings(obj.tourSettings);
   return base;
 }
 
@@ -132,5 +161,18 @@ export function buildDisplayPayload(content: InfluencerDisplayContent): Prisma.I
       url: l.url,
       ...(l.label?.trim() ? { label: l.label.trim() } : {}),
     })),
+    tourSettings: content.tourSettings,
   });
+}
+
+export function pruneTourSettings(
+  tourSettings: Record<string, InfluencerTourDisplaySettings>,
+  tourIds: string[]
+): Record<string, InfluencerTourDisplaySettings> {
+  const allowed = new Set(tourIds);
+  const out: Record<string, InfluencerTourDisplaySettings> = {};
+  for (const [tourId, settings] of Object.entries(tourSettings)) {
+    if (allowed.has(tourId)) out[tourId] = settings;
+  }
+  return out;
 }

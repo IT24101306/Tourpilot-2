@@ -22,9 +22,27 @@ export type WhoWeAreImage = {
   alt?: string;
 };
 
+export type GalleryEntitySnapshot = {
+  id: string;
+  name: string;
+  type: string;
+  city: string | null;
+  district: string | null;
+  description: string | null;
+  durationMin: number | null;
+  priceHint: number | null;
+  media?: unknown;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type GalleryItem = {
   url: string;
   label: string;
+  entityId: string;
+};
+
+export type EnrichedGalleryItem = GalleryItem & {
+  entity: GalleryEntitySnapshot;
 };
 
 export type DisplayPackage = {
@@ -267,20 +285,31 @@ export function parseGallery(raw: unknown): GalleryItem[] {
 
   const items: GalleryItem[] = [];
   for (const entry of raw) {
-    if (typeof entry === "string" && entry.trim()) {
-      items.push({ url: entry.trim(), label: "Gallery" });
-      continue;
-    }
     if (!entry || typeof entry !== "object") continue;
     const row = entry as Record<string, unknown>;
     const url = String(row.url || "").trim();
+    const entityId = String(row.entityId || "").trim();
     if (!url) continue;
     items.push({
       url,
       label: String(row.label || "Gallery").trim() || "Gallery",
+      entityId,
     });
   }
   return items;
+}
+
+export function enrichGalleryWithEntities(
+  items: GalleryItem[],
+  entitiesById: Map<string, GalleryEntitySnapshot>
+): EnrichedGalleryItem[] {
+  const enriched: EnrichedGalleryItem[] = [];
+  for (const item of items) {
+    const entity = entitiesById.get(item.entityId);
+    if (!entity) continue;
+    enriched.push({ ...item, entity });
+  }
+  return enriched;
 }
 
 export function buildSectionsPayload(

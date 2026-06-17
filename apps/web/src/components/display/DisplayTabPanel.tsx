@@ -29,9 +29,13 @@ import {
   type DisplaySectionFlags,
   type DisplaySocialLink,
   type GalleryItem,
+  type GalleryEntitySnapshot,
   type HeroSlide,
   type WhoWeAreImage,
 } from "./displayTypes";
+
+import type { EntityOption } from "../tour/tourFormTypes";
+import { entityOptionLabel } from "../tour/tourFormTypes";
 
 type PublishedTour = {
   id: string;
@@ -109,6 +113,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
 
+  const [entities, setEntities] = useState<EntityOption[]>([]);
+
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [packageModalOpen, setPackageModalOpen] = useState(false);
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
@@ -119,7 +125,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   const [reviewForm, setReviewForm] = useState<DisplayReview>(defaultReviewForm);
   const [packageForm, setPackageForm] = useState<DisplayPackage>(defaultPackageForm);
-  const [galleryForm, setGalleryForm] = useState<GalleryItem>({ url: "", label: "" });
+  const [galleryForm, setGalleryForm] = useState<GalleryItem>({
+    url: "",
+    label: "",
+    entityId: "",
+  });
   const [offerForm, setOfferForm] = useState<DisplayOffer>(defaultOfferForm);
   const [heroForm, setHeroForm] = useState<HeroSlide>({ url: "", label: "" });
   const [socialForm, setSocialForm] = useState<DisplaySocialLink>(defaultSocialForm);
@@ -175,6 +185,34 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     if (agencySlug) setSlug(agencySlug);
   }, [agencySlug]);
 
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const rows = await api<
+          Array<{
+            id: string;
+            name: string;
+            type: string;
+            city: string | null;
+            priceHint: number | null;
+          }>
+        >("/entities", { token });
+        setEntities(
+          rows.map((e) => ({
+            id: e.id,
+            name: e.name,
+            type: e.type,
+            city: e.city,
+            priceHint: e.priceHint,
+          }))
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [token]);
+
   const persistDisplaySettings = useCallback(
     async (nextConfig: DisplayConfig, statusMessage = "Display page updated.") => {
       if (!token) return;
@@ -195,6 +233,14 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           ? nextConfig.content.featuredImageUrl.trim()
           : MEDIA.hero;
 
+        const gallery = nextConfig.gallery
+          .map((g) => ({
+            url: g.url.trim(),
+            label: g.label.trim() || "Gallery",
+            entityId: g.entityId.trim(),
+          }))
+          .filter((g) => g.url && g.entityId);
+
         const data = await api<DisplayPayload>("/agencies/mine/display", {
           method: "PUT",
           token,
@@ -210,7 +256,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               whoWeAreDescription: nextConfig.content.whoWeAreDescription.trim(),
               highlights: nextConfig.content.highlights.map((h) => h.trim()).filter(Boolean),
             },
-            gallery: nextConfig.gallery,
+            gallery,
             reviews: nextConfig.reviews.map(({ authorName, rating, body }) => ({
               authorName,
               rating,
@@ -441,13 +487,23 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     e.preventDefault();
     const url = galleryForm.url.trim();
     if (!url) return;
-    const entry = { url, label: galleryForm.label.trim() || "Gallery" };
+    const entityId = galleryForm.entityId.trim();
+    if (!entityId) return;
+
+    const entry: GalleryItem = {
+      url,
+      label: galleryForm.label.trim() || "Gallery",
+      entityId,
+    };
+
+    const linkedEntity = entities.find((ent) => ent.id === entityId);
     const isNew = editGalleryIndex === null;
     requestConfirm({
       title: isNew ? "Add gallery image?" : "Update gallery image?",
       confirmLabel: isNew ? "Add image" : "Save image",
       summary: [
         { label: "Label", value: entry.label },
+        { label: "Linked entity", value: linkedEntity ? entityOptionLabel(linkedEntity) : "—" },
         { label: "Image URL", value: url.length > 80 ? `${url.slice(0, 80)}…` : url },
       ],
       onConfirm: () => {
@@ -460,7 +516,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           },
           isNew ? "Gallery image added to your display page." : "Gallery image updated on your display page."
         );
-        setGalleryForm({ url: "", label: "" });
+        setGalleryForm({ url: "", label: "", entityId: "" });
         setEditGalleryIndex(null);
         setGalleryModalOpen(false);
       },
@@ -1279,6 +1335,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                       key={`${g.url}-${i}`}
                       thumb={<img src={g.url} alt="" className="display-compact-row-thumb" />}
                       title={g.label}
+                      meta={
+                        <span className="muted">
+                          {g.entityId
+                            ? entities.find((ent) => ent.id === g.entityId)
+                              ? entityOptionLabel(entities.find((ent) => ent.id === g.entityId)!)
+                              : "Not linked"
+                            : "Not linked"}
+                        </span>
+                      }
                       onEdit={() => {
                         setEditGalleryIndex(i);
                         setGalleryForm(g);
@@ -1294,7 +1359,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                   className="btn btn-primary"
                   onClick={() => {
                     setEditGalleryIndex(null);
-                    setGalleryForm({ url: "", label: "" });
+                    setGalleryForm({ url: "", label: "", entityId: "" });
                     setGalleryModalOpen(true);
                   }}
                 >
@@ -1556,6 +1621,19 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 placeholder="Sand Morning"
               />
             </ModalField>
+            <ModalField label="Link to entity" full>
+              <select
+                value={galleryForm.entityId}
+                onChange={(e) => setGalleryForm({ ...galleryForm, entityId: e.target.value })}
+              >
+                <option value="">Select…</option>
+                {entities.map((ent) => (
+                  <option key={ent.id} value={ent.id}>
+                    {entityOptionLabel(ent)}
+                  </option>
+                ))}
+              </select>
+            </ModalField>
           </div>
           <ModalActions
             onCancel={() => {
@@ -1563,7 +1641,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               setEditGalleryIndex(null);
             }}
             submitLabel={editGalleryIndex === null ? "Add image" : "Save image"}
-            canSubmit={Boolean(galleryForm.url.trim())}
+            canSubmit={Boolean(galleryForm.url.trim() && galleryForm.entityId.trim())}
           />
           {editGalleryIndex !== null && (
             <button

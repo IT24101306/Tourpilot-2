@@ -1,6 +1,12 @@
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
 import type { DisplaySocialLink, HeroSlide } from "../components/display/displayTypes";
 
+export type InfluencerTourDisplaySettings = {
+  termsAcceptedAt?: string;
+  hideAgencyName?: boolean;
+  displayPriceLkr?: number;
+};
+
 export type InfluencerDisplayContent = {
   headline: string;
   tagline: string;
@@ -10,6 +16,7 @@ export type InfluencerDisplayContent = {
   aboutTitle: string;
   aboutDescription: string;
   socialLinks: DisplaySocialLink[];
+  tourSettings: Record<string, InfluencerTourDisplaySettings>;
 };
 
 export function resolveInfluencerHeroSlides(

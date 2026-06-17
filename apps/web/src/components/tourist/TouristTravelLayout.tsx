@@ -8,7 +8,7 @@ export function TouristTravelLayout() {
       <ModuleHeader
         module="guided"
         title="My travel"
-        subtitle="Inquiries, confirmed bookings, and tours you have saved for later."
+        subtitle="Inquiries, confirmed bookings, saved tours, and custom trip plans."
       >
         <Link to="/agencies" className="btn btn-teal">
           Plan a new trip
@@ -23,7 +23,7 @@ export function TouristTravelLayout() {
           Bookings
         </NavLink>
         <NavLink to="/saved" className={navLinkClass}>
-          Saved tours
+          Saved
         </NavLink>
       </nav>
 

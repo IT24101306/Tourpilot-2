@@ -1,9 +1,31 @@
 import type { AgencyInquiry } from "./types";
 import type { TaskItem } from "../../types/tasks";
 import { formatInquiryStatus } from "./types";
+import {
+  isCommissionNegotiationOpen,
+  type CommissionNegotiation,
+} from "../../lib/commissionNegotiationTypes";
 
-export function buildAgencyTasks(inquiries: AgencyInquiry[]): TaskItem[] {
+export function buildAgencyTasks(
+  inquiries: AgencyInquiry[],
+  commissionRequests: CommissionNegotiation[] = []
+): TaskItem[] {
   const tasks: TaskItem[] = [];
+
+  for (const req of commissionRequests) {
+    if (!isCommissionNegotiationOpen(req) || req.pendingActor !== "AGENCY") continue;
+    tasks.push({
+      id: `commission-${req.id}`,
+      title: `Commission: ${req.influencer.name}`,
+      hint: `${req.tour.title} · offered ${req.currentOfferPct}% · negotiate in Tasks`,
+      priority: "high",
+      dueLabel: "Today",
+      dueToday: true,
+      category: "Commission",
+      link: "/dashboard/agency/tasks",
+      sourceKey: req.id,
+    });
+  }
 
   for (const inq of inquiries) {
     const traveler = inq.tourist?.name ?? "Traveler";

@@ -16,6 +16,7 @@ import { driverRouter } from "./routes/driver.js";
 import { driversRouter } from "./routes/drivers.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { savedToursRouter } from "./routes/savedTours.js";
+import { savedTripPlansRouter } from "./routes/savedTripPlans.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { touristRouter } from "./routes/tourist.js";
 
@@ -52,6 +53,7 @@ export function createApp() {
   app.use("/api/drivers", driversRouter);
   app.use("/api/uploads", uploadsRouter);
   app.use("/api/saved-tours", savedToursRouter);
+  app.use("/api/saved-trip-plans", savedTripPlansRouter);
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/tourist", touristRouter);
 

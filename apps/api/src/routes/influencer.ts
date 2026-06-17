@@ -1,14 +1,22 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { buildDisplayPayload, parseInfluencerDisplay } from "../lib/influencerDisplay.js";
+import { buildDisplayPayload, parseInfluencerDisplay, pruneTourSettings } from "../lib/influencerDisplay.js";
+import {
+  resolveInfluencerTourCommissionPct,
+} from "../lib/influencerCommissionRequests.js";
+import {
+  applyCommissionRequestAction,
+  createCommissionRequest,
+  getInfluencerCommissionRequests,
+} from "../services/commissionNegotiation.js";
 import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
 import {
   agencyActiveOfferWhere,
   loadActiveOffers,
   serializeActiveOffer,
 } from "../lib/offers.js";
-import { agencyCommissionPct, attachTourPricing } from "../lib/tourPricing.js";
+import { attachTourPricing } from "../lib/tourPricing.js";
 import { buildReferralSharePath, buildReferralShareUrl } from "../lib/referralShare.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
 
@@ -186,7 +194,7 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
       return res.status(400).json({ error: "Tour not found or not available for promotion" });
     }
 
-    const tourCommissionPct = agencyCommissionPct(tour);
+    const tourCommissionPct = await resolveInfluencerTourCommissionPct(profile.id, tour);
 
     const existingForTour = await prisma.referralCode.findFirst({
       where: { influencerId: profile.id, tourId: tour.id, isActive: true },
@@ -283,6 +291,22 @@ influencerRouter.get("/mine/display", authRequired, requireRoles("INFLUENCER"), 
       orderBy: [{ agency: { name: "asc" } }, { title: "asc" }],
     });
 
+    const commissionRequests = await prisma.influencerCommissionRequest.findMany({
+      where: { influencerId: profile.id },
+      orderBy: { updatedAt: "desc" },
+    });
+    const requestByTourId = new Map<string, (typeof commissionRequests)[number]>();
+    for (const req of commissionRequests) {
+      if (!requestByTourId.has(req.tourId)) requestByTourId.set(req.tourId, req);
+    }
+
+    const approvedPctByTourId = new Map<string, number>();
+    for (const req of commissionRequests) {
+      if (req.status === "APPROVED" && req.approvedPct != null && !approvedPctByTourId.has(req.tourId)) {
+        approvedPctByTourId.set(req.tourId, Number(req.approvedPct));
+      }
+    }
+
     const codes = await prisma.referralCode.findMany({
       where: { influencerId: profile.id, isActive: true, tourId: { not: null } },
       select: { tourId: true, code: true },
@@ -298,22 +322,42 @@ influencerRouter.get("/mine/display", authRequired, requireRoles("INFLUENCER"), 
       publicPath: `/influencers/${profile.slug}`,
       display,
       availableOffers: activeOffers.map(serializeActiveOffer),
-      availableTours: tours.map((t) => {
-        const pricing = attachTourPricing(t);
-        return {
-          id: t.id,
-          title: t.title,
-          slug: t.slug,
-          summary: t.summary,
-          days: t.days,
-          publicPriceLkr: pricing.publicPriceLkr,
-          influencerCommissionLkr: pricing.influencerCommissionLkr,
-          coverUrl: t.coverUrl,
-          agency: t.agency,
-          hasReferralCode: codeByTourId.has(t.id),
-          referralCode: codeByTourId.get(t.id) ?? null,
-        };
-      }),
+      availableTours: await Promise.all(
+        tours.map(async (t) => {
+          const customPct = approvedPctByTourId.get(t.id);
+          const pricing = attachTourPricing(t, customPct);
+          const req = requestByTourId.get(t.id);
+          return {
+            id: t.id,
+            title: t.title,
+            slug: t.slug,
+            summary: t.summary,
+            days: t.days,
+            publicPriceLkr: pricing.publicPriceLkr,
+            minDisplayPriceLkr: pricing.publicPriceLkr,
+            influencerCommissionLkr: pricing.influencerCommissionLkr,
+            influencerCommissionPct: pricing.influencerCommissionPct,
+            influencerInstructions: t.influencerInstructions?.trim() || null,
+            coverUrl: t.coverUrl,
+            agency: t.agency,
+            hasReferralCode: codeByTourId.has(t.id),
+            referralCode: codeByTourId.get(t.id) ?? null,
+            commissionRequest: req
+              ? {
+                  id: req.id,
+                  status: req.status,
+                  requestedPct: Number(req.requestedPct),
+                  currentOfferPct: Number(req.currentOfferPct ?? req.requestedPct),
+                  pendingActor: req.pendingActor,
+                  offerByRole: req.offerByRole,
+                  approvedPct: req.approvedPct != null ? Number(req.approvedPct) : null,
+                  message: req.message,
+                  agencyNote: req.agencyNote,
+                }
+              : null,
+          };
+        })
+      ),
     });
   } catch (e) {
     next(e);
@@ -354,6 +398,17 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
           .max(12)
           .optional()
           .default([]),
+        tourSettings: z
+          .record(
+            z.string(),
+            z.object({
+              termsAcceptedAt: z.string().optional(),
+              hideAgencyName: z.boolean().optional(),
+              displayPriceLkr: z.number().positive().optional(),
+            })
+          )
+          .optional()
+          .default({}),
       })
       .parse(req.body);
 
@@ -363,10 +418,48 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
         isPublished: true,
         tourKind: "READY_MADE",
       },
-      select: { id: true },
+      include: { agency: { select: { influencerCommissionPct: true } } },
     });
     const validTourIds = new Set(validTours.map((t) => t.id));
     const tourIds = body.tourIds.filter((id) => validTourIds.has(id));
+
+    const approvedPctByTourId = new Map<string, number>();
+    const approvedRequests = await prisma.influencerCommissionRequest.findMany({
+      where: { influencerId: profile.id, status: "APPROVED", tourId: { in: tourIds } },
+      orderBy: { updatedAt: "desc" },
+    });
+    for (const req of approvedRequests) {
+      if (req.approvedPct != null && !approvedPctByTourId.has(req.tourId)) {
+        approvedPctByTourId.set(req.tourId, Number(req.approvedPct));
+      }
+    }
+
+    const tourSettings: Record<string, { termsAcceptedAt?: string; hideAgencyName?: boolean; displayPriceLkr?: number }> =
+      {};
+    for (const tourId of tourIds) {
+      const settings = body.tourSettings[tourId];
+      if (!settings?.termsAcceptedAt?.trim()) {
+        return res.status(400).json({
+          error: "Accept the terms and conditions for each tour you feature on your display page.",
+        });
+      }
+      const tour = validTours.find((t) => t.id === tourId);
+      if (!tour) continue;
+      const pricing = attachTourPricing(tour, approvedPctByTourId.get(tourId));
+      const minPrice = pricing.publicPriceLkr;
+      if (settings.displayPriceLkr != null && settings.displayPriceLkr < minPrice) {
+        return res.status(400).json({
+          error: `Displayed price for "${tour.title}" cannot be lower than LKR ${minPrice.toLocaleString()}.`,
+        });
+      }
+      tourSettings[tourId] = {
+        termsAcceptedAt: settings.termsAcceptedAt.trim(),
+        ...(settings.hideAgencyName ? { hideAgencyName: true } : {}),
+        ...(settings.displayPriceLkr != null && settings.displayPriceLkr > minPrice
+          ? { displayPriceLkr: Math.round(settings.displayPriceLkr) }
+          : {}),
+      };
+    }
 
     const now = new Date();
     const validOffers = await prisma.offer.findMany({
@@ -389,9 +482,11 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
         aboutTitle: body.aboutTitle,
         aboutDescription: body.aboutDescription,
         socialLinks: body.socialLinks,
+        tourSettings,
       },
       profile.user.name
     );
+    content.tourSettings = pruneTourSettings(content.tourSettings, tourIds);
 
     await prisma.influencerProfile.update({
       where: { id: profile.id },
@@ -410,6 +505,113 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
     next(e);
   }
 });
+
+influencerRouter.post(
+  "/commission-requests",
+  authRequired,
+  requireRoles("INFLUENCER"),
+  async (req, res, next) => {
+    try {
+      const profile = await getInfluencerProfileForUser(req.user!.id);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+
+      const body = z
+        .object({
+          tourId: z.string().min(1),
+          requestedPct: z.number().min(0).max(50),
+          message: z.string().min(10).max(2000),
+        })
+        .parse(req.body);
+
+      const tour = await prisma.tour.findFirst({
+        where: { id: body.tourId, isPublished: true, tourKind: "READY_MADE" },
+        include: { agency: { select: { id: true, name: true, ownerId: true } } },
+      });
+      if (!tour) return res.status(400).json({ error: "Tour not found or not available" });
+
+      const created = await createCommissionRequest({
+        influencerId: profile.id,
+        influencerUserId: req.user!.id,
+        tourId: tour.id,
+        agencyId: tour.agencyId,
+        requestedPct: body.requestedPct,
+        message: body.message.trim(),
+        tourTitle: tour.title,
+        influencerName: profile.user.name,
+        agencyOwnerId: tour.agency.ownerId,
+        agencyName: tour.agency.name,
+      });
+
+      res.status(201).json(created);
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ error: e.errors[0]?.message || "Invalid input" });
+      }
+      next(e);
+    }
+  }
+);
+
+influencerRouter.get(
+  "/commission-requests",
+  authRequired,
+  requireRoles("INFLUENCER"),
+  async (req, res, next) => {
+    try {
+      const profile = await getInfluencerProfileForUser(req.user!.id);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      res.json(await getInfluencerCommissionRequests(profile.id));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+influencerRouter.patch(
+  "/commission-requests/:id",
+  authRequired,
+  requireRoles("INFLUENCER"),
+  async (req, res, next) => {
+    try {
+      const profile = await getInfluencerProfileForUser(req.user!.id);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+
+      const body = z
+        .object({
+          action: z.enum(["AGREE", "REJECT", "NEGOTIATE"]),
+          proposedPct: z.number().min(0).max(50).optional(),
+          message: z.string().max(2000).optional(),
+        })
+        .parse(req.body);
+
+      const row = await prisma.influencerCommissionRequest.findFirst({
+        where: { id: req.params.id, influencerId: profile.id },
+        select: { id: true },
+      });
+      if (!row) return res.status(404).json({ error: "Request not found" });
+
+      const updated = await applyCommissionRequestAction({
+        requestId: row.id,
+        actorRole: "INFLUENCER",
+        actorUserId: req.user!.id,
+        action: body.action,
+        proposedPct: body.proposedPct,
+        body: body.message,
+      });
+
+      res.json(updated);
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ error: e.errors[0]?.message || "Invalid input" });
+      }
+      next(e);
+    }
+  }
+);
 
 influencerRouter.get("/tours", authRequired, requireRoles("INFLUENCER"), async (_req, res, next) => {
   try {

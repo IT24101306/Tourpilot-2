@@ -6,6 +6,39 @@ import { asJson } from "../utils/json.js";
 
 export const entitiesRouter = Router();
 
+const publicEntityTypeSchema = z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT"]);
+
+// Public: used by the tourist "Build my trip" page to browse an agency's catalog.
+// NOTE: This intentionally does not require auth.
+entitiesRouter.get("/public/:agencySlug", async (req, res, next) => {
+  try {
+    const typeParam = req.query.type;
+    const type =
+      typeof typeParam === "string" && typeParam !== "all"
+        ? publicEntityTypeSchema.parse(typeParam)
+        : null;
+
+    const agency = await prisma.agency.findFirst({
+      where: { slug: req.params.agencySlug, status: "APPROVED" },
+      select: { id: true },
+    });
+
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const entities = await prisma.entity.findMany({
+      where: {
+        agencyId: agency.id,
+        ...(type ? { type } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(entities.map(serializeEntity));
+  } catch (e) {
+    next(e);
+  }
+});
+
 entitiesRouter.get("/", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);

@@ -965,6 +965,114 @@
   background: #fff;
 }
 
+.tour-day-transport {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed color-mix(in srgb, var(--brand-accent-green) 25%, var(--line));
+  background: color-mix(in srgb, var(--brand-accent-green) 8%, #fff);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.tour-day-transport__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tour-day-transport__row {
+  display: grid;
+  grid-template-columns: 1fr 160px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.tour-day-transport__row select,
+.tour-day-transport__row input {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-height: 34px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  background: #fff;
+}
+
+.tour-day-transport__icon {
+  color: var(--brand-dark-green);
+}
+
+.tour-day-transport__subtotal {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+}
+
+.tour-price-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.tour-pricing-summary {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--brand-dark-green) 12%, var(--line));
+  background: color-mix(in srgb, var(--brand-surface) 55%, #fff);
+}
+
+.tour-pricing-summary h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: var(--brand-dark-green);
+}
+
+.tour-pricing-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tour-pricing-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.tour-pricing-lines__total {
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.tour-pricing-lines__final {
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 2px solid color-mix(in srgb, var(--brand-accent-green) 35%, var(--line));
+  font-weight: 800;
+  color: var(--brand-dark-green);
+}
+
+.tour-pricing-note {
+  margin: 10px 0 0;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 640px) {
+  .tour-day-transport__row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .remove-row-btn {
   border: 1px solid #f0c9c9;
   background: #fff5f5;
@@ -3023,4 +3131,197 @@
   border-radius: 999px;
   background: var(--green);
   margin-bottom: 8px;
+}
+
+.influencer-tour-pick-instructions {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand-accent-teal) 12%, #fff);
+  border-left: 3px solid var(--brand-accent-teal);
+}
+
+.influencer-tour-pick-instructions h4 {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+}
+
+.influencer-tour-pick-instructions p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.influencer-tour-pick-commission {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.influencer-tour-pick-commission strong {
+  display: block;
+  margin-top: 4px;
+}
+
+.influencer-tour-pick-request {
+  margin-bottom: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.influencer-tour-pick-hide-agency {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.partner-request-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.partner-request-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+}
+
+.partner-request-card header {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.partner-request-message {
+  margin: 0 0 12px;
+  line-height: 1.55;
+}
+
+.partner-request-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.commission-tasks-section {
+  margin-bottom: 28px;
+}
+
+.commission-tasks-section__title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--brand-dark-green, #0b3022);
+}
+
+.commission-tasks-section__lead {
+  margin: 0 0 14px;
+}
+
+.commission-tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.commission-negotiation {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.commission-negotiation--compact {
+  opacity: 0.92;
+}
+
+.commission-negotiation__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.commission-negotiation__badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--brand-surface, #e4e8e7);
+}
+
+.commission-negotiation__badge--pending,
+.commission-negotiation__badge--negotiating {
+  background: color-mix(in srgb, var(--brand-accent-teal, #1fa19d) 18%, #fff);
+  color: var(--brand-dark-green, #0b3022);
+}
+
+.commission-negotiation__thread {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.commission-negotiation__msg {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.commission-negotiation__msg--influencer {
+  background: color-mix(in srgb, var(--brand-accent-green, #14b81d) 10%, #fff);
+}
+
+.commission-negotiation__msg--agency {
+  background: color-mix(in srgb, var(--brand-accent-teal, #1fa19d) 10%, #fff);
+}
+
+.commission-negotiation__msg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.commission-negotiation__msg p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.commission-negotiation__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.commission-negotiation__counter {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.commission-negotiation__status {
+  margin: 10px 0 0;
+  font-size: 0.88rem;
+  color: var(--brand-accent-teal, #1fa19d);
+  font-weight: 700;
 }

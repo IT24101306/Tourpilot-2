@@ -1,8 +1,10 @@
 import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ImageUrlField } from "../ImageUrlField";
-import { tourPublicPriceLkr } from "@tourpilot/shared";
+import { AGENCY_TRANSPORT_OPTIONS } from "../display/transportOptions";
+import { TransportVehicleIcon } from "../icons/LineIcons";
 import type { ManagedOffer } from "../offers/OffersDashboard";
 import type { TourOfferLinkState } from "../../lib/tourOfferLink";
+import { computeTourFormPricing } from "../../lib/tourFormPricing";
 import { TourOfferLinkSection } from "./TourOfferLinkSection";
 import {
   createDayPlan,
@@ -21,7 +23,7 @@ import {
 
 type Props = {
   open: boolean;
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "duplicate";
   tourKind: TourKind;
   form: TourFormState;
   entities: EntityOption[];
@@ -113,14 +115,15 @@ export function TourFormModal({
   if (!open) return null;
 
   const effectiveCommissionPct = form.influencerCommissionPct ?? agencyInfluencerCommissionPct;
-  const listedPrice = tourPublicPriceLkr({
-    basePriceLkr: form.basePriceLkr,
-    influencerCommissionPct: effectiveCommissionPct,
-  });
+  const pricing = computeTourFormPricing(form, entities, agencyInfluencerCommissionPct);
 
   const kindLabel = tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
   const modalTitle =
-    mode === "edit" ? `Edit ${kindLabel} Tour` : `Create ${kindLabel} Tour`;
+    mode === "edit"
+      ? `Edit ${kindLabel} Tour`
+      : mode === "duplicate"
+        ? `Duplicate ${kindLabel} Tour`
+        : `Create ${kindLabel} Tour`;
   const canSave = isTourFormSavable(form);
 
   function updateDays(days: DayPlan[]) {
@@ -171,6 +174,13 @@ export function TourFormModal({
     );
   }
 
+  function patchDay(
+    dayId: string,
+    patch: Partial<Pick<DayPlan, "transportVehicleId" | "transportRateLkr">>
+  ) {
+    updateDays(form.days.map((d) => (d.id === dayId ? { ...d, ...patch } : d)));
+  }
+
   return (
     <div className="entity-modal tour-modal open" role="presentation" onClick={onClose}>
       <DialogShell title={modalTitle} onClose={onClose}>
@@ -191,16 +201,22 @@ export function TourFormModal({
           </FormField>
 
           <div className="tour-meta-grid">
-            <FormField label="Your tour price (LKR)">
+            <FormField label="Tour price (LKR)">
               <input
                 type="number"
                 min={0}
                 step={100}
-                value={form.basePriceLkr || ""}
+                value={form.priceFromCatalog ? pricing.catalogSubtotal || "" : form.basePriceLkr || ""}
                 onChange={(e) =>
-                  onChange({ ...form, basePriceLkr: Number(e.target.value) || 0 })
+                  onChange({
+                    ...form,
+                    priceFromCatalog: false,
+                    basePriceLkr: Number(e.target.value) || 0,
+                  })
                 }
-                placeholder="89500"
+                placeholder={String(pricing.catalogSubtotal || 0)}
+                readOnly={form.priceFromCatalog}
+                aria-readonly={form.priceFromCatalog}
               />
             </FormField>
             <FormField label="Influencer commission %">
@@ -221,13 +237,29 @@ export function TourFormModal({
                 aria-label="Influencer commission percentage"
               />
             </FormField>
+            <label className="tour-price-mode full" style={{ gridColumn: "1 / -1" }}>
+              <input
+                type="checkbox"
+                checked={form.priceFromCatalog}
+                onChange={(e) =>
+                  onChange({
+                    ...form,
+                    priceFromCatalog: e.target.checked,
+                    basePriceLkr: e.target.checked ? pricing.catalogSubtotal : form.basePriceLkr,
+                  })
+                }
+              />
+              Auto-calculate tour price from entity rates + vehicle rates in the itinerary
+            </label>
             <p className="tour-listed-price muted full" style={{ gridColumn: "1 / -1", margin: 0 }}>
-              Tourists see <strong>LKR {listedPrice.toLocaleString()}</strong> (your price +{" "}
-              {effectiveCommissionPct > 0
-                ? `${effectiveCommissionPct}% influencer commission`
-                : "no influencer commission"}
-              ). Leave blank to use the agency default ({agencyInfluencerCommissionPct}%) from Display
-              settings.
+              Final listed price for tourists:{" "}
+              <strong>LKR {pricing.listedPriceLkr.toLocaleString()}</strong>
+              {pricing.commissionLkr > 0
+                ? ` (catalog LKR ${pricing.basePriceLkr.toLocaleString()} + LKR ${pricing.commissionLkr.toLocaleString()} influencer commission at ${effectiveCommissionPct}%)`
+                : pricing.basePriceLkr > 0
+                  ? ` (catalog LKR ${pricing.basePriceLkr.toLocaleString()}, no influencer commission)`
+                  : ""}
+              .
             </p>
             <ImageUrlField
               label="Cover image"
@@ -252,6 +284,15 @@ export function TourFormModal({
               value={form.description}
               onChange={(e) => onChange({ ...form, description: e.target.value })}
               placeholder="Full description shown on the public tour page"
+            />
+          </FormField>
+
+          <FormField label="Special instructions for influencers" full>
+            <textarea
+              rows={3}
+              value={form.influencerInstructions}
+              onChange={(e) => onChange({ ...form, influencerInstructions: e.target.value })}
+              placeholder="Promo rules, content guidelines, or dos and don'ts for influencers featuring this tour"
             />
           </FormField>
 
@@ -353,12 +394,49 @@ export function TourFormModal({
               entities={filteredEntities}
               allEntitiesCount={entities.length}
               canRemoveDay={form.days.length > 1}
+              dayPricing={pricing.dayBreakdown.find((d) => d.dayNumber === day.dayNumber)}
               onAddEntry={() => addEntry(day.id)}
               onRemoveDay={() => removeDay(day.id)}
               onRemoveEntry={(entryId) => removeEntry(day.id, entryId)}
               onPatchEntry={(entryId, patch) => patchEntry(day.id, entryId, patch)}
+              onPatchTransport={(patch) => patchDay(day.id, patch)}
             />
           ))}
+
+          <div className="tour-pricing-summary" aria-label="Itinerary pricing breakdown">
+            <h4>Pricing breakdown</h4>
+            <ul className="tour-pricing-lines">
+              <li>
+                <span>Entities subtotal</span>
+                <strong>LKR {pricing.entitiesSubtotal.toLocaleString()}</strong>
+              </li>
+              <li>
+                <span>Vehicle rates</span>
+                <strong>LKR {pricing.transportSubtotal.toLocaleString()}</strong>
+              </li>
+              <li className="tour-pricing-lines__total">
+                <span>Catalog total (your price)</span>
+                <strong>LKR {pricing.catalogSubtotal.toLocaleString()}</strong>
+              </li>
+              {pricing.commissionLkr > 0 && (
+                <li>
+                  <span>Influencer commission</span>
+                  <strong>LKR {pricing.commissionLkr.toLocaleString()}</strong>
+                </li>
+              )}
+              <li className="tour-pricing-lines__final">
+                <span>Final listed price</span>
+                <strong>LKR {pricing.listedPriceLkr.toLocaleString()}</strong>
+              </li>
+            </ul>
+            {pricing.onRequestEntityCount > 0 && (
+              <p className="muted tour-pricing-note">
+                {pricing.onRequestEntityCount} entit
+                {pricing.onRequestEntityCount === 1 ? "y has" : "ies have"} no listed rate — only
+                entities with prices are included in the auto total.
+              </p>
+            )}
+          </div>
 
           <div className="day-tools">
             <button type="button" className="mini-btn" onClick={addDay}>
@@ -371,7 +449,13 @@ export function TourFormModal({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving || !canSave}>
-              {saving ? "Saving…" : mode === "edit" ? "Update tour" : "Create tour"}
+              {saving
+                ? "Saving…"
+                : mode === "edit"
+                  ? "Update tour"
+                  : mode === "duplicate"
+                    ? "Save as new tour"
+                    : "Create tour"}
             </button>
           </div>
           {status && <p className="tour-status">{status}</p>}
@@ -422,19 +506,30 @@ function DayBlock({
   entities,
   allEntitiesCount,
   canRemoveDay,
+  dayPricing,
   onAddEntry,
   onRemoveDay,
   onRemoveEntry,
   onPatchEntry,
+  onPatchTransport,
 }: {
   day: DayPlan;
   entities: EntityOption[];
   allEntitiesCount: number;
   canRemoveDay: boolean;
+  dayPricing?: {
+    entitiesLkr: number;
+    transportLkr: number;
+    transportLabel: string | null;
+    onRequestCount: number;
+  };
   onAddEntry: () => void;
   onRemoveDay: () => void;
   onRemoveEntry: (entryId: string) => void;
   onPatchEntry: (entryId: string, patch: Partial<{ time: string; entityId: string }>) => void;
+  onPatchTransport: (
+    patch: Partial<Pick<DayPlan, "transportVehicleId" | "transportRateLkr">>
+  ) => void;
 }) {
   return (
     <div className="day-block">
@@ -462,6 +557,58 @@ function DayBlock({
             onRemove={() => onRemoveEntry(entry.id)}
           />
         ))}
+      </div>
+
+      <div className="tour-day-transport">
+        <div className="tour-day-transport__head">
+          <strong>Vehicle for this day</strong>
+          <span className="muted">Optional — rate adds to tour total</span>
+        </div>
+        <div className="tour-day-transport__row">
+          <select
+            value={day.transportVehicleId}
+            onChange={(e) =>
+              onPatchTransport({
+                transportVehicleId: e.target.value,
+                transportRateLkr: e.target.value ? day.transportRateLkr : 0,
+              })
+            }
+            aria-label={`Day ${day.dayNumber} vehicle`}
+          >
+            <option value="">No vehicle</option>
+            {AGENCY_TRANSPORT_OPTIONS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+                {t.variant ? ` (${t.variant})` : ""}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            value={day.transportRateLkr || ""}
+            onChange={(e) =>
+              onPatchTransport({ transportRateLkr: Number(e.target.value) || 0 })
+            }
+            placeholder="Vehicle rate (LKR)"
+            disabled={!day.transportVehicleId}
+            aria-label={`Day ${day.dayNumber} vehicle rate`}
+          />
+          {day.transportVehicleId && (
+            <span className="tour-day-transport__icon" aria-hidden="true">
+              <TransportVehicleIcon vehicleId={day.transportVehicleId} size={22} />
+            </span>
+          )}
+        </div>
+        {dayPricing && (dayPricing.entitiesLkr > 0 || dayPricing.transportLkr > 0) && (
+          <p className="muted tour-day-transport__subtotal">
+            Day subtotal: LKR {(dayPricing.entitiesLkr + dayPricing.transportLkr).toLocaleString()}
+            {dayPricing.transportLkr > 0 && dayPricing.transportLabel
+              ? ` (incl. ${dayPricing.transportLabel})`
+              : ""}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -504,6 +651,9 @@ function DayRow({
         {entities.map((ent) => (
           <option key={ent.id} value={ent.id}>
             {entityOptionLabel(ent)}
+            {ent.priceHint != null
+              ? ` · LKR ${ent.priceHint.toLocaleString()}`
+              : " · Price on request"}
           </option>
         ))}
       </select>

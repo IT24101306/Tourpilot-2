@@ -18,6 +18,7 @@ import type { DisplaySocialLink, HeroSlide } from "../components/display/display
 import { LineUserIcon } from "../components/icons/LineIcons";
 import { NotificationBell } from "../components/NotificationBell";
 import { TourPilotBrand } from "../components/TourPilotBrand";
+import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { loginPath } from "../utils/authRedirect";
 import { navLinkLightClass } from "../utils/navLinkClass";
 import { useAuth } from "../context/AuthContext";
@@ -34,7 +35,8 @@ type StorefrontTour = {
   days: number;
   publicPriceLkr: number;
   coverUrl: string;
-  agency: { id: string; name: string; slug: string };
+  agency: { id: string; name: string; slug: string } | null;
+  hideAgencyName?: boolean;
   refCode: string | null;
   tourPath: string;
 };
@@ -59,10 +61,11 @@ function InfluencerPackageCard({ tour }: { tour: StorefrontTour }) {
   return (
     <Link to={tour.tourPath} className="agency-package-card">
       <CoverImage src={image} className="agency-package-card-bg" />
+      <SaveTourButton tourId={tour.id} className="agency-package-save" />
       <span className="agency-package-days">{formatTourDaysNights(tour.days)}</span>
       <div className="agency-package-card-body">
         <h3>{tour.title}</h3>
-        <p>{tour.agency.name}</p>
+        {!tour.hideAgencyName && tour.agency ? <p>{tour.agency.name}</p> : null}
         <strong>
           <FormatLkr amount={tour.publicPriceLkr} prefix="from" />
         </strong>

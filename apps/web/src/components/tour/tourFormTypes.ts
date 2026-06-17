@@ -1,3 +1,6 @@
+import { transportLabelFor } from "../display/transportOptions";
+import { resolveTourBasePriceLkr } from "../../lib/tourFormPricing";
+
 export type TourKind = "READY_MADE" | "CUSTOM";
 
 export type DayEntry = {
@@ -10,6 +13,8 @@ export type DayPlan = {
   id: string;
   dayNumber: number;
   entries: DayEntry[];
+  transportVehicleId: string;
+  transportRateLkr: number;
 };
 
 export type TourFormState = {
@@ -17,8 +22,11 @@ export type TourFormState = {
   summary: string;
   description: string;
   basePriceLkr: number;
+  /** When true, tour price is computed from entity + vehicle rates in the itinerary. */
+  priceFromCatalog: boolean;
   /** null = use agency default from Display settings */
   influencerCommissionPct: number | null;
+  influencerInstructions: string;
   coverUrl: string;
   isPublished: boolean;
   days: DayPlan[];
@@ -34,6 +42,9 @@ export type AgencyTourDayItem = {
 export type AgencyTourDay = {
   dayNumber: number;
   title: string | null;
+  transportVehicleId?: string | null;
+  transportLabel?: string | null;
+  transportRateLkr?: number | null;
   items: AgencyTourDayItem[];
 };
 
@@ -48,6 +59,7 @@ export type AgencyTourDetail = {
   basePriceLkr: number;
   influencerCommissionPct?: number;
   tourInfluencerCommissionPct?: number | null;
+  influencerInstructions?: string | null;
   influencerCommissionLkr?: number;
   publicPriceLkr?: number;
   coverUrl?: string | null;
@@ -60,7 +72,13 @@ export function createEntry(time = "", entityId = ""): DayEntry {
 }
 
 export function createDayPlan(dayNumber: number): DayPlan {
-  return { id: crypto.randomUUID(), dayNumber, entries: [createEntry()] };
+  return {
+    id: crypto.randomUUID(),
+    dayNumber,
+    entries: [createEntry()],
+    transportVehicleId: "",
+    transportRateLkr: 0,
+  };
 }
 
 export function defaultTourForm(): TourFormState {
@@ -69,10 +87,24 @@ export function defaultTourForm(): TourFormState {
     summary: "",
     description: "",
     basePriceLkr: 0,
+    priceFromCatalog: true,
     influencerCommissionPct: null,
+    influencerInstructions: "",
     coverUrl: "",
     isPublished: false,
     days: [createDayPlan(1)],
+  };
+}
+
+export function normalizeTourForm(form: TourFormState): TourFormState {
+  return {
+    ...form,
+    priceFromCatalog: form.priceFromCatalog ?? true,
+    days: form.days.map((day) => ({
+      ...day,
+      transportVehicleId: day.transportVehicleId ?? "",
+      transportRateLkr: day.transportRateLkr ?? 0,
+    })),
   };
 }
 
@@ -91,6 +123,8 @@ export function tourToFormState(tour: AgencyTourDetail): TourFormState {
       ? tour.tourDays.map((day) => ({
           id: crypto.randomUUID(),
           dayNumber: day.dayNumber,
+          transportVehicleId: day.transportVehicleId ?? "",
+          transportRateLkr: day.transportRateLkr ?? 0,
           entries:
             day.items.length > 0
               ? day.items.map((item) =>
@@ -105,10 +139,24 @@ export function tourToFormState(tour: AgencyTourDetail): TourFormState {
     summary: tour.summary ?? "",
     description: tour.description ?? "",
     basePriceLkr: tour.basePriceLkr,
+    priceFromCatalog: true,
     influencerCommissionPct: tour.tourInfluencerCommissionPct ?? null,
+    influencerInstructions: tour.influencerInstructions ?? "",
     coverUrl: tour.coverUrl ?? "",
     isPublished: tour.isPublished,
     days,
+  };
+}
+
+/** Prefill a new tour from an existing one — saved as draft with a copied title. */
+export function tourToDuplicateFormState(tour: AgencyTourDetail): TourFormState {
+  const base = tourToFormState(tour);
+  const trimmed = tour.title.trim();
+  const copyTitle = /^copy of /i.test(trimmed) ? trimmed : `Copy of ${trimmed}`;
+  return {
+    ...base,
+    title: copyTitle,
+    isPublished: false,
   };
 }
 
@@ -209,18 +257,31 @@ export function entityOptionLabel(e: EntityOption) {
   return `${e.name} (${type}${place})`;
 }
 
-export function buildTourPlanPayload(form: TourFormState, tourKind: TourKind) {
+export function buildTourPlanPayload(
+  form: TourFormState,
+  tourKind: TourKind,
+  entities: EntityOption[] = []
+) {
+  const basePriceLkr = resolveTourBasePriceLkr(form, entities);
+
   return {
     title: form.title.trim(),
     tourKind,
-    basePriceLkr: form.basePriceLkr,
+    basePriceLkr,
     influencerCommissionPct: form.influencerCommissionPct,
+    influencerInstructions: form.influencerInstructions.trim() || undefined,
     summary: form.summary.trim() || undefined,
     description: form.description.trim() || undefined,
     coverUrl: form.coverUrl.trim() || undefined,
     isPublished: form.isPublished,
     dayPlans: form.days.map((day) => ({
       dayNumber: day.dayNumber,
+      transportVehicleId: day.transportVehicleId || undefined,
+      transportLabel: day.transportVehicleId
+        ? transportLabelFor(day.transportVehicleId)
+        : undefined,
+      transportRateLkr:
+        day.transportVehicleId && day.transportRateLkr > 0 ? day.transportRateLkr : undefined,
       items: day.entries
         .filter((e) => e.entityId && e.time)
         .map((e, idx) => ({

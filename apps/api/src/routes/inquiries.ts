@@ -33,6 +33,57 @@ import {
 
 export const inquiriesRouter = Router();
 
+type TripPlanInquiryPayload = {
+  title: string;
+  agencySlug: string;
+  days: Array<Record<string, unknown>>;
+  estimatedTotalLkr?: number;
+};
+
+function formatTripPlanInquiryMessage(plan: TripPlanInquiryPayload): string {
+  const lines: string[] = [
+    `I'd like to inquire about my custom itinerary: "${plan.title}".`,
+    "",
+  ];
+
+  for (const day of plan.days) {
+    const dayNumber = typeof day.dayNumber === "number" ? day.dayNumber : "?";
+    lines.push(`Day ${dayNumber}:`);
+
+    const sections: Array<[string, unknown]> = [
+      ["Accommodation", day.accommodation],
+      ["Transport", day.transport],
+      ["Activities", day.activities],
+      ["Viewpoints", day.viewpoints],
+      ["Dining & others", day.dining],
+    ];
+
+    for (const [label, value] of sections) {
+      if (!value) continue;
+      if (Array.isArray(value)) {
+        const names = value
+          .map((item) =>
+            item && typeof item === "object" && "name" in item ? String(item.name) : null
+          )
+          .filter(Boolean);
+        if (names.length > 0) lines.push(`  • ${label}: ${names.join(", ")}`);
+      } else if (typeof value === "object" && value !== null && "name" in value) {
+        lines.push(`  • ${label}: ${String((value as { name: string }).name)}`);
+      }
+    }
+
+    lines.push("");
+  }
+
+  if (plan.estimatedTotalLkr != null) {
+    lines.push(`Estimated total from listed prices: LKR ${plan.estimatedTotalLkr.toLocaleString()}`);
+    lines.push("");
+  }
+
+  lines.push("Please confirm availability, final pricing, and next steps.");
+  return lines.join("\n").trim();
+}
+
 const inquiryIncludeForAgency = {
   tourist: { select: { id: true, name: true, phone: true, email: true, role: true } },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
@@ -99,7 +150,15 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
         startDate: z.union([z.string().datetime(), z.string().date()]).optional(),
         endDate: z.union([z.string().datetime(), z.string().date()]).optional(),
         budgetBand: z.string().optional(),
-        interests: z.array(z.string()).optional(),
+        interests: z.union([z.array(z.string()), z.record(z.unknown())]).optional(),
+        tripPlan: z
+          .object({
+            title: z.string().min(1),
+            agencySlug: z.string().min(1),
+            days: z.array(z.record(z.unknown())).min(1),
+            estimatedTotalLkr: z.number().min(0).optional(),
+          })
+          .optional(),
         message: z.string().optional(),
         email: z.string().email("A valid email address is required"),
         refCode: z.string().optional(),
@@ -114,8 +173,8 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
       if (code?.isActive) referralCodeId = code.id;
     }
 
-    let tourId: string | undefined = body.tourId;
-    let inquiryType = body.type;
+    let tourId: string | undefined = body.tripPlan ? undefined : body.tourId;
+    let inquiryType = body.tripPlan ? "CUSTOM" : body.type;
 
     if (tourId) {
       const tour = await prisma.tour.findFirst({
@@ -132,13 +191,23 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
 
     const messageBody =
       body.message?.trim() ||
-      (tourId
-        ? `I'm interested in this ready-made tour. Please share availability and next steps.`
-        : undefined);
+      (body.tripPlan
+        ? formatTripPlanInquiryMessage(body.tripPlan)
+        : tourId
+          ? `I'm interested in this ready-made tour. Please share availability and next steps.`
+          : undefined);
 
     if (!messageBody) {
       return res.status(400).json({ error: "Please describe your trip requirements" });
     }
+
+    const interestsPayload = body.tripPlan
+      ? {
+          _kind: "trip_plan" as const,
+          plan: body.tripPlan,
+          tags: Array.isArray(body.interests) ? body.interests : [],
+        }
+      : body.interests;
 
     const contactEmail = body.email.trim().toLowerCase();
 
@@ -158,7 +227,7 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
           startDate: body.startDate ? new Date(body.startDate) : undefined,
           endDate: body.endDate ? new Date(body.endDate) : undefined,
           budgetBand: body.budgetBand,
-          interests: body.interests ?? [],
+          interests: interestsPayload ?? [],
           message: messageBody,
           referralCodeId,
           statusHistory: { create: { status: "NEW", actorId: req.user!.id } },

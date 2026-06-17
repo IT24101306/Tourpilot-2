@@ -39,8 +39,11 @@ export function ProfilePage() {
 
   const loadSavedCount = useCallback(async () => {
     if (!token || user?.role !== "TOURIST") return;
-    const list = await api<{ id: string }[]>("/saved-tours/mine", { token });
-    setSavedCount(list.length);
+    const [tours, plans] = await Promise.all([
+      api<{ id: string }[]>("/saved-tours/mine", { token }),
+      api<{ id: string }[]>("/saved-trip-plans/mine", { token }),
+    ]);
+    setSavedCount(tours.length + plans.length);
   }, [token, user?.role]);
 
   const loadPartner = useCallback(async () => {
@@ -98,7 +101,7 @@ export function ProfilePage() {
         description:
           inquiryCount > 0
             ? "Track inquiries, confirmed bookings, and saved tours in one place."
-            : "Send inquiries, save tours, and manage bookings from My travel.",
+            : "Send inquiries, save tours and trip plans, and manage bookings from My travel.",
         to: "/trips",
         span: 2,
       });
@@ -106,14 +109,14 @@ export function ProfilePage() {
       stats.push(
         { label: "Inquiries", value: String(inquiryCount), tone: "accent" },
         { label: "Bookings", value: String(bookingCount) },
-        { label: "Saved tours", value: String(savedCount) },
+        { label: "Saved", value: String(savedCount) },
         { label: "Loyalty points", value: loyalty.toLocaleString() }
       );
 
       actions.push(
         { label: "Inquiries", to: "/trips", variant: "teal" },
         { label: "Bookings", to: "/trips/bookings" },
-        { label: "Saved tours", to: "/saved" }
+        { label: "Saved", to: "/saved" }
       );
       break;
     }

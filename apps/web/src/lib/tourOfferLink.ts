@@ -1,6 +1,6 @@
 import type { ConfirmSummaryItem } from "../components/confirm/ConfirmActionContext";
 import type { ManagedOffer } from "../components/offers/OffersDashboard";
-import type { TourFormState, TourKind } from "../components/tour/tourFormTypes";
+import type { TourFormState, TourKind, EntityOption } from "../components/tour/tourFormTypes";
 import { buildTourPlanPayload } from "../components/tour/tourFormTypes";
 
 export type TourOfferNewDraft = {
@@ -166,11 +166,12 @@ export function buildTourSavePayload(
   form: TourFormState,
   tourKind: TourKind,
   offerLink: TourOfferLinkState,
-  initialLinkedOfferIds: string[]
+  initialLinkedOfferIds: string[],
+  entities: EntityOption[] = []
 ) {
   const offerLinkPayload = buildOfferLinkPayload(offerLink, initialLinkedOfferIds);
   return {
-    ...buildTourPlanPayload(form, tourKind),
+    ...buildTourPlanPayload(form, tourKind, entities),
     ...(offerLinkPayload ? { offerLink: offerLinkPayload } : {}),
   };
 }

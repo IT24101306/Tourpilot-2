@@ -41,9 +41,24 @@ export type DisplayReview = {
   body: string;
 };
 
+export type GalleryEntitySnapshot = {
+  id: string;
+  name: string;
+  type: string;
+  city: string | null;
+  district: string | null;
+  description: string | null;
+  durationMin: number | null;
+  priceHint: number | null;
+  media?: unknown;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type GalleryItem = {
   url: string;
   label: string;
+  entityId: string;
+  entity?: GalleryEntitySnapshot | null;
 };
 
 export type HeroSlide = {

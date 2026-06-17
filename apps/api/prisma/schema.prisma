@@ -77,6 +77,25 @@ enum CommissionStatus {
   CANCELLED
 }
 
+enum InfluencerCommissionRequestStatus {
+  PENDING
+  NEGOTIATING
+  APPROVED
+  REJECTED
+}
+
+enum CommissionNegotiationActor {
+  INFLUENCER
+  AGENCY
+}
+
+enum CommissionNegotiationAction {
+  REQUEST
+  NEGOTIATE
+  AGREE
+  REJECT
+}
+
 enum WalletTxnType {
   LOGIN_FEE
   TOPUP
@@ -112,6 +131,7 @@ model User {
   inquiries            Inquiry[]             @relation("TouristInquiries")
   offerRegistrations   OfferRegistration[]
   savedTours           SavedTour[]
+  savedTripPlans       SavedTripPlan[]
   walletLedger         WalletLedger[]
   refreshTokens        RefreshToken[]
   referralAttributions ReferralAttribution[]
@@ -187,15 +207,16 @@ model TouristProfile {
 }
 
 model InfluencerProfile {
-  id          String         @id @default(cuid()) @db.VarChar(25)
-  userId      String         @unique @db.VarChar(25)
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  slug        String?        @unique @db.VarChar(191)
-  bio         String?        @db.Text
-  socialLinks Json?
-  display     Json?
-  codes       ReferralCode[]
-  commissions Commission[]
+  id                 String                        @id @default(cuid()) @db.VarChar(25)
+  userId             String                        @unique @db.VarChar(25)
+  user               User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug               String?                       @unique @db.VarChar(191)
+  bio                String?                       @db.Text
+  socialLinks        Json?
+  display            Json?
+  codes              ReferralCode[]
+  commissions        Commission[]
+  commissionRequests InfluencerCommissionRequest[]
 }
 
 model DriverProfile {
@@ -243,8 +264,10 @@ model Agency {
   reviews         Review[]
   inquiries       Inquiry[]
   displaySettings DisplaySettings?
-  drivers         AgencyDriver[]
-  offers          Offer[]
+  drivers                AgencyDriver[]
+  offers                 Offer[]
+  influencerCommissionRequests InfluencerCommissionRequest[]
+  savedTripPlans               SavedTripPlan[]
 }
 
 model AgencyStaff {
@@ -320,30 +343,73 @@ model Tour {
   influencerCommissionLkr Decimal               @default(0) @db.Decimal(12, 2)
   seasonTag        String?
   districtTags     Json?
-  coverUrl         String?               @db.Text
-  media            Json?
-  isPublished      Boolean               @default(false)
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  tourDays         TourDay[]
-  inquiries        Inquiry[]
-  inquiryResponses InquiryResponse[]
-  proposalItems    InquiryProposalItem[]
-  savedBy          SavedTour[]
-  referralCodes    ReferralCode[]
-  offerTours       OfferTour[]
-  driverAssignments DriverAssignment[]
+  coverUrl               String?               @db.Text
+  media                  Json?
+  influencerInstructions String?               @db.Text
+  isPublished            Boolean               @default(false)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  tourDays               TourDay[]
+  inquiries              Inquiry[]
+  inquiryResponses       InquiryResponse[]
+  proposalItems          InquiryProposalItem[]
+  savedBy                SavedTour[]
+  referralCodes          ReferralCode[]
+  offerTours             OfferTour[]
+  driverAssignments      DriverAssignment[]
+  influencerCommissionRequests InfluencerCommissionRequest[]
 
   @@unique([agencyId, slug])
 }
 
+model InfluencerCommissionRequest {
+  id             String                            @id @default(cuid()) @db.VarChar(25)
+  influencerId   String                            @db.VarChar(25)
+  influencer     InfluencerProfile                 @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  tourId         String                            @db.VarChar(25)
+  tour           Tour                              @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  agencyId       String                            @db.VarChar(25)
+  agency         Agency                            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  requestedPct   Decimal                           @db.Decimal(5, 2)
+  currentOfferPct Decimal                          @default(0) @db.Decimal(5, 2)
+  message        String                            @db.Text
+  status         InfluencerCommissionRequestStatus @default(PENDING)
+  pendingActor   CommissionNegotiationActor        @default(AGENCY)
+  offerByRole    CommissionNegotiationActor?
+  approvedPct    Decimal?                          @db.Decimal(5, 2)
+  agencyNote     String?                           @db.Text
+  createdAt      DateTime                          @default(now())
+  updatedAt      DateTime                          @updatedAt
+  messages       InfluencerCommissionMessage[]
+
+  @@index([agencyId, status])
+  @@index([influencerId, tourId])
+}
+
+model InfluencerCommissionMessage {
+  id          String                      @id @default(cuid()) @db.VarChar(25)
+  requestId   String                      @db.VarChar(25)
+  request     InfluencerCommissionRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorRole  CommissionNegotiationActor
+  authorId    String                      @db.VarChar(25)
+  action      CommissionNegotiationAction
+  proposedPct Decimal?                    @db.Decimal(5, 2)
+  body        String                      @db.Text
+  createdAt   DateTime                    @default(now())
+
+  @@index([requestId, createdAt])
+}
+
 model TourDay {
-  id        String        @id @default(cuid()) @db.VarChar(25)
-  tourId    String        @db.VarChar(25)
-  tour      Tour          @relation(fields: [tourId], references: [id], onDelete: Cascade)
-  dayNumber Int
-  title     String?
-  items     TourDayItem[]
+  id                 String        @id @default(cuid()) @db.VarChar(25)
+  tourId             String        @db.VarChar(25)
+  tour               Tour          @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  dayNumber          Int
+  title              String?
+  transportVehicleId String?       @db.VarChar(40)
+  transportLabel     String?
+  transportRateLkr   Decimal?      @db.Decimal(12, 2)
+  items              TourDayItem[]
 
   @@unique([tourId, dayNumber])
 }
@@ -630,6 +696,21 @@ model SavedTour {
   createdAt DateTime @default(now())
 
   @@unique([userId, tourId])
+}
+
+model SavedTripPlan {
+  id           String   @id @default(cuid()) @db.VarChar(25)
+  userId       String   @db.VarChar(25)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agencyId     String   @db.VarChar(25)
+  agency       Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  title        String
+  plan         Json
+  estimatedLkr Decimal? @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }
 
 model WalletLedger {

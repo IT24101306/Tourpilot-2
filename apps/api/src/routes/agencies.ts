@@ -18,9 +18,11 @@ import { asJson } from "../utils/json.js";
 import { storedImageUrlSchema, storedImageUrlWithFallback } from "../lib/imageUrlSchema.js";
 import {
   buildSectionsPayload,
+  enrichGalleryWithEntities,
   parseDisplayPayload,
   parseGallery,
   type DisplayPackage,
+  type GalleryEntitySnapshot,
 } from "../lib/displaySettings.js";
 import {
   agencyOfferWhere,
@@ -36,6 +38,10 @@ import {
 } from "../lib/offers.js";
 import { applyOfferUpdate } from "../lib/offers.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
+import {
+  applyCommissionRequestAction,
+  getAgencyCommissionRequests,
+} from "../services/commissionNegotiation.js";
 
 
 
@@ -46,6 +52,7 @@ export const agenciesRouter = Router();
 const galleryItemSchema = z.object({
   url: storedImageUrlSchema,
   label: z.string().default("Gallery"),
+  entityId: z.string().min(1).max(25),
 });
 
 
@@ -424,7 +431,19 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
     if (!agency) return res.status(404).json({ error: "Agency not found" });
 
-
+    const requestBody =
+      req.body && typeof req.body === "object"
+        ? {
+            ...(req.body as Record<string, unknown>),
+            gallery: Array.isArray((req.body as { gallery?: unknown }).gallery)
+              ? (req.body as { gallery: unknown[] }).gallery.filter((entry) => {
+                  if (!entry || typeof entry !== "object") return false;
+                  const row = entry as Record<string, unknown>;
+                  return Boolean(String(row.entityId || "").trim());
+                })
+              : [],
+          }
+        : req.body;
 
     const body = z
 
@@ -460,15 +479,29 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
       })
 
-      .parse(req.body);
+      .parse(requestBody);
 
 
 
     const galleryItems = body.gallery
+      .map((g) => ({
+        url: g.url.trim(),
+        label: g.label.trim() || "Gallery",
+        entityId: g.entityId.trim(),
+      }))
+      .filter((g) => g.url && g.entityId);
 
-      .map((g) => ({ url: g.url.trim(), label: g.label.trim() || "Gallery" }))
-
-      .filter((g) => g.url);
+    const galleryEntityIds = [...new Set(galleryItems.map((g) => g.entityId))];
+    if (galleryEntityIds.length > 0) {
+      const ownedCount = await prisma.entity.count({
+        where: { agencyId: agency.id, id: { in: galleryEntityIds } },
+      });
+      if (ownedCount !== galleryEntityIds.length) {
+        return res.status(400).json({
+          error: "Each gallery image must link to one of your catalog entities.",
+        });
+      }
+    }
 
 
 
@@ -613,6 +646,9 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
   } catch (e) {
 
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: e.errors[0]?.message || "Invalid display settings" });
+    }
     next(e);
 
   }
@@ -765,6 +801,68 @@ agenciesRouter.get(
   }
 );
 
+agenciesRouter.get(
+  "/mine/influencer-commission-requests",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+      res.json(await getAgencyCommissionRequests(agency.id, status));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+agenciesRouter.patch(
+  "/mine/influencer-commission-requests/:id",
+  authRequired,
+  requireRoles("AGENCY"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const body = z
+        .object({
+          action: z.enum(["AGREE", "REJECT", "NEGOTIATE"]),
+          proposedPct: z.number().min(0).max(50).optional(),
+          message: z.string().max(2000).optional(),
+        })
+        .parse(req.body);
+
+      const row = await prisma.influencerCommissionRequest.findFirst({
+        where: { id: req.params.id, agencyId: agency.id },
+        select: { id: true },
+      });
+      if (!row) return res.status(404).json({ error: "Request not found" });
+
+      const updated = await applyCommissionRequestAction({
+        requestId: row.id,
+        actorRole: "AGENCY",
+        actorUserId: req.user!.id,
+        action: body.action,
+        proposedPct: body.proposedPct,
+        body: body.message,
+        agencyName: agency.name,
+      });
+
+      res.json(updated);
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status) return res.status(err.status).json({ error: err.message });
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ error: e.errors[0]?.message || "Invalid input" });
+      }
+      next(e);
+    }
+  }
+);
+
 agenciesRouter.get("/:slug", async (req, res, next) => {
 
   try {
@@ -799,7 +897,35 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
     const display = parseDisplayPayload(agency.displaySettings?.sections);
 
-    const gallery = parseGallery(agency.gallery);
+    const rawGallery = parseGallery(agency.gallery);
+    const galleryEntityIds = [...new Set(rawGallery.map((g) => g.entityId))];
+
+    const galleryEntities =
+      galleryEntityIds.length > 0
+        ? await prisma.entity.findMany({
+            where: { agencyId: agency.id, id: { in: galleryEntityIds } },
+          })
+        : [];
+
+    const galleryEntityMap = new Map<string, GalleryEntitySnapshot>(
+      galleryEntities.map((entity) => [
+        entity.id,
+        {
+          id: entity.id,
+          name: entity.name,
+          type: entity.type,
+          city: entity.city,
+          district: entity.district,
+          description: entity.description,
+          durationMin: entity.durationMin,
+          priceHint: entity.priceHint != null ? Number(entity.priceHint) : null,
+          media: entity.media,
+          metadata: (entity.metadata as Record<string, unknown> | null) ?? null,
+        },
+      ])
+    );
+
+    const gallery = enrichGalleryWithEntities(rawGallery, galleryEntityMap);
 
     const packages = resolvePackages(
       display.content.packages,

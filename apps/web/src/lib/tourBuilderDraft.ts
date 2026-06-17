@@ -9,7 +9,7 @@ export const TOUR_BUILDER_RESUME_PARAM = "resumeTour";
 
 export type TourBuilderDraft = {
   form: TourFormState;
-  modalMode: "create" | "edit";
+  modalMode: "create" | "edit" | "duplicate";
   modalKind: TourKind;
   editingTourId: string | null;
   offerLink: TourOfferLinkState;

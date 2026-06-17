@@ -16,13 +16,16 @@ import {
 } from "../../lib/tourOfferLink";
 import {
   defaultTourForm,
+  normalizeTourForm,
   tourToFormState,
+  tourToDuplicateFormState,
   type EntityOption,
   type GroupOption,
   type TourFormState,
   type TourKind,
 } from "../../components/tour/tourFormTypes";
 import { displayTourPrice } from "../../lib/tourPricing";
+import { computeTourFormPricing } from "../../lib/tourFormPricing";
 import {
   clearTourBuilderDraft,
   loadTourBuilderDraft,
@@ -65,7 +68,7 @@ export function AgencyToursPage() {
   const [actionStatus, setActionStatus] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [modalMode, setModalMode] = useState<"create" | "edit" | "duplicate">("create");
   const [modalKind, setModalKind] = useState<TourKind>("READY_MADE");
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [tourForm, setTourForm] = useState<TourFormState>(defaultTourForm());
@@ -118,7 +121,7 @@ export function AgencyToursPage() {
     setModalMode(draft.modalMode);
     setModalKind(draft.modalKind);
     setEditingTourId(draft.editingTourId);
-    setTourForm(draft.form);
+    setTourForm(normalizeTourForm(draft.form));
     setOfferLink(draft.offerLink);
     setInitialLinkedOfferIds(draft.initialLinkedOfferIds);
     setTourStatus("");
@@ -183,6 +186,7 @@ export function AgencyToursPage() {
     setTourForm({
       ...defaultTourForm(),
       isPublished: kind === "READY_MADE",
+      priceFromCatalog: true,
     });
     setTourStatus("");
     setOfferLink(emptyTourOfferLink());
@@ -203,11 +207,27 @@ export function AgencyToursPage() {
     navigate(tourBuilderAllPath());
   }
 
+  function openDuplicate(tour: AgencyTour) {
+    clearTourBuilderDraft();
+    setModalMode("duplicate");
+    setModalKind(tour.tourKind);
+    setEditingTourId(null);
+    setTourForm(tourToDuplicateFormState(tour));
+    setTourStatus("");
+    setOfferLink(emptyTourOfferLink());
+    setInitialLinkedOfferIds([]);
+    setModalOpen(true);
+  }
+
   function openEdit(tour: AgencyTour) {
     setModalMode("edit");
     setModalKind(tour.tourKind);
     setEditingTourId(tour.id);
-    setTourForm(tourToFormState(tour));
+    const formState = normalizeTourForm(tourToFormState(tour));
+    const catalogPricing = computeTourFormPricing(formState, entityOptions, influencerCommissionPct);
+    const priceFromCatalog =
+      Math.abs(formState.basePriceLkr - catalogPricing.catalogSubtotal) < 1;
+    setTourForm({ ...formState, priceFromCatalog });
     const linked = tour.linkedOffers ?? offers.filter((o) => o.tourIds.includes(tour.id));
     const linkedIds = linked.map((o) => (typeof o === "string" ? o : o.id));
     setInitialLinkedOfferIds(linkedIds);
@@ -231,15 +251,25 @@ export function AgencyToursPage() {
     setTourSaving(true);
     setTourStatus("");
     try {
-      const payload = buildTourSavePayload(tourForm, modalKind, offerLink, initialLinkedOfferIds);
-      if (modalMode === "create") {
+      const payload = buildTourSavePayload(
+        tourForm,
+        modalKind,
+        offerLink,
+        initialLinkedOfferIds,
+        entityOptions
+      );
+      if (modalMode === "create" || modalMode === "duplicate") {
         await api<AgencyTour>("/tours/with-plan", {
           method: "POST",
           token,
           body: JSON.stringify(payload),
         });
         setTourStatus(
-          offerLink.enabled ? "Tour created and offer links saved." : "Tour created."
+          modalMode === "duplicate"
+            ? "New tour saved from duplicate."
+            : offerLink.enabled
+              ? "Tour created and offer links saved."
+              : "Tour created."
         );
       } else if (editingTourId) {
         await api(`/tours/${editingTourId}/with-plan`, {
@@ -290,21 +320,41 @@ export function AgencyToursPage() {
       (sum, day) => sum + day.entries.filter((entry) => entry.time && entry.entityId).length,
       0
     );
+    const pricing = computeTourFormPricing(tourForm, entityOptions, influencerCommissionPct);
 
     requestConfirm({
-      title: modalMode === "create" ? "Create tour?" : "Save tour changes?",
-      description: "Review the itinerary and offer links before saving.",
-      confirmLabel: modalMode === "create" ? "Create tour" : "Save changes",
+      title:
+        modalMode === "create"
+          ? "Create tour?"
+          : modalMode === "duplicate"
+            ? "Save as new tour?"
+            : "Save tour changes?",
+      description:
+        modalMode === "duplicate"
+          ? "A new tour will be created from this copy. The original tour is unchanged."
+          : "Review the itinerary and offer links before saving.",
+      confirmLabel:
+        modalMode === "create"
+          ? "Create tour"
+          : modalMode === "duplicate"
+            ? "Save new tour"
+            : "Save changes",
       summary: [
         { label: "Title", value: tourForm.title.trim() || "(untitled)" },
         { label: "Type", value: modalKind === "READY_MADE" ? "Ready-made" : "Custom" },
         { label: "Days", value: String(itineraryDays) },
         { label: "Activities", value: String(activityCount) },
         {
-          label: "Base price",
-          value: tourForm.basePriceLkr
-            ? `LKR ${Number(tourForm.basePriceLkr).toLocaleString()}`
-            : "Not set",
+          label: "Tour price",
+          value: `LKR ${pricing.basePriceLkr.toLocaleString()}`,
+        },
+        {
+          label: "Catalog breakdown",
+          value: `Entities LKR ${pricing.entitiesSubtotal.toLocaleString()} + vehicles LKR ${pricing.transportSubtotal.toLocaleString()}`,
+        },
+        {
+          label: "Final listed price",
+          value: `LKR ${pricing.listedPriceLkr.toLocaleString()}`,
         },
         { label: "Visibility", value: tourForm.isPublished ? "Published" : "Draft" },
         ...getOfferLinkConfirmSummary(offerLink, initialLinkedOfferIds, offers, editingTourId),
@@ -518,6 +568,9 @@ export function AgencyToursPage() {
                   <button type="button" className="mini-btn" onClick={() => openEdit(t)}>
                     Edit
                   </button>
+                  <button type="button" className="mini-btn" onClick={() => openDuplicate(t)}>
+                    Duplicate
+                  </button>
                   <button type="button" className="mini-btn" onClick={() => togglePublish(t)}>
                     {t.isPublished ? "Unpublish" : "Publish"}
                   </button>
@@ -547,6 +600,12 @@ export function AgencyToursPage() {
                     expandedTour.tourDays.map((day) => (
                       <div key={day.dayNumber} className="cat-tour-day">
                         <h4>Day {day.dayNumber}</h4>
+                        {day.transportLabel && day.transportRateLkr != null && (
+                          <p className="muted cat-tour-transport">
+                            Vehicle: {day.transportLabel} · LKR{" "}
+                            {Number(day.transportRateLkr).toLocaleString()}
+                          </p>
+                        )}
                         <ul>
                           {day.items.map((item, idx) => (
                             <li key={idx}>

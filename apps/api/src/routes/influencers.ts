@@ -78,17 +78,21 @@ influencersRouter.get("/:slug", async (req, res, next) => {
       aboutDescription: display.aboutDescription,
       socialLinks: display.socialLinks,
       tours: tours.map((t) => {
+        const settings = display.tourSettings[t.id];
         const pricing = attachTourPricing(t);
         const refCode = codeByTourId.get(t.id);
+        const listedPrice = settings?.displayPriceLkr ?? pricing.publicPriceLkr;
+        const hideAgency = settings?.hideAgencyName === true;
         return {
           id: t.id,
           title: t.title,
           slug: t.slug,
           summary: t.summary,
           days: t.days,
-          publicPriceLkr: pricing.publicPriceLkr,
+          publicPriceLkr: listedPrice,
           coverUrl: resolveImageUrl(t.coverUrl, DEFAULT_TOUR_COVER_URL),
-          agency: t.agency,
+          agency: hideAgency ? null : t.agency,
+          hideAgencyName: hideAgency,
           refCode: refCode ?? null,
           tourPath: `/tours/${t.agency.slug}/${t.slug}${refCode ? `?ref=${refCode}` : ""}`,
         };

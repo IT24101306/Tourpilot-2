@@ -20,6 +20,7 @@ const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/agency/groups", label: "Groups" },
   { to: "/dashboard/agency/display", label: "Display" },
   { to: "/dashboard/agency/offers", label: "Offers" },
+  { to: "/dashboard/agency/partners", label: "Partners" },
 ];
 export function AgencyDashboardLayout() {
   return (

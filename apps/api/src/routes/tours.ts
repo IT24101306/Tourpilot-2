@@ -17,6 +17,9 @@ export const toursRouter = Router();
 const dayPlanSchema = z.object({
   dayNumber: z.number().int().min(1),
   title: z.string().optional(),
+  transportVehicleId: z.string().max(40).optional(),
+  transportLabel: z.string().max(120).optional(),
+  transportRateLkr: z.number().nonnegative().optional(),
   items: z.array(
     z.object({
       entityId: z.string(),
@@ -31,6 +34,7 @@ const withPlanBodySchema = z.object({
   tourKind: z.enum(["READY_MADE", "CUSTOM"]),
   basePriceLkr: z.number().nonnegative().optional(),
   influencerCommissionPct: z.number().min(0).max(50).nullable().optional(),
+  influencerInstructions: z.string().max(4000).optional(),
   summary: z.string().optional(),
   description: z.string().optional(),
   coverUrl: z.string().optional(),
@@ -82,6 +86,10 @@ async function replaceTourDayPlans(
         tourId,
         dayNumber: day.dayNumber,
         title: day.title ?? `Day ${day.dayNumber}`,
+        transportVehicleId: day.transportVehicleId?.trim() || null,
+        transportLabel: day.transportLabel?.trim() || null,
+        transportRateLkr:
+          day.transportRateLkr != null && day.transportRateLkr > 0 ? day.transportRateLkr : null,
       },
     });
 
@@ -252,6 +260,9 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
           ...(body.influencerCommissionPct !== undefined
             ? { influencerCommissionPct: body.influencerCommissionPct }
             : {}),
+          ...(body.influencerInstructions !== undefined
+            ? { influencerInstructions: body.influencerInstructions.trim() || null }
+            : {}),
           isPublished: willPublish,
         },
       });
@@ -336,6 +347,9 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
           basePriceLkr: body.basePriceLkr ?? Number(existing.basePriceLkr),
           ...(body.influencerCommissionPct !== undefined
             ? { influencerCommissionPct: body.influencerCommissionPct }
+            : {}),
+          ...(body.influencerInstructions !== undefined
+            ? { influencerInstructions: body.influencerInstructions.trim() || null }
             : {}),
           ...(body.isPublished !== undefined ? { isPublished: body.isPublished } : {}),
         },
@@ -579,6 +593,7 @@ function serializeTourListItem(
     tourKind: string;
     basePriceLkr: unknown;
     influencerCommissionPct?: unknown | null;
+    influencerInstructions?: string | null;
     coverUrl?: string | null;
     seasonTag?: string | null;
     districtTags?: unknown;
@@ -588,6 +603,9 @@ function serializeTourListItem(
     tourDays?: Array<{
       dayNumber: number;
       title: string | null;
+      transportVehicleId?: string | null;
+      transportLabel?: string | null;
+      transportRateLkr?: unknown | null;
       items: Array<{
         scheduledTime: string | null;
         entity: { id: string; name: string; type: string } | null;
@@ -611,6 +629,7 @@ function serializeTourListItem(
     tourKind: tour.tourKind,
     ...pricing,
     tourInfluencerCommissionPct,
+    influencerInstructions: tour.influencerInstructions ?? null,
     coverUrl: tour.coverUrl ?? null,
     seasonTag: tour.seasonTag ?? null,
     districtTags: tour.districtTags ?? null,
@@ -622,6 +641,10 @@ function serializeTourListItem(
     tourDays: tour.tourDays?.map((d) => ({
       dayNumber: d.dayNumber,
       title: d.title,
+      transportVehicleId: d.transportVehicleId ?? null,
+      transportLabel: d.transportLabel ?? null,
+      transportRateLkr:
+        d.transportRateLkr != null ? Number(d.transportRateLkr) : null,
       items: d.items.map((i) => ({
         scheduledTime: i.scheduledTime,
         entityId: i.entity?.id ?? null,

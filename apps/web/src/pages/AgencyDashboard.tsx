@@ -341,7 +341,7 @@ export function AgencyDashboard() {
         method: "POST",
         token,
         body: JSON.stringify(
-          buildTourSavePayload(tourForm, tourModalKind, offerLink, [])
+          buildTourSavePayload(tourForm, tourModalKind, offerLink, [], entityOptions)
         ),
       });
       setTourStatus(

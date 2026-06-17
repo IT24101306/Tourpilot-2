@@ -4,7 +4,12 @@ import { loginPath } from "../utils/authRedirect";
 import { CoverImage } from "../components/CoverImage";
 import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "../components/NotificationBell";
-import { DEFAULT_TOUR_COVER_URL, formatTourDaysNights, resolveImageUrl } from "@tourpilot/shared";
+import {
+  DEFAULT_TOUR_COVER_URL,
+  formatTourDaysNights,
+  normalizeEntityMedia,
+  resolveImageUrl,
+} from "@tourpilot/shared";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
@@ -13,11 +18,13 @@ import { FormatLkr } from "../components/currency/FormatLkr";
 import { OfferRegistrationModal } from "../components/discovery/OfferRegistrationModal";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
-import { LineCheckIcon, LineUserIcon } from "../components/icons/LineIcons";
+import { EntityTypeLineIcon, LineCheckIcon, LineUserIcon } from "../components/icons/LineIcons";
 import { TourPilotBrand } from "../components/TourPilotBrand";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
 import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav";
+import { AgencyTransportSection } from "../components/display/AgencyTransportSection";
 import { AgencyWhoWeAreSection } from "../components/display/AgencyWhoWeAreSection";
+import { entityDetailsSummary, entityLocationLabel } from "../components/entity/entityTypes";
 import {
   defaultDisplayConfig,
   resolveHeroSlides,
@@ -27,7 +34,9 @@ import {
   type DisplayPackage,
   type DisplaySectionFlags,
   type GalleryItem,
+  type GalleryEntitySnapshot,
 } from "../components/display/displayTypes";
+import { DashboardModal } from "../components/DashboardModal";
 import "../styles/agency-display.css";
 
 type Tour = {
@@ -76,18 +85,76 @@ function splitGalleryColumns(items: GalleryItem[]) {
 function GalleryColumn({
   items,
   sizeClass,
+  onSelect,
 }: {
   items: GalleryItem[];
   sizeClass: "tall" | "wide" | "short";
+  onSelect: (item: GalleryItem) => void;
 }) {
   return (
     <div className="agency-gallery-col">
       {items.map((item, i) => (
-        <div key={`${item.url}-${i}`} className={`agency-gallery-item ${sizeClass}`}>
+        <button
+          key={`${item.url}-${i}`}
+          type="button"
+          className={`agency-gallery-item ${sizeClass}`}
+          onClick={() => onSelect(item)}
+        >
           <div className="agency-gallery-item-bg" style={{ backgroundImage: `url(${item.url})` }} />
           <span>{item.label}</span>
-        </div>
+        </button>
       ))}
+    </div>
+  );
+}
+
+function GalleryEntityModalBody({ entity }: { entity: GalleryEntitySnapshot }) {
+  const mediaBundle = normalizeEntityMedia(entity.media as any);
+  const extraImages =
+    mediaBundle.items?.filter((m) => m.kind === "image" && m.url && m.url !== mediaBundle.mainImageUrl) ?? [];
+
+  const kindLabel = entity.type === "RESTAURANT" ? "Other" : entity.type[0] + entity.type.slice(1).toLowerCase();
+  const detailsSummary = entityDetailsSummary({
+    type: entity.type,
+    description: entity.description ?? null,
+    metadata: entity.metadata,
+  });
+
+  return (
+    <div className="agency-gallery-entity-body">
+      {mediaBundle.mainImageUrl ? (
+        <CoverImage src={mediaBundle.mainImageUrl} className="agency-gallery-entity-main-img" alt={entity.name} />
+      ) : null}
+
+      <div className="agency-gallery-entity-text">
+        <div className="agency-gallery-entity-kind">
+          <EntityTypeLineIcon type={entity.type} size={16} />
+          <span>{kindLabel}</span>
+        </div>
+
+        {entity.description ? <p className="agency-gallery-entity-desc">{entity.description}</p> : null}
+
+        {detailsSummary && detailsSummary !== "—" ? (
+          <p className="muted agency-gallery-entity-details">{detailsSummary}</p>
+        ) : null}
+
+        <div className="agency-gallery-entity-price">
+          {entity.priceHint != null ? <FormatLkr amount={entity.priceHint} /> : "Price on request"}
+        </div>
+
+        {extraImages.length ? (
+          <div className="agency-gallery-entity-extra-images">
+            {extraImages.slice(0, 5).map((m, idx) => (
+              <CoverImage
+                key={`${m.url}-${idx}`}
+                src={m.url}
+                className="agency-gallery-entity-extra-img"
+                alt={m.label || entity.name}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -169,6 +236,9 @@ export function AgencyDetailPage() {
   const [registerOffer, setRegisterOffer] = useState<DiscoveryOffer | null>(null);
   const [navSolid, setNavSolid] = useState(false);
 
+  const [galleryEntityModalOpen, setGalleryEntityModalOpen] = useState(false);
+  const [galleryEntity, setGalleryEntity] = useState<GalleryEntitySnapshot | null>(null);
+
   useEffect(() => {
     function onScroll() {
       setNavSolid(window.scrollY > 48);
@@ -242,8 +312,10 @@ export function AgencyDetailPage() {
     document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  function scrollToInquiry() {
-    document.getElementById("request-custom-tour")?.scrollIntoView({ behavior: "smooth" });
+  function goToBuildMyTrip() {
+    if (!slug) return;
+    const refQuery = refCode ? `?ref=${encodeURIComponent(refCode)}` : "";
+    navigate(`/agencies/${slug}/build-my-trip${refQuery}`);
   }
 
   function openOfferRegistration(offer: DiscoveryOffer) {
@@ -282,6 +354,7 @@ export function AgencyDetailPage() {
   if (showTours) heroSectionLinks.push({ id: "packages", label: "Packages" });
   if (showShowcase && showReviews) heroSectionLinks.push({ id: "reviews", label: "Reviews" });
   if (hasGallery) heroSectionLinks.push({ id: "gallery", label: "Gallery" });
+  heroSectionLinks.push({ id: "transport", label: "Transport" });
   if (inquiryEnabled) heroSectionLinks.push({ id: "request-custom-tour", label: "Inquire" });
 
   return (
@@ -346,7 +419,7 @@ export function AgencyDetailPage() {
               </button>
             )}
             {inquiryEnabled && (
-              <button type="button" className="agency-hero-banner__ghost" onClick={scrollToInquiry}>
+              <button type="button" className="agency-hero-banner__ghost" onClick={goToBuildMyTrip}>
                 {content.ctaLabel || "Plan your trip"}
               </button>
             )}
@@ -469,7 +542,7 @@ export function AgencyDetailPage() {
               </ul>
 
               {inquiryEnabled && (
-                <button type="button" className="agency-showcase-cta" onClick={scrollToInquiry}>
+                <button type="button" className="agency-showcase-cta" onClick={goToBuildMyTrip}>
                   {content.ctaLabel}
                 </button>
               )}
@@ -517,14 +590,66 @@ export function AgencyDetailPage() {
                   <p>Moments from the road with {agency.name}.</p>
                 </div>
                 <div className="agency-gallery-wall">
-                  <GalleryColumn items={col1} sizeClass="wide" />
-                  <GalleryColumn items={col2} sizeClass="tall" />
-                  <GalleryColumn items={col3} sizeClass="short" />
+                  <GalleryColumn
+                    items={col1}
+                    sizeClass="wide"
+                    onSelect={(item) => {
+                      if (!item.entity) return;
+                      setGalleryEntity(item.entity);
+                      setGalleryEntityModalOpen(true);
+                    }}
+                  />
+                  <GalleryColumn
+                    items={col2}
+                    sizeClass="tall"
+                    onSelect={(item) => {
+                      if (!item.entity) return;
+                      setGalleryEntity(item.entity);
+                      setGalleryEntityModalOpen(true);
+                    }}
+                  />
+                  <GalleryColumn
+                    items={col3}
+                    sizeClass="short"
+                    onSelect={(item) => {
+                      if (!item.entity) return;
+                      setGalleryEntity(item.entity);
+                      setGalleryEntityModalOpen(true);
+                    }}
+                  />
                 </div>
               </section>
             </div>
           </div>
         )}
+
+        <div className="agency-display-band agency-display-band--transport">
+          <div className="agency-display-inner">
+            <AgencyTransportSection agencyName={agency.name} />
+          </div>
+        </div>
+
+        <DashboardModal
+          open={galleryEntityModalOpen}
+          title={galleryEntity?.name ?? "Gallery"}
+          subtitle={
+            galleryEntity
+              ? `${entityLocationLabel({
+                  city: galleryEntity.city,
+                  district: galleryEntity.district,
+                  metadata: galleryEntity.metadata,
+                })}`
+              : undefined
+          }
+          onClose={() => {
+            setGalleryEntityModalOpen(false);
+            setGalleryEntity(null);
+          }}
+        >
+          {galleryEntity ? (
+            <GalleryEntityModalBody entity={galleryEntity} />
+          ) : null}
+        </DashboardModal>
 
         {inquiryEnabled && (
           <div className="agency-display-band agency-display-band--green">

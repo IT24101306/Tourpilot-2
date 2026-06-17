@@ -17,6 +17,7 @@ import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
 import { OffersPage } from "./pages/OffersPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { BuildMyTripPage } from "./pages/BuildMyTripPage";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
 import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
@@ -25,6 +26,7 @@ import { AgencyTravelersPage } from "./pages/agency/AgencyTravelersPage";
 import { AgencyAllEntitiesPage } from "./pages/agency/AgencyAllEntitiesPage";
 import { AgencyGroupsPage } from "./pages/agency/AgencyGroupsPage";
 import { AgencyDisplayPage } from "./pages/agency/AgencyDisplayPage";
+import { AgencyPartnerRequestsPage } from "./pages/agency/AgencyPartnerRequestsPage";
 import { AgencyOffersPage } from "./pages/agency/AgencyOffersPage";
 import { DriverOverviewPage } from "./pages/driver/DriverOverviewPage";
 import { DriverAssignedToursPage } from "./pages/driver/DriverAssignedToursPage";
@@ -36,6 +38,7 @@ import { InfluencerOverviewPage } from "./pages/influencer/InfluencerOverviewPag
 import { InfluencerToursPage } from "./pages/influencer/InfluencerToursPage";
 import { InfluencerCodesPage } from "./pages/influencer/InfluencerCodesPage";
 import { InfluencerCommissionsPage } from "./pages/influencer/InfluencerCommissionsPage";
+import { InfluencerCommissionRequestsPage } from "./pages/influencer/InfluencerCommissionRequestsPage";
 import { InfluencerGuidePage } from "./pages/influencer/InfluencerGuidePage";
 import { InfluencerDisplayPage } from "./pages/influencer/InfluencerDisplayPage";
 import { InfluencerDetailPage } from "./pages/InfluencerDetailPage";
@@ -139,6 +142,7 @@ export default function App() {
           <Route path="register/pro" element={<RegisterProPage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
+          <Route path="agencies/:slug/build-my-trip" element={<BuildMyTripPage />} />
           <Route path="influencers/:slug" element={<InfluencerDetailPage />} />
           <Route path="tours/:agencySlug/:tourSlug" element={<TourDetailPage />} />
           <Route path="itinerary/:shareToken" element={<ItinerarySharePage />} />
@@ -163,6 +167,7 @@ export default function App() {
             <Route path="groups" element={<AgencyGroupsPage />} />
             <Route path="offers" element={<AgencyOffersPage />} />
             <Route path="display" element={<AgencyDisplayPage />} />
+            <Route path="partners" element={<AgencyPartnerRequestsPage />} />
           </Route>
 
           <Route
@@ -195,6 +200,7 @@ export default function App() {
             <Route path="display" element={<InfluencerDisplayPage />} />
             <Route path="codes" element={<InfluencerCodesPage />} />
             <Route path="commissions" element={<InfluencerCommissionsPage />} />
+            <Route path="commission-requests" element={<InfluencerCommissionRequestsPage />} />
             <Route path="guide" element={<InfluencerGuidePage />} />
           </Route>
 

@@ -23,7 +23,7 @@ export async function resolveReferralCommissionLkr(
 
   if (ref.tour) {
     const base = Number(ref.tour.basePriceLkr);
-    const pct = agencyCommissionPct(ref.tour);
+    const pct = Number(ref.commissionPct) || agencyCommissionPct(ref.tour);
     const fromTourBase = commissionLkrFromBase(base, pct);
     if (fromTourBase > 0) return fromTourBase;
   }

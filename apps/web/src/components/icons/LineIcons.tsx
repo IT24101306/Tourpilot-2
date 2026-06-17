@@ -217,3 +217,96 @@ export function EntityTypeLineIcon({
       );
   }
 }
+
+export function TransportVehicleIcon({
+  vehicleId,
+  className,
+  size = 32,
+  stroke = "currentColor",
+}: IconProps & { vehicleId: string }) {
+  const common = {
+    className,
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke,
+    strokeWidth: 1.6,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true as const,
+  };
+
+  switch (vehicleId) {
+    case "sedan":
+      return (
+        <svg {...common}>
+          <path d="M4 16h16l-1.5-5.5a2 2 0 0 0-1.9-1.4H7.4a2 2 0 0 0-1.9 1.4L4 16z" />
+          <path d="M6.5 9.5 7.8 6h8.4l1.3 3.5" />
+          <circle cx="7.5" cy="16" r="1.25" />
+          <circle cx="16.5" cy="16" r="1.25" />
+        </svg>
+      );
+    case "suv":
+      return (
+        <svg {...common}>
+          <path d="M3.5 16h17l-1.2-6a2 2 0 0 0-1.95-1.55H6.65A2 2 0 0 0 4.7 10L3.5 16z" />
+          <path d="M6 10 7.5 6.5h9L18 10" />
+          <path d="M8 6.5h8" />
+          <circle cx="7.5" cy="16" r="1.35" />
+          <circle cx="16.5" cy="16" r="1.35" />
+        </svg>
+      );
+    case "mini-van-flat":
+      return (
+        <svg {...common}>
+          <rect x="3" y="9" width="18" height="7" rx="1.5" />
+          <path d="M5 9V7.5A1.5 1.5 0 0 1 6.5 6h11A1.5 1.5 0 0 1 19 7.5V9" />
+          <circle cx="7.5" cy="16" r="1.25" />
+          <circle cx="16.5" cy="16" r="1.25" />
+          <path d="M9 12h6" />
+        </svg>
+      );
+    case "van-high":
+      return (
+        <svg {...common}>
+          <path d="M3 11h18v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z" />
+          <path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3" />
+          <path d="M5 8h14" />
+          <circle cx="7.5" cy="17" r="1.25" />
+          <circle cx="16.5" cy="17" r="1.25" />
+          <path d="M10 13h4" />
+        </svg>
+      );
+    case "mini-coach":
+      return (
+        <svg {...common}>
+          <path d="M2.5 10h19v7a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 17v-7z" />
+          <path d="M4 10V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2" />
+          <circle cx="6.5" cy="17.5" r="1.1" />
+          <circle cx="12" cy="17.5" r="1.1" />
+          <circle cx="17.5" cy="17.5" r="1.1" />
+          <path d="M8 13h8" />
+        </svg>
+      );
+    case "bus":
+      return (
+        <svg {...common}>
+          <path d="M2 9.5h20v8a1.5 1.5 0 0 1-1.5 1.5h-17A1.5 1.5 0 0 1 2 17.5v-8z" />
+          <path d="M4 9.5V7.5A2 2 0 0 1 6 5.5h12a2 2 0 0 1 2 2v2" />
+          <circle cx="6.5" cy="18" r="1.1" />
+          <circle cx="12" cy="18" r="1.1" />
+          <circle cx="17.5" cy="18" r="1.1" />
+          <path d="M8 12.5h8M8 15h8" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...common}>
+          <rect x="3" y="8" width="18" height="8" rx="2" />
+          <circle cx="7.5" cy="16" r="1.25" />
+          <circle cx="16.5" cy="16" r="1.25" />
+        </svg>
+      );
+  }
+}

@@ -35,6 +35,9 @@ export type AgencyTourDayItem = {
 export type AgencyTourDay = {
   dayNumber: number;
   title: string | null;
+  transportVehicleId?: string | null;
+  transportLabel?: string | null;
+  transportRateLkr?: number | null;
   items: AgencyTourDayItem[];
 };
 

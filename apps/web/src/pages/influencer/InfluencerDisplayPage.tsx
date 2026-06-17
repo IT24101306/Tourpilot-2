@@ -4,23 +4,16 @@ import { formatOfferMonthLabel } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
-import { InfluencerTourDetailModal } from "../../components/influencer/InfluencerTourDetailModal";
+import { InfluencerTourPickModal, type InfluencerDisplayTourOption } from "../../components/influencer/InfluencerTourPickModal";
+import type { InfluencerTourDisplaySettings } from "../../lib/influencerDisplay";
 import { InfluencerDisplayContentEditor } from "../../components/influencer/InfluencerDisplayContentEditor";
 import type { DisplaySocialLink, HeroSlide } from "../../components/display/displayTypes";
 import { isFreeOffer } from "../../lib/offerPricing";
-import { useInfluencerDashboard, type InfluencerTour } from "./types";
 import "../../styles/dashboard.css";
 
-type DisplayTour = {
-  id: string;
-  title: string;
-  slug: string;
+type DisplayTour = InfluencerDisplayTourOption & {
   summary: string | null;
-  days: number;
-  publicPriceLkr: number;
-  influencerCommissionLkr: number;
   coverUrl: string | null;
-  agency: { id: string; name: string; slug: string };
   hasReferralCode: boolean;
   referralCode: string | null;
 };
@@ -52,6 +45,7 @@ type DisplayData = {
     aboutTitle: string;
     aboutDescription: string;
     socialLinks: DisplaySocialLink[];
+    tourSettings?: Record<string, InfluencerTourDisplaySettings>;
   };
   availableTours: DisplayTour[];
   availableOffers: DisplayOffer[];
@@ -59,7 +53,6 @@ type DisplayData = {
 
 export function InfluencerDisplayPage() {
   const { token } = useAuth();
-  const { openCreateForTour, copyText } = useInfluencerDashboard();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -72,10 +65,11 @@ export function InfluencerDisplayPage() {
   const [socialLinks, setSocialLinks] = useState<DisplaySocialLink[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedOfferIds, setSelectedOfferIds] = useState<Set<string>>(new Set());
+  const [tourSettings, setTourSettings] = useState<Record<string, InfluencerTourDisplaySettings>>({});
   const [tours, setTours] = useState<DisplayTour[]>([]);
   const [offers, setOffers] = useState<DisplayOffer[]>([]);
   const [agencyFilter, setAgencyFilter] = useState("all");
-  const [detailTour, setDetailTour] = useState<InfluencerTour | null>(null);
+  const [pickTour, setPickTour] = useState<DisplayTour | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -91,6 +85,7 @@ export function InfluencerDisplayPage() {
       setSocialLinks(data.display.socialLinks ?? []);
       setSelectedIds(new Set(data.display.tourIds));
       setSelectedOfferIds(new Set(data.display.offerIds ?? []));
+      setTourSettings(data.display.tourSettings ?? {});
       setTours(data.availableTours);
       setOffers(data.availableOffers ?? []);
     } catch (e) {
@@ -135,11 +130,26 @@ export function InfluencerDisplayPage() {
     return `from LKR ${o.tourPriceLkr.toLocaleString()}`;
   }
 
-  function toggleTour(id: string) {
+  function openTourPicker(tour: DisplayTour) {
+    setPickTour(tour);
+  }
+
+  function confirmTourPick(settings: InfluencerTourDisplaySettings) {
+    if (!pickTour) return;
+    setSelectedIds((prev) => new Set(prev).add(pickTour.id));
+    setTourSettings((prev) => ({ ...prev, [pickTour.id]: settings }));
+    setPickTour(null);
+  }
+
+  function removeTourFromDisplay(tourId: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.delete(tourId);
+      return next;
+    });
+    setTourSettings((prev) => {
+      const next = { ...prev };
+      delete next[tourId];
       return next;
     });
   }
@@ -161,6 +171,10 @@ export function InfluencerDisplayPage() {
     try {
       const tourIds = tours.filter((t) => selectedIds.has(t.id)).map((t) => t.id);
       const offerIds = offers.filter((o) => selectedOfferIds.has(o.id)).map((o) => o.id);
+      const settingsPayload: Record<string, InfluencerTourDisplaySettings> = {};
+      for (const id of tourIds) {
+        if (tourSettings[id]?.termsAcceptedAt) settingsPayload[id] = tourSettings[id];
+      }
       await api("/influencer/mine/display", {
         method: "PUT",
         token,
@@ -173,6 +187,7 @@ export function InfluencerDisplayPage() {
           aboutTitle,
           aboutDescription,
           socialLinks,
+          tourSettings: settingsPayload,
         }),
       });
       setMsg("Display page saved.");
@@ -316,22 +331,19 @@ export function InfluencerDisplayPage() {
             ) : (
               filteredTours.map((t) => {
                 const checked = selectedIds.has(t.id);
+                const settings = tourSettings[t.id];
+                const shownPrice = settings?.displayPriceLkr ?? t.publicPriceLkr;
                 return (
                   <li key={t.id}>
-                    <label
+                    <div
                       className={`influencer-display-tour-row${checked ? " influencer-display-tour-row--on" : ""}`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleTour(t.id)}
-                      />
                       <span className="influencer-display-tour-main">
                         <strong>{t.title}</strong>
                         <span className="muted">
-                          {t.agency.name} · {t.days} days · LKR {t.publicPriceLkr.toLocaleString()}
-                          {t.influencerCommissionLkr > 0 &&
-                            ` · you earn LKR ${t.influencerCommissionLkr.toLocaleString()}`}
+                          {settings?.hideAgencyName ? "Agency hidden" : t.agency.name} · {t.days} days ·
+                          LKR {shownPrice.toLocaleString()}
+                          {` · ${t.influencerCommissionPct}% commission (LKR ${t.influencerCommissionLkr.toLocaleString()})`}
                         </span>
                       </span>
                       <span className="influencer-display-tour-side">
@@ -340,31 +352,34 @@ export function InfluencerDisplayPage() {
                         ) : (
                           <span className="influencer-display-ref muted">No code yet</span>
                         )}
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-nav influencer-display-info-btn"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setDetailTour({
-                              id: t.id,
-                              title: t.title,
-                              slug: t.slug,
-                              summary: t.summary,
-                              days: t.days,
-                              basePriceLkr: t.publicPriceLkr,
-                              influencerCommissionLkr: t.influencerCommissionLkr,
-                              publicPriceLkr: t.publicPriceLkr,
-                              coverUrl: t.coverUrl,
-                              seasonTag: null,
-                              agency: t.agency,
-                            });
-                          }}
-                        >
-                          Agency info
-                        </button>
+                        {checked ? (
+                          <>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-nav influencer-display-info-btn"
+                              onClick={() => openTourPicker(t)}
+                            >
+                              Edit options
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-lite btn-nav"
+                              onClick={() => removeTourFromDisplay(t.id)}
+                            >
+                              Remove
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-nav"
+                            onClick={() => openTourPicker(t)}
+                          >
+                            Add to page
+                          </button>
+                        )}
                       </span>
-                    </label>
+                    </div>
                   </li>
                 );
               })
@@ -425,17 +440,15 @@ export function InfluencerDisplayPage() {
         </form>
       )}
 
-      <InfluencerTourDetailModal
-        tour={detailTour}
-        open={!!detailTour}
-        onClose={() => setDetailTour(null)}
-        onCreate={() => {
-          if (detailTour) {
-            setDetailTour(null);
-            openCreateForTour(detailTour.id);
-          }
-        }}
-        onCopy={copyText}
+      <InfluencerTourPickModal
+        open={!!pickTour}
+        tour={pickTour}
+        settings={pickTour ? tourSettings[pickTour.id] ?? {} : {}}
+        token={token}
+        isEditing={pickTour ? selectedIds.has(pickTour.id) : false}
+        onClose={() => setPickTour(null)}
+        onConfirm={confirmTourPick}
+        onCommissionRequestSent={() => void load()}
       />
     </div>
   );
