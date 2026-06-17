@@ -45,12 +45,16 @@ export function AccountProfileShell({
     ? [...fields, { label: "Email", value: email }]
     : fields;
 
-  const hasOverview =
-    highlights.length > 0 || stats.length > 0 || infoFields.length > 0 || actions.length > 0;
+  const featured = highlights[0] ?? null;
+  const walletDisplay = role === "TOURIST" ? formatMoney(walletBalance) : lkr(walletBalance);
+  const hasShortcuts = actions.length > 0;
+  const hasStats = stats.length > 0;
+  const hasDetails = infoFields.length > 0;
+  const hasOverview = hasShortcuts || featured || hasStats || hasDetails;
 
   const body = (
     <>
-      <div className="account-profile-hero">
+      <header className="account-profile-hero">
         <div className="account-profile-hero-inner">
           <div className="account-profile-identity">
             <div className="account-profile-avatar" aria-hidden="true">
@@ -64,81 +68,104 @@ export function AccountProfileShell({
                   {roleLabel(role)}
                 </span>
                 <span className="account-profile-phone">{formatPhone(phone)}</span>
+                <span className="account-profile-wallet-inline">
+                  <span className="account-profile-wallet-inline-label">Wallet</span>
+                  <strong>{walletDisplay}</strong>
+                </span>
               </div>
               {tagline ? <p className="account-profile-tagline">{tagline}</p> : null}
             </div>
           </div>
-          <div className="account-profile-wallet">
-            <span className="account-profile-wallet-label">Wallet balance</span>
-            <strong className="account-profile-wallet-value">
-              {role === "TOURIST" ? formatMoney(walletBalance) : lkr(walletBalance)}
-            </strong>
-          </div>
         </div>
-      </div>
+      </header>
 
       <div className="account-profile-body">
         {hasOverview && (
-          <div className="account-profile-band account-profile-band--surface">
+          <section className="account-profile-band account-profile-band--surface">
             <div className="account-profile-inner">
-              <header className="account-section-head">
-                <h2>Overview</h2>
-                <p>Your details, wallet, and shortcuts in one place.</p>
-              </header>
+              {hasShortcuts && (
+                <div className="account-profile-block">
+                  <header className="account-block-head">
+                    <h2>Shortcuts</h2>
+                    <p>Jump to your most-used tools.</p>
+                  </header>
+                  <nav className="account-shortcuts" aria-label="Account shortcuts">
+                    {actions.map((a) => (
+                      <Link
+                        key={a.to}
+                        to={a.to}
+                        className={`account-shortcut account-shortcut--${a.variant ?? "ghost"}`}
+                      >
+                        <span className="account-shortcut-label">{a.label}</span>
+                        <span className="account-shortcut-arrow" aria-hidden="true">
+                          →
+                        </span>
+                      </Link>
+                    ))}
+                  </nav>
+                </div>
+              )}
 
-              <div className="account-profile-bento" aria-label="Account overview">
-                {highlights.map((h) => (
-                  <Link
-                    key={h.id}
-                    to={h.to}
-                    className={`account-bento-tile account-bento-tile--highlight account-bento-span-${h.span ?? 2}`}
-                  >
-                    <span className="account-bento-kicker">{h.label}</span>
-                    <strong className="account-bento-value">{h.value}</strong>
-                    {h.description ? <p className="account-bento-desc">{h.description}</p> : null}
-                    <span className="account-bento-cta">Open →</span>
+              {featured && (
+                <div className="account-profile-block">
+                  <header className="account-block-head">
+                    <h2>Featured</h2>
+                  </header>
+                  <Link to={featured.to} className="account-featured-card">
+                    <div className="account-featured-card-body">
+                      <span className="account-featured-kicker">{featured.label}</span>
+                      <strong className="account-featured-value">{featured.value}</strong>
+                      {featured.description ? (
+                        <p className="account-featured-desc">{featured.description}</p>
+                      ) : null}
+                    </div>
+                    <span className="account-featured-cta">Open</span>
                   </Link>
-                ))}
+                </div>
+              )}
 
-                {stats.map((s) => (
-                  <div
-                    key={s.label}
-                    className={`account-bento-tile account-bento-tile--stat account-bento-span-1 account-bento-tile--${s.tone ?? "default"}`}
-                  >
-                    <span className="account-bento-kicker">{s.label}</span>
-                    <strong className="account-bento-value">{s.value}</strong>
-                  </div>
-                ))}
+              {hasStats && (
+                <div className="account-profile-block">
+                  <header className="account-block-head">
+                    <h2>At a glance</h2>
+                  </header>
+                  <dl className="account-stat-row">
+                    {stats.map((s) => (
+                      <div
+                        key={s.label}
+                        className={`account-stat-item account-stat-item--${s.tone ?? "default"}`}
+                      >
+                        <dt>{s.label}</dt>
+                        <dd>{s.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
 
-                {infoFields.map((f) => (
-                  <div
-                    key={f.label}
-                    className={`account-bento-tile account-bento-tile--info account-bento-span-${infoFields.length === 1 ? 2 : 1}`}
-                  >
-                    <span className="account-bento-kicker">{f.label}</span>
-                    <p className="account-bento-desc account-bento-desc--strong">{f.value}</p>
-                  </div>
-                ))}
-
-                {actions.map((a) => (
-                  <Link
-                    key={a.to}
-                    to={a.to}
-                    className={`account-bento-tile account-bento-tile--action account-bento-span-1 account-bento-tile--action-${a.variant ?? "ghost"}`}
-                  >
-                    <span className="account-bento-kicker">{a.label}</span>
-                    <span className="account-bento-cta">Go →</span>
-                  </Link>
-                ))}
-              </div>
+              {hasDetails && (
+                <div className="account-profile-block">
+                  <header className="account-block-head">
+                    <h2>Details</h2>
+                  </header>
+                  <dl className="account-details-list">
+                    {infoFields.map((f) => (
+                      <div key={f.label} className="account-details-row">
+                        <dt>{f.label}</dt>
+                        <dd>{f.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
         )}
 
         {children ? (
-          <div className="account-profile-band account-profile-band--white">
+          <section className="account-profile-band account-profile-band--white">
             <div className="account-profile-inner account-profile-inner--panels">{children}</div>
-          </div>
+          </section>
         ) : null}
       </div>
     </>

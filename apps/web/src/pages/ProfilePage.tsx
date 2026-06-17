@@ -100,10 +100,9 @@ export function ProfilePage() {
             : "Plan your first trip",
         description:
           inquiryCount > 0
-            ? "Track inquiries, confirmed bookings, and saved tours in one place."
-            : "Send inquiries, save tours and trip plans, and manage bookings from My travel.",
+            ? "Track inquiries, bookings, and saved tours."
+            : "Send inquiries, save tours, and manage bookings.",
         to: "/trips",
-        span: 2,
       });
 
       stats.push(
@@ -127,9 +126,8 @@ export function ProfilePage() {
           id: "growth",
           label: "Partner growth",
           value: lkr(partner.stats.totalEarned),
-          description: `${partner.stats.activeCodes} active codes · ${partner.stats.totalClicks.toLocaleString()} link clicks · ${partner.stats.totalInquiries} inquiries`,
+          description: `${partner.stats.activeCodes} active codes · ${partner.stats.totalClicks.toLocaleString()} clicks`,
           to: "/dashboard/influencer",
-          span: 2,
         });
         stats.push(
           { label: "Pending", value: lkr(partner.stats.pendingCommission) },
@@ -143,7 +141,6 @@ export function ProfilePage() {
           value: "Loading stats…",
           description: "Fetching your codes and commissions.",
           to: "/dashboard/influencer",
-          span: 2,
         });
       }
       actions.push(
@@ -160,20 +157,19 @@ export function ProfilePage() {
           id: "storefront",
           label: "Public storefront",
           value: user.agency.name,
-          description: "Your traveler-facing page — packages, gallery, and inquiry form.",
+          description: "Packages, gallery, and inquiry form for travelers.",
           to: `/agencies/${user.agency.slug}`,
-          span: 2,
         });
         fields.push({
           label: "Store URL",
           value: `tourpilot.app/agencies/${user.agency.slug}`,
         });
       }
-      stats.push({ label: "Account", value: "Agency operator", tone: "accent" });
       actions.push(
         { label: "Manage tours", to: "/dashboard/agency/tours", variant: "teal" },
         { label: "Bookings", to: "/dashboard/agency/bookings" },
-        { label: "Negotiations", to: "/dashboard/agency/negotiations" }
+        { label: "Negotiations", to: "/dashboard/agency/negotiations" },
+        { label: "Offers", to: "/dashboard/agency/offers" }
       );
       break;
     }
@@ -183,12 +179,10 @@ export function ProfilePage() {
         label: "Today on the road",
         value: user.agencyDriver?.agencyName ?? "Your schedule",
         description: user.agencyDriver
-          ? `Linked to ${user.agencyDriver.agencyName} · status ${user.agencyDriver.status}`
-          : "View pickups, routes, and assigned tours for today.",
+          ? `Linked to ${user.agencyDriver.agencyName} · ${user.agencyDriver.status}`
+          : "Pickups, routes, and assigned tours.",
         to: "/dashboard/driver",
-        span: 2,
       });
-      stats.push({ label: "Role", value: "Field driver", tone: "accent" });
       actions.push(
         { label: "Today's schedule", to: "/dashboard/driver", variant: "teal" },
         { label: "Assigned tours", to: "/dashboard/driver/assigned" },
@@ -201,11 +195,9 @@ export function ProfilePage() {
         id: "governance",
         label: "Platform oversight",
         value: "Approvals & offers",
-        description: "Review agencies, manage platform offers, and keep TourPilot running smoothly.",
+        description: "Review agencies and manage platform offers.",
         to: "/dashboard/admin",
-        span: 2,
       });
-      stats.push({ label: "Access level", value: "Administrator", tone: "accent" });
       actions.push(
         { label: "Admin overview", to: "/dashboard/admin", variant: "teal" },
         { label: "Manage offers", to: "/dashboard/admin/offers" },

@@ -105,11 +105,11 @@ export function WalletHistoryPanel({ refreshKey = 0 }: Props) {
 
   return (
     <section className="wallet-history-panel" aria-label="Wallet activity">
-      <div className="wallet-history-panel__head account-section-head">
+      <div className="wallet-history-panel__head account-block-head">
         <div>
           <h2 className="wallet-history-panel__title">Wallet</h2>
           <p className="wallet-history-panel__subtitle">
-            Top up your balance, review login fee deductions, and full wallet history.
+            Top up, login fees, and transaction history.
           </p>
         </div>
       </div>

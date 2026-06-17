@@ -134,7 +134,7 @@ a {
 .brand--with-logo {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   font-size: 1.2rem;
 }
 
