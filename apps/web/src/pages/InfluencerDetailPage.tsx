@@ -19,6 +19,7 @@ import { LineUserIcon } from "../components/icons/LineIcons";
 import { NotificationBell } from "../components/NotificationBell";
 import { TourPilotBrand } from "../components/TourPilotBrand";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
+import { offerBookPath } from "../lib/offerBookPaths";
 import { loginPath } from "../utils/authRedirect";
 import { navLinkLightClass } from "../utils/navLinkClass";
 import { useAuth } from "../context/AuthContext";
@@ -35,6 +36,7 @@ type StorefrontTour = {
   days: number;
   publicPriceLkr: number;
   coverUrl: string;
+  galleryImages?: HeroSlide[];
   agency: { id: string; name: string; slug: string } | null;
   hideAgencyName?: boolean;
   refCode: string | null;
@@ -51,18 +53,32 @@ type Storefront = {
   aboutTitle: string;
   aboutDescription: string;
   socialLinks: DisplaySocialLink[];
+  socialTagHandle?: string | null;
   tours: StorefrontTour[];
   offers: DiscoveryOffer[];
 };
 
 function InfluencerPackageCard({ tour }: { tour: StorefrontTour }) {
   const image = resolveImageUrl(tour.coverUrl, DEFAULT_TOUR_COVER_URL);
+  const gallery = tour.galleryImages ?? [];
 
   return (
-    <Link to={tour.tourPath} className="agency-package-card">
+    <Link to={tour.tourPath} className="agency-package-card influencer-package-card">
       <CoverImage src={image} className="agency-package-card-bg" />
       <SaveTourButton tourId={tour.id} className="agency-package-save" />
       <span className="agency-package-days">{formatTourDaysNights(tour.days)}</span>
+      {gallery.length > 0 ? (
+        <div className="influencer-package-gallery" aria-label="Tour photos">
+          {gallery.map((slide, index) => (
+            <CoverImage
+              key={`${slide.url}-${index}`}
+              src={slide.url}
+              className="influencer-package-gallery__thumb"
+              alt={slide.label || `Tour photo ${index + 1}`}
+            />
+          ))}
+        </div>
+      ) : null}
       <div className="agency-package-card-body">
         <h3>{tour.title}</h3>
         {!tour.hideAgencyName && tour.agency ? <p>{tour.agency.name}</p> : null}
@@ -79,7 +95,7 @@ export function InfluencerDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const returnPath = slug ? `/influencers/${slug}` : "/";
+  const returnPath = slug ? `/i/${slug}` : "/";
   const [store, setStore] = useState<Storefront | null>(null);
   const [missing, setMissing] = useState(false);
   const [shareMsg, setShareMsg] = useState("");
@@ -146,6 +162,10 @@ export function InfluencerDetailPage() {
     document.getElementById("packages")?.scrollIntoView({ behavior: "smooth" });
   }
 
+  function openOfferBook(offer: DiscoveryOffer) {
+    navigate(offerBookPath(offer.id, returnPath));
+  }
+
   async function sharePage() {
     if (!pageUrl) return;
     setShareMsg("");
@@ -181,9 +201,6 @@ export function InfluencerDetailPage() {
         <TourPilotBrand onImage />
         <nav className="nav nav--light" aria-label="Creator storefront">
           <div className="nav-actions nav-actions--light">
-            <NavLink to="/agencies" className={navLinkLightClass}>
-              Browse agencies
-            </NavLink>
             <NotificationBell />
             {user ? (
               <>
@@ -255,15 +272,12 @@ export function InfluencerDetailPage() {
         )}
 
         {hasOffers && (
-          <div className="agency-display-band agency-display-band--offers-spotlight">
-            <div className="agency-display-inner agency-display-inner--offers">
-              <AgencyOffersFlipShowcase
-                offers={storefront.offers}
-                agencyName={storefront.name}
-                onRegister={(offer) => navigate(`/offers?offer=${offer.id}`)}
-              />
-            </div>
-          </div>
+          <AgencyOffersFlipShowcase
+            offers={storefront.offers}
+            agencyName={storefront.name}
+            statusMsg={undefined}
+            onRegister={openOfferBook}
+          />
         )}
 
         <div className="agency-display-band agency-display-band--scenic">

@@ -1,11 +1,12 @@
 import { TransportVehicleIcon } from "../icons/LineIcons";
-import { AGENCY_TRANSPORT_OPTIONS } from "./transportOptions";
+import { AGENCY_TRANSPORT_OPTIONS, type TransportOption } from "./transportOptions";
 
 type Props = {
   agencyName?: string;
+  options?: TransportOption[];
 };
 
-export function AgencyTransportSection({ agencyName }: Props) {
+export function AgencyTransportSection({ agencyName, options = AGENCY_TRANSPORT_OPTIONS }: Props) {
   return (
     <section className="agency-section agency-transport-section" id="transport">
       <div className="agency-transport-head">
@@ -13,17 +14,17 @@ export function AgencyTransportSection({ agencyName }: Props) {
           <h2>Transport</h2>
           <p>
             {agencyName
-              ? `Choose how you travel with ${agencyName} — from couples to full coach groups.`
-              : "Vehicle options for every group size across Sri Lanka."}
+              ? `Vehicle options with ${agencyName}.`
+              : "Vehicle options for every group size."}
           </p>
         </div>
       </div>
 
       <div className="agency-transport-grid">
-        {AGENCY_TRANSPORT_OPTIONS.map((option) => (
-          <article key={option.id} className="agency-transport-card">
+        {options.map((option, index) => (
+          <article key={`${option.id}-${index}`} className="agency-transport-card">
             <div className="agency-transport-card__icon-wrap" aria-hidden="true">
-              <TransportVehicleIcon vehicleId={option.id} size={34} />
+              <TransportVehicleIcon vehicleId={option.id} size={22} />
             </div>
 
             <div className="agency-transport-card__body">

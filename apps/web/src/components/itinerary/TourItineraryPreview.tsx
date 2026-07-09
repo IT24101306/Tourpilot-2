@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ItineraryExploreView, type ItineraryExploreDay } from "./ItineraryExploreView";
 import { ItineraryGalleryRail } from "./ItineraryGalleryRail";
 import { collectItineraryGallery } from "./itineraryGallery";
+import { TourPackagePricingNotice } from "./TourPackagePricingNotice";
 
 type TourDay = {
   dayNumber: number;
@@ -52,6 +53,7 @@ export function TourItineraryPreview({ days, title = "Itinerary" }: Props) {
           <h2 className="tour-itinerary-section__title">{title}</h2>
           <p className="tour-itinerary-section__sub">Day by day — expand to see each stop.</p>
         </header>
+        <TourPackagePricingNotice className="tour-package-pricing-notice--itinerary" />
         <ItineraryExploreView
           days={exploreDays}
           compact

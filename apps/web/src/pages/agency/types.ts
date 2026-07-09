@@ -5,7 +5,7 @@ export type AgencyInquiry = {
   pax: number;
   message: string | null;
   createdAt: string;
-  tourist?: { id: string; name: string; phone: string; email?: string | null };
+  tourist?: { id: string; name: string; phone: string; email?: string | null; avatarUrl?: string | null };
   tour?: { title: string } | null;
 };
 

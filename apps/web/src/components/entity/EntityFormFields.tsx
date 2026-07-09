@@ -1,4 +1,5 @@
 import { EntityTypeLineIcon } from "../icons/LineIcons";
+import { FormFieldError } from "../FormFieldError";
 import {
   ENTITY_TYPE_OPTIONS,
   FIELDS_BY_TYPE,
@@ -13,6 +14,7 @@ type Props = {
   typePicker?: "select" | "chips";
   showName?: boolean;
   nameRequired?: boolean;
+  fieldErrors?: Record<string, string>;
 };
 
 export function EntityFormFields({
@@ -21,6 +23,7 @@ export function EntityFormFields({
   typePicker = "select",
   showName = true,
   nameRequired = true,
+  fieldErrors,
 }: Props) {
   const fields = FIELDS_BY_TYPE[form.type];
 
@@ -35,7 +38,7 @@ export function EntityFormFields({
   return (
     <>
       {showName && (
-        <div className={typePicker === "chips" ? "field full" : "field"}>
+        <div className={`${typePicker === "chips" ? "field full" : "field"}${fieldErrors?.name ? " field--invalid" : ""}`}>
           <label htmlFor="entity-name">Name{ nameRequired ? " *" : ""}</label>
           <input
             id="entity-name"
@@ -45,6 +48,7 @@ export function EntityFormFields({
             placeholder="Entity name"
             required={nameRequired}
           />
+          <FormFieldError message={fieldErrors?.name} />
         </div>
       )}
 

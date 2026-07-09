@@ -51,6 +51,46 @@ export const defaultEntityForm = (): EntityFormState => ({
   dressCode: "",
 });
 
+/** Build editable form state from an existing entity (reverse of buildEntityPayload). */
+export function entityToFormState(entity: {
+  name: string;
+  type: string;
+  city?: string | null;
+  description?: string | null;
+  priceHint?: number | null;
+  contact?: string | null;
+  metadata?: Record<string, unknown> | null;
+}): EntityFormState {
+  const m = (entity.metadata || {}) as Record<string, unknown>;
+  const str = (v: unknown) => (v == null ? "" : String(v));
+  const type = (ALLOWED_ENTITY_TYPES.includes(entity.type as EntityTypeKey)
+    ? (entity.type as EntityTypeKey)
+    : "HOTEL") as EntityTypeKey;
+
+  return {
+    ...defaultEntityForm(),
+    name: entity.name ?? "",
+    type,
+    city: str(entity.city),
+    description: str(entity.description),
+    priceHint: entity.priceHint != null ? String(entity.priceHint) : "",
+    contact: str(entity.contact),
+    duration: str(m.duration),
+    location: str(m.location),
+    otherInfo: str(m.otherInfo),
+    rooms: str(m.rooms),
+    openHoursDays: str(m.openHoursDays),
+    starRating: str(m.starRating),
+    amenities: str(m.amenities),
+    minGroupSize: str(m.minGroupSize),
+    maxGroupSize: str(m.maxGroupSize),
+    bestTimeToVisit: str(m.bestTimeToVisit),
+    cuisineType: str(m.cuisineType),
+    reservationRequired: m.reservationRequired ? "true" : "false",
+    dressCode: str(m.dressCode),
+  };
+}
+
 export type FieldKey = keyof EntityFormState;
 
 export type FieldDef = {
@@ -101,7 +141,11 @@ export const FIELDS_BY_TYPE: Record<EntityTypeKey, FieldDef[]> = {
     { key: "priceHint", label: "Price per person (LKR)", input: "number", placeholder: "3500" },
     { key: "minGroupSize", label: "Min group size", input: "number", placeholder: "2" },
     { key: "maxGroupSize", label: "Max group size", input: "number", placeholder: "12" },
-    { key: "duration", label: "Duration", placeholder: "e.g. 3 hours" },
+    {
+      key: "duration",
+      label: "Average time to participate",
+      placeholder: "e.g. 3 hours",
+    },
     { key: "location", label: "Location", placeholder: "Meeting point or area" },
     { key: "otherInfo", label: "Other info", input: "textarea", fullWidth: true },
     { key: "contact", label: "Contact no", input: "tel", placeholder: "0771234567" },
@@ -109,6 +153,11 @@ export const FIELDS_BY_TYPE: Record<EntityTypeKey, FieldDef[]> = {
   VIEWPOINT: [
     DESCRIPTION_FIELD,
     { key: "priceHint", label: "Price (LKR)", input: "number", placeholder: "500" },
+    {
+      key: "duration",
+      label: "Average time to visit",
+      placeholder: "e.g. 45 minutes",
+    },
     {
       key: "bestTimeToVisit",
       label: "Best time to visit",
@@ -184,6 +233,7 @@ export function buildEntityPayload(form: EntityFormState) {
 
   if (form.type === "VIEWPOINT") {
     if (num(form.priceHint) != null) payload.priceHint = num(form.priceHint);
+    if (trim(form.duration)) metadata.duration = trim(form.duration);
     if (trim(form.bestTimeToVisit)) metadata.bestTimeToVisit = trim(form.bestTimeToVisit);
     if (trim(form.contact)) payload.contact = trim(form.contact);
   }
@@ -233,13 +283,14 @@ export function entityDetailsSummary(entity: {
     if (m.amenities) parts.push(String(m.amenities).slice(0, 36) + (String(m.amenities).length > 36 ? "…" : ""));
   }
   if (entity.type === "ACTIVITY") {
+    if (m.duration) parts.push(`~${m.duration}`);
     if (m.minGroupSize != null || m.maxGroupSize != null) {
       parts.push(`Group ${m.minGroupSize ?? "?"}–${m.maxGroupSize ?? "?"}`);
     }
-    if (m.duration) parts.push(String(m.duration));
   }
-  if (entity.type === "VIEWPOINT" && m.bestTimeToVisit) {
-    parts.push(String(m.bestTimeToVisit));
+  if (entity.type === "VIEWPOINT") {
+    if (m.duration) parts.push(`~${m.duration}`);
+    if (m.bestTimeToVisit) parts.push(String(m.bestTimeToVisit));
   }
   if (entity.type === "RESTAURANT") {
     if (m.cuisineType) parts.push(String(m.cuisineType));

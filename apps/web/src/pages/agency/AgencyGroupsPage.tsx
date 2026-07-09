@@ -21,6 +21,7 @@ export function AgencyGroupsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "", entityIds: [] as string[] });
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export function AgencyGroupsPage() {
     }
   }
 
-  function createGroup(e: FormEvent) {
+  function saveGroup(e: FormEvent) {
     e.preventDefault();
     if (!token || !groupForm.name.trim()) return;
     if (groupForm.entityIds.length === 0) {
@@ -78,15 +79,18 @@ export function AgencyGroupsPage() {
       return;
     }
 
+    const isEditing = editingGroupId !== null;
     const entityNames = entities
       .filter((e) => groupForm.entityIds.includes(e.id))
       .map((e) => e.name)
       .join(", ");
 
     requestConfirm({
-      title: "Create entity group?",
-      description: "Reuse this bundle when building itineraries and tours.",
-      confirmLabel: "Create group",
+      title: isEditing ? "Save changes to this group?" : "Create entity group?",
+      description: isEditing
+        ? "Update the bundle used in itineraries and tour planning."
+        : "Reuse this bundle when building itineraries and tours.",
+      confirmLabel: isEditing ? "Save changes" : "Create group",
       summary: [
         { label: "Name", value: groupForm.name.trim() },
         {
@@ -103,25 +107,90 @@ export function AgencyGroupsPage() {
         setSaving(true);
         setStatus("");
         try {
-          const created = await api<AgencyGroup>("/entities/groups", {
-            method: "POST",
-            token,
-            body: JSON.stringify({
-              name: groupForm.name.trim(),
-              description: groupForm.description.trim() || undefined,
-              entityIds: groupForm.entityIds,
-            }),
+          const body = JSON.stringify({
+            name: groupForm.name.trim(),
+            description: groupForm.description.trim() || undefined,
+            entityIds: groupForm.entityIds,
           });
+          const saved = isEditing
+            ? await api<AgencyGroup>(`/entities/groups/${editingGroupId}`, {
+                method: "PATCH",
+                token,
+                body,
+              })
+            : await api<AgencyGroup>("/entities/groups", {
+                method: "POST",
+                token,
+                body,
+              });
+          setEditingGroupId(null);
           setGroupForm({ name: "", description: "", entityIds: [] });
           setEntitySearch("");
           await refresh();
-          setSelectedGroupId(created.id);
-          setStatus("Group created.");
+          setSelectedGroupId(saved.id);
+          setStatus(isEditing ? "Group updated." : "Group created.");
           setTimeout(() => setStatus(""), 2500);
         } catch (err) {
-          setStatus(err instanceof ApiError ? err.message : "Failed to create group");
+          setStatus(err instanceof ApiError ? err.message : "Failed to save group");
         } finally {
           setSaving(false);
+        }
+      },
+    });
+  }
+
+  function startEdit(group: AgencyGroup) {
+    setEditingGroupId(group.id);
+    setGroupForm({
+      name: group.name,
+      description: group.description ?? "",
+      entityIds: group.items.map((i) => i.entity.id),
+    });
+    setEntitySearch("");
+    setTypeFilter("all");
+    setStatus(`Editing "${group.name}" — add or remove entities, then save.`);
+  }
+
+  function startDuplicate(group: AgencyGroup) {
+    setEditingGroupId(null);
+    setSelectedGroupId(null);
+    setGroupForm({
+      name: `${group.name} (copy)`,
+      description: group.description ?? "",
+      entityIds: group.items.map((i) => i.entity.id),
+    });
+    setEntitySearch("");
+    setTypeFilter("all");
+    setStatus("Editing a copy — adjust entities and save it as a new group.");
+  }
+
+  function cancelEdit() {
+    setEditingGroupId(null);
+    setGroupForm({ name: "", description: "", entityIds: [] });
+    setStatus("");
+  }
+
+  function deleteGroup(group: AgencyGroup) {
+    if (!token) return;
+    requestConfirm({
+      title: "Delete this group?",
+      description: "The bundle is removed. The entities inside it are not deleted.",
+      confirmLabel: "Delete group",
+      variant: "danger",
+      summary: [
+        { label: "Name", value: group.name },
+        { label: "Entities", value: `${group.items.length}` },
+      ],
+      onConfirm: async () => {
+        try {
+          await api(`/entities/groups/${group.id}`, { method: "DELETE", token });
+          if (editingGroupId === group.id) cancelEdit();
+          setSelectedGroupId(null);
+          await refresh();
+          setStatus("Group deleted.");
+          setTimeout(() => setStatus(""), 2500);
+        } catch (err) {
+          setStatus(err instanceof ApiError ? err.message : "Failed to delete group");
         }
       },
     });
@@ -159,10 +228,14 @@ export function AgencyGroupsPage() {
       {status && <p className="groups-toast">{status}</p>}
 
       <div className="groups-studio-layout">
-        <form className="groups-form-card" onSubmit={createGroup}>
+        <form className="groups-form-card" onSubmit={saveGroup}>
           <div className="groups-form-card-head">
-            <h3>Create group</h3>
-            <p className="muted">Name your set, then pick entities from your catalog.</p>
+            <h3>{editingGroupId ? "Edit group" : "Create group"}</h3>
+            <p className="muted">
+              {editingGroupId
+                ? "Add or remove entities below, rename it, then save your changes."
+                : "Name your set, then pick entities from your catalog."}
+            </p>
           </div>
 
           <div className="entity-form-grid">
@@ -285,13 +358,26 @@ export function AgencyGroupsPage() {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary groups-submit"
-            disabled={saving || !groupForm.name.trim() || groupForm.entityIds.length === 0}
-          >
-            {saving ? "Creating…" : "Create group"}
-          </button>
+          <div className="groups-form-actions">
+            {editingGroupId && (
+              <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              className="btn btn-primary groups-submit"
+              disabled={saving || !groupForm.name.trim() || groupForm.entityIds.length === 0}
+            >
+              {saving
+                ? editingGroupId
+                  ? "Saving…"
+                  : "Creating…"
+                : editingGroupId
+                  ? "Save changes"
+                  : "Create group"}
+            </button>
+          </div>
         </form>
 
         <aside className="groups-library">
@@ -340,6 +426,29 @@ export function AgencyGroupsPage() {
               {selectedGroup.description && (
                 <p className="muted groups-detail-desc">{selectedGroup.description}</p>
               )}
+              <div className="groups-detail-actions">
+                <button
+                  type="button"
+                  className="mini-btn"
+                  onClick={() => startEdit(selectedGroup)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="mini-btn"
+                  onClick={() => startDuplicate(selectedGroup)}
+                >
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  className="mini-btn mini-btn--danger"
+                  onClick={() => deleteGroup(selectedGroup)}
+                >
+                  Delete
+                </button>
+              </div>
               <ul className="groups-detail-entities">
                 {selectedGroup.items.map((item) => (
                   <li key={item.entity.id}>

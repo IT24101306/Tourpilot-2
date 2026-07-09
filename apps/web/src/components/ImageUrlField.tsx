@@ -82,7 +82,7 @@ export function ImageUrlField({
       {hint ? (
         <span className="muted image-url-hint">{hint}</span>
       ) : null}
-      {error ? <span className="image-url-error">{error}</span> : null}
+      {error ? <span className="form-error image-url-error">{error}</span> : null}
     </label>
   );
 }

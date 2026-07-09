@@ -11,6 +11,14 @@ import { OfferShareButton } from "./OfferShareButton";
 import type { OfferRewardTier } from "@tourpilot/shared";
 import { useFormatMoney } from "../../context/CurrencyContext";
 
+export type OfferTourOption = {
+  id: string;
+  title: string;
+  slug: string;
+  coverUrl: string | null;
+  basePriceLkr: number;
+};
+
 export type DiscoveryOffer = {
   id: string;
   title: string;
@@ -28,7 +36,9 @@ export type DiscoveryOffer = {
   agency?: { id: string; name: string; slug: string } | null;
   agencyName?: string | null;
   agencySlug?: string | null;
+  socialTagHandle?: string | null;
   tourSlug?: string | null;
+  tours?: OfferTourOption[];
 };
 
 type Props = {
@@ -81,7 +91,7 @@ function OfferPrice({
 export function DiscoveryOfferCard({
   offer,
   onRegister,
-  registerLabel = "Register",
+  registerLabel = "Book now",
   compact,
   hero,
   page,

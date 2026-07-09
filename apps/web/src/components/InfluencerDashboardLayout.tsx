@@ -2,19 +2,20 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CreateReferralCodeModal } from "./influencer/CreateReferralCodeModal";
 import { TourPilotBrand } from "./TourPilotBrand";
+import { DashboardSupportButton } from "./support/SupportAgentsModal";
 import {
   InfluencerDashboardContext,
   useInfluencerDashboardProvider,
 } from "../pages/influencer/types";
 
 const INFLUENCER_TABS: { to: string; label: string; end?: boolean }[] = [
-  { to: "/dashboard/influencer", label: "Overview", end: true },
-  { to: "/dashboard/influencer/tours", label: "Tours" },
-  { to: "/dashboard/influencer/display", label: "Display" },
-  { to: "/dashboard/influencer/codes", label: "Codes" },
-  { to: "/dashboard/influencer/commission-requests", label: "Rate talks" },
-  { to: "/dashboard/influencer/commissions", label: "Commissions" },
-  { to: "/dashboard/influencer/guide", label: "Guide" },
+  { to: "/dashboard/i", label: "Overview", end: true },
+  { to: "/dashboard/i/tours", label: "Tours" },
+  { to: "/dashboard/i/display", label: "Display" },
+  { to: "/dashboard/i/codes", label: "Codes" },
+  { to: "/dashboard/i/commission-requests", label: "Rate talks" },
+  { to: "/dashboard/i/commissions", label: "Commissions" },
+  { to: "/dashboard/i/guide", label: "Guide" },
 ];
 
 export function InfluencerDashboardLayout() {
@@ -32,6 +33,7 @@ export function InfluencerDashboardLayout() {
           </div>
           <nav className="nav nav--light" aria-label="Partner utilities">
             <div className="nav-actions nav-actions--light">
+              <DashboardSupportButton />
               <Link to="/profile" className="nav-link-light">
                 Profile
               </Link>

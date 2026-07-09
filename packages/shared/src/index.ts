@@ -30,7 +30,7 @@ export function dashboardPathForRole(role: UserRole): string {
     case "AGENCY":
       return "/dashboard/agency";
     case "INFLUENCER":
-      return "/dashboard/influencer";
+      return "/dashboard/i";
     case "DRIVER":
       return "/dashboard/driver";
     case "ADMIN":
@@ -73,6 +73,9 @@ export {
   offerRewardTierCompactLabel,
   offerRewardTierForEveryone,
   offerRewardTierHeadline,
+  offerRewardTierDisplayLine,
+  offerRewardTierIcon,
+  offerRewardTierMilestoneHeading,
   summarizeOfferRewardTiers,
   OFFER_MONTH_ABBREVS,
   parseOfferMonthParts,
@@ -118,3 +121,9 @@ export {
   type AgencyKycInput,
   type AgencyKycRecord,
 } from "./agencyKyc.js";
+
+export {
+  normalizeSocialTagHandle,
+  resolveSocialTagHandle,
+  type SocialLinkLike,
+} from "./socialTagHandle.js";

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { GuidedTripCard } from "../components/guided/GuidedTripCard";
@@ -40,10 +39,7 @@ export function TouristTripsPage() {
     return (
       <div className="guided-empty-panel">
         <h3>No inquiries yet</h3>
-        <p>Browse trusted agencies, send an inquiry, and track proposals here.</p>
-        <Link to="/agencies" className="btn btn-primary">
-          Find an agency
-        </Link>
+        <p>Visit an agency or tour page and send an inquiry to track proposals here.</p>
       </div>
     );
   }

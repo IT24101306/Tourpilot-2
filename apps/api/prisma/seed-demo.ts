@@ -999,8 +999,8 @@ async function main() {
   console.log("  Wild Coast: +94773334400 →", extended.wildAgency.slug, "(approved)");
   console.log("  Rejected:   ", "+94778889900 →", extended.rejectedAgency.slug);
   console.log("  Tourists:   ", PHONES.tourist1, PHONES.tourist2, PHONES.tourist3);
-  console.log("  Influencers:", PHONES.influencer1, "/influencers/island-vibes");
-  console.log("              ", PHONES.influencer2, "/influencers/lanka-lens");
+  console.log("  Influencers:", PHONES.influencer1, "/i/island-vibes");
+  console.log("              ", PHONES.influencer2, "/i/lanka-lens");
   console.log("  Drivers:    ", PHONES.driver1, PHONES.driver2);
   console.log("\nHighlights:");
   console.log("  Tours:", [tour1.slug, tour2.slug, tour3.slug].join(", "));

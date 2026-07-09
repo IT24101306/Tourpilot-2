@@ -23,10 +23,10 @@ export function InfluencerOverviewPage() {
         <button type="button" className="btn btn-primary" onClick={() => openCreateForTour()}>
           Create referral code
         </button>
-        <Link to="/dashboard/influencer/tours" className="btn btn-teal">
+        <Link to="/dashboard/i/tours" className="btn btn-teal">
           Browse tours
         </Link>
-        <Link to="/dashboard/influencer/display" className="btn btn-ghost">
+        <Link to="/dashboard/i/display" className="btn btn-ghost">
           Display page
         </Link>
       </ModuleHeader>
@@ -69,7 +69,7 @@ export function InfluencerOverviewPage() {
       <section className="partner-board">
         <div className="partner-board-head">
           <h3>How you earn</h3>
-          <Link to="/dashboard/influencer/guide" className="partner-board-link">
+          <Link to="/dashboard/i/guide" className="partner-board-link">
             Full guide →
           </Link>
         </div>

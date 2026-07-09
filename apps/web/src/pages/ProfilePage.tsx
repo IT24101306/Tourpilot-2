@@ -127,7 +127,7 @@ export function ProfilePage() {
           label: "Partner growth",
           value: lkr(partner.stats.totalEarned),
           description: `${partner.stats.activeCodes} active codes · ${partner.stats.totalClicks.toLocaleString()} clicks`,
-          to: "/dashboard/influencer",
+          to: "/dashboard/i",
         });
         stats.push(
           { label: "Pending", value: lkr(partner.stats.pendingCommission) },
@@ -140,13 +140,13 @@ export function ProfilePage() {
           label: "Partner account",
           value: "Loading stats…",
           description: "Fetching your codes and commissions.",
-          to: "/dashboard/influencer",
+          to: "/dashboard/i",
         });
       }
       actions.push(
-        { label: "Referral codes", to: "/dashboard/influencer/codes", variant: "teal" },
-        { label: "Commissions", to: "/dashboard/influencer/commissions" },
-        { label: "Tours to promote", to: "/dashboard/influencer/tours" }
+        { label: "Referral codes", to: "/dashboard/i/codes", variant: "teal" },
+        { label: "Commissions", to: "/dashboard/i/commissions" },
+        { label: "Tours to promote", to: "/dashboard/i/tours" }
       );
       break;
     }

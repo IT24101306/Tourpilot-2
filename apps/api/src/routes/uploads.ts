@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { authRequired, requireRoles } from "../middleware/auth.js";
+import { authRequired } from "../middleware/auth.js";
 import {
   UPLOAD_DIR,
   UPLOAD_MAX_BYTES,
@@ -38,7 +38,6 @@ const upload = multer({
 uploadsRouter.post(
   "/",
   authRequired,
-  requireRoles("AGENCY", "ADMIN"),
   (req, res, next) => {
     upload.single("file")(req, res, (err) => {
       if (err) {

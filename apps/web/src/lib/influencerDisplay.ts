@@ -5,7 +5,11 @@ export type InfluencerTourDisplaySettings = {
   termsAcceptedAt?: string;
   hideAgencyName?: boolean;
   displayPriceLkr?: number;
+  coverUrl?: string;
+  galleryImages?: HeroSlide[];
 };
+
+export const MAX_INFLUENCER_TOUR_GALLERY = 8;
 
 export type InfluencerDisplayContent = {
   headline: string;
@@ -16,6 +20,7 @@ export type InfluencerDisplayContent = {
   aboutTitle: string;
   aboutDescription: string;
   socialLinks: DisplaySocialLink[];
+  socialTagHandle: string;
   tourSettings: Record<string, InfluencerTourDisplaySettings>;
 };
 

@@ -16,14 +16,9 @@ export function PublicLayout() {
         <nav className="nav" aria-label="Primary">
           <div className="nav-links">
             {!onProfile && (
-              <>
-                <NavLink to="/agencies" className={navLinkClass}>
-                  Agencies
-                </NavLink>
-                <NavLink to="/offers" className={navLinkClass}>
-                  Offers
-                </NavLink>
-              </>
+              <NavLink to="/offers" className={navLinkClass}>
+                Offers
+              </NavLink>
             )}
             {user?.role === "TOURIST" && (
               <>
@@ -54,7 +49,7 @@ export function PublicLayout() {
                   </NavLink>
                 )}
                 {user.role === "INFLUENCER" && (
-                  <NavLink to="/dashboard/influencer" className={navLinkClass}>
+                  <NavLink to="/dashboard/i" className={navLinkClass}>
                     Dashboard
                   </NavLink>
                 )}

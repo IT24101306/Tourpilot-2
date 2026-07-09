@@ -6,9 +6,11 @@ import type { ManagedOffer } from "../offers/OffersDashboard";
 import type { TourOfferLinkState } from "../../lib/tourOfferLink";
 import { computeTourFormPricing } from "../../lib/tourFormPricing";
 import { TourOfferLinkSection } from "./TourOfferLinkSection";
+import { TourPackagePricingNotice } from "../itinerary/TourPackagePricingNotice";
 import {
   createDayPlan,
   createEntry,
+  entityDestinationOptions,
   entityOptionLabel,
   filterEntityOptions,
   filterGroupOptions,
@@ -63,9 +65,12 @@ export function TourFormModal({
   onAddNewEntity,
 }: Props) {
   const [typeFilter, setTypeFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
   const [groupSearch, setGroupSearch] = useState("");
   const [entitySearch, setEntitySearch] = useState("");
+
+  const destinationOptions = useMemo(() => entityDestinationOptions(entities), [entities]);
 
   const filteredGroups = useMemo(
     () => filterGroupOptions(groups, groupSearch),
@@ -73,18 +78,26 @@ export function TourFormModal({
   );
 
   const filteredEntities = useMemo(
-    () => filterEntityOptions(entities, groups, typeFilter, groupFilter, entitySearch),
-    [entities, groups, typeFilter, groupFilter, entitySearch]
+    () => filterEntityOptions(entities, groups, typeFilter, groupFilter, entitySearch, cityFilter),
+    [entities, groups, typeFilter, groupFilter, entitySearch, cityFilter]
   );
 
   useEffect(() => {
     if (!open) {
       setTypeFilter("all");
+      setCityFilter("all");
       setGroupFilter("all");
       setGroupSearch("");
       setEntitySearch("");
     }
   }, [open]);
+
+  useEffect(() => {
+    if (cityFilter === "all") return;
+    if (!destinationOptions.includes(cityFilter)) {
+      setCityFilter("all");
+    }
+  }, [destinationOptions, cityFilter]);
 
   useEffect(() => {
     if (groupFilter === "all") return;
@@ -110,7 +123,7 @@ export function TourFormModal({
         ),
       })),
     });
-  }, [typeFilter, groupFilter, entitySearch, filteredEntities, open]);
+  }, [typeFilter, cityFilter, groupFilter, entitySearch, filteredEntities, open]);
 
   if (!open) return null;
 
@@ -160,14 +173,33 @@ export function TourFormModal({
   function patchEntry(
     dayId: string,
     entryId: string,
-    patch: Partial<{ time: string; entityId: string }>
+    patch: Partial<{
+      time: string;
+      entityId: string;
+      costLkr: number;
+      sellingPriceLkr: number;
+    }>
   ) {
+    let mergedPatch = { ...patch };
+    if (patch.entityId !== undefined) {
+      if (patch.entityId) {
+        const ent = entities.find((e) => e.id === patch.entityId);
+        mergedPatch = {
+          ...mergedPatch,
+          costLkr: ent?.priceHint ?? 0,
+          sellingPriceLkr: ent?.priceHint ?? 0,
+        };
+      } else {
+        mergedPatch = { ...mergedPatch, costLkr: 0, sellingPriceLkr: 0 };
+      }
+    }
+
     updateDays(
       form.days.map((d) =>
         d.id === dayId
           ? {
               ...d,
-              entries: d.entries.map((e) => (e.id === entryId ? { ...e, ...patch } : e)),
+              entries: d.entries.map((e) => (e.id === entryId ? { ...e, ...mergedPatch } : e)),
             }
           : d
       )
@@ -176,7 +208,9 @@ export function TourFormModal({
 
   function patchDay(
     dayId: string,
-    patch: Partial<Pick<DayPlan, "transportVehicleId" | "transportRateLkr">>
+    patch: Partial<
+      Pick<DayPlan, "transportVehicleId" | "transportRateLkr" | "transportSellingPriceLkr">
+    >
   ) {
     updateDays(form.days.map((d) => (d.id === dayId ? { ...d, ...patch } : d)));
   }
@@ -353,6 +387,20 @@ export function TourFormModal({
               <option value="VIEWPOINT">View point</option>
               <option value="RESTAURANT">Restaurant</option>
             </select>
+            <select
+              className="table-filter"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              aria-label="Filter by destination"
+              disabled={destinationOptions.length === 0}
+            >
+              <option value="all">All destinations</option>
+              {destinationOptions.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
             <div className="tour-group-filter-wrap">
               <input
                 type="search"
@@ -387,6 +435,8 @@ export function TourFormModal({
             </p>
           )}
 
+          <TourPackagePricingNotice />
+
           {form.days.map((day) => (
             <DayBlock
               key={day.id}
@@ -405,35 +455,47 @@ export function TourFormModal({
 
           <div className="tour-pricing-summary" aria-label="Itinerary pricing breakdown">
             <h4>Pricing breakdown</h4>
-            <ul className="tour-pricing-lines">
-              <li>
-                <span>Entities subtotal</span>
-                <strong>LKR {pricing.entitiesSubtotal.toLocaleString()}</strong>
-              </li>
-              <li>
-                <span>Vehicle rates</span>
-                <strong>LKR {pricing.transportSubtotal.toLocaleString()}</strong>
-              </li>
-              <li className="tour-pricing-lines__total">
-                <span>Catalog total (your price)</span>
-                <strong>LKR {pricing.catalogSubtotal.toLocaleString()}</strong>
-              </li>
-              {pricing.commissionLkr > 0 && (
-                <li>
-                  <span>Influencer commission</span>
-                  <strong>LKR {pricing.commissionLkr.toLocaleString()}</strong>
-                </li>
-              )}
-              <li className="tour-pricing-lines__final">
-                <span>Final listed price</span>
+            <table className="tour-itinerary-table tour-itinerary-table--summary">
+              <thead>
+                <tr>
+                  <th scope="col"> </th>
+                  <th scope="col">Cost</th>
+                  <th scope="col">Selling price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Entities subtotal</td>
+                  <td>LKR {pricing.entitiesSubtotal.toLocaleString()}</td>
+                  <td>LKR {pricing.entitiesSellingSubtotal.toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <td>Vehicle rates</td>
+                  <td>LKR {pricing.transportSubtotal.toLocaleString()}</td>
+                  <td>LKR {pricing.transportSellingSubtotal.toLocaleString()}</td>
+                </tr>
+                <tr className="tour-itinerary-table__total">
+                  <td>Grand total</td>
+                  <td>
+                    <strong>LKR {pricing.catalogSubtotal.toLocaleString()}</strong>
+                  </td>
+                  <td>
+                    <strong>LKR {pricing.sellingTotal.toLocaleString()}</strong>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            {pricing.commissionLkr > 0 && (
+              <p className="muted tour-pricing-note">
+                Listed tourist price (cost + {effectiveCommissionPct}% influencer commission):{" "}
                 <strong>LKR {pricing.listedPriceLkr.toLocaleString()}</strong>
-              </li>
-            </ul>
+              </p>
+            )}
             {pricing.onRequestEntityCount > 0 && (
               <p className="muted tour-pricing-note">
                 {pricing.onRequestEntityCount} entit
                 {pricing.onRequestEntityCount === 1 ? "y has" : "ies have"} no listed rate — only
-                entities with prices are included in the auto total.
+                rows with prices are included in the auto totals.
               </p>
             )}
           </div>
@@ -518,17 +580,27 @@ function DayBlock({
   allEntitiesCount: number;
   canRemoveDay: boolean;
   dayPricing?: {
-    entitiesLkr: number;
-    transportLkr: number;
+    costSubtotal: number;
+    sellingSubtotal: number;
     transportLabel: string | null;
-    onRequestCount: number;
+    transportCostLkr: number;
   };
   onAddEntry: () => void;
   onRemoveDay: () => void;
   onRemoveEntry: (entryId: string) => void;
-  onPatchEntry: (entryId: string, patch: Partial<{ time: string; entityId: string }>) => void;
+  onPatchEntry: (
+    entryId: string,
+    patch: Partial<{
+      time: string;
+      entityId: string;
+      costLkr: number;
+      sellingPriceLkr: number;
+    }>
+  ) => void;
   onPatchTransport: (
-    patch: Partial<Pick<DayPlan, "transportVehicleId" | "transportRateLkr">>
+    patch: Partial<
+      Pick<DayPlan, "transportVehicleId" | "transportRateLkr" | "transportSellingPriceLkr">
+    >
   ) => void;
 }) {
   return (
@@ -546,71 +618,125 @@ function DayBlock({
           )}
         </div>
       </div>
-      <div className="day-list">
-        {day.entries.map((entry) => (
-          <DayRow
-            key={entry.id}
-            entry={entry}
-            entities={entities}
-            allEntitiesCount={allEntitiesCount}
-            onPatch={(patch) => onPatchEntry(entry.id, patch)}
-            onRemove={() => onRemoveEntry(entry.id)}
-          />
-        ))}
-      </div>
 
-      <div className="tour-day-transport">
-        <div className="tour-day-transport__head">
-          <strong>Vehicle for this day</strong>
-          <span className="muted">Optional — rate adds to tour total</span>
-        </div>
-        <div className="tour-day-transport__row">
-          <select
-            value={day.transportVehicleId}
-            onChange={(e) =>
-              onPatchTransport({
-                transportVehicleId: e.target.value,
-                transportRateLkr: e.target.value ? day.transportRateLkr : 0,
-              })
-            }
-            aria-label={`Day ${day.dayNumber} vehicle`}
-          >
-            <option value="">No vehicle</option>
-            {AGENCY_TRANSPORT_OPTIONS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-                {t.variant ? ` (${t.variant})` : ""}
-              </option>
+      <div className="tour-itinerary-table-wrap">
+        <table className="tour-itinerary-table">
+          <thead>
+            <tr>
+              <th scope="col">Itinerary</th>
+              <th scope="col">Cost (LKR)</th>
+              <th scope="col">Selling price (LKR)</th>
+              <th scope="col" className="tour-itinerary-table__actions" aria-label="Remove row" />
+            </tr>
+          </thead>
+          <tbody>
+            {day.entries.map((entry) => (
+              <DayRow
+                key={entry.id}
+                entry={entry}
+                entities={entities}
+                allEntitiesCount={allEntitiesCount}
+                onPatch={(patch) => onPatchEntry(entry.id, patch)}
+                onRemove={() => onRemoveEntry(entry.id)}
+              />
             ))}
-          </select>
-          <input
-            type="number"
-            min={0}
-            step={100}
-            value={day.transportRateLkr || ""}
-            onChange={(e) =>
-              onPatchTransport({ transportRateLkr: Number(e.target.value) || 0 })
-            }
-            placeholder="Vehicle rate (LKR)"
-            disabled={!day.transportVehicleId}
-            aria-label={`Day ${day.dayNumber} vehicle rate`}
-          />
-          {day.transportVehicleId && (
-            <span className="tour-day-transport__icon" aria-hidden="true">
-              <TransportVehicleIcon vehicleId={day.transportVehicleId} size={22} />
-            </span>
-          )}
-        </div>
-        {dayPricing && (dayPricing.entitiesLkr > 0 || dayPricing.transportLkr > 0) && (
-          <p className="muted tour-day-transport__subtotal">
-            Day subtotal: LKR {(dayPricing.entitiesLkr + dayPricing.transportLkr).toLocaleString()}
-            {dayPricing.transportLkr > 0 && dayPricing.transportLabel
-              ? ` (incl. ${dayPricing.transportLabel})`
-              : ""}
-          </p>
-        )}
+            <tr className="tour-itinerary-table__transport">
+              <td>
+                <div className="tour-itinerary-transport">
+                  <span className="tour-itinerary-transport__label">Vehicle</span>
+                  <select
+                    value={day.transportVehicleId}
+                    onChange={(e) =>
+                      onPatchTransport({
+                        transportVehicleId: e.target.value,
+                        transportRateLkr: e.target.value ? day.transportRateLkr : 0,
+                        transportSellingPriceLkr: e.target.value
+                          ? day.transportSellingPriceLkr
+                          : 0,
+                      })
+                    }
+                    aria-label={`Day ${day.dayNumber} vehicle`}
+                  >
+                    <option value="">No vehicle</option>
+                    {AGENCY_TRANSPORT_OPTIONS.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                        {t.variant ? ` (${t.variant})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {day.transportVehicleId && (
+                    <span className="tour-itinerary-transport__icon" aria-hidden="true">
+                      <TransportVehicleIcon vehicleId={day.transportVehicleId} size={20} />
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td>
+                <LkrInput
+                  value={day.transportRateLkr}
+                  onChange={(value) => onPatchTransport({ transportRateLkr: value })}
+                  disabled={!day.transportVehicleId}
+                  aria-label={`Day ${day.dayNumber} vehicle cost`}
+                  placeholder="Cost"
+                />
+              </td>
+              <td>
+                <LkrInput
+                  value={day.transportSellingPriceLkr}
+                  onChange={(value) => onPatchTransport({ transportSellingPriceLkr: value })}
+                  disabled={!day.transportVehicleId}
+                  aria-label={`Day ${day.dayNumber} vehicle selling price`}
+                  placeholder="Selling"
+                />
+              </td>
+              <td />
+            </tr>
+            {dayPricing && (dayPricing.costSubtotal > 0 || dayPricing.sellingSubtotal > 0) && (
+              <tr className="tour-itinerary-table__subtotal">
+                <td>
+                  Day subtotal
+                  {dayPricing.transportCostLkr > 0 && dayPricing.transportLabel
+                    ? ` (incl. ${dayPricing.transportLabel})`
+                    : ""}
+                </td>
+                <td>LKR {dayPricing.costSubtotal.toLocaleString()}</td>
+                <td>LKR {dayPricing.sellingSubtotal.toLocaleString()}</td>
+                <td />
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
+  );
+}
+
+function LkrInput({
+  value,
+  onChange,
+  disabled,
+  "aria-label": ariaLabel,
+  placeholder,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+  "aria-label"?: string;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type="number"
+      min={0}
+      step={100}
+      className="tour-itinerary-table__amount"
+      value={value || ""}
+      onChange={(e) => onChange(Number(e.target.value) || 0)}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      placeholder={placeholder}
+    />
   );
 }
 
@@ -621,10 +747,22 @@ function DayRow({
   onPatch,
   onRemove,
 }: {
-  entry: { time: string; entityId: string };
+  entry: {
+    time: string;
+    entityId: string;
+    costLkr: number;
+    sellingPriceLkr: number;
+  };
   entities: EntityOption[];
   allEntitiesCount: number;
-  onPatch: (patch: Partial<{ time: string; entityId: string }>) => void;
+  onPatch: (
+    patch: Partial<{
+      time: string;
+      entityId: string;
+      costLkr: number;
+      sellingPriceLkr: number;
+    }>
+  ) => void;
   onRemove: () => void;
 }) {
   const emptyLabel =
@@ -635,31 +773,60 @@ function DayRow({
         : "Select entity";
 
   return (
-    <div className="day-row">
-      <input
-        type="time"
-        value={entry.time}
-        onChange={(e) => onPatch({ time: e.target.value })}
-        required
-      />
-      <select
-        value={entry.entityId}
-        onChange={(e) => onPatch({ entityId: e.target.value })}
-        required
-      >
-        <option value="">{emptyLabel}</option>
-        {entities.map((ent) => (
-          <option key={ent.id} value={ent.id}>
-            {entityOptionLabel(ent)}
-            {ent.priceHint != null
-              ? ` · LKR ${ent.priceHint.toLocaleString()}`
-              : " · Price on request"}
-          </option>
-        ))}
-      </select>
-      <button type="button" className="remove-row-btn" onClick={onRemove} aria-label="Remove entity row">
-        ×
-      </button>
-    </div>
+    <tr className="tour-itinerary-table__entry">
+      <td>
+        <div className="tour-itinerary-entry">
+          <input
+            type="time"
+            value={entry.time}
+            onChange={(e) => onPatch({ time: e.target.value })}
+            required
+            aria-label="Scheduled time"
+          />
+          <select
+            value={entry.entityId}
+            onChange={(e) => onPatch({ entityId: e.target.value })}
+            required
+            aria-label="Entity"
+          >
+            <option value="">{emptyLabel}</option>
+            {entities.map((ent) => (
+              <option key={ent.id} value={ent.id}>
+                {entityOptionLabel(ent)}
+                {ent.priceHint != null
+                  ? ` · LKR ${ent.priceHint.toLocaleString()}`
+                  : " · Price on request"}
+              </option>
+            ))}
+          </select>
+        </div>
+      </td>
+      <td>
+        <LkrInput
+          value={entry.costLkr}
+          onChange={(costLkr) => onPatch({ costLkr })}
+          aria-label="Cost"
+          placeholder="Cost"
+        />
+      </td>
+      <td>
+        <LkrInput
+          value={entry.sellingPriceLkr}
+          onChange={(sellingPriceLkr) => onPatch({ sellingPriceLkr })}
+          aria-label="Selling price"
+          placeholder="Selling"
+        />
+      </td>
+      <td className="tour-itinerary-table__actions">
+        <button
+          type="button"
+          className="remove-row-btn"
+          onClick={onRemove}
+          aria-label="Remove entity row"
+        >
+          ×
+        </button>
+      </td>
+    </tr>
   );
 }

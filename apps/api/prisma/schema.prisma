@@ -356,6 +356,7 @@ model Tour {
   savedBy                SavedTour[]
   referralCodes          ReferralCode[]
   offerTours             OfferTour[]
+  offerRegistrations     OfferRegistration[]
   driverAssignments      DriverAssignment[]
   influencerCommissionRequests InfluencerCommissionRequest[]
 
@@ -408,8 +409,9 @@ model TourDay {
   title              String?
   transportVehicleId String?       @db.VarChar(40)
   transportLabel     String?
-  transportRateLkr   Decimal?      @db.Decimal(12, 2)
-  items              TourDayItem[]
+  transportRateLkr         Decimal?      @db.Decimal(12, 2)
+  transportSellingPriceLkr Decimal?      @db.Decimal(12, 2)
+  items                    TourDayItem[]
 
   @@unique([tourId, dayNumber])
 }
@@ -424,8 +426,9 @@ model TourDayItem {
   group         EntityGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   kind          LineItemKind @default(REQUIRED)
   label         String?
-  priceLkr      Decimal?     @db.Decimal(12, 2)
-  scheduledTime String?      @db.VarChar(8)
+  priceLkr         Decimal?     @db.Decimal(12, 2)
+  sellingPriceLkr  Decimal?     @db.Decimal(12, 2)
+  scheduledTime    String?      @db.VarChar(8)
   sortOrder     Int          @default(0)
   notes         String?      @db.Text
 }
@@ -621,7 +624,10 @@ model OfferRegistration {
   offer           Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
   userId          String   @db.VarChar(25)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tourId          String?  @db.VarChar(25)
+  tour            Tour?    @relation(fields: [tourId], references: [id], onDelete: SetNull)
   screenshotUrl   String   @default("") @db.Text
+  message         String   @default("") @db.Text
   termsAcceptedAt DateTime @default(now())
   createdAt       DateTime @default(now())
 

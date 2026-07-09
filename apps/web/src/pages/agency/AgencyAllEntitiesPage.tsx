@@ -4,13 +4,19 @@ import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { EntityFormFields } from "../../components/entity/EntityFormFields";
 import { EntityMediaFields } from "../../components/entity/EntityMediaFields";
-import { buildEntityMediaStore, type EntityMediaItem } from "@tourpilot/shared";
+import { EntityFormModal } from "../../components/entity/EntityFormModal";
+import {
+  buildEntityMediaStore,
+  normalizeEntityMedia,
+  type EntityMediaItem,
+} from "@tourpilot/shared";
 import {
   ALLOWED_ENTITY_TYPES,
   buildEntityPayload,
   defaultEntityForm,
   entityDetailsSummary,
   entityLocationLabel,
+  entityToFormState,
   entityTypeLabel,
   type EntityFormState,
   type EntityTypeKey,
@@ -18,6 +24,8 @@ import {
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { EntityTypeLineIcon } from "../../components/icons/LineIcons";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { validateRequiredFields } from "../../lib/formValidation";
+import { FormValidationMessages } from "../../components/FormFieldError";
 import {
   TOUR_BUILDER_RETURN_PARAM,
   TOUR_BUILDER_RETURN_VALUE,
@@ -41,6 +49,7 @@ type AgencyEntity = {
   description?: string | null;
   contact?: string | null;
   metadata?: Record<string, unknown> | null;
+  media?: unknown;
 };
 
 export function AgencyAllEntitiesPage() {
@@ -58,6 +67,15 @@ export function AgencyAllEntitiesPage() {
   const [entityForm, setEntityForm] = useState<EntityFormState>(defaultEntityForm());
   const [mainImageUrl, setMainImageUrl] = useState("");
   const [gallery, setGallery] = useState<EntityMediaItem[]>([]);
+
+  const [editEntity, setEditEntity] = useState<AgencyEntity | null>(null);
+  const [editForm, setEditForm] = useState<EntityFormState>(defaultEntityForm());
+  const [editMainImageUrl, setEditMainImageUrl] = useState("");
+  const [editGallery, setEditGallery] = useState<EntityMediaItem[]>([]);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [entityFieldErrors, setEntityFieldErrors] = useState<Record<string, string>>({});
+  const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
 
   const filterTabs = useMemo(() => {
     const tabs: { value: string; label: string }[] = [
@@ -95,6 +113,15 @@ export function AgencyAllEntitiesPage() {
   function addEntity(e: FormEvent) {
     e.preventDefault();
     if (!token) return;
+    const errors = validateRequiredFields({
+      name: { label: "Name", value: entityForm.name },
+    });
+    if (Object.keys(errors).length > 0) {
+      setEntityFieldErrors(errors);
+      return;
+    }
+    setEntityFieldErrors({});
+
     const savedName = entityForm.name.trim();
     const payload = buildEntityPayload(entityForm);
     requestConfirm({
@@ -135,6 +162,86 @@ export function AgencyAllEntitiesPage() {
           setToast("Could not save entity. Check required fields and try again.");
         } finally {
           setSaving(false);
+        }
+      },
+    });
+  }
+
+  function openEdit(ent: AgencyEntity) {
+    const bundle = normalizeEntityMedia(ent.media);
+    setEditEntity(ent);
+    setEditForm(entityToFormState(ent));
+    setEditMainImageUrl(bundle.mainImageUrl ?? "");
+    setEditGallery(bundle.items);
+    setEditError("");
+    setEditFieldErrors({});
+  }
+
+  function closeEdit() {
+    setEditEntity(null);
+    setEditSaving(false);
+    setEditError("");
+    setEditFieldErrors({});
+  }
+
+  async function saveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!token || !editEntity) return;
+    const errors = validateRequiredFields({
+      name: { label: "Name", value: editForm.name },
+    });
+    if (Object.keys(errors).length > 0) {
+      setEditFieldErrors(errors);
+      return;
+    }
+    setEditFieldErrors({});
+    setEditSaving(true);
+    setEditError("");
+    try {
+      await api(`/entities/${editEntity.id}`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({
+          ...buildEntityPayload(editForm),
+          media: buildEntityMediaStore(editMainImageUrl, editGallery) ?? {
+            mainImageUrl: null,
+            items: [],
+          },
+        }),
+      });
+      await refresh(token);
+      setEditEntity(null);
+      setToast(`${editForm.name.trim() || "Entity"} updated.`);
+      setTimeout(() => setToast(""), 3200);
+    } catch {
+      setEditError("Could not save changes. Check required fields and try again.");
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function deleteEntity(ent: AgencyEntity) {
+    if (!token) return;
+    requestConfirm({
+      title: "Delete this entity?",
+      description:
+        "It will be removed from your library. Tours or groups that reference it may be affected.",
+      confirmLabel: "Delete entity",
+      variant: "danger",
+      summary: [
+        { label: "Name", value: ent.name },
+        { label: "Type", value: entityTypeLabel(ent.type) },
+        { label: "Location", value: entityLocationLabel(ent) },
+      ],
+      onConfirm: async () => {
+        try {
+          await api(`/entities/${ent.id}`, { method: "DELETE", token });
+          await refresh(token);
+          setToast(`${ent.name} deleted.`);
+          setTimeout(() => setToast(""), 3200);
+        } catch {
+          setToast("Could not delete entity. It may be in use by a tour.");
+          setTimeout(() => setToast(""), 4000);
         }
       },
     });
@@ -210,10 +317,12 @@ export function AgencyAllEntitiesPage() {
           <div className="entities-form-section">
             <h4>Details</h4>
             <div className="entity-form-grid">
+              <FormValidationMessages errors={entityFieldErrors} />
               <EntityFormFields
                 form={entityForm}
                 onChange={setEntityForm}
                 typePicker="chips"
+                fieldErrors={entityFieldErrors}
               />
             </div>
           </div>
@@ -231,7 +340,7 @@ export function AgencyAllEntitiesPage() {
             <button
               type="submit"
               className="btn btn-primary entities-submit-btn"
-              disabled={saving || !entityForm.name.trim()}
+              disabled={saving}
             >
               {saving ? "Saving…" : "Save entity"}
             </button>
@@ -264,6 +373,7 @@ export function AgencyAllEntitiesPage() {
                     <th>Location</th>
                     <th>Details</th>
                     <th>Price</th>
+                    <th aria-label="Actions"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -288,6 +398,22 @@ export function AgencyAllEntitiesPage() {
                       <td className="entities-price">
                         {ent.priceHint != null ? `LKR ${ent.priceHint.toLocaleString()}` : "—"}
                       </td>
+                      <td className="entities-row-actions">
+                        <button
+                          type="button"
+                          className="mini-btn"
+                          onClick={() => openEdit(ent)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="mini-btn mini-btn--danger"
+                          onClick={() => deleteEntity(ent)}
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -296,6 +422,25 @@ export function AgencyAllEntitiesPage() {
           )}
         </section>
       </div>
+
+      <EntityFormModal
+        open={editEntity !== null}
+        title="Edit entity"
+        subtitle="Update the details and media for this place, then save your changes."
+        form={editForm}
+        onChange={setEditForm}
+        mainImageUrl={editMainImageUrl}
+        onMainImageChange={setEditMainImageUrl}
+        gallery={editGallery}
+        onGalleryChange={setEditGallery}
+        saving={editSaving}
+        status={editError}
+        fieldErrors={editFieldErrors}
+        submitLabel="Save changes"
+        onSubmit={saveEdit}
+        onClose={closeEdit}
+        token={token}
+      />
     </div>
   );
 }

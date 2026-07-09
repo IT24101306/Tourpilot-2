@@ -85,7 +85,9 @@ function formatTripPlanInquiryMessage(plan: TripPlanInquiryPayload): string {
 }
 
 const inquiryIncludeForAgency = {
-  tourist: { select: { id: true, name: true, phone: true, email: true, role: true } },
+  tourist: {
+    select: { id: true, name: true, phone: true, email: true, role: true, avatarUrl: true },
+  },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
   responses: {
     orderBy: { createdAt: "asc" as const },
@@ -733,7 +735,14 @@ function serializeInquiryForClient(inquiry: {
   endDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  tourist?: { id: string; name: string; phone?: string; email?: string | null; role?: string };
+  tourist?: {
+    id: string;
+    name: string;
+    phone?: string;
+    email?: string | null;
+    role?: string;
+    avatarUrl?: string | null;
+  };
   agency?: { id: string; name: string; slug: string; logoUrl?: string | null };
   tour?: {
     id: string;

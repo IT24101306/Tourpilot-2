@@ -141,8 +141,7 @@ export function CreateReferralCodeModal({
           <ModalActions
             onCancel={onClose}
             submitLabel="Generate referral code"
-            saving={saving}
-            canSubmit={Boolean(tourId)}
+            saving={saving}
           />
         </form>
       )}

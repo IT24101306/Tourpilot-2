@@ -19,6 +19,8 @@ type Props = {
   onAboutTitleChange: (value: string) => void;
   onAboutDescriptionChange: (value: string) => void;
   onSocialLinksChange: (links: DisplaySocialLink[]) => void;
+  socialTagHandle: string;
+  onSocialTagHandleChange: (value: string) => void;
 };
 
 const defaultSocial = (): DisplaySocialLink => ({
@@ -37,6 +39,8 @@ export function InfluencerDisplayContentEditor({
   onAboutTitleChange,
   onAboutDescriptionChange,
   onSocialLinksChange,
+  socialTagHandle,
+  onSocialTagHandleChange,
 }: Props) {
   const [heroModalOpen, setHeroModalOpen] = useState(false);
   const [editHeroIndex, setEditHeroIndex] = useState<number | null>(null);
@@ -120,6 +124,22 @@ export function InfluencerDisplayContentEditor({
 
   return (
     <>
+      <div className="display-list-block">
+        <h3 className="influencer-display-section-title">Story tag handle</h3>
+        <p className="muted display-subsection-desc">
+          Travelers who register for offers on your page will tag this @ handle in their social story.
+        </p>
+        <label className="field">
+          <span>@ handle</span>
+          <input
+            value={socialTagHandle}
+            onChange={(e) => onSocialTagHandleChange(e.target.value)}
+            placeholder="@yourname"
+            maxLength={80}
+          />
+        </label>
+      </div>
+
       <div className="display-list-block">
         <h3 className="influencer-display-section-title">Hero banner images</h3>
         <p className="muted display-subsection-desc">
@@ -276,7 +296,6 @@ export function InfluencerDisplayContentEditor({
           <ModalActions
             onCancel={() => setHeroModalOpen(false)}
             submitLabel={editHeroIndex === null ? "Add slide" : "Save slide"}
-            canSubmit={Boolean(heroForm.url.trim())}
           />
           {editHeroIndex !== null && (
             <button
@@ -333,7 +352,6 @@ export function InfluencerDisplayContentEditor({
           <ModalActions
             onCancel={() => setSocialModalOpen(false)}
             submitLabel={editSocialIndex === null ? "Add link" : "Save link"}
-            canSubmit={Boolean(socialForm.platform.trim() && socialForm.url.trim())}
           />
           {editSocialIndex !== null && (
             <button

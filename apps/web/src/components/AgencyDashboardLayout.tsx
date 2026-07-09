@@ -6,6 +6,7 @@ import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "./NotificationBell";
 import { ConfirmActionProvider, useConfirmAction } from "./confirm/ConfirmActionContext";
 import { TourPilotBrand } from "./TourPilotBrand";
+import { DashboardSupportButton } from "./support/SupportAgentsModal";
 import "../styles/dashboard.css";
 
 const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
@@ -94,6 +95,7 @@ function AgencyDashboardLayoutInner() {
         </div>
         <nav className="nav nav--light" aria-label="Dashboard utilities">
           <div className="nav-actions nav-actions--light">
+            <DashboardSupportButton />
             <button type="button" className="nav-link-light" onClick={() => setTopupOpen(true)}>
               Topup
             </button>

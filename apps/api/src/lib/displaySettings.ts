@@ -8,6 +8,7 @@ export type DisplaySectionFlags = {
   gallery: boolean;
   offers: boolean;
   inquiry: boolean;
+  transport: boolean;
 };
 
 export type DisplaySocialLink = {
@@ -61,6 +62,62 @@ export type DisplayOffer = {
   imageUrl?: string;
 };
 
+export type DisplayTransportOption = {
+  id: string;
+  name: string;
+  variant?: string;
+  description: string;
+  seating: string;
+  luggage: string;
+};
+
+export const DEFAULT_TRANSPORT_OPTIONS: DisplayTransportOption[] = [
+  {
+    id: "sedan",
+    name: "Sedan",
+    description: "Comfortable for 2 passengers, especially for a couple",
+    seating: "2–3 passengers",
+    luggage: "2 medium bags",
+  },
+  {
+    id: "suv",
+    name: "SUV",
+    description: "Comfortable for 3 passengers, spacious and versatile",
+    seating: "3–4 passengers",
+    luggage: "3–4 medium bags",
+  },
+  {
+    id: "mini-van-flat",
+    name: "Mini-van",
+    variant: "Flat Roof",
+    description: "Compact van option for small groups.",
+    seating: "3–6 passengers",
+    luggage: "3–6 medium bags",
+  },
+  {
+    id: "van-high",
+    name: "Van",
+    variant: "High Roof",
+    description: "Extra headroom and space for larger groups.",
+    seating: "6–9 passengers",
+    luggage: "6–9 medium bags",
+  },
+  {
+    id: "mini-coach",
+    name: "Mini Coach",
+    description: "Mid-sized group transport with comfort.",
+    seating: "9–20 passengers",
+    luggage: "9–20 medium bags",
+  },
+  {
+    id: "bus",
+    name: "Bus",
+    description: "Full-size coach for large groups and long journeys.",
+    seating: "20+ passengers",
+    luggage: "20+ medium bags",
+  },
+];
+
 export type HeroSlide = {
   url: string;
   label?: string;
@@ -74,6 +131,7 @@ export type DisplayContent = {
   whoWeAreDescription: string;
   whoWeAreSocialLinks: DisplaySocialLink[];
   whoWeAreImages: WhoWeAreImage[];
+  socialTagHandle: string;
   packagesTitle: string;
   packagesSubtitle: string;
   ratingScore: string;
@@ -84,6 +142,7 @@ export type DisplayContent = {
   featuredQuote: string;
   packages: DisplayPackage[];
   offers: DisplayOffer[];
+  transportOptions: DisplayTransportOption[];
 };
 
 export type DisplaySectionsPayload = {
@@ -99,6 +158,7 @@ export const defaultDisplayEnabled = (): DisplaySectionFlags => ({
   gallery: true,
   offers: true,
   inquiry: true,
+  transport: true,
 });
 
 export function defaultDisplayContent(): DisplayContent {
@@ -110,6 +170,7 @@ export function defaultDisplayContent(): DisplayContent {
     whoWeAreDescription: "",
     whoWeAreSocialLinks: [],
     whoWeAreImages: [],
+    socialTagHandle: "",
     packagesTitle: "Ready-Made Packages",
     packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
     ratingScore: "4.9",
@@ -125,6 +186,7 @@ export function defaultDisplayContent(): DisplayContent {
       "We expected sand and silence. We found peace, stars, and people who love what they do.",
     packages: [],
     offers: [],
+    transportOptions: DEFAULT_TRANSPORT_OPTIONS.map((option) => ({ ...option })),
   };
 }
 
@@ -143,6 +205,7 @@ export function parseDisplaySections(raw: unknown): DisplaySectionFlags {
       gallery: e.gallery !== false,
       offers: e.offers !== false,
       inquiry: e.inquiry !== false,
+      transport: e.transport !== false,
     };
   }
 
@@ -204,6 +267,10 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
       });
     }
     base.whoWeAreSocialLinks = links.slice(0, 12);
+  }
+
+  if (typeof content.socialTagHandle === "string") {
+    base.socialTagHandle = content.socialTagHandle.trim().slice(0, 80);
   }
 
   if (Array.isArray(content.whoWeAreImages)) {
@@ -268,6 +335,28 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
       });
     }
     base.offers = offers;
+  }
+
+  if (Array.isArray(content.transportOptions)) {
+    const transportOptions: DisplayTransportOption[] = [];
+    for (const item of content.transportOptions) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as Record<string, unknown>;
+      const id = String(row.id || "").trim();
+      const name = String(row.name || "").trim();
+      if (!id || !name) continue;
+      transportOptions.push({
+        id,
+        name,
+        variant: typeof row.variant === "string" ? row.variant.trim() || undefined : undefined,
+        description: String(row.description || "").trim(),
+        seating: String(row.seating || "").trim(),
+        luggage: String(row.luggage || "").trim(),
+      });
+    }
+    base.transportOptions = transportOptions.slice(0, 12);
+  } else {
+    base.transportOptions = DEFAULT_TRANSPORT_OPTIONS.map((option) => ({ ...option }));
   }
 
   return base;

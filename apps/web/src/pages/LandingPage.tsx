@@ -55,8 +55,8 @@ export function LandingPage() {
         )}
 
         <div className="hero-actions">
-          <Link to="/agencies" className="btn btn-teal">
-            Explore agencies
+          <Link to="/offers" className="btn btn-teal">
+            View offers
           </Link>
           <Link to="/register" className="btn btn-ghost">
             Sign up free
@@ -75,9 +75,6 @@ export function LandingPage() {
             <h2 className="section-title">Start with trusted operators</h2>
             <p className="muted">Highly rated teams ready to craft your Sri Lanka journey.</p>
           </div>
-          <Link to="/agencies" className="btn btn-ghost">
-            View all agencies
-          </Link>
         </div>
 
         {featured.length === 0 ? (

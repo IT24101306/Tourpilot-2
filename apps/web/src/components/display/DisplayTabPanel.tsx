@@ -28,14 +28,18 @@ import {
   type DisplayReview,
   type DisplaySectionFlags,
   type DisplaySocialLink,
+  type DisplayTransportOption,
   type GalleryItem,
   type GalleryEntitySnapshot,
   type HeroSlide,
   type WhoWeAreImage,
 } from "./displayTypes";
+import { AGENCY_TRANSPORT_OPTIONS } from "./transportOptions";
 
 import type { EntityOption } from "../tour/tourFormTypes";
 import { entityOptionLabel } from "../tour/tourFormTypes";
+import { validateRequiredFields } from "../../lib/formValidation";
+import { FormValidationMessages } from "../FormFieldError";
 
 type PublishedTour = {
   id: string;
@@ -101,6 +105,15 @@ const defaultWhoWeAreImageForm = (): WhoWeAreImage => ({
   alt: "",
 });
 
+const defaultTransportForm = (): DisplayTransportOption => ({
+  id: "sedan",
+  name: "",
+  variant: "",
+  description: "",
+  seating: "",
+  luggage: "",
+});
+
 export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const { requestConfirm } = useConfirmAction();
   const [activeStep, setActiveStep] = useState<DisplayStep>("hero");
@@ -122,6 +135,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [heroModalOpen, setHeroModalOpen] = useState(false);
   const [socialModalOpen, setSocialModalOpen] = useState(false);
   const [whoWeAreImageModalOpen, setWhoWeAreImageModalOpen] = useState(false);
+  const [transportModalOpen, setTransportModalOpen] = useState(false);
 
   const [reviewForm, setReviewForm] = useState<DisplayReview>(defaultReviewForm);
   const [packageForm, setPackageForm] = useState<DisplayPackage>(defaultPackageForm);
@@ -134,6 +148,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [heroForm, setHeroForm] = useState<HeroSlide>({ url: "", label: "" });
   const [socialForm, setSocialForm] = useState<DisplaySocialLink>(defaultSocialForm);
   const [whoWeAreImageForm, setWhoWeAreImageForm] = useState<WhoWeAreImage>(defaultWhoWeAreImageForm);
+  const [transportForm, setTransportForm] = useState<DisplayTransportOption>(defaultTransportForm);
 
   const [editReviewIndex, setEditReviewIndex] = useState<number | null>(null);
   const [editPackageIndex, setEditPackageIndex] = useState<number | null>(null);
@@ -142,6 +157,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [editGalleryIndex, setEditGalleryIndex] = useState<number | null>(null);
   const [editSocialIndex, setEditSocialIndex] = useState<number | null>(null);
   const [editWhoWeAreImageIndex, setEditWhoWeAreImageIndex] = useState<number | null>(null);
+  const [editTransportIndex, setEditTransportIndex] = useState<number | null>(null);
+  const [modalFieldErrors, setModalFieldErrors] = useState<Record<string, string>>({});
   const displayHydratedRef = useRef(false);
   const skipNextAutoSaveRef = useRef(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -165,7 +182,12 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       setPublishedTours(data.publishedTours);
       setConfig({
         enabled: data.enabled,
-        content: data.content,
+        content: {
+          ...data.content,
+          transportOptions: Array.isArray(data.content.transportOptions)
+            ? data.content.transportOptions
+            : defaultDisplayConfig().content.transportOptions,
+        },
         gallery: data.gallery,
         reviews: data.reviews,
       });
@@ -343,6 +365,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     updateContent({ highlights: [...config.content.highlights, ""] });
   }
 
+  function clearModalFieldError(key: string) {
+    setModalFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
   function saveSettings() {
     if (!token) return;
     const enabledSections = Object.entries(config.enabled)
@@ -365,6 +396,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         { label: "Gallery items", value: String(config.gallery.length) },
         { label: "Reviews", value: String(config.reviews.length) },
         { label: "Offers", value: String(config.content.offers.length) },
+        { label: "Transport vehicles", value: String(config.content.transportOptions.length) },
       ],
       onConfirm: () => {
         void persistDisplaySettings(config, "Display settings saved.");
@@ -390,6 +422,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   function savePackage(e: FormEvent) {
     e.preventDefault();
+    const errors = validateRequiredFields({
+      title: { label: "Title", value: packageForm.title },
+      imageUrl: { label: "Package image", value: packageForm.imageUrl },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
     const entry = {
       ...packageForm,
       title: packageForm.title.trim(),
@@ -397,7 +439,6 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       priceLabel: packageForm.priceLabel.trim() || "Contact for price",
       imageUrl: packageForm.imageUrl.trim(),
     };
-    if (!entry.title || !entry.imageUrl) return;
 
     const isNew = editPackageIndex === null;
     requestConfirm({
@@ -449,12 +490,20 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   function saveReview(e: FormEvent) {
     e.preventDefault();
+    const errors = validateRequiredFields({
+      authorName: { label: "Author name", value: reviewForm.authorName },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
     const entry: DisplayReview = {
       ...reviewForm,
       authorName: reviewForm.authorName.trim(),
       body: reviewForm.body.trim(),
     };
-    if (!entry.authorName) return;
 
     const isNew = editReviewIndex === null;
     requestConfirm({
@@ -485,10 +534,18 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   function saveGalleryItem(e: FormEvent) {
     e.preventDefault();
+    const errors = validateRequiredFields({
+      url: { label: "Gallery image", value: galleryForm.url },
+      entityId: { label: "Linked entity", value: galleryForm.entityId },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
     const url = galleryForm.url.trim();
-    if (!url) return;
     const entityId = galleryForm.entityId.trim();
-    if (!entityId) return;
 
     const entry: GalleryItem = {
       url,
@@ -525,8 +582,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   function saveHeroSlide(e: FormEvent) {
     e.preventDefault();
+    const errors = validateRequiredFields({
+      url: { label: "Hero image", value: heroForm.url },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
     const url = heroForm.url.trim();
-    if (!url) return;
     const isNew = editHeroIndex === null;
     if (isNew && config.content.heroImages.length >= MAX_AGENCY_HERO_SLIDES) {
       setSaveStatus(`You can add up to ${MAX_AGENCY_HERO_SLIDES} hero slides.`);
@@ -573,12 +638,20 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   function saveSocialLink(e: FormEvent) {
     e.preventDefault();
+    const errors = validateRequiredFields({
+      url: { label: "URL", value: socialForm.url },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
     const entry: DisplaySocialLink = {
       platform: socialForm.platform.trim(),
       url: socialForm.url.trim(),
       label: socialForm.label?.trim() || undefined,
     };
-    if (!entry.platform || !entry.url) return;
 
     const isNew = editSocialIndex === null;
     requestConfirm({
@@ -629,8 +702,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   function saveWhoWeAreImage(e: FormEvent) {
     e.preventDefault();
+    const errors = validateRequiredFields({
+      url: { label: "Image", value: whoWeAreImageForm.url },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
     const url = whoWeAreImageForm.url.trim();
-    if (!url) return;
     const entry: WhoWeAreImage = {
       url,
       label: whoWeAreImageForm.label?.trim() || undefined,
@@ -686,6 +767,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   function saveOffer(e: FormEvent) {
     e.preventDefault();
+    const errors = validateRequiredFields({
+      title: { label: "Title", value: offerForm.title },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
     const entry: DisplayOffer = {
       title: offerForm.title.trim(),
       description: offerForm.description.trim(),
@@ -693,7 +783,6 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       badge: offerForm.badge?.trim() || undefined,
       imageUrl: offerForm.imageUrl?.trim() || undefined,
     };
-    if (!entry.title) return;
 
     const isNew = editOfferIndex === null;
     requestConfirm({
@@ -805,6 +894,111 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         );
         setOfferModalOpen(false);
         setEditOfferIndex(null);
+      },
+    });
+  }
+
+  function applyTransportTemplate(vehicleId: string) {
+    const template = AGENCY_TRANSPORT_OPTIONS.find((option) => option.id === vehicleId);
+    if (!template) {
+      setTransportForm((prev) => ({ ...prev, id: vehicleId }));
+      return;
+    }
+    setTransportForm({
+      id: template.id,
+      name: template.name,
+      variant: template.variant || "",
+      description: template.description,
+      seating: template.seating,
+      luggage: template.luggage,
+    });
+  }
+
+  function saveTransport(e: FormEvent) {
+    e.preventDefault();
+    const errors = validateRequiredFields({
+      name: { label: "Display name", value: transportForm.name },
+    });
+    if (Object.keys(errors).length > 0) {
+      setModalFieldErrors(errors);
+      return;
+    }
+    setModalFieldErrors({});
+
+    const entry: DisplayTransportOption = {
+      id: transportForm.id.trim(),
+      name: transportForm.name.trim(),
+      variant: transportForm.variant?.trim() || undefined,
+      description: transportForm.description.trim(),
+      seating: transportForm.seating.trim(),
+      luggage: transportForm.luggage.trim(),
+    };
+
+    const isNew = editTransportIndex === null;
+    requestConfirm({
+      title: isNew ? "Add transport option?" : "Update transport option?",
+      confirmLabel: isNew ? "Add vehicle" : "Save vehicle",
+      summary: [
+        { label: "Vehicle", value: entry.name },
+        { label: "Seats", value: entry.seating || "—" },
+        { label: "Luggage", value: entry.luggage || "—" },
+      ],
+      onConfirm: () => {
+        void applyAndPersist(
+          (prev) => {
+            const transportOptions = [...prev.content.transportOptions];
+            if (editTransportIndex === null) transportOptions.push(entry);
+            else transportOptions[editTransportIndex] = entry;
+            return { ...prev, content: { ...prev.content, transportOptions } };
+          },
+          isNew ? "Transport option added to your display page." : "Transport option updated."
+        );
+        setTransportModalOpen(false);
+        setEditTransportIndex(null);
+      },
+    });
+  }
+
+  function removeTransport(index: number) {
+    const option = config.content.transportOptions[index];
+    requestConfirm({
+      title: "Remove transport option?",
+      variant: "danger",
+      confirmLabel: "Remove vehicle",
+      summary: [{ label: "Vehicle", value: option?.name ?? `Vehicle ${index + 1}` }],
+      onConfirm: () => {
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            content: {
+              ...prev.content,
+              transportOptions: prev.content.transportOptions.filter((_, j) => j !== index),
+            },
+          }),
+          "Transport option removed from your display page."
+        );
+        setTransportModalOpen(false);
+        setEditTransportIndex(null);
+      },
+    });
+  }
+
+  function resetTransportDefaults() {
+    requestConfirm({
+      title: "Reset transport list?",
+      description: "This replaces your custom vehicles with the standard line-up.",
+      confirmLabel: "Reset list",
+      onConfirm: () => {
+        void applyAndPersist(
+          (prev) => ({
+            ...prev,
+            content: {
+              ...prev.content,
+              transportOptions: AGENCY_TRANSPORT_OPTIONS.map((option) => ({ ...option })),
+            },
+          }),
+          "Transport list reset to defaults."
+        );
       },
     });
   }
@@ -998,6 +1192,19 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 </DisplayFieldHint>
               </label>
             </div>
+
+            <label className="field">
+              <span>Story tag handle</span>
+              <input
+                value={content.socialTagHandle}
+                onChange={(e) => updateContent({ socialTagHandle: e.target.value })}
+                placeholder="@youragency"
+                maxLength={80}
+              />
+              <DisplayFieldHint>
+                Travelers registering for your offers will be asked to tag this @ handle in their story.
+              </DisplayFieldHint>
+            </label>
 
             <div className="display-list-block">
               <p className="display-subsection-label">Social links</p>
@@ -1219,14 +1426,6 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                   placeholder="/5"
                 />
               </label>
-              <label>
-                CTA label
-                <input
-                  value={content.ctaLabel}
-                  onChange={(e) => updateContent({ ctaLabel: e.target.value })}
-                  placeholder="Plan your trip"
-                />
-              </label>
             </div>
 
             <div className="display-field-stack">
@@ -1426,6 +1625,82 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 </a>
               </DisplaySectionActions>
             </DisplayStepPanel>
+
+            <DisplayStepPanel
+              title="Transport"
+              description="Vehicle cards shown on your public page for every group size."
+            >
+              <DisplayVisibilityToggle
+                label="Show transport section"
+                hint={
+                  config.enabled.transport
+                    ? "Travelers see your vehicle options on your public page."
+                    : "The transport section is hidden on your public page."
+                }
+                checked={config.enabled.transport}
+                onChange={(checked) => toggleSection("transport", checked)}
+              />
+
+              <div className="display-list-block">
+                <p className="display-subsection-label">Vehicle line-up</p>
+                <p className="muted display-subsection-desc">
+                  Add, edit, or remove the transport cards travelers see on your storefront.
+                </p>
+                {content.transportOptions.length === 0 ? (
+                  <p className="display-empty-hint">No transport options yet.</p>
+                ) : (
+                  <div className="display-compact-list">
+                    {content.transportOptions.map((option, i) => (
+                      <DisplayCompactRow
+                        key={`${option.id}-${i}`}
+                        title={
+                          option.variant ? `${option.name} (${option.variant})` : option.name
+                        }
+                        meta={
+                          <span className="muted">
+                            {option.seating || "Seats TBD"}
+                            {option.luggage ? ` · ${option.luggage}` : ""}
+                          </span>
+                        }
+                        onEdit={() => {
+                          setEditTransportIndex(i);
+                          setTransportForm({
+                            id: option.id,
+                            name: option.name,
+                            variant: option.variant || "",
+                            description: option.description,
+                            seating: option.seating,
+                            luggage: option.luggage,
+                          });
+                          setTransportModalOpen(true);
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <DisplaySectionActions>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={content.transportOptions.length >= 12}
+                    onClick={() => {
+                      setEditTransportIndex(null);
+                      applyTransportTemplate("sedan");
+                      setTransportModalOpen(true);
+                    }}
+                  >
+                    + Add vehicle
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={resetTransportDefaults}
+                  >
+                    Reset to defaults
+                  </button>
+                </DisplaySectionActions>
+              </div>
+            </DisplayStepPanel>
           </>
         )}
 
@@ -1487,11 +1762,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={savePackage}>
           <div className="entity-form-grid">
-            <ModalField label="Title">
+            <FormValidationMessages errors={modalFieldErrors} />
+            <ModalField label="Title" error={modalFieldErrors.title}>
               <input
                 type="text"
                 value={packageForm.title}
-                onChange={(e) => setPackageForm({ ...packageForm, title: e.target.value })}
+                onChange={(e) => {
+                  setPackageForm({ ...packageForm, title: e.target.value });
+                  clearModalFieldError("title");
+                }}
                 placeholder="Desert Journey"
                 required
                 autoFocus
@@ -1513,12 +1792,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 placeholder="LKR 49,000 / per person"
               />
             </ModalField>
-            <ModalField label="Package image" full>
+            <ModalField label="Package image" full error={modalFieldErrors.imageUrl}>
               <ImageUrlField
                 label=""
                 className="image-url-field--embedded"
                 value={packageForm.imageUrl}
-                onChange={(imageUrl) => setPackageForm({ ...packageForm, imageUrl })}
+                onChange={(imageUrl) => {
+                  setPackageForm({ ...packageForm, imageUrl });
+                  clearModalFieldError("imageUrl");
+                }}
                 token={token}
               />
             </ModalField>
@@ -1526,7 +1808,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setPackageModalOpen(false)}
             submitLabel="Save package"
-            canSubmit={Boolean(packageForm.title.trim() && packageForm.imageUrl.trim())}
+
           />
           {editPackageIndex !== null && (
             <button
@@ -1548,11 +1830,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={saveReview}>
           <div className="entity-form-grid">
-            <ModalField label="Author name">
+            <FormValidationMessages errors={modalFieldErrors} />
+            <ModalField label="Author name" error={modalFieldErrors.authorName}>
               <input
                 type="text"
                 value={reviewForm.authorName}
-                onChange={(e) => setReviewForm({ ...reviewForm, authorName: e.target.value })}
+                onChange={(e) => {
+                  setReviewForm({ ...reviewForm, authorName: e.target.value });
+                  clearModalFieldError("authorName");
+                }}
                 required
                 autoFocus
               />
@@ -1579,7 +1865,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setReviewModalOpen(false)}
             submitLabel="Save review"
-            canSubmit={Boolean(reviewForm.authorName.trim())}
+
           />
           {editReviewIndex !== null && (
             <button
@@ -1604,12 +1890,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={saveGalleryItem}>
           <div className="entity-form-grid">
-            <ModalField label="Gallery image" full>
+            <FormValidationMessages errors={modalFieldErrors} />
+            <ModalField label="Gallery image" full error={modalFieldErrors.url}>
               <ImageUrlField
                 label=""
                 className="image-url-field--embedded"
                 value={galleryForm.url}
-                onChange={(url) => setGalleryForm({ ...galleryForm, url })}
+                onChange={(url) => {
+                  setGalleryForm({ ...galleryForm, url });
+                  clearModalFieldError("url");
+                }}
                 token={token}
               />
             </ModalField>
@@ -1621,10 +1911,13 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 placeholder="Sand Morning"
               />
             </ModalField>
-            <ModalField label="Link to entity" full>
+            <ModalField label="Link to entity" full error={modalFieldErrors.entityId}>
               <select
                 value={galleryForm.entityId}
-                onChange={(e) => setGalleryForm({ ...galleryForm, entityId: e.target.value })}
+                onChange={(e) => {
+                  setGalleryForm({ ...galleryForm, entityId: e.target.value });
+                  clearModalFieldError("entityId");
+                }}
               >
                 <option value="">Select…</option>
                 {entities.map((ent) => (
@@ -1641,7 +1934,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               setEditGalleryIndex(null);
             }}
             submitLabel={editGalleryIndex === null ? "Add image" : "Save image"}
-            canSubmit={Boolean(galleryForm.url.trim() && galleryForm.entityId.trim())}
+
           />
           {editGalleryIndex !== null && (
             <button
@@ -1663,12 +1956,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={saveHeroSlide}>
           <div className="entity-form-grid">
-            <ModalField label="Hero image" full>
+            <FormValidationMessages errors={modalFieldErrors} />
+            <ModalField label="Hero image" full error={modalFieldErrors.url}>
               <ImageUrlField
                 label=""
                 className="image-url-field--embedded"
                 value={heroForm.url}
-                onChange={(url) => setHeroForm({ ...heroForm, url })}
+                onChange={(url) => {
+                  setHeroForm({ ...heroForm, url });
+                  clearModalFieldError("url");
+                }}
                 token={token}
               />
             </ModalField>
@@ -1684,7 +1981,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setHeroModalOpen(false)}
             submitLabel={editHeroIndex === null ? "Add slide" : "Save slide"}
-            canSubmit={Boolean(heroForm.url.trim())}
+
           />
           {editHeroIndex !== null && (
             <button
@@ -1706,6 +2003,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={saveSocialLink}>
           <div className="entity-form-grid">
+            <FormValidationMessages errors={modalFieldErrors} />
             <ModalField label="Platform">
               <select
                 value={socialForm.platform}
@@ -1720,11 +2018,14 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 ))}
               </select>
             </ModalField>
-            <ModalField label="URL" full>
+            <ModalField label="URL" full error={modalFieldErrors.url}>
               <input
                 type="url"
                 value={socialForm.url}
-                onChange={(e) => setSocialForm({ ...socialForm, url: e.target.value })}
+                onChange={(e) => {
+                  setSocialForm({ ...socialForm, url: e.target.value });
+                  clearModalFieldError("url");
+                }}
                 placeholder="https://instagram.com/yourpage"
                 required
               />
@@ -1741,7 +2042,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setSocialModalOpen(false)}
             submitLabel={editSocialIndex === null ? "Add link" : "Save link"}
-            canSubmit={Boolean(socialForm.url.trim())}
+
           />
           {editSocialIndex !== null && (
             <button
@@ -1763,12 +2064,16 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={saveWhoWeAreImage}>
           <div className="entity-form-grid">
-            <ModalField label="Image" full>
+            <FormValidationMessages errors={modalFieldErrors} />
+            <ModalField label="Image" full error={modalFieldErrors.url}>
               <ImageUrlField
                 label=""
                 className="image-url-field--embedded"
                 value={whoWeAreImageForm.url}
-                onChange={(url) => setWhoWeAreImageForm({ ...whoWeAreImageForm, url })}
+                onChange={(url) => {
+                  setWhoWeAreImageForm({ ...whoWeAreImageForm, url });
+                  clearModalFieldError("url");
+                }}
                 token={token}
               />
             </ModalField>
@@ -1794,7 +2099,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setWhoWeAreImageModalOpen(false)}
             submitLabel={editWhoWeAreImageIndex === null ? "Add image" : "Save image"}
-            canSubmit={Boolean(whoWeAreImageForm.url.trim())}
+
           />
           {editWhoWeAreImageIndex !== null && (
             <button
@@ -1816,11 +2121,15 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       >
         <form onSubmit={saveOffer}>
           <div className="entity-form-grid">
-            <ModalField label="Title">
+            <FormValidationMessages errors={modalFieldErrors} />
+            <ModalField label="Title" error={modalFieldErrors.title}>
               <input
                 type="text"
                 value={offerForm.title}
-                onChange={(e) => setOfferForm({ ...offerForm, title: e.target.value })}
+                onChange={(e) => {
+                  setOfferForm({ ...offerForm, title: e.target.value });
+                  clearModalFieldError("title");
+                }}
                 required
                 autoFocus
               />
@@ -1861,7 +2170,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           <ModalActions
             onCancel={() => setOfferModalOpen(false)}
             submitLabel="Save offer"
-            canSubmit={Boolean(offerForm.title.trim())}
+
           />
           {editOfferIndex !== null && (
             <button
@@ -1870,6 +2179,102 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               onClick={() => removeOffer(editOfferIndex)}
             >
               Remove offer
+            </button>
+          )}
+        </form>
+      </DashboardModal>
+
+      <DashboardModal
+        open={transportModalOpen}
+        title={editTransportIndex === null ? "Add vehicle" : "Edit vehicle"}
+        subtitle="Shown as a card in the transport section on your public page."
+        onClose={() => {
+          setTransportModalOpen(false);
+          setEditTransportIndex(null);
+        }}
+      >
+        <form onSubmit={saveTransport}>
+          <div className="entity-form-grid">
+            <FormValidationMessages errors={modalFieldErrors} />
+            <ModalField label="Vehicle type (icon)">
+              <select
+                value={transportForm.id}
+                onChange={(e) => {
+                  if (editTransportIndex === null) applyTransportTemplate(e.target.value);
+                  else setTransportForm((prev) => ({ ...prev, id: e.target.value }));
+                }}
+                required
+              >
+                {AGENCY_TRANSPORT_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.variant ? `${option.name} (${option.variant})` : option.name}
+                  </option>
+                ))}
+              </select>
+            </ModalField>
+            <ModalField label="Display name" error={modalFieldErrors.name}>
+              <input
+                type="text"
+                value={transportForm.name}
+                onChange={(e) => {
+                  setTransportForm({ ...transportForm, name: e.target.value });
+                  clearModalFieldError("name");
+                }}
+                placeholder="Sedan"
+                required
+                autoFocus
+              />
+            </ModalField>
+            <ModalField label="Variant label (optional)">
+              <input
+                type="text"
+                value={transportForm.variant || ""}
+                onChange={(e) => setTransportForm({ ...transportForm, variant: e.target.value })}
+                placeholder="High Roof"
+              />
+            </ModalField>
+            <ModalField label="Description" full>
+              <textarea
+                rows={3}
+                value={transportForm.description}
+                onChange={(e) =>
+                  setTransportForm({ ...transportForm, description: e.target.value })
+                }
+                placeholder="Comfortable for small groups with room for luggage."
+              />
+            </ModalField>
+            <ModalField label="Seating">
+              <input
+                type="text"
+                value={transportForm.seating}
+                onChange={(e) => setTransportForm({ ...transportForm, seating: e.target.value })}
+                placeholder="2–3 passengers"
+              />
+            </ModalField>
+            <ModalField label="Luggage">
+              <input
+                type="text"
+                value={transportForm.luggage}
+                onChange={(e) => setTransportForm({ ...transportForm, luggage: e.target.value })}
+                placeholder="2 medium bags"
+              />
+            </ModalField>
+          </div>
+          <ModalActions
+            onCancel={() => {
+              setTransportModalOpen(false);
+              setEditTransportIndex(null);
+            }}
+            submitLabel={editTransportIndex === null ? "Add vehicle" : "Save vehicle"}
+
+          />
+          {editTransportIndex !== null && (
+            <button
+              type="button"
+              className="btn btn-lite display-modal-delete"
+              onClick={() => removeTransport(editTransportIndex)}
+            >
+              Remove vehicle
             </button>
           )}
         </form>

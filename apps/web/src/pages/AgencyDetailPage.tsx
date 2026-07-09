@@ -15,19 +15,21 @@ import { useAuth } from "../context/AuthContext";
 import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
 import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 import { FormatLkr } from "../components/currency/FormatLkr";
-import { OfferRegistrationModal } from "../components/discovery/OfferRegistrationModal";
+import { offerBookPath } from "../lib/offerBookPaths";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { EntityTypeLineIcon, LineCheckIcon, LineUserIcon } from "../components/icons/LineIcons";
 import { TourPilotBrand } from "../components/TourPilotBrand";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
 import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav";
+import { AgencyReviewsFlipShowcase } from "../components/display/AgencyReviewsFlipShowcase";
 import { AgencyTransportSection } from "../components/display/AgencyTransportSection";
 import { AgencyWhoWeAreSection } from "../components/display/AgencyWhoWeAreSection";
 import { entityDetailsSummary, entityLocationLabel } from "../components/entity/entityTypes";
 import {
   defaultDisplayConfig,
   resolveHeroSlides,
+  resolveTransportOptions,
   sectionEnabled,
   type DisplayContent,
   type DisplayOffer,
@@ -227,13 +229,11 @@ export function AgencyDetailPage() {
   const inquireTourId = searchParams.get("inquireTour");
   const focusInquiryForm =
     Boolean(inquireTourId) || location.hash === "#request-custom-tour";
-  const { token, user, logout } = useAuth();
+  const { user, logout } = useAuth();
   const agencyReturnPath = slug
     ? `/agencies/${slug}${refCode ? `?ref=${encodeURIComponent(refCode)}` : ""}`
-    : "/agencies";
+    : "/";
   const [agency, setAgency] = useState<Agency | null>(null);
-  const [offerMsg, setOfferMsg] = useState("");
-  const [registerOffer, setRegisterOffer] = useState<DiscoveryOffer | null>(null);
   const [navSolid, setNavSolid] = useState(false);
 
   const [galleryEntityModalOpen, setGalleryEntityModalOpen] = useState(false);
@@ -286,6 +286,7 @@ export function AgencyDetailPage() {
   );
   const packages = content.packages;
   const cmsOffers = content.offers;
+  const transportOptions = resolveTransportOptions(content);
   const loyaltyOffers = agency?.loyaltyOffers ?? [];
   const gallery = agency?.gallery || [];
 
@@ -312,19 +313,8 @@ export function AgencyDetailPage() {
     document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  function goToBuildMyTrip() {
-    if (!slug) return;
-    const refQuery = refCode ? `?ref=${encodeURIComponent(refCode)}` : "";
-    navigate(`/agencies/${slug}/build-my-trip${refQuery}`);
-  }
-
-  function openOfferRegistration(offer: DiscoveryOffer) {
-    if (!token) {
-      navigate(loginPath(agencyReturnPath));
-      return;
-    }
-    setOfferMsg("");
-    setRegisterOffer(offer);
+  function openOfferBook(offer: DiscoveryOffer) {
+    navigate(offerBookPath(offer.id, agencyReturnPath));
   }
 
   const [col1, col2, col3] = splitGalleryColumns(gallery);
@@ -334,6 +324,7 @@ export function AgencyDetailPage() {
   const showGallery = sectionEnabled(enabled, "gallery");
   const showOffers = sectionEnabled(enabled, "offers");
   const inquiryEnabled = sectionEnabled(enabled, "inquiry");
+  const showTransport = sectionEnabled(enabled, "transport");
 
   const ratingDisplay = content.ratingScore || String(agency.avgRating.toFixed(1));
   const ratingSub =
@@ -354,7 +345,7 @@ export function AgencyDetailPage() {
   if (showTours) heroSectionLinks.push({ id: "packages", label: "Packages" });
   if (showShowcase && showReviews) heroSectionLinks.push({ id: "reviews", label: "Reviews" });
   if (hasGallery) heroSectionLinks.push({ id: "gallery", label: "Gallery" });
-  heroSectionLinks.push({ id: "transport", label: "Transport" });
+  if (showTransport && transportOptions.length > 0) heroSectionLinks.push({ id: "transport", label: "Transport" });
   if (inquiryEnabled) heroSectionLinks.push({ id: "request-custom-tour", label: "Inquire" });
 
   return (
@@ -418,11 +409,6 @@ export function AgencyDetailPage() {
                 View offers
               </button>
             )}
-            {inquiryEnabled && (
-              <button type="button" className="agency-hero-banner__ghost" onClick={goToBuildMyTrip}>
-                {content.ctaLabel || "Plan your trip"}
-              </button>
-            )}
           </div>
         </div>
         <AgencyHeroSectionNav links={heroSectionLinks} />
@@ -442,26 +428,22 @@ export function AgencyDetailPage() {
         </div>
 
         {hasLoyaltyOffers && (
-          <div className="agency-display-band agency-display-band--offers-spotlight">
-            <div className="agency-display-inner agency-display-inner--offers">
-              <AgencyOffersFlipShowcase
-                offers={loyaltyOffers.map((offer) => ({
-                  ...offer,
-                  agencyName: agency.name,
-                  agencySlug: agency.slug,
-                }))}
-                agencyName={agency.name}
-                statusMsg={offerMsg || undefined}
-                onRegister={(offer) =>
-                  openOfferRegistration({
-                    ...offer,
-                    agencyName: agency.name,
-                    agencySlug: agency.slug,
-                  })
-                }
-              />
-            </div>
-          </div>
+          <AgencyOffersFlipShowcase
+            offers={loyaltyOffers.map((offer) => ({
+              ...offer,
+              agencyName: agency.name,
+              agencySlug: agency.slug,
+            }))}
+            agencyName={agency.name}
+            statusMsg={undefined}
+            onRegister={(offer) =>
+              openOfferBook({
+                ...offer,
+                agencyName: agency.name,
+                agencySlug: agency.slug,
+              })
+            }
+          />
         )}
 
         {hasScenicContent && (
@@ -540,39 +522,19 @@ export function AgencyDetailPage() {
                   </li>
                 ))}
               </ul>
-
-              {inquiryEnabled && (
-                <button type="button" className="agency-showcase-cta" onClick={goToBuildMyTrip}>
-                  {content.ctaLabel}
-                </button>
-              )}
             </div>
 
             <div className="agency-showcase-visual">
-              <div
-                className="agency-showcase-featured"
-                style={{ backgroundImage: `url(${content.featuredImageUrl})` }}
-              >
-                <blockquote className="agency-showcase-featured-quote">
+              {showReviews && visibleReviews.length > 0 ? (
+                <AgencyReviewsFlipShowcase
+                  reviews={visibleReviews}
+                  avgRating={agency.avgRating}
+                  reviewCount={agency.reviewCount}
+                />
+              ) : (
+                <blockquote className="agency-showcase-featured-quote agency-showcase-featured-quote--plain">
                   &ldquo;{content.featuredQuote}&rdquo;
                 </blockquote>
-              </div>
-
-              {showReviews && visibleReviews.length > 0 && (
-                <div className="agency-showcase-reviews-wrap">
-                  <h3 className="agency-reviews-title">What travelers say</h3>
-                  <div className="agency-showcase-reviews">
-                    {visibleReviews.map((r, i) => (
-                      <article key={i} className="agency-review-card">
-                        <div className="agency-review-stars" aria-label={`${r.rating} stars`}>
-                          {"★".repeat(r.rating)}
-                        </div>
-                        <p>&ldquo;{r.body}&rdquo;</p>
-                        <footer>— {r.authorName}</footer>
-                      </article>
-                    ))}
-                  </div>
-                </div>
               )}
             </div>
             </section>
@@ -623,11 +585,13 @@ export function AgencyDetailPage() {
           </div>
         )}
 
-        <div className="agency-display-band agency-display-band--transport">
-          <div className="agency-display-inner">
-            <AgencyTransportSection agencyName={agency.name} />
+        {showTransport && transportOptions.length > 0 && (
+          <div className="agency-display-band agency-display-band--transport">
+            <div className="agency-display-inner">
+              <AgencyTransportSection agencyName={agency.name} options={transportOptions} />
+            </div>
           </div>
-        </div>
+        )}
 
         <DashboardModal
           open={galleryEntityModalOpen}
@@ -664,20 +628,6 @@ export function AgencyDetailPage() {
           </div>
         )}
       </div>
-
-      <OfferRegistrationModal
-        open={!!registerOffer}
-        offer={registerOffer}
-        token={token}
-        onClose={() => setRegisterOffer(null)}
-        onSuccess={() => {
-          if (!slug) return;
-          setOfferMsg("You are registered — the agency will follow up.");
-          void api<Agency>(`/agencies/${slug}`)
-            .then(setAgency)
-            .catch(console.error);
-        }}
-      />
     </div>
   );
 }

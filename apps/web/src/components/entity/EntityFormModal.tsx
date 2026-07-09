@@ -12,6 +12,13 @@ type Props = {
   token?: string | null;
   status: string;
   saving: boolean;
+  /** Override the heading. Defaults to "Add <type>". */
+  title?: string;
+  /** Override the helper text under the heading. */
+  subtitle?: string;
+  /** Override the submit button label. Defaults to "Save". */
+  submitLabel?: string;
+  fieldErrors?: Record<string, string>;
   onClose: () => void;
   onChange: (next: EntityFormState) => void;
   onMainImageChange: (url: string) => void;
@@ -34,6 +41,10 @@ export function EntityFormModal({
   token,
   status,
   saving,
+  title,
+  subtitle,
+  submitLabel,
+  fieldErrors,
   onClose,
   onChange,
   onMainImageChange,
@@ -52,16 +63,18 @@ export function EntityFormModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="dialog-head">
-          <h3 id="entity-dialog-title">{titleByType[form.type]}</h3>
+          <h3 id="entity-dialog-title">{title ?? titleByType[form.type]}</h3>
           <button type="button" className="close-btn" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>
-        <p className="dialog-sub muted">Fields change based on entity type. Only the name is required.</p>
+        <p className="dialog-sub muted">
+          {subtitle ?? "Fields change based on entity type. Only the name is required."}
+        </p>
 
         <form onSubmit={onSubmit}>
           <div className="entity-form-grid">
-            <EntityFormFields form={form} onChange={onChange} typePicker="select" />
+            <EntityFormFields form={form} onChange={onChange} typePicker="select" fieldErrors={fieldErrors} />
           </div>
 
           <EntityMediaFields
@@ -77,7 +90,7 @@ export function EntityFormModal({
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving || !form.name.trim()}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? "Saving…" : submitLabel ?? "Save"}
             </button>
           </div>
           {status && <p className="entity-status">{status}</p>}

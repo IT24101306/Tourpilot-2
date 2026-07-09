@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { currentPath, loginPath } from "./utils/authRedirect";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CurrencyProvider } from "./context/CurrencyContext";
@@ -12,12 +12,11 @@ import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterProPage } from "./pages/RegisterProPage";
 import { TermsPage } from "./pages/TermsPage";
-import { AgenciesPage } from "./pages/AgenciesPage";
 import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
 import { OffersPage } from "./pages/OffersPage";
+import { OfferBookPage } from "./pages/OfferBookPage";
 import { ProfilePage } from "./pages/ProfilePage";
-import { BuildMyTripPage } from "./pages/BuildMyTripPage";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
 import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
@@ -88,6 +87,26 @@ function HomeRoute() {
   return <LandingPage />;
 }
 
+function InfluencerStorefrontRedirect() {
+  const { slug } = useParams<{ slug: string }>();
+  return <Navigate to={`/i/${slug ?? ""}`} replace />;
+}
+
+function InfluencerDashboardLegacyRedirect() {
+  const location = useLocation();
+  const suffix = location.pathname.slice("/dashboard/influencer".length);
+  return <Navigate to={`/dashboard/i${suffix}${location.search}${location.hash}`} replace />;
+}
+
+function AgenciesListingRedirect() {
+  return <Navigate to="/" replace />;
+}
+
+function BuildMyTripLegacyRedirect() {
+  const { slug } = useParams<{ slug: string }>();
+  return <Navigate to={slug ? `/agencies/${slug}` : "/"} replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -96,8 +115,9 @@ export default function App() {
         <Routes>
           <Route element={<PublicLayout />}>
             <Route index element={<HomeRoute />} />
-            <Route path="agencies" element={<AgenciesPage />} />
+            <Route path="agencies" element={<AgenciesListingRedirect />} />
             <Route path="offers" element={<OffersPage />} />
+            <Route path="offers/:offerId/book" element={<OfferBookPage />} />
             <Route
               path="profile"
               element={
@@ -142,8 +162,9 @@ export default function App() {
           <Route path="register/pro" element={<RegisterProPage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
-          <Route path="agencies/:slug/build-my-trip" element={<BuildMyTripPage />} />
-          <Route path="influencers/:slug" element={<InfluencerDetailPage />} />
+          <Route path="agencies/:slug/build-my-trip" element={<BuildMyTripLegacyRedirect />} />
+          <Route path="i/:slug" element={<InfluencerDetailPage />} />
+          <Route path="influencers/:slug" element={<InfluencerStorefrontRedirect />} />
           <Route path="tours/:agencySlug/:tourSlug" element={<TourDetailPage />} />
           <Route path="itinerary/:shareToken" element={<ItinerarySharePage />} />
 
@@ -187,8 +208,10 @@ export default function App() {
             <Route path="tasks" element={<DriverTasksPage />} />
           </Route>
 
+          <Route path="dashboard/influencer/*" element={<InfluencerDashboardLegacyRedirect />} />
+
           <Route
-            path="dashboard/influencer"
+            path="dashboard/i"
             element={
               <Protected roles={["INFLUENCER"]}>
                 <InfluencerDashboardLayout />

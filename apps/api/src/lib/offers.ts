@@ -4,9 +4,11 @@ import {
   DEFAULT_TOUR_COVER_URL,
   parseOfferRewardTiers,
   resolveImageUrl,
+  resolveSocialTagHandle,
   type OfferRewardTier,
 } from "@tourpilot/shared";
 import { optionalImageUrlSchema } from "./imageUrlSchema.js";
+import { parseDisplayPayload } from "./displaySettings.js";
 import { prisma } from "./prisma.js";
 
 const offerMonthSchema = z
@@ -87,6 +89,14 @@ export function serializeOfferAdmin(o: OfferWithAdminInclude) {
 export function serializeActiveOffer(o: OfferWithActiveInclude) {
   const primary = o.tours[0]?.tour;
   const agency = o.agency ?? primary?.agency ?? null;
+  const pageConfig = o.agency?.pageConfig ?? primary?.agency?.pageConfig ?? null;
+  const agencyDisplay = pageConfig ? parseDisplayPayload(pageConfig) : null;
+  const socialTagHandle = agencyDisplay
+    ? resolveSocialTagHandle(
+        agencyDisplay.content.socialTagHandle,
+        agencyDisplay.content.whoWeAreSocialLinks
+      )
+    : null;
 
   return {
     id: o.id,
@@ -106,6 +116,7 @@ export function serializeActiveOffer(o: OfferWithActiveInclude) {
     agency: agency ? { id: agency.id, name: agency.name, slug: agency.slug } : null,
     agencyName: agency?.name ?? null,
     agencySlug: agency?.slug ?? null,
+    socialTagHandle,
     tourSlug: primary?.slug ?? null,
     tours: o.tours.map((t) => ({
       ...t.tour,
@@ -226,7 +237,7 @@ export async function applyOfferUpdate(
 }
 
 export const offerIncludeActive = {
-  agency: { select: { id: true, name: true, slug: true } },
+  agency: { select: { id: true, name: true, slug: true, pageConfig: true } },
   tours: {
     include: {
       tour: {
@@ -236,7 +247,7 @@ export const offerIncludeActive = {
           slug: true,
           coverUrl: true,
           basePriceLkr: true,
-          agency: { select: { id: true, name: true, slug: true } },
+          agency: { select: { id: true, name: true, slug: true, pageConfig: true } },
         },
       },
     },

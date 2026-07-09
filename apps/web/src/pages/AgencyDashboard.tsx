@@ -13,6 +13,7 @@ import {
 import { buildEntityMediaStore, type EntityMediaItem } from "@tourpilot/shared";
 import type { ManagedOffer } from "../components/offers/OffersDashboard";
 import { TourFormModal } from "../components/tour/TourFormModal";
+import { TourPackagePricingNotice } from "../components/itinerary/TourPackagePricingNotice";
 import {
   buildTourSavePayload,
   emptyTourOfferLink,
@@ -642,7 +643,9 @@ export function AgencyDashboard() {
               <div className="tour-detail-box">
                 <h3 style={{ margin: "0 0 12px" }}>{selectedTour.title}</h3>
                 {selectedTour.tourDays?.length ? (
-                  selectedTour.tourDays.map((day) => (
+                  <>
+                    <TourPackagePricingNotice />
+                    {selectedTour.tourDays.map((day) => (
                     <div key={day.dayNumber} className="tour-day-block">
                       <h4>Day {day.dayNumber}</h4>
                       <ul>
@@ -653,7 +656,8 @@ export function AgencyDashboard() {
                         ))}
                       </ul>
                     </div>
-                  ))
+                  ))}
+                  </>
                 ) : (
                   <p className="muted">No day plan saved.</p>
                 )}

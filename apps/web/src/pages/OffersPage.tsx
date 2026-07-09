@@ -8,20 +8,19 @@ import {
   DiscoveryOfferCard,
   type DiscoveryOffer,
 } from "../components/discovery/DiscoveryOfferCard";
-import { OfferRegistrationModal } from "../components/discovery/OfferRegistrationModal";
+import { offerBookPath } from "../lib/offerBookPaths";
 import { daysUntilEnd } from "../lib/discoveryUtils";
 
 export function OffersPage() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get("offer");
   const [offers, setOffers] = useState<DiscoveryOffer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg] = useState("");
-  const [registerOffer, setRegisterOffer] = useState<DiscoveryOffer | null>(null);
   const scrolledRef = useRef(false);
+  const returnPath = currentPath(location);
 
   useEffect(() => {
     setLoading(true);
@@ -48,9 +47,8 @@ export function OffersPage() {
     return { total: offers.length, endingSoon, openSpots };
   }, [offers]);
 
-  async function refreshOffers() {
-    const refreshed = await api<DiscoveryOffer[]>("/offers/active");
-    setOffers(refreshed);
+  function openOfferBook(offer: DiscoveryOffer) {
+    navigate(offerBookPath(offer.id, returnPath));
   }
 
   return (
@@ -61,8 +59,8 @@ export function OffersPage() {
         subtitle="Transparent tour pricing with rewards and countdown — no hidden surprises."
       >
         {!user && (
-          <Link to={loginPath(currentPath(location))} className="btn btn-teal">
-            Log in to register
+          <Link to={loginPath(returnPath)} className="btn btn-teal">
+            Log in to book
           </Link>
         )}
       </ModuleHeader>
@@ -84,16 +82,12 @@ export function OffersPage() {
         </div>
       )}
 
-      {msg && <p className="disc-status-msg offers-status-msg">{msg}</p>}
 
       {loading ? (
         <p className="muted offers-loading">Loading offers…</p>
       ) : offers.length === 0 ? (
         <div className="disc-empty offers-empty">
-          <p>No active offers right now. Check back soon or browse agencies.</p>
-          <Link to="/agencies" className="btn btn-primary">
-            Explore agencies
-          </Link>
+          <p>No active offers right now. Check back soon.</p>
         </div>
       ) : (
         <div className="disc-offer-grid disc-offer-grid--page">
@@ -103,29 +97,12 @@ export function OffersPage() {
               offer={o}
               page
               cardId={`offer-${o.id}`}
-              onRegister={() => {
-                if (!token) {
-                  navigate(loginPath(`/offers?offer=${o.id}`));
-                  return;
-                }
-                setRegisterOffer(o);
-              }}
-              registerLabel={token ? "Register for offer" : "Log in to register"}
+              onRegister={() => openOfferBook(o)}
+              registerLabel="Book now"
             />
           ))}
         </div>
       )}
-
-      <OfferRegistrationModal
-        open={!!registerOffer}
-        offer={registerOffer}
-        token={token}
-        onClose={() => setRegisterOffer(null)}
-        onSuccess={() => {
-          setMsg("You are registered — your agency will follow up.");
-          void refreshOffers().catch(console.error);
-        }}
-      />
     </section>
   );
 }

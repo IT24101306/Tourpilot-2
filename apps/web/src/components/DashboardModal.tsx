@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { FormFieldError } from "./FormFieldError";
 import { createPortal } from "react-dom";
 import { lockBodyScroll, unlockBodyScroll } from "../lib/scrollLock";
 
@@ -62,16 +63,19 @@ export function DashboardModal({
 export function ModalField({
   label,
   full,
+  error,
   children,
 }: {
   label: string;
   full?: boolean;
+  error?: string;
   children: ReactNode;
 }) {
   return (
-    <div className={`field ${full ? "full" : ""}`}>
+    <div className={`field ${full ? "full" : ""}${error ? " field--invalid" : ""}`}>
       <label>{label}</label>
       {children}
+      <FormFieldError message={error} />
     </div>
   );
 }
@@ -80,20 +84,17 @@ export function ModalActions({
   onCancel,
   submitLabel,
   saving,
-  canSubmit = true,
 }: {
   onCancel: () => void;
   submitLabel: string;
   saving?: boolean;
-  /** When false, submit stays disabled until the form has enough data. */
-  canSubmit?: boolean;
 }) {
   return (
     <div className="dialog-actions">
       <button type="button" className="btn btn-ghost" onClick={onCancel}>
         Cancel
       </button>
-      <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
+      <button type="submit" className="btn btn-primary" disabled={saving}>
         {saving ? "Saving…" : submitLabel}
       </button>
     </div>

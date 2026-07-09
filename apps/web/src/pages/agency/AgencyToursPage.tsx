@@ -6,6 +6,7 @@ import { useConfirmAction } from "../../components/confirm/ConfirmActionContext"
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import type { ManagedOffer } from "../../components/offers/OffersDashboard";
 import { TourFormModal } from "../../components/tour/TourFormModal";
+import { TourPackagePricingNotice } from "../../components/itinerary/TourPackagePricingNotice";
 import {
   buildTourSavePayload,
   getOfferLinkConfirmSummary,
@@ -597,7 +598,9 @@ export function AgencyToursPage() {
               {expandedId === t.id && expandedTour?.id === t.id && (
                 <div className="cat-tour-detail">
                   {expandedTour.tourDays?.length ? (
-                    expandedTour.tourDays.map((day) => (
+                    <>
+                      <TourPackagePricingNotice />
+                      {expandedTour.tourDays.map((day) => (
                       <div key={day.dayNumber} className="cat-tour-day">
                         <h4>Day {day.dayNumber}</h4>
                         {day.transportLabel && day.transportRateLkr != null && (
@@ -618,7 +621,8 @@ export function AgencyToursPage() {
                           ))}
                         </ul>
                       </div>
-                    ))
+                    ))}
+                    </>
                   ) : (
                     <p className="muted">No day plan saved. Edit this tour to add entities.</p>
                   )}

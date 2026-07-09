@@ -11,9 +11,40 @@ type TravelerRow = {
   name: string;
   phone: string;
   email: string | null;
+  avatarUrl: string | null;
   latestStatus: string;
   inquiryCount: number;
 };
+
+function travelerInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function TravelerAvatar({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
+  const [failed, setFailed] = useState(!avatarUrl);
+
+  if (!avatarUrl || failed) {
+    return (
+      <span className="traveler-avatar traveler-avatar--fallback" aria-hidden="true">
+        {travelerInitials(name)}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      className="traveler-avatar"
+      src={avatarUrl}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export function AgencyTravelersPage() {
   const { token } = useAuth();
@@ -35,12 +66,16 @@ export function AgencyTravelersPage() {
             if (inq.tourist.email && !existing.email) {
               existing.email = inq.tourist.email;
             }
+            if (inq.tourist.avatarUrl && !existing.avatarUrl) {
+              existing.avatarUrl = inq.tourist.avatarUrl;
+            }
           } else {
             map.set(inq.tourist.id, {
               id: inq.tourist.id,
               name: inq.tourist.name,
               phone: inq.tourist.phone,
               email: inq.tourist.email ?? null,
+              avatarUrl: inq.tourist.avatarUrl ?? null,
               latestStatus: inq.status,
               inquiryCount: 1,
             });
@@ -100,7 +135,10 @@ export function AgencyTravelersPage() {
             <li key={t.id}>
               <div className="ops-queue-card" style={{ cursor: "default" }}>
                 <div className="ops-queue-card-top">
-                  <strong>{t.name}</strong>
+                  <span className="traveler-name-row">
+                    <TravelerAvatar name={t.name} avatarUrl={t.avatarUrl} />
+                    <strong>{t.name}</strong>
+                  </span>
                   <span className={`agency-status ${inquiryStatusClass(t.latestStatus)}`}>
                     {formatInquiryStatus(t.latestStatus)}
                   </span>

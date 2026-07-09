@@ -106,6 +106,15 @@ const whoWeAreImageSchema = z.object({
   alt: z.string().optional(),
 });
 
+const transportOptionSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  variant: z.string().optional(),
+  description: z.string().default(""),
+  seating: z.string().default(""),
+  luggage: z.string().default(""),
+});
+
 const contentSchema = z.object({
 
   heroHeadline: z.string(),
@@ -122,6 +131,8 @@ const contentSchema = z.object({
   whoWeAreDescription: z.string().default(""),
 
   whoWeAreSocialLinks: z.array(socialLinkSchema).max(12).default([]),
+
+  socialTagHandle: z.string().max(80).default(""),
 
   whoWeAreImages: z.array(whoWeAreImageSchema).max(8).default([]),
 
@@ -145,6 +156,8 @@ const contentSchema = z.object({
 
   offers: z.array(offerSchema).default([]),
 
+  transportOptions: z.array(transportOptionSchema).max(12).default([]),
+
 });
 
 
@@ -164,6 +177,8 @@ const enabledSchema = z.object({
   offers: z.boolean(),
 
   inquiry: z.boolean(),
+
+  transport: z.boolean().default(true),
 
 });
 

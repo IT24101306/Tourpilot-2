@@ -1,5 +1,5 @@
 const STEPS = [
-  { n: "1", title: "Explore", hint: "Browse verified agencies and tours" },
+  { n: "1", title: "Explore", hint: "Discover tours, offers, and trusted operators" },
   { n: "2", title: "Compare", hint: "Transparent pricing and itineraries" },
   { n: "3", title: "Plan together", hint: "Inquire and refine your trip in one place" },
 ] as const;

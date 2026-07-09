@@ -577,12 +577,21 @@ button.agency-hero-banner__ghost {
 }
 
 .agency-display-band--transport {
-  padding-block: 64px;
+  padding-block: 28px;
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--brand-accent-green) 20%, #fff) 0%,
     color-mix(in srgb, var(--brand-accent-green) 12%, var(--brand-surface)) 100%
   );
+}
+
+.agency-display-band--offers {
+  padding-block: 56px;
+  background: #122d1e;
+}
+
+.agency-display-band--offers .agency-display-inner {
+  max-width: 1320px;
 }
 
 /* —— Transport —— */
@@ -592,130 +601,133 @@ button.agency-hero-banner__ghost {
 
 .agency-transport-section-head {
   border-bottom: none;
-  margin-bottom: 28px;
+  margin-bottom: 12px;
   padding-bottom: 0;
+}
+
+.agency-transport-section-head h2 {
+  font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+  margin-bottom: 4px;
+}
+
+.agency-transport-section-head h2::before {
+  width: 28px;
+  height: 2px;
+  margin-bottom: 8px;
+}
+
+.agency-transport-section-head p {
+  font-size: 0.84rem;
+  line-height: 1.4;
+  max-width: 46ch;
 }
 
 .agency-transport-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
 }
 
 .agency-transport-card {
   position: relative;
   background: #fff;
   border: 1px solid color-mix(in srgb, var(--brand-dark-green) 8%, transparent);
-  border-radius: 20px;
-  padding: 22px 20px 20px;
+  border-radius: 12px;
+  padding: 10px 12px;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 100%;
-  box-shadow:
-    0 10px 30px rgba(11, 48, 34, 0.06),
-    0 2px 8px rgba(11, 48, 34, 0.04);
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+  box-shadow: 0 3px 10px rgba(11, 48, 34, 0.05);
   transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .agency-transport-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--brand-accent-teal) 35%, transparent);
-  box-shadow:
-    0 18px 40px rgba(11, 48, 34, 0.1),
-    0 4px 14px rgba(31, 161, 157, 0.12);
+  box-shadow: 0 6px 16px rgba(11, 48, 34, 0.08);
 }
 
 .agency-transport-card__icon-wrap {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   color: var(--brand-dark-green);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--brand-accent-teal) 22%, #fff) 0%,
-    color-mix(in srgb, var(--brand-accent-green) 14%, #fff) 100%
-  );
+  background: #fff;
   border: 1px solid color-mix(in srgb, var(--brand-accent-teal) 20%, transparent);
+  box-shadow: 0 1px 4px rgba(11, 48, 34, 0.08);
 }
 
 .agency-transport-card__body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
   flex: 1;
+  min-width: 0;
 }
 
 .agency-transport-card__title-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .agency-transport-card__title {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 1.08rem;
+  font-size: 0.86rem;
   font-weight: 800;
   color: var(--brand-dark-green);
   letter-spacing: -0.02em;
 }
 
 .agency-transport-card__variant {
-  font-size: 0.68rem;
-  padding: 3px 8px;
+  font-size: 0.58rem;
+  padding: 1px 5px;
 }
 
 .agency-transport-card__desc {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.55;
-  color: var(--ad-muted);
+  display: none;
 }
 
 .agency-transport-card__chips {
-  display: grid;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .agency-transport-chip {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 12px;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--brand-surface) 70%, #fff);
   border: 1px solid color-mix(in srgb, var(--brand-black) 6%, transparent);
 }
 
 .agency-transport-chip__label {
-  font-size: 0.68rem;
+  font-size: 0.55rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--brand-accent-teal);
 }
 
 .agency-transport-chip__value {
-  font-size: 0.84rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--brand-black);
-  text-align: right;
-}
-
-@media (max-width: 1024px) {
-  .agency-transport-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 640px) {
@@ -724,7 +736,7 @@ button.agency-hero-banner__ghost {
   }
 
   .agency-display-band--transport {
-    padding-block: 48px;
+    padding-block: 22px;
   }
 }
 
@@ -765,7 +777,8 @@ button.agency-hero-banner__ghost {
 }
 
 .agency-display-inner--who {
-  padding-bottom: clamp(40px, 5vh, 56px);
+  padding-top: clamp(28px, 4vh, 40px);
+  padding-bottom: clamp(24px, 3vh, 36px);
 }
 
 .agency-display-cover + .agency-display-inner {
@@ -842,13 +855,25 @@ button.agency-hero-banner__ghost {
 
 /* —— Who we are —— */
 .agency-who-we-are {
-  padding-top: 8px;
+  padding-top: 0;
+  margin-bottom: 0;
 }
 
 .agency-who-we-are__head {
-  margin-bottom: 22px;
+  margin-bottom: 12px;
   padding-bottom: 0;
   border-bottom: none;
+}
+
+.agency-who-we-are__head h2 {
+  font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+  margin-bottom: 0;
+}
+
+.agency-who-we-are__head h2::before {
+  width: 28px;
+  height: 2px;
+  margin-bottom: 8px;
 }
 
 .agency-who-we-are__body {
@@ -857,16 +882,16 @@ button.agency-hero-banner__ghost {
 
 .agency-who-we-are__description {
   margin: 0;
-  max-width: 62ch;
+  max-width: 58ch;
   color: var(--ad-muted);
-  font-size: 1.02rem;
-  line-height: 1.7;
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .agency-who-we-are__social-row {
   display: flex;
   justify-content: center;
-  margin-top: clamp(28px, 4vw, 40px);
+  margin-top: clamp(16px, 2.5vw, 24px);
 }
 
 .agency-who-we-are__social {
@@ -877,7 +902,7 @@ button.agency-hero-banner__ghost {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .agency-who-we-are__social li {
@@ -888,8 +913,8 @@ button.agency-hero-banner__ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 1.5px solid var(--ad-green);
   background: #fff;
@@ -918,14 +943,14 @@ button.agency-hero-banner__ghost {
 
 .agency-who-we-are__badges {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 14px;
-  margin-top: 32px;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .agency-who-we-are__badge {
   margin: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   background: #fff;
   border: 1px solid var(--ad-line);
@@ -1272,6 +1297,233 @@ button.agency-hero-banner__ghost {
   color: var(--ad-muted);
 }
 
+.agency-showcase-featured-quote--plain {
+  background: var(--ad-card);
+  border: 1px solid var(--ad-line);
+  border-radius: 24px;
+  color: var(--ad-ink);
+  font-style: italic;
+  box-shadow: 0 16px 40px rgba(15, 26, 22, 0.08);
+}
+
+.agency-showcase-featured-quote--plain::before {
+  content: none;
+}
+
+/* —— Reviews flip showcase —— */
+.agency-review-flip-wrap {
+  min-width: 0;
+}
+
+.agency-review-flip__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.agency-review-flip__head .agency-reviews-title {
+  margin: 0;
+}
+
+.agency-review-flip__score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.agency-review-flip__score-num {
+  font-family: var(--font-heading);
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ad-ink);
+}
+
+.agency-review-flip__score-stars {
+  color: var(--ad-gold);
+  letter-spacing: 2px;
+  font-size: 0.95rem;
+}
+
+.agency-review-flip__score-count {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ad-muted);
+}
+
+.agency-review-flip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: clamp(6px, 1.5vw, 14px);
+}
+
+.agency-review-flip__stage {
+  perspective: 1400px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-width: 0;
+}
+
+.agency-review-flip__card {
+  width: 100%;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 30px;
+  border-radius: 24px;
+  background: var(--ad-card);
+  border: 1px solid var(--ad-line);
+  box-shadow:
+    0 4px 6px rgba(15, 26, 22, 0.04),
+    0 20px 48px rgba(15, 26, 22, 0.1);
+  transform-style: preserve-3d;
+  transition:
+    transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1),
+    opacity 0.35s ease;
+  text-align: left;
+}
+
+.agency-review-flip__card.is-flip-out {
+  transform: rotateY(-88deg) scale(0.96);
+  opacity: 0;
+}
+
+.agency-review-flip__card.is-flip-in {
+  animation: agency-review-flip-in 0.7s cubic-bezier(0.4, 0.2, 0.2, 1) forwards;
+}
+
+@keyframes agency-review-flip-in {
+  from {
+    transform: rotateY(88deg) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.agency-review-flip__rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agency-review-flip__rating-num {
+  font-family: var(--font-heading);
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ad-ink);
+}
+
+.agency-review-flip__stars {
+  color: var(--ad-gold);
+  letter-spacing: 3px;
+  font-size: 1.1rem;
+}
+
+.agency-review-flip__body {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #334155;
+  font-style: italic;
+}
+
+.agency-review-flip__author {
+  margin-top: auto;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ad-muted);
+}
+
+.agency-review-flip__nav {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ad-ink);
+  background: var(--ad-card);
+  border: 1px solid var(--ad-line);
+  box-shadow: 0 4px 14px rgba(15, 26, 22, 0.08);
+  transition:
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+
+.agency-review-flip__nav:hover:not(:disabled) {
+  background: var(--brand-surface, #e4e8e7);
+  transform: translateY(-1px);
+}
+
+.agency-review-flip__nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.agency-review-flip__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.agency-review-flip__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--ad-muted) 45%, transparent);
+  transition:
+    width 0.2s ease,
+    background 0.2s ease;
+}
+
+.agency-review-flip__dot.is-active {
+  width: 24px;
+  border-radius: 999px;
+  background: var(--ad-green, #14b81d);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agency-review-flip__card {
+    transition: none;
+  }
+
+  .agency-review-flip__card.is-flip-out,
+  .agency-review-flip__card.is-flip-in {
+    transform: none;
+    opacity: 1;
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .agency-review-flip__nav {
+    display: none;
+  }
+
+  .agency-review-flip {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* —— Offers —— */
 .agency-offers {
   margin-bottom: 56px;
@@ -1343,227 +1595,97 @@ button.agency-hero-banner__ghost {
   font-size: 0.9rem;
 }
 
-/* —— Offers spotlight (flip carousel) —— */
-.agency-display-band--offers-spotlight {
-  position: relative;
-  background: linear-gradient(165deg, #041a10 0%, #0a3320 42%, #062818 100%);
-  overflow: hidden;
+/* —— Offers flip showcase —— */
+.agency-offer-flip-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(58px, 76px);
+  gap: clamp(10px, 1.5vw, 18px);
+  align-items: stretch;
 }
 
-.agency-display-band--offers-spotlight::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74, 222, 128, 0.14) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 40% at 90% 80%, rgba(0, 175, 2, 0.12) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-.agency-display-inner--offers {
-  position: relative;
-  z-index: 1;
-  padding-top: clamp(56px, 8vh, 88px);
-  padding-bottom: clamp(64px, 9vh, 96px);
-}
-
-.agency-offer-showcase {
-  max-width: 1040px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.agency-offer-showcase__glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(960px, 94vw);
-  height: 280px;
-  transform: translate(-50%, -45%);
-  background: radial-gradient(ellipse, rgba(74, 222, 128, 0.2) 0%, transparent 70%);
-  pointer-events: none;
-  filter: blur(40px);
-}
-
-.agency-offer-showcase__head {
-  margin-bottom: clamp(28px, 4vh, 40px);
-}
-
-.agency-offer-showcase__eyebrow {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #4ade80;
-  margin-bottom: 10px;
-}
-
-.agency-offer-showcase__head h2 {
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 600;
-  color: #fff;
-  margin: 0 0 12px;
-  letter-spacing: -0.03em;
-  text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 4px 24px rgba(0, 0, 0, 0.35);
-}
-
-.agency-offer-showcase__head p {
-  margin: 0 auto;
-  max-width: 48ch;
-  font-size: 1.02rem;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.agency-offer-showcase__head strong {
-  color: #fff;
-}
-
-.agency-offer-showcase__status {
-  max-width: 520px;
-  margin: 0 auto 20px;
-  text-align: center;
-}
-
-.agency-offer-showcase__month-cal {
-  margin: 0 auto 18px;
-  max-width: min(960px, 100%);
-}
-
-.offer-month-calendar {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  text-align: left;
-}
-
-.offer-month-calendar__icon {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #4ade80;
-}
-
-.offer-month-calendar__content {
-  flex: 1;
+.agency-offer-flip-main {
   min-width: 0;
+  width: 100%;
+}
+
+.agency-offer-months-panel {
+  align-self: stretch;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.offer-month-calendar__dedicated {
-  margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.35;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.offer-month-calendar__dedicated strong {
-  color: #fff;
-  font-weight: 800;
-}
-
-.offer-month-calendar__strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-
-.offer-month-calendar__year {
-  flex-shrink: 0;
-  margin-right: 4px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.offer-month-calendar__month {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.1rem;
-  padding: 3px 5px;
-  border-radius: 8px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.45);
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
 }
 
-.offer-month-calendar__month.is-active {
-  color: #052e16;
-  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-  box-shadow: 0 2px 10px rgba(74, 222, 128, 0.35);
+.agency-offer-flip-wrap {
+  min-width: 0;
+  width: 100%;
 }
 
 .agency-offer-flip {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: clamp(8px, 2vw, 20px);
+  gap: clamp(6px, 1.5vw, 14px);
+  width: 100%;
 }
 
 .agency-offer-flip__stage {
+  grid-column: 2;
   perspective: 1400px;
-  min-height: 320px;
+  min-width: 0;
+  width: 100%;
   display: flex;
   align-items: stretch;
   justify-content: center;
 }
 
-.agency-offer-flip__card {
+.agency-offer-flip__nav--prev {
+  grid-column: 1;
+}
+
+.agency-offer-flip__nav--next {
+  grid-column: 3;
+}
+
+.agency-offer-flip-card {
+  --offer-hero-text: #ffffff;
+  --offer-hero-accent: #fde047;
+  --offer-hero-shadow: 0 1px 4px rgba(0, 0, 0, 0.85), 0 2px 10px rgba(0, 0, 0, 0.55);
+  --offer-hero-icon-shadow: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+
+  position: relative;
   width: 100%;
-  max-width: 960px;
-  display: grid;
-  grid-template-columns: minmax(220px, 42%) 1fr;
-  grid-template-rows: none;
-  min-height: 300px;
-  max-height: 380px;
-  border-radius: 20px;
+  min-height: clamp(640px, 82vh, 880px);
+  border-radius: 28px;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 4px 6px rgba(0, 0, 0, 0.08),
-    0 24px 64px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(74, 222, 128, 0.15);
   cursor: pointer;
+  background-color: #1a3328;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 6px 10px rgba(15, 26, 22, 0.08),
+    0 28px 56px rgba(15, 26, 22, 0.18);
   transform-style: preserve-3d;
   transition:
     transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1),
     opacity 0.35s ease;
-  text-align: left;
 }
 
-.agency-offer-flip__card.is-flip-out {
+.agency-offer-flip-card__overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(15, 26, 22, 0.35) 0%, rgba(15, 26, 22, 0.55) 55%, rgba(15, 26, 22, 0.72) 100%),
+    radial-gradient(ellipse 70% 55% at 50% 40%, rgba(0, 0, 0, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.agency-offer-flip-card.is-flip-out {
   transform: rotateY(-88deg) scale(0.96);
   opacity: 0;
 }
 
-.agency-offer-flip__card.is-flip-in {
+.agency-offer-flip-card.is-flip-in {
   animation: agency-offer-flip-in 0.7s cubic-bezier(0.4, 0.2, 0.2, 1) forwards;
 }
 
@@ -1578,282 +1700,593 @@ button.agency-hero-banner__ghost {
   }
 }
 
-.agency-offer-flip__media {
-  position: relative;
-  overflow: hidden;
-  background: #0a3320;
-}
-
-.agency-offer-flip__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.agency-offer-flip__media-shade {
+.agency-offer-flip-card__title {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(4, 26, 16, 0.15) 0%, rgba(4, 26, 16, 0.55) 100%);
-  pointer-events: none;
-}
-
-.agency-offer-flip__countdown-wrap {
-  position: absolute;
-  top: 16px;
-  left: 16px;
+  top: clamp(24px, 4vh, 36px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(94%, 920px);
+  margin: 0;
+  padding: 0 clamp(8px, 2vw, 16px);
+  text-align: center;
+  font-family: "Poppins", var(--font-heading), sans-serif;
+  font-size: clamp(1rem, 2.4vw, 1.55rem);
+  font-weight: 800;
+  line-height: 1.28;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--offer-hero-text);
+  text-shadow: var(--offer-hero-shadow);
   z-index: 1;
 }
 
-.agency-offer-flip__countdown {
-  font-size: 0.8rem !important;
-  padding: 6px 14px !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  color: var(--ad-green) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.agency-offer-flip__body {
-  padding: clamp(16px, 2.5vw, 22px);
+.agency-offer-flip-card__main {
+  position: absolute;
+  top: clamp(96px, 14vh, 128px);
+  bottom: clamp(120px, 16vh, 156px);
+  left: clamp(20px, 4vw, 40px);
+  right: clamp(20px, 4vw, 40px);
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow: auto;
-  min-height: 0;
-}
-
-.agency-offer-flip__body-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.agency-offer-flip__body-top h3 {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: clamp(1.25rem, 2.5vw, 1.55rem);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--ad-ink);
-  flex: 1;
-}
-
-.agency-offer-flip__share {
-  flex-shrink: 0;
-  max-width: min(11.5rem, 42%);
-}
-
-.agency-offer-flip__share .disc-offer-share-btn--labeled {
-  padding: 6px 10px;
-  font-size: 0.68rem;
-  line-height: 1.25;
-  text-align: left;
-  white-space: normal;
-}
-
-.agency-offer-flip__share .disc-offer-share-btn__label {
-  max-width: 9rem;
-}
-
-.agency-offer-flip__tiers-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.agency-offer-flip__tiers-title {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ad-muted);
-}
-
-.agency-offer-flip__roadmap .offer-reward-roadmap__track-base {
-  background: #d8e8df;
-}
-
-.agency-offer-flip__roadmap.is-interactive {
-  background: #f4faf7;
-  border-color: #d0e8da;
-}
-
-.agency-offer-flip__roadmap .offer-reward-roadmap__summary {
-  font-size: 0.76rem;
-}
-
-.agency-offer-flip__roadmap .offer-reward-roadmap__footnote {
-  font-size: 0.72rem;
-}
-
-.agency-offer-flip__desc {
-  margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.5;
-  color: var(--ad-muted);
-}
-
-.agency-offer-flip__reward {
-  margin: 0;
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #e8f8ea 0%, #dff5e2 100%);
-  border: 1px solid #a8d9b0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.45;
-  color: #0a5c28;
-}
-
-.agency-offer-flip__goal {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.agency-offer-flip__goal-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.agency-offer-flip__goal-label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ad-muted);
-}
-
-.agency-offer-flip__goal-value {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--ad-ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.agency-offer-flip__goal-value span {
-  font-weight: 600;
-  color: var(--ad-muted);
-}
-
-.agency-offer-flip__progress {
-  height: 10px;
-  border-radius: 999px;
-  background: #e8f0ec;
-  overflow: hidden;
-}
-
-.agency-offer-flip__progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #00af02 0%, #4ade80 100%);
-  transition: width 0.5s ease;
-}
-
-.agency-offer-flip__goal-hint {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--ad-muted);
-}
-
-.agency-offer-flip__price-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.agency-offer-flip__price {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--ad-green);
-}
-
-.agency-offer-flip__price--free {
-  font-size: 1.35rem;
-  letter-spacing: 0.04em;
-}
-
-.agency-offer-flip__price-was {
-  font-size: 0.9rem;
-  color: var(--ad-muted);
-  text-decoration: line-through;
-}
-
-.agency-offer-flip__actions {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-top: 4px;
+  justify-content: space-between;
+  gap: clamp(16px, 3vw, 32px);
+  pointer-events: none;
+  z-index: 1;
 }
 
-.agency-offer-flip__cta {
-  flex: 1;
-  min-width: 200px;
+.agency-offer-flip-card__share-col,
+.agency-offer-flip-card__rewards-col {
+  pointer-events: auto;
+}
+
+.agency-offer-flip-card__share-col {
+  flex: 0 1 min(240px, 34vw);
+  align-self: center;
+}
+
+.agency-offer-flip-card__rewards-col {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+}
+
+.agency-offer-flip-card__footer {
+  position: absolute;
+  inset: auto 0 0 0;
+  min-height: clamp(108px, 14vh, 144px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.agency-offer-flip-card__countdown,
+.agency-offer-flip-card__actions {
+  position: absolute;
+  bottom: clamp(16px, 2.5vh, 24px);
+  pointer-events: auto;
+}
+
+.agency-offer-flip-card__countdown {
+  left: clamp(20px, 4vw, 40px);
+}
+
+.agency-offer-flip-card__actions {
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: min(320px, 86vw);
+  text-align: center;
+}
+
+.agency-offer-flip-card__progress {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.agency-offer-flip-card__register {
+  width: 100%;
+  max-width: 280px;
   min-height: 48px;
-  padding: 0 24px;
-  border: none;
-  border-radius: 14px;
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #fff;
-  cursor: pointer;
-  background: linear-gradient(135deg, #00af02 0%, #00c902 100%);
-  box-shadow: 0 10px 28px rgba(0, 175, 2, 0.3);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  box-shadow: 0 8px 24px rgba(20, 184, 29, 0.28);
 }
 
-.agency-offer-flip__cta:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(0, 175, 2, 0.38);
-}
-
-.agency-offer-flip__cta:disabled {
+.agency-offer-flip-card__register:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
-.agency-offer-flip__registrants-link {
+.agency-offer-flip-card__view {
   border: none;
   background: transparent;
-  padding: 8px 0;
-  font-size: 0.88rem;
+  color: var(--offer-hero-text);
+  font-family: inherit;
+  font-size: 0.82rem;
   font-weight: 700;
-  color: var(--ad-green);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
+  text-shadow: var(--offer-hero-shadow);
+  opacity: 0.92;
 }
 
-.agency-offer-flip__nav {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  font-size: 1.6rem;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
+.agency-offer-flip-card__view:hover {
+  opacity: 1;
+}
+
+/* Share — hero variant (on offer card) */
+.disc-offer-share-wrap--hero {
+  display: block;
+}
+
+.disc-offer-share-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(10px, 1.8vw, 16px);
+}
+
+.disc-offer-share-hero__label {
+  max-width: min(11rem, 30vw);
+  font-family: var(--font-heading);
+  font-size: clamp(0.82rem, 1.5vw, 1rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--offer-hero-text);
+  text-shadow: var(--offer-hero-shadow);
+}
+
+.disc-offer-share-hero__icon-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+  width: clamp(40px, 5vw, 48px);
+  height: clamp(40px, 5vw, 48px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--offer-hero-accent);
+  cursor: pointer;
+  filter: var(--offer-hero-icon-shadow);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.disc-offer-share-hero__icon-btn:hover {
+  transform: scale(1.06);
+  opacity: 0.92;
+}
+
+.disc-offer-share-hero__icon-btn svg {
+  width: clamp(32px, 4.5vw, 42px);
+  height: clamp(32px, 4.5vw, 42px);
+}
+
+.disc-offer-share-wrap--hero .disc-offer-share-feedback {
+  margin-top: 8px;
+  color: var(--offer-hero-accent);
+  font-size: 0.82rem;
+  text-shadow: var(--offer-hero-shadow);
+}
+
+/* Countdown — hero variant */
+.offer-countdown--hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--offer-hero-accent);
+  text-transform: none;
+  box-shadow: none;
+}
+
+.offer-countdown--hero.offer-countdown--ended {
+  background: transparent !important;
+  color: #fca5a5;
+}
+
+.offer-countdown--hero svg {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  color: var(--offer-hero-accent);
+  filter: var(--offer-hero-icon-shadow);
+}
+
+.offer-countdown--hero.offer-countdown--ended svg {
+  color: #fca5a5;
+}
+
+.offer-countdown__hero-time {
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: var(--offer-hero-accent);
+  text-shadow: var(--offer-hero-shadow);
+}
+
+.offer-countdown--hero.offer-countdown--ended .offer-countdown__hero-time {
+  color: #fca5a5;
+  text-shadow: var(--offer-hero-shadow);
+}
+
+/* Calendar — hero variant */
+.offer-month-calendar--hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.offer-month-calendar__hero-icon {
+  width: clamp(40px, 5vw, 50px);
+  height: clamp(40px, 5vw, 50px);
+  color: var(--offer-hero-text);
+  filter: var(--offer-hero-icon-shadow);
+}
+
+.offer-month-calendar--hero .offer-month-calendar__hero-month {
+  display: block;
+  max-width: min(9rem, 24vw);
+  font-size: clamp(0.65rem, 1.1vw, 0.78rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+  color: var(--offer-hero-text);
+  text-shadow: var(--offer-hero-shadow);
+}
+
+.offer-month-calendar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.offer-month-calendar__icon {
+  flex-shrink: 0;
+  color: var(--brand-accent-teal, #1fa19d);
+}
+
+.offer-month-calendar__content {
+  min-width: 0;
+}
+
+.offer-month-calendar__dedicated {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+}
+
+.offer-month-calendar__year-block + .offer-month-calendar__year-block {
+  margin-top: 10px;
+}
+
+.offer-month-calendar__strip {
+  display: grid;
+  grid-template-columns: auto repeat(12, minmax(0, 1fr));
+  gap: 4px;
+  align-items: center;
+}
+
+.offer-month-calendar__year {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--brand-dark-green, #0b3022);
+  padding-right: 4px;
+}
+
+.offer-month-calendar__month {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 2px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(11, 48, 34, 0.06);
+  color: var(--brand-black, #000);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+button.offer-month-calendar__month {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button.offer-month-calendar__month:hover {
+  background: rgba(31, 161, 157, 0.16);
+}
+
+.offer-month-calendar__month.is-offered {
+  background: rgba(20, 184, 29, 0.18);
+  color: var(--brand-dark-green, #0b3022);
+}
+
+.offer-month-calendar__month.is-active {
+  background: var(--brand-accent-green, #14b81d);
+  color: var(--brand-black, #000);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
+
+.offer-month-calendar--sidebar {
+  flex-direction: column;
+  width: 100%;
+  max-width: 76px;
+  min-height: min(100%, 520px);
+  padding: 8px 4px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 2px solid rgba(31, 161, 157, 0.55);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.agency-display-band--offers .offer-month-calendar--sidebar {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.offer-month-calendar__sidebar-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.offer-month-calendar__icon-badge {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  color: #fff;
+  background: rgba(31, 161, 157, 0.45);
+  box-shadow: none;
+}
+
+.offer-month-calendar__icon-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.offer-month-calendar__sidebar-copy {
+  min-width: 0;
+}
+
+.offer-month-calendar__sidebar-title {
+  margin: 0;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.2;
+}
+
+.offer-month-calendar__viewing-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.48rem;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: normal;
+  text-align: center;
+}
+
+.offer-month-calendar__years {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.offer-month-calendar__year-block--grid {
+  display: grid;
+  gap: 4px;
+}
+
+.offer-month-calendar__year-block--grid + .offer-month-calendar__year-block--grid {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.offer-month-calendar__year-block--grid .offer-month-calendar__year {
+  font-size: 0.52rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  padding-right: 0;
+}
+
+.offer-month-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 2px;
+}
+
+.offer-month-calendar--sidebar .offer-month-calendar__grid {
+  grid-template-columns: 1fr;
+  gap: 3px;
+}
+
+.offer-month-calendar__month--grid {
+  min-height: 16px;
+  padding: 2px 1px;
+  border-radius: 4px;
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.offer-month-calendar--sidebar .offer-month-calendar__month--grid {
+  min-height: 18px;
+  font-size: 0.46rem;
+  letter-spacing: 0.01em;
+}
+
+.offer-month-calendar__month--grid.is-offered {
+  background: rgba(20, 184, 29, 0.28);
+  color: rgba(255, 255, 255, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(20, 184, 29, 0.4);
+}
+
+.offer-month-calendar__month--grid.is-active {
+  background: var(--brand-accent-green, #14b81d);
+  color: var(--brand-black, #000);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  transform: none;
+}
+
+button.offer-month-calendar__month--grid:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+button.offer-month-calendar__month--grid.is-offered:hover {
+  background: rgba(20, 184, 29, 0.42);
+}
+
+.offer-month-calendar__legend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin: 8px 0 0;
+  font-size: 0.46rem;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.offer-month-calendar__legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.offer-month-calendar__legend-dot.is-offered {
+  background: var(--brand-accent-green, #14b81d);
+  box-shadow: 0 0 6px rgba(20, 184, 29, 0.45);
+}
+
+/* Reward ladder */
+.offer-reward-ladder {
+  display: flex;
+  flex-direction: column;
+  min-width: min(320px, 42vw);
+}
+
+.offer-reward-ladder__milestones {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 3vh, 28px);
+}
+
+.offer-reward-ladder__milestone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.offer-reward-ladder__heading {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(1rem, 1.85vw, 1.25rem);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: var(--offer-hero-shadow);
+  line-height: 1.15;
+}
+
+.offer-reward-ladder__reward {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-size: clamp(0.88rem, 1.55vw, 1.05rem);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: var(--offer-hero-shadow);
+  line-height: 1.2;
+}
+
+.offer-reward-ladder__icon {
+  font-size: 1.15em;
+  line-height: 1;
   flex-shrink: 0;
 }
 
+.offer-reward-ladder__reward-text {
+  min-width: 0;
+}
+
+.offer-reward-ladder__milestone.is-unlocked .offer-reward-ladder__heading,
+.offer-reward-ladder__milestone.is-unlocked .offer-reward-ladder__reward {
+  color: #fff;
+}
+
+.agency-offer-flip__nav {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ad-ink);
+  background: var(--ad-card);
+  border: 1px solid var(--ad-line);
+  box-shadow: 0 4px 14px rgba(15, 26, 22, 0.08);
+  transition:
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+
 .agency-offer-flip__nav:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.45);
+  background: var(--brand-surface, #e4e8e7);
+  transform: translateY(-1px);
 }
 
 .agency-offer-flip__nav:disabled {
@@ -1865,7 +2298,7 @@ button.agency-hero-banner__ghost {
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .agency-offer-flip__dot {
@@ -1874,67 +2307,124 @@ button.agency-hero-banner__ghost {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  transition: width 0.25s ease, background 0.25s ease;
+  background: color-mix(in srgb, var(--ad-muted) 45%, transparent);
+  transition:
+    width 0.2s ease,
+    background 0.2s ease;
 }
 
 .agency-offer-flip__dot.is-active {
   width: 24px;
   border-radius: 999px;
-  background: #4ade80;
+  background: var(--ad-green, #14b81d);
 }
 
-@media (max-width: 720px) {
-  .agency-offer-flip {
+@media (max-width: 960px) {
+  .agency-offer-flip-layout {
     grid-template-columns: 1fr;
-    gap: 12px;
+    align-items: stretch;
   }
 
+  .agency-offer-months-panel {
+    max-width: min(88px, 100%);
+    margin-inline: auto;
+  }
+
+  .offer-month-calendar--sidebar {
+    min-height: 0;
+    max-width: 88px;
+  }
+}
+
+@media (max-width: 900px) {
+  .agency-offer-flip-card__main {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    top: clamp(88px, 12vh, 110px);
+    bottom: clamp(132px, 16vh, 168px);
+  }
+
+  .agency-offer-flip-card__share-col {
+    flex: 0 0 auto;
+    max-width: none;
+    align-self: flex-start;
+  }
+
+  .agency-offer-flip-card__rewards-col {
+    align-self: flex-end;
+    margin-left: 0;
+  }
+
+  .offer-reward-ladder {
+    min-width: 0;
+    max-width: min(340px, 92vw);
+  }
+
+  .disc-offer-share-hero__label {
+    max-width: min(14rem, 70vw);
+  }
+}
+
+@media (max-width: 640px) {
   .agency-offer-flip__nav {
     display: none;
   }
 
-  .agency-offer-flip__stage {
-    min-height: auto;
-  }
-
-  .agency-offer-flip__card {
+  .agency-offer-flip {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(160px, 28vh) auto;
-    max-height: none;
-    min-height: auto;
   }
 
-  .agency-offer-showcase__month-cal {
-    margin-bottom: 14px;
+  .agency-offer-flip__stage {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 720px) {
+  .agency-offer-flip-card__title {
+    top: clamp(24px, 5vh, 36px);
+    font-size: clamp(0.82rem, 3.8vw, 1.05rem);
+    line-height: 1.32;
+    letter-spacing: 0.025em;
   }
 
-  .offer-month-calendar {
-    padding: 10px 12px;
+  .agency-offer-flip-card__footer {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 0 clamp(16px, 4vw, 24px) clamp(28px, 5vh, 40px);
   }
 
-  .offer-month-calendar__month {
-    min-width: 1.85rem;
-    font-size: 0.64rem;
+  .agency-offer-flip-card__countdown,
+  .agency-offer-flip-card__actions {
+    position: static;
+    transform: none;
   }
 
-  .agency-offer-flip__share {
-    max-width: 100%;
+  .agency-offer-flip-card__actions {
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .agency-offer-flip__share .disc-offer-share-btn__label {
-    max-width: none;
+  .agency-offer-flip-card__register {
+    width: min(100%, 280px);
+  }
+
+  .offer-reward-ladder__reward-text {
+    white-space: normal;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .agency-offer-flip__card {
+  .agency-offer-flip-card {
     transition: none;
   }
 
-  .agency-offer-flip__card.is-flip-out,
-  .agency-offer-flip__card.is-flip-in {
+  .agency-offer-flip-card.is-flip-out,
+  .agency-offer-flip-card.is-flip-in {
     transform: none;
     opacity: 1;
     animation: none;

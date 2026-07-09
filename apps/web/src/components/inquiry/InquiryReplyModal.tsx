@@ -493,8 +493,7 @@ export function InquiryReplyModal({
                         ? "Update & resend to tourist"
                         : "Send to tourist"
                   }
-                  saving={saving}
-                  canSubmit={totalSelections > 0}
+                  saving={saving}
                 />
               </form>
             )}

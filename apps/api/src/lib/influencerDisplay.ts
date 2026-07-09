@@ -17,7 +17,11 @@ export type InfluencerTourDisplaySettings = {
   termsAcceptedAt?: string;
   hideAgencyName?: boolean;
   displayPriceLkr?: number;
+  coverUrl?: string;
+  galleryImages?: InfluencerHeroSlide[];
 };
+
+export const MAX_INFLUENCER_TOUR_GALLERY = 8;
 
 export type InfluencerDisplayContent = {
   headline: string;
@@ -28,6 +32,7 @@ export type InfluencerDisplayContent = {
   aboutTitle: string;
   aboutDescription: string;
   socialLinks: InfluencerSocialLink[];
+  socialTagHandle: string;
   tourSettings: Record<string, InfluencerTourDisplaySettings>;
 };
 
@@ -54,6 +59,7 @@ export function defaultInfluencerDisplay(name: string): InfluencerDisplayContent
     aboutTitle: "About the creator",
     aboutDescription: "",
     socialLinks: [],
+    socialTagHandle: "",
     tourSettings: {},
   };
 }
@@ -89,6 +95,21 @@ function parseSocialLinks(raw: unknown): InfluencerSocialLink[] {
   return links;
 }
 
+function parseTourGalleryImages(raw: unknown): InfluencerHeroSlide[] {
+  if (!Array.isArray(raw)) return [];
+  const slides: InfluencerHeroSlide[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const url = typeof row.url === "string" ? row.url.trim() : "";
+    if (!url) continue;
+    const label = typeof row.label === "string" ? row.label.trim() : "";
+    slides.push({ url, ...(label ? { label } : {}) });
+    if (slides.length >= MAX_INFLUENCER_TOUR_GALLERY) break;
+  }
+  return slides;
+}
+
 function parseTourSettings(raw: unknown): Record<string, InfluencerTourDisplaySettings> {
   if (!raw || typeof raw !== "object") return {};
   const out: Record<string, InfluencerTourDisplaySettings> = {};
@@ -104,6 +125,11 @@ function parseTourSettings(raw: unknown): Record<string, InfluencerTourDisplaySe
       const price = Number(row.displayPriceLkr);
       if (Number.isFinite(price) && price > 0) settings.displayPriceLkr = Math.round(price);
     }
+    if (typeof row.coverUrl === "string" && row.coverUrl.trim()) {
+      settings.coverUrl = row.coverUrl.trim();
+    }
+    const galleryImages = parseTourGalleryImages(row.galleryImages);
+    if (galleryImages.length > 0) settings.galleryImages = galleryImages;
     if (Object.keys(settings).length > 0) out[tourId.trim()] = settings;
   }
   return out;
@@ -140,6 +166,9 @@ export function parseInfluencerDisplay(raw: unknown, name: string): InfluencerDi
     base.aboutDescription = obj.aboutDescription.trim().slice(0, 1200);
   }
   base.socialLinks = parseSocialLinks(obj.socialLinks);
+  if (typeof obj.socialTagHandle === "string") {
+    base.socialTagHandle = obj.socialTagHandle.trim().slice(0, 80);
+  }
   base.tourSettings = parseTourSettings(obj.tourSettings);
   return base;
 }
@@ -161,6 +190,7 @@ export function buildDisplayPayload(content: InfluencerDisplayContent): Prisma.I
       url: l.url,
       ...(l.label?.trim() ? { label: l.label.trim() } : {}),
     })),
+    socialTagHandle: content.socialTagHandle.trim(),
     tourSettings: content.tourSettings,
   });
 }

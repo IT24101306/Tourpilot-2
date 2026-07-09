@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { ModuleHeader } from "../module/ModuleHeader";
 import { navLinkClass } from "../../utils/navLinkClass";
 
@@ -8,11 +8,8 @@ export function TouristTravelLayout() {
       <ModuleHeader
         module="guided"
         title="My travel"
-        subtitle="Inquiries, confirmed bookings, saved tours, and custom trip plans."
+        subtitle="Inquiries, confirmed bookings, and saved tours."
       >
-        <Link to="/agencies" className="btn btn-teal">
-          Plan a new trip
-        </Link>
       </ModuleHeader>
 
       <nav className="tourist-travel-tabs" aria-label="Travel sections">

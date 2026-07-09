@@ -10,7 +10,7 @@ export function InfluencerGuidePage() {
         title="Partner playbook"
         subtitle="Everything you need to promote Sri Lanka tours and get paid fairly."
       >
-        <Link to="/dashboard/influencer/tours" className="btn btn-primary">
+        <Link to="/dashboard/i/tours" className="btn btn-primary">
           Start promoting
         </Link>
       </ModuleHeader>

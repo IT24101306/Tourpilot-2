@@ -10,6 +10,7 @@ import { InfluencerDisplayContentEditor } from "../../components/influencer/Infl
 import type { DisplaySocialLink, HeroSlide } from "../../components/display/displayTypes";
 import { isFreeOffer } from "../../lib/offerPricing";
 import "../../styles/dashboard.css";
+import "../../styles/influencer-display.css";
 
 type DisplayTour = InfluencerDisplayTourOption & {
   summary: string | null;
@@ -45,6 +46,7 @@ type DisplayData = {
     aboutTitle: string;
     aboutDescription: string;
     socialLinks: DisplaySocialLink[];
+    socialTagHandle?: string;
     tourSettings?: Record<string, InfluencerTourDisplaySettings>;
   };
   availableTours: DisplayTour[];
@@ -63,6 +65,7 @@ export function InfluencerDisplayPage() {
   const [aboutTitle, setAboutTitle] = useState("About the creator");
   const [aboutDescription, setAboutDescription] = useState("");
   const [socialLinks, setSocialLinks] = useState<DisplaySocialLink[]>([]);
+  const [socialTagHandle, setSocialTagHandle] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedOfferIds, setSelectedOfferIds] = useState<Set<string>>(new Set());
   const [tourSettings, setTourSettings] = useState<Record<string, InfluencerTourDisplaySettings>>({});
@@ -83,6 +86,7 @@ export function InfluencerDisplayPage() {
       setAboutTitle(data.display.aboutTitle ?? "About the creator");
       setAboutDescription(data.display.aboutDescription ?? "");
       setSocialLinks(data.display.socialLinks ?? []);
+      setSocialTagHandle(data.display.socialTagHandle ?? "");
       setSelectedIds(new Set(data.display.tourIds));
       setSelectedOfferIds(new Set(data.display.offerIds ?? []));
       setTourSettings(data.display.tourSettings ?? {});
@@ -187,6 +191,7 @@ export function InfluencerDisplayPage() {
           aboutTitle,
           aboutDescription,
           socialLinks,
+          socialTagHandle,
           tourSettings: settingsPayload,
         }),
       });
@@ -199,7 +204,7 @@ export function InfluencerDisplayPage() {
   }
 
   const storefrontUrl =
-    typeof window !== "undefined" && slug ? `${window.location.origin}/influencers/${slug}` : "";
+    typeof window !== "undefined" && slug ? `${window.location.origin}/i/${slug}` : "";
 
   async function copyStorefrontLink() {
     if (!storefrontUrl) return;
@@ -232,7 +237,7 @@ export function InfluencerDisplayPage() {
   }
 
   return (
-    <div className="module-shell module-partner">
+    <div className="module-shell module-partner influencer-display-page">
       <ModuleHeader
         module="partner"
         title="Display page"
@@ -240,23 +245,35 @@ export function InfluencerDisplayPage() {
       >
         {slug && (
           <>
-            <button type="button" className="btn btn-primary" onClick={() => void shareStorefront()}>
+            <button type="button" className="btn btn-ghost" onClick={() => void shareStorefront()}>
               Share page
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => void copyStorefrontLink()}>
               Copy link
             </button>
-            <Link to={`/influencers/${slug}`} className="btn btn-teal" target="_blank" rel="noreferrer">
+            <Link to={`/i/${slug}`} className="btn btn-teal" target="_blank" rel="noreferrer">
               Preview
             </Link>
           </>
         )}
+        {!loading && (
+          <button
+            type="submit"
+            form="influencer-display-form"
+            className="btn btn-primary influencer-display-save-btn"
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save display page"}
+          </button>
+        )}
       </ModuleHeader>
+
+      {msg && !loading ? <p className="partner-toast influencer-display-save-status">{msg}</p> : null}
 
       {loading ? (
         <p className="muted">Loading…</p>
       ) : (
-        <form className="influencer-display-editor" onSubmit={save}>
+        <form id="influencer-display-form" className="influencer-display-editor" onSubmit={save}>
           {storefrontUrl && (
             <div className="influencer-display-url">
               <div className="influencer-display-url-top">
@@ -304,6 +321,8 @@ export function InfluencerDisplayPage() {
             onAboutTitleChange={setAboutTitle}
             onAboutDescriptionChange={setAboutDescription}
             onSocialLinksChange={setSocialLinks}
+            socialTagHandle={socialTagHandle}
+            onSocialTagHandleChange={setSocialTagHandle}
           />
 
           <div className="partner-toolbar">
@@ -333,6 +352,8 @@ export function InfluencerDisplayPage() {
                 const checked = selectedIds.has(t.id);
                 const settings = tourSettings[t.id];
                 const shownPrice = settings?.displayPriceLkr ?? t.publicPriceLkr;
+                const photoCount =
+                  (settings?.coverUrl ? 1 : 0) + (settings?.galleryImages?.length ?? 0);
                 return (
                   <li key={t.id}>
                     <div
@@ -343,6 +364,7 @@ export function InfluencerDisplayPage() {
                         <span className="muted">
                           {settings?.hideAgencyName ? "Agency hidden" : t.agency.name} · {t.days} days ·
                           LKR {shownPrice.toLocaleString()}
+                          {photoCount > 0 ? ` · ${photoCount} custom photo${photoCount === 1 ? "" : "s"}` : ""}
                           {` · ${t.influencerCommissionPct}% commission (LKR ${t.influencerCommissionLkr.toLocaleString()})`}
                         </span>
                       </span>
@@ -429,14 +451,6 @@ export function InfluencerDisplayPage() {
               })
             )}
           </ul>
-
-          <div className="dialog-actions">
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? "Saving…" : "Save display page"}
-            </button>
-          </div>
-
-          {msg && <p className="partner-toast">{msg}</p>}
         </form>
       )}
 

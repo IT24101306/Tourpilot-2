@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+import { DEFAULT_TOUR_COVER_URL, resolveImageUrl, resolveSocialTagHandle } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
 import { parseInfluencerDisplay } from "../lib/influencerDisplay.js";
 import {
@@ -77,12 +77,21 @@ influencersRouter.get("/:slug", async (req, res, next) => {
       aboutTitle: display.aboutTitle,
       aboutDescription: display.aboutDescription,
       socialLinks: display.socialLinks,
+      socialTagHandle: resolveSocialTagHandle(display.socialTagHandle, display.socialLinks),
       tours: tours.map((t) => {
         const settings = display.tourSettings[t.id];
         const pricing = attachTourPricing(t);
         const refCode = codeByTourId.get(t.id);
         const listedPrice = settings?.displayPriceLkr ?? pricing.publicPriceLkr;
         const hideAgency = settings?.hideAgencyName === true;
+        const coverUrl = resolveImageUrl(
+          settings?.coverUrl?.trim() || t.coverUrl,
+          DEFAULT_TOUR_COVER_URL
+        );
+        const galleryImages = (settings?.galleryImages ?? []).map((image) => ({
+          url: resolveImageUrl(image.url, DEFAULT_TOUR_COVER_URL),
+          ...(image.label?.trim() ? { label: image.label.trim() } : {}),
+        }));
         return {
           id: t.id,
           title: t.title,
@@ -90,7 +99,8 @@ influencersRouter.get("/:slug", async (req, res, next) => {
           summary: t.summary,
           days: t.days,
           publicPriceLkr: listedPrice,
-          coverUrl: resolveImageUrl(t.coverUrl, DEFAULT_TOUR_COVER_URL),
+          coverUrl,
+          galleryImages,
           agency: hideAgency ? null : t.agency,
           hideAgencyName: hideAgency,
           refCode: refCode ?? null,

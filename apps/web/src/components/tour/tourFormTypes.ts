@@ -7,6 +7,8 @@ export type DayEntry = {
   id: string;
   time: string;
   entityId: string;
+  costLkr: number;
+  sellingPriceLkr: number;
 };
 
 export type DayPlan = {
@@ -15,6 +17,7 @@ export type DayPlan = {
   entries: DayEntry[];
   transportVehicleId: string;
   transportRateLkr: number;
+  transportSellingPriceLkr: number;
 };
 
 export type TourFormState = {
@@ -37,6 +40,8 @@ export type AgencyTourDayItem = {
   entityId: string | null;
   entityName: string | null;
   entityType?: string | null;
+  priceLkr?: number | null;
+  sellingPriceLkr?: number | null;
 };
 
 export type AgencyTourDay = {
@@ -45,6 +50,7 @@ export type AgencyTourDay = {
   transportVehicleId?: string | null;
   transportLabel?: string | null;
   transportRateLkr?: number | null;
+  transportSellingPriceLkr?: number | null;
   items: AgencyTourDayItem[];
 };
 
@@ -67,8 +73,13 @@ export type AgencyTourDetail = {
   tourDays?: AgencyTourDay[];
 };
 
-export function createEntry(time = "", entityId = ""): DayEntry {
-  return { id: crypto.randomUUID(), time, entityId };
+export function createEntry(
+  time = "",
+  entityId = "",
+  costLkr = 0,
+  sellingPriceLkr = 0
+): DayEntry {
+  return { id: crypto.randomUUID(), time, entityId, costLkr, sellingPriceLkr };
 }
 
 export function createDayPlan(dayNumber: number): DayPlan {
@@ -78,6 +89,7 @@ export function createDayPlan(dayNumber: number): DayPlan {
     entries: [createEntry()],
     transportVehicleId: "",
     transportRateLkr: 0,
+    transportSellingPriceLkr: 0,
   };
 }
 
@@ -104,6 +116,12 @@ export function normalizeTourForm(form: TourFormState): TourFormState {
       ...day,
       transportVehicleId: day.transportVehicleId ?? "",
       transportRateLkr: day.transportRateLkr ?? 0,
+      transportSellingPriceLkr: day.transportSellingPriceLkr ?? 0,
+      entries: day.entries.map((entry) => ({
+        ...entry,
+        costLkr: entry.costLkr ?? 0,
+        sellingPriceLkr: entry.sellingPriceLkr ?? 0,
+      })),
     })),
   };
 }
@@ -125,10 +143,16 @@ export function tourToFormState(tour: AgencyTourDetail): TourFormState {
           dayNumber: day.dayNumber,
           transportVehicleId: day.transportVehicleId ?? "",
           transportRateLkr: day.transportRateLkr ?? 0,
+          transportSellingPriceLkr: day.transportSellingPriceLkr ?? 0,
           entries:
             day.items.length > 0
               ? day.items.map((item) =>
-                  createEntry(item.scheduledTime ?? "", item.entityId ?? "")
+                  createEntry(
+                    item.scheduledTime ?? "",
+                    item.entityId ?? "",
+                    item.priceLkr ?? 0,
+                    item.sellingPriceLkr ?? item.priceLkr ?? 0
+                  )
                 )
               : [createEntry()],
         }))
@@ -201,7 +225,7 @@ export function buildItineraryFromTourForm(
             entityId: e.entityId,
             label: ent?.name || "Activity",
             kind: "REQUIRED" as const,
-            priceLkr: ent?.priceHint ?? null,
+            priceLkr: e.costLkr > 0 ? e.costLkr : ent?.priceHint ?? null,
           };
         }),
     }))
@@ -225,16 +249,31 @@ export function filterGroupOptions(groups: GroupOption[], searchQuery = ""): Gro
   return groups.filter((g) => g.name.toLowerCase().includes(q));
 }
 
+/** Unique, sorted list of destinations (cities) across the given entities. */
+export function entityDestinationOptions(entities: EntityOption[]): string[] {
+  const set = new Set<string>();
+  for (const e of entities) {
+    const city = e.city?.trim();
+    if (city) set.add(city);
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
 export function filterEntityOptions(
   entities: EntityOption[],
   groups: GroupOption[],
   typeFilter: string,
   groupFilter: string,
-  searchQuery = ""
+  searchQuery = "",
+  cityFilter = "all"
 ): EntityOption[] {
   let list = entities;
   if (typeFilter !== "all") {
     list = list.filter((e) => e.type === typeFilter);
+  }
+  if (cityFilter !== "all") {
+    const target = cityFilter.trim().toLowerCase();
+    list = list.filter((e) => (e.city ?? "").trim().toLowerCase() === target);
   }
   if (groupFilter !== "all") {
     const group = groups.find((g) => g.id === groupFilter);
@@ -282,12 +321,18 @@ export function buildTourPlanPayload(
         : undefined,
       transportRateLkr:
         day.transportVehicleId && day.transportRateLkr > 0 ? day.transportRateLkr : undefined,
+      transportSellingPriceLkr:
+        day.transportVehicleId && day.transportSellingPriceLkr > 0
+          ? day.transportSellingPriceLkr
+          : undefined,
       items: day.entries
         .filter((e) => e.entityId && e.time)
         .map((e, idx) => ({
           entityId: e.entityId,
           scheduledTime: e.time,
           sortOrder: idx,
+          costLkr: e.costLkr > 0 ? e.costLkr : undefined,
+          sellingPriceLkr: e.sellingPriceLkr > 0 ? e.sellingPriceLkr : undefined,
         })),
     })),
   };

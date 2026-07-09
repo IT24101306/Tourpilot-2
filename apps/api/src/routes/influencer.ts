@@ -319,7 +319,7 @@ influencerRouter.get("/mine/display", authRequired, requireRoles("INFLUENCER"), 
 
     res.json({
       slug: profile.slug,
-      publicPath: `/influencers/${profile.slug}`,
+      publicPath: `/i/${profile.slug}`,
       display,
       availableOffers: activeOffers.map(serializeActiveOffer),
       availableTours: await Promise.all(
@@ -398,6 +398,7 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
           .max(12)
           .optional()
           .default([]),
+        socialTagHandle: z.string().max(80).optional().default(""),
         tourSettings: z
           .record(
             z.string(),
@@ -405,6 +406,16 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
               termsAcceptedAt: z.string().optional(),
               hideAgencyName: z.boolean().optional(),
               displayPriceLkr: z.number().positive().optional(),
+              coverUrl: z.string().url().max(500).optional(),
+              galleryImages: z
+                .array(
+                  z.object({
+                    url: z.string().url().max(500),
+                    label: z.string().max(80).optional(),
+                  })
+                )
+                .max(8)
+                .optional(),
             })
           )
           .optional()
@@ -434,8 +445,16 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
       }
     }
 
-    const tourSettings: Record<string, { termsAcceptedAt?: string; hideAgencyName?: boolean; displayPriceLkr?: number }> =
-      {};
+    const tourSettings: Record<
+      string,
+      {
+        termsAcceptedAt?: string;
+        hideAgencyName?: boolean;
+        displayPriceLkr?: number;
+        coverUrl?: string;
+        galleryImages?: { url: string; label?: string }[];
+      }
+    > = {};
     for (const tourId of tourIds) {
       const settings = body.tourSettings[tourId];
       if (!settings?.termsAcceptedAt?.trim()) {
@@ -457,6 +476,18 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
         ...(settings.hideAgencyName ? { hideAgencyName: true } : {}),
         ...(settings.displayPriceLkr != null && settings.displayPriceLkr > minPrice
           ? { displayPriceLkr: Math.round(settings.displayPriceLkr) }
+          : {}),
+        ...(settings.coverUrl?.trim() ? { coverUrl: settings.coverUrl.trim() } : {}),
+        ...(settings.galleryImages?.length
+          ? {
+              galleryImages: settings.galleryImages
+                .map((image) => ({
+                  url: image.url.trim(),
+                  ...(image.label?.trim() ? { label: image.label.trim() } : {}),
+                }))
+                .filter((image) => image.url)
+                .slice(0, 8),
+            }
           : {}),
       };
     }
@@ -482,6 +513,7 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
         aboutTitle: body.aboutTitle,
         aboutDescription: body.aboutDescription,
         socialLinks: body.socialLinks,
+        socialTagHandle: body.socialTagHandle,
         tourSettings,
       },
       profile.user.name
@@ -495,7 +527,7 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
 
     res.json({
       slug: profile.slug,
-      publicPath: `/influencers/${profile.slug}`,
+      publicPath: `/i/${profile.slug}`,
       display: content,
     });
   } catch (e) {

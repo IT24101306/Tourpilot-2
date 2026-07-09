@@ -20,6 +20,8 @@ export const offersRouter = Router();
 const offerRegisterBodySchema = z.object({
   screenshotUrl: storedImageUrlSchema,
   termsAccepted: z.literal(true),
+  tourId: z.string().min(1),
+  message: z.string().max(2000).optional(),
 });
 
 offersRouter.get("/active", async (_req, res, next) => {
@@ -108,13 +110,37 @@ offersRouter.get("/:id/registrations", async (req, res, next) => {
   }
 });
 
+offersRouter.get("/:id", async (req, res, next) => {
+  try {
+    const now = new Date();
+    const offer = await prisma.offer.findFirst({
+      where: {
+        id: req.params.id,
+        isActive: true,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
+      include: offerIncludeActive,
+    });
+    if (!offer) {
+      return res.status(404).json({ error: "Offer not found" });
+    }
+    res.json(serializeActiveOffer(offer));
+  } catch (e) {
+    next(e);
+  }
+});
+
 offersRouter.post("/:id/register", authRequired, async (req, res, next) => {
   try {
     const body = offerRegisterBodySchema.parse(req.body);
     const now = new Date();
     const offer = await prisma.offer.findUnique({
       where: { id: req.params.id },
-      include: { _count: { select: { registrations: true } } },
+      include: {
+        _count: { select: { registrations: true } },
+        tours: { select: { tourId: true } },
+      },
     });
 
     if (!offer || !offer.isActive) {
@@ -129,16 +155,50 @@ offersRouter.post("/:id/register", authRequired, async (req, res, next) => {
       return res.status(409).json({ error: "Offer registration cap reached" });
     }
 
-    const reg = await prisma.offerRegistration.create({
-      data: {
-        offerId: offer.id,
-        userId: req.user!.id,
-        screenshotUrl: body.screenshotUrl,
-        termsAcceptedAt: now,
-      },
+    if (!body.tourId) {
+      return res.status(400).json({ error: "Choose a tour to register for" });
+    }
+
+    const tourWhere: { id: string; isPublished: true; agencyId?: string } = {
+      id: body.tourId,
+      isPublished: true,
+    };
+    if (offer.agencyId) {
+      tourWhere.agencyId = offer.agencyId;
+    }
+
+    const tour = await prisma.tour.findFirst({
+      where: tourWhere,
+      select: { id: true },
+    });
+    if (!tour) {
+      return res.status(400).json({ error: "Selected tour is not available for this offer" });
+    }
+
+    const reg = await prisma.$transaction(async (tx) => {
+      const created = await tx.offerRegistration.create({
+        data: {
+          offerId: offer.id,
+          userId: req.user!.id,
+          tourId: body.tourId ?? null,
+          screenshotUrl: body.screenshotUrl,
+          message: body.message?.trim() ?? "",
+          termsAcceptedAt: now,
+        },
+      });
+      const registrationNumber = await tx.offerRegistration.count({
+        where: { offerId: offer.id, createdAt: { lte: created.createdAt } },
+      });
+      return { created, registrationNumber };
     });
 
-    res.status(201).json(reg);
+    res.status(201).json({
+      id: reg.created.id,
+      offerId: reg.created.offerId,
+      tourId: reg.created.tourId,
+      registrationNumber: reg.registrationNumber,
+      createdAt: reg.created.createdAt,
+    });
   } catch (e) {
     if ((e as { code?: string }).code === "P2002") {
       return res.status(409).json({ error: "Already registered" });

@@ -1,4 +1,5 @@
 import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
+import { AGENCY_TRANSPORT_OPTIONS, type TransportOption } from "./transportOptions";
 
 export type DisplaySectionFlags = {
   whoWeAre: boolean;
@@ -8,6 +9,7 @@ export type DisplaySectionFlags = {
   gallery: boolean;
   offers: boolean;
   inquiry: boolean;
+  transport: boolean;
 };
 
 export type DisplaySocialLink = {
@@ -82,6 +84,8 @@ export type DisplayOffer = {
   imageUrl?: string;
 };
 
+export type DisplayTransportOption = TransportOption;
+
 export type DisplayContent = {
   heroHeadline: string;
   heroSubheadline: string;
@@ -90,6 +94,7 @@ export type DisplayContent = {
   whoWeAreDescription: string;
   whoWeAreSocialLinks: DisplaySocialLink[];
   whoWeAreImages: WhoWeAreImage[];
+  socialTagHandle: string;
   packagesTitle: string;
   packagesSubtitle: string;
   ratingScore: string;
@@ -100,6 +105,7 @@ export type DisplayContent = {
   featuredQuote: string;
   packages: DisplayPackage[];
   offers: DisplayOffer[];
+  transportOptions: DisplayTransportOption[];
 };
 
 export type DisplayConfig = {
@@ -118,6 +124,7 @@ export const defaultDisplayContent = (): DisplayContent => ({
   whoWeAreDescription: "",
   whoWeAreSocialLinks: [],
   whoWeAreImages: [],
+  socialTagHandle: "",
   packagesTitle: "Ready-Made Packages",
   packagesSubtitle: "Curated routes with local guides, transport, and stays included.",
   ratingScore: "4.9",
@@ -134,6 +141,7 @@ export const defaultDisplayContent = (): DisplayContent => ({
     "We expected sand and silence. We found peace, stars, and people who love what they do.",
   packages: [],
   offers: [],
+  transportOptions: AGENCY_TRANSPORT_OPTIONS.map((option) => ({ ...option })),
 });
 
 export const defaultDisplayConfig = (): DisplayConfig => ({
@@ -145,6 +153,7 @@ export const defaultDisplayConfig = (): DisplayConfig => ({
     gallery: true,
     offers: true,
     inquiry: true,
+    transport: true,
   },
   content: defaultDisplayContent(),
   gallery: [],
@@ -156,6 +165,11 @@ export function sectionEnabled(
   key: keyof DisplaySectionFlags
 ): boolean {
   return enabled?.[key] ?? defaultDisplayConfig().enabled[key];
+}
+
+export function resolveTransportOptions(content: DisplayContent): DisplayTransportOption[] {
+  if (Array.isArray(content.transportOptions)) return content.transportOptions;
+  return AGENCY_TRANSPORT_OPTIONS;
 }
 
 /** Resolve hero slides for the public page (custom slides → cover → featured → default). */

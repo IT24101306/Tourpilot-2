@@ -20,11 +20,14 @@ const dayPlanSchema = z.object({
   transportVehicleId: z.string().max(40).optional(),
   transportLabel: z.string().max(120).optional(),
   transportRateLkr: z.number().nonnegative().optional(),
+  transportSellingPriceLkr: z.number().nonnegative().optional(),
   items: z.array(
     z.object({
       entityId: z.string(),
       scheduledTime: z.string().min(1),
       sortOrder: z.number().int().default(0),
+      costLkr: z.number().nonnegative().optional(),
+      sellingPriceLkr: z.number().nonnegative().optional(),
     })
   ),
 });
@@ -90,11 +93,17 @@ async function replaceTourDayPlans(
         transportLabel: day.transportLabel?.trim() || null,
         transportRateLkr:
           day.transportRateLkr != null && day.transportRateLkr > 0 ? day.transportRateLkr : null,
+        transportSellingPriceLkr:
+          day.transportSellingPriceLkr != null && day.transportSellingPriceLkr > 0
+            ? day.transportSellingPriceLkr
+            : null,
       },
     });
 
     for (const item of day.items) {
       const entity = validEntities.find((e) => e.id === item.entityId)!;
+      const entityPrice =
+        entity.priceHint != null ? Number(entity.priceHint) : null;
       await tx.tourDayItem.create({
         data: {
           tourDayId: tourDay.id,
@@ -102,7 +111,8 @@ async function replaceTourDayPlans(
           scheduledTime: item.scheduledTime,
           sortOrder: item.sortOrder,
           label: entity.name,
-          priceLkr: entity.priceHint,
+          priceLkr: item.costLkr ?? entityPrice,
+          sellingPriceLkr: item.sellingPriceLkr ?? entityPrice,
         },
       });
     }
@@ -606,8 +616,11 @@ function serializeTourListItem(
       transportVehicleId?: string | null;
       transportLabel?: string | null;
       transportRateLkr?: unknown | null;
+      transportSellingPriceLkr?: unknown | null;
       items: Array<{
         scheduledTime: string | null;
+        priceLkr?: unknown | null;
+        sellingPriceLkr?: unknown | null;
         entity: { id: string; name: string; type: string } | null;
         label: string | null;
       }>;
@@ -645,11 +658,15 @@ function serializeTourListItem(
       transportLabel: d.transportLabel ?? null,
       transportRateLkr:
         d.transportRateLkr != null ? Number(d.transportRateLkr) : null,
+      transportSellingPriceLkr:
+        d.transportSellingPriceLkr != null ? Number(d.transportSellingPriceLkr) : null,
       items: d.items.map((i) => ({
         scheduledTime: i.scheduledTime,
         entityId: i.entity?.id ?? null,
         entityName: i.entity?.name ?? i.label,
         entityType: i.entity?.type,
+        priceLkr: i.priceLkr != null ? Number(i.priceLkr) : null,
+        sellingPriceLkr: i.sellingPriceLkr != null ? Number(i.sellingPriceLkr) : null,
       })),
     })),
     linkedOffers,

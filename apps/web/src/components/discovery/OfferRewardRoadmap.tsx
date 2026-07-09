@@ -1,6 +1,9 @@
 import { useState, type MouseEvent } from "react";
 import {
+  offerRewardTierDisplayLine,
   offerRewardTierHeadline,
+  offerRewardTierIcon,
+  offerRewardTierMilestoneHeading,
   parseOfferRewardTiers,
   summarizeOfferRewardTiers,
   type OfferRewardTier,
@@ -135,8 +138,15 @@ export function OfferRewardRoadmap({
                 isNext ? " is-next" : ""
               }`}
             >
-              <span className="offer-reward-roadmap__detail-count">{tier.registrationsRequired}</span>
-              <span className="offer-reward-roadmap__detail-text">{offerRewardTierHeadline(tier)}</span>
+              <p className="offer-reward-roadmap__detail-heading">
+                {offerRewardTierMilestoneHeading(tier)}
+              </p>
+              <p className="offer-reward-roadmap__detail-reward">
+                <span className="offer-reward-roadmap__detail-icon" aria-hidden="true">
+                  {offerRewardTierIcon(tier)}
+                </span>
+                <span>{offerRewardTierDisplayLine(tier)}</span>
+              </p>
             </li>
           );
         })}

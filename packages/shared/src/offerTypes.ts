@@ -75,6 +75,47 @@ export function offerRewardTierHeadline(tier: OfferRewardTier): string {
   return `${tier.winnersCount} people get ${tier.rewardLabel}`;
 }
 
+function formatRewardPhrase(label: string): string {
+  const text = label.trim().replace(/^(a |an )/i, "");
+  return text
+    .split(/\s+/)
+    .map((word) => {
+      if (/^free$/i.test(word)) return "FREE";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+/** Public flip-card milestone heading, e.g. "50 Registrations". */
+export function offerRewardTierMilestoneHeading(tier: OfferRewardTier): string {
+  return `${tier.registrationsRequired} Registrations`;
+}
+
+/** Public flip-card reward line, e.g. "FREE Dinner for Everyone". */
+export function offerRewardTierDisplayLine(tier: OfferRewardTier): string {
+  const reward = formatRewardPhrase(tier.rewardLabel);
+
+  if (offerRewardTierForEveryone(tier)) {
+    const core = reward.replace(/^FREE\s+/i, "");
+    return core ? `FREE ${core} for Everyone` : "FREE Reward for Everyone";
+  }
+
+  if (tier.winnersCount === 1) {
+    const core = reward.replace(/^FREE\s+/i, "FREE ");
+    const article = /^[aeiou]/i.test(core) ? "an" : "a";
+    return `1 Lucky Winner Gets ${article} ${core}`;
+  }
+
+  const core = reward.replace(/^FREE\s+/i, "FREE ");
+  return `${tier.winnersCount} Lucky Winners Get ${core}`;
+}
+
+/** Emoji shown beside the reward line on offer cards. */
+export function offerRewardTierIcon(tier: OfferRewardTier): string {
+  if (offerRewardTierForEveryone(tier)) return "🍽️";
+  return "🎁";
+}
+
 export function describeOfferRewardTier(tier: OfferRewardTier): string {
   const reward = offerRewardTierHeadline(tier);
   return `At ${tier.registrationsRequired} registrations — ${reward}`;
