@@ -187,6 +187,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           transportOptions: Array.isArray(data.content.transportOptions)
             ? data.content.transportOptions
             : defaultDisplayConfig().content.transportOptions,
+          offerBannerStyle:
+            data.content.offerBannerStyle === "strip" ? "strip" : "card",
         },
         gallery: data.gallery,
         reviews: data.reviews,
@@ -1576,6 +1578,66 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 checked={config.enabled.offers}
                 onChange={(checked) => toggleSection("offers", checked)}
               />
+
+              <div className="display-list-block">
+                <p className="display-subsection-label">Loyalty offer banner style</p>
+                <p className="muted display-subsection-desc">
+                  Choose how the free-tour offer appears on your public page.
+                </p>
+                <div className="display-offer-style-options" role="radiogroup" aria-label="Offer banner style">
+                  <label
+                    className={`display-offer-style-option${
+                      (content.offerBannerStyle ?? "card") === "card" ? " is-selected" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="offerBannerStyle"
+                      checked={(content.offerBannerStyle ?? "card") === "card"}
+                      onChange={() =>
+                        void applyAndPersist(
+                          (prev) => ({
+                            ...prev,
+                            content: { ...prev.content, offerBannerStyle: "card" },
+                          }),
+                          "Offer banner style updated."
+                        )
+                      }
+                    />
+                    <span>
+                      <strong>Style 1 — Card</strong>
+                      <span className="muted">Flip card with rewards, countdown, and Book now</span>
+                    </span>
+                  </label>
+                  <label
+                    className={`display-offer-style-option${
+                      content.offerBannerStyle === "strip" ? " is-selected" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="offerBannerStyle"
+                      checked={content.offerBannerStyle === "strip"}
+                      onChange={() =>
+                        void applyAndPersist(
+                          (prev) => ({
+                            ...prev,
+                            content: { ...prev.content, offerBannerStyle: "strip" },
+                          }),
+                          "Offer banner style updated."
+                        )
+                      }
+                    />
+                    <span>
+                      <strong>Style 2 — Strip</strong>
+                      <span className="muted">
+                        “Your entire tour is free!” banner with Click here
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               {content.offers.length === 0 ? (
                 <p className="display-empty-hint">No promo cards yet.</p>
               ) : (

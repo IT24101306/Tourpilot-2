@@ -13,6 +13,7 @@ import {
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
+import { AgencyOfferFreeBanner } from "../components/discovery/AgencyOfferFreeBanner";
 import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 import { FormatLkr } from "../components/currency/FormatLkr";
 import { offerBookPath } from "../lib/offerBookPaths";
@@ -301,6 +302,35 @@ export function AgencyDetailPage() {
     [agency]
   );
 
+  const stripPackages = useMemo(() => {
+    const fromPackages = packages
+      .map((pkg) => {
+        const tour = pkg.tourId ? tourById.get(pkg.tourId) : undefined;
+        if (!tour) return null;
+        return {
+          id: tour.id,
+          title: pkg.title || tour.title,
+          slug: tour.slug,
+          coverUrl: pkg.imageUrl || tour.coverUrl,
+          basePriceLkr: tour.basePriceLkr,
+          location: pkg.location,
+          days: tour.days,
+        };
+      })
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
+
+    if (fromPackages.length > 0) return fromPackages;
+
+    return (agency?.tours ?? []).map((tour) => ({
+      id: tour.id,
+      title: tour.title,
+      slug: tour.slug,
+      coverUrl: tour.coverUrl,
+      basePriceLkr: tour.basePriceLkr,
+      days: tour.days,
+    }));
+  }, [packages, tourById, agency?.tours]);
+
   if (!agency) {
     return (
       <div className="agency-display">
@@ -335,13 +365,18 @@ export function AgencyDetailPage() {
   const hasLoyaltyOffers = showOffers && loyaltyOffers.length > 0;
   const hasCmsOffers = showOffers && cmsOffers.length > 0;
   const hasOffers = hasLoyaltyOffers || hasCmsOffers;
+  const offerBannerStyle = content.offerBannerStyle === "strip" ? "strip" : "card";
+  const showStripBanner = showOffers && offerBannerStyle === "strip";
+  const showCardOffers = hasLoyaltyOffers && offerBannerStyle === "card";
   const hasScenicContent =
     hasCmsOffers || showTours || showShowcase;
   const hasGallery = showGallery && gallery.length > 0;
   const heroSectionLinks: { id: string; label: string }[] = [
     { id: "who-we-are", label: "Who we are" },
   ];
-  if (showOffers && hasOffers) heroSectionLinks.push({ id: "offers", label: "Offers" });
+  if ((showOffers && hasOffers) || showStripBanner) {
+    heroSectionLinks.push({ id: "offers", label: "Offers" });
+  }
   if (showTours) heroSectionLinks.push({ id: "packages", label: "Packages" });
   if (showShowcase && showReviews) heroSectionLinks.push({ id: "reviews", label: "Reviews" });
   if (hasGallery) heroSectionLinks.push({ id: "gallery", label: "Gallery" });
@@ -404,11 +439,11 @@ export function AgencyDetailPage() {
           </div>
 
           <div className="agency-hero-banner__actions">
-            {showOffers && hasOffers && (
+            {(showOffers && hasOffers) || showStripBanner ? (
               <button type="button" className="agency-hero-banner__cta" onClick={scrollToOffers}>
                 View offers
               </button>
-            )}
+            ) : null}
           </div>
         </div>
         <AgencyHeroSectionNav links={heroSectionLinks} />
@@ -427,7 +462,20 @@ export function AgencyDetailPage() {
           </div>
         </div>
 
-        {hasLoyaltyOffers && (
+        {showStripBanner && (
+          <AgencyOfferFreeBanner
+            agencyId={agency.id}
+            agencyName={agency.name}
+            agencySlug={agency.slug}
+            packages={stripPackages}
+            offers={loyaltyOffers}
+            returnTo={agencyReturnPath}
+            refCode={refCode}
+            socialTagHandle={content.socialTagHandle}
+          />
+        )}
+
+        {showCardOffers && (
           <AgencyOffersFlipShowcase
             offers={loyaltyOffers.map((offer) => ({
               ...offer,

@@ -21,6 +21,9 @@ type Props = {
   tour?: InquiryTourRef | null;
   /** Scroll this section into view once after mount (e.g. from tour inquire link). */
   focusOnMount?: boolean;
+  /** Compact layout for use inside offer-flow side panels. */
+  embedded?: boolean;
+  onSuccess?: (inquiryId: string) => void;
 };
 
 export function AgencyInquirySection({
@@ -30,6 +33,8 @@ export function AgencyInquirySection({
   refCode,
   tour,
   focusOnMount,
+  embedded,
+  onSuccess,
 }: Props) {
   const sectionRef = useRef<HTMLElement>(null);
   const location = useLocation();
@@ -136,6 +141,7 @@ export function AgencyInquirySection({
       await refreshUser().catch(() => {});
       setSentInquiryId(result.id);
       setStatus("Your inquiry was sent! The agency will reply in your trip room.");
+      onSuccess?.(result.id);
       if (!tour) {
         setMessage("");
         setInterests("");
@@ -153,54 +159,64 @@ export function AgencyInquirySection({
   return (
     <section
       ref={sectionRef}
-      className="agency-inquiry-section"
-      id="request-custom-tour"
+      className={`agency-inquiry-section${embedded ? " agency-inquiry-section--embedded" : ""}`}
+      id={embedded ? undefined : "request-custom-tour"}
     >
       <div className="agency-inquiry-inner">
         <div className="agency-inquiry-layout">
-          <header className="agency-inquiry-intro">
-            <span className="agency-inquiry-eyebrow">
-              {isTourInquiry ? "Ready-made package" : "Personalized travel"}
-            </span>
-            <h2>{isTourInquiry ? `Inquire about ${tour!.title}` : "Request a custom tour"}</h2>
-            <p className="agency-inquiry-lead">
-              {isTourInquiry ? (
-                <>
-                  You are inquiring about a specific tour from <strong>{agencyName}</strong>. Add
-                  dates and any changes — the agency will reply in your trip room.
-                </>
-              ) : (
-                <>
-                  Tell <strong>{agencyName}</strong> what you need — dates, group size, budget, and
-                  interests — and receive a tailored proposal on your profile.
-                </>
-              )}
-            </p>
-            <ul className="agency-inquiry-trust" aria-hidden="true">
-              <li>
-                <span className="agency-inquiry-trust-icon">
-                  <LineCheckIcon size={14} />
-                </span>
-                No payment required to inquire
-              </li>
-              <li>
-                <span className="agency-inquiry-trust-icon">
-                  <LineCheckIcon size={14} />
-                </span>
-                Direct reply from the agency team
-              </li>
-              <li>
-                <span className="agency-inquiry-trust-icon">
-                  <LineCheckIcon size={14} />
-                </span>
-                Refine the itinerary together
-              </li>
-            </ul>
-          </header>
+          {!embedded && (
+            <header className="agency-inquiry-intro">
+              <span className="agency-inquiry-eyebrow">
+                {isTourInquiry ? "Ready-made package" : "Personalized travel"}
+              </span>
+              <h2>{isTourInquiry ? `Inquire about ${tour!.title}` : "Request a custom tour"}</h2>
+              <p className="agency-inquiry-lead">
+                {isTourInquiry ? (
+                  <>
+                    You are inquiring about a specific tour from <strong>{agencyName}</strong>. Add
+                    dates and any changes — the agency will reply in your trip room.
+                  </>
+                ) : (
+                  <>
+                    Tell <strong>{agencyName}</strong> what you need — dates, group size, budget, and
+                    interests — and receive a tailored proposal on your profile.
+                  </>
+                )}
+              </p>
+              <ul className="agency-inquiry-trust" aria-hidden="true">
+                <li>
+                  <span className="agency-inquiry-trust-icon">
+                    <LineCheckIcon size={14} />
+                  </span>
+                  No payment required to inquire
+                </li>
+                <li>
+                  <span className="agency-inquiry-trust-icon">
+                    <LineCheckIcon size={14} />
+                  </span>
+                  Direct reply from the agency team
+                </li>
+                <li>
+                  <span className="agency-inquiry-trust-icon">
+                    <LineCheckIcon size={14} />
+                  </span>
+                  Refine the itinerary together
+                </li>
+              </ul>
+            </header>
+          )}
 
           <div className="agency-inquiry-card">
+            {embedded && (
+              <header className="agency-inquiry-embedded-head">
+                <h3>{isTourInquiry ? `Inquire about ${tour!.title}` : "Request a custom tour"}</h3>
+                <p className="muted">
+                  Tell the agency what to change, then continue with offer registration.
+                </p>
+              </header>
+            )}
             {isTourInquiry && tour && (
-              <InquiryTourChip tour={tour} agencySlug={agencySlug} />
+              <InquiryTourChip tour={tour} agencySlug={agencySlug} compact={embedded} />
             )}
 
             {!token && (

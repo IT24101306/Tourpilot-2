@@ -62,6 +62,9 @@ export type DisplayOffer = {
   imageUrl?: string;
 };
 
+/** Style 1 = flip card showcase; Style 2 = free-tour strip banner. */
+export type OfferBannerStyle = "card" | "strip";
+
 export type DisplayTransportOption = {
   id: string;
   name: string;
@@ -143,6 +146,7 @@ export type DisplayContent = {
   packages: DisplayPackage[];
   offers: DisplayOffer[];
   transportOptions: DisplayTransportOption[];
+  offerBannerStyle: OfferBannerStyle;
 };
 
 export type DisplaySectionsPayload = {
@@ -187,6 +191,7 @@ export function defaultDisplayContent(): DisplayContent {
     packages: [],
     offers: [],
     transportOptions: DEFAULT_TRANSPORT_OPTIONS.map((option) => ({ ...option })),
+    offerBannerStyle: "card",
   };
 }
 
@@ -357,6 +362,10 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
     base.transportOptions = transportOptions.slice(0, 12);
   } else {
     base.transportOptions = DEFAULT_TRANSPORT_OPTIONS.map((option) => ({ ...option }));
+  }
+
+  if (content.offerBannerStyle === "strip" || content.offerBannerStyle === "card") {
+    base.offerBannerStyle = content.offerBannerStyle;
   }
 
   return base;
