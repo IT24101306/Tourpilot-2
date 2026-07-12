@@ -23,18 +23,17 @@ jobs:
           cache: npm
 
       - name: Install
+        env:
+          # Required by apps/api postinstall → prisma generate (prisma.config.ts)
+          DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
         run: npm ci
 
       - name: Build shared
         run: npm run build -w @tourpilot/shared
 
-      - name: Generate Prisma client
-        working-directory: apps/api
+      - name: Build API
         env:
           DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
-        run: npx prisma generate
-
-      - name: Build API
         run: npm run build -w @tourpilot/api
 
       - name: Build web
