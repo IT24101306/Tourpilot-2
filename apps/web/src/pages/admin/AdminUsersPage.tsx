@@ -107,6 +107,7 @@ export function AdminUsersPage() {
         { label: "Support", value: features.support ? "On" : "Off" },
         { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
         { label: "Offers", value: features.offers ? "On" : "Off" },
+        { label: "Display", value: features.display ? "On" : "Off" },
       ],
       onConfirm: async () => {
         setSaving(true);

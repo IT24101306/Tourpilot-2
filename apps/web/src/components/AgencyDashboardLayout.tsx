@@ -9,13 +9,18 @@ import { TourPilotBrand } from "./TourPilotBrand";
 import { DashboardSupportButton } from "./support/SupportAgentsModal";
 import "../styles/dashboard.css";
 
-const AGENCY_TABS: { to: string; label: string; end?: boolean; feature?: "offers" }[] = [
+const AGENCY_TABS: {
+  to: string;
+  label: string;
+  end?: boolean;
+  feature?: "offers" | "display";
+}[] = [
   { to: "/dashboard/agency", label: "Overview", end: true },
   { to: "/dashboard/agency/bookings", label: "Bookings" },
   { to: "/dashboard/agency/negotiations", label: "Negotiations" },
   { to: "/dashboard/agency/tasks", label: "Tasks" },
   { to: "/dashboard/agency/travelers", label: "Travelers" },
-  { to: "/dashboard/agency/display", label: "Display" },
+  { to: "/dashboard/agency/display", label: "Display", feature: "display" },
   { to: "/dashboard/agency/offers", label: "Offers", feature: "offers" },
 ];
 
@@ -130,9 +135,10 @@ function AgencyDashboardLayoutInner() {
     () =>
       AGENCY_TABS.filter((tab) => {
         if (tab.feature === "offers") return features.offers;
+        if (tab.feature === "display") return features.display;
         return true;
       }),
-    [features.offers]
+    [features.offers, features.display]
   );
 
   const onBuildStep = BUILD_STEPS.some(
@@ -146,6 +152,7 @@ function AgencyDashboardLayoutInner() {
 
   const blockedByFeature =
     (!features.offers && location.pathname.startsWith("/dashboard/agency/offers")) ||
+    (!features.display && location.pathname.startsWith("/dashboard/agency/display")) ||
     (!features.driversAndPartners &&
       (location.pathname.startsWith("/dashboard/agency/drivers") ||
         location.pathname.startsWith("/dashboard/agency/partners")));
@@ -253,11 +260,11 @@ function AgencyDashboardLayoutInner() {
               >
                 Site
               </a>
-            ) : (
+            ) : features.display ? (
               <Link to="/dashboard/agency/display" className="nav-link-light">
                 Site
               </Link>
-            )}
+            ) : null}
             <button type="button" className="nav-link-light" onClick={logout}>
               Log out
             </button>

@@ -229,6 +229,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         support: z.boolean().optional(),
         walletTopup: z.boolean().optional(),
         offers: z.boolean().optional(),
+        display: z.boolean().optional(),
       })
       .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
       .parse(req.body) as Partial<AgencyFeatures>;
@@ -245,6 +246,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureSupport: true,
         featureWalletTopup: true,
         featureOffers: true,
+        featureDisplay: true,
       },
     });
 
@@ -297,6 +299,7 @@ adminRouter.get("/users", async (req, res, next) => {
             featureSupport: true,
             featureWalletTopup: true,
             featureOffers: true,
+            featureDisplay: true,
           },
         },
         agencyStaff: {
@@ -312,6 +315,7 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureSupport: true,
                 featureWalletTopup: true,
                 featureOffers: true,
+                featureDisplay: true,
               },
             },
           },

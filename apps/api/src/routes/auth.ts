@@ -402,6 +402,7 @@ function serializeUser(user: {
     featureSupport?: boolean;
     featureWalletTopup?: boolean;
     featureOffers?: boolean;
+    featureDisplay?: boolean;
   } | null;
   agencyDriver?: {
     id: string;

@@ -5,7 +5,8 @@ export type AgencyFeatureKey =
   | "driversAndPartners"
   | "support"
   | "walletTopup"
-  | "offers";
+  | "offers"
+  | "display";
 
 export type AgencyFeatures = Record<AgencyFeatureKey, boolean>;
 
@@ -14,6 +15,7 @@ type AgencyFeatureSource = {
   featureSupport?: boolean;
   featureWalletTopup?: boolean;
   featureOffers?: boolean;
+  featureDisplay?: boolean;
 };
 
 export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | undefined): AgencyFeatures {
@@ -22,6 +24,7 @@ export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | und
     support: agency?.featureSupport ?? true,
     walletTopup: agency?.featureWalletTopup ?? true,
     offers: agency?.featureOffers ?? true,
+    display: agency?.featureDisplay ?? true,
   };
 }
 
@@ -31,6 +34,7 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
     featureSupport: boolean;
     featureWalletTopup: boolean;
     featureOffers: boolean;
+    featureDisplay: boolean;
   }> = {};
   if (features.driversAndPartners !== undefined) {
     data.featureDriversAndPartners = features.driversAndPartners;
@@ -38,6 +42,7 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
   if (features.support !== undefined) data.featureSupport = features.support;
   if (features.walletTopup !== undefined) data.featureWalletTopup = features.walletTopup;
   if (features.offers !== undefined) data.featureOffers = features.offers;
+  if (features.display !== undefined) data.featureDisplay = features.display;
   return data;
 }
 
@@ -46,6 +51,7 @@ const FEATURE_LABELS: Record<AgencyFeatureKey, string> = {
   support: "Support",
   walletTopup: "Wallet topup",
   offers: "Offers",
+  display: "Display",
 };
 
 /** Returns an Express-ready error payload when the agency feature is disabled. */

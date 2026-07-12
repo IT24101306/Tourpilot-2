@@ -23,6 +23,11 @@ const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[]
     label: "Offers",
     hint: "Loyalty offers tab and management",
   },
+  {
+    key: "display",
+    label: "Display",
+    hint: "Storefront editor — hero, packages, gallery, reviews",
+  },
 ];
 
 type Props = {

@@ -443,7 +443,12 @@ agenciesRouter.get("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
 
 
-agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+agenciesRouter.put(
+  "/mine/display",
+  authRequired,
+  requireRoles("AGENCY"),
+  requireAgencyFeature("display"),
+  async (req, res, next) => {
 
   try {
 

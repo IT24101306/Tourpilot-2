@@ -30,6 +30,7 @@ export type AdminAgency = {
     support: boolean;
     walletTopup: boolean;
     offers: boolean;
+    display: boolean;
   };
 };
 
@@ -52,6 +53,7 @@ export type AdminUser = {
       support: boolean;
       walletTopup: boolean;
       offers: boolean;
+      display: boolean;
     };
   } | null;
 };

@@ -262,6 +262,7 @@ model Agency {
   featureSupport            Boolean @default(true)
   featureWalletTopup        Boolean @default(true)
   featureOffers             Boolean @default(true)
+  featureDisplay            Boolean @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   staff           AgencyStaff[]
