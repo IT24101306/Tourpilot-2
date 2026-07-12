@@ -86,15 +86,16 @@ curl -s http://127.0.0.1/api/health
 # open http://YOUR_SERVER_IP in a browser
 ```
 
-Optional seed (once):
+Optional seed (once) — production starts with **empty tables** (`db push` only):
 
 ```bash
-docker compose -f docker-compose.prod.yml exec api npx tsx prisma/seed.ts
-# or demo:
-# docker compose -f docker-compose.prod.yml exec api npx tsx prisma/seed-demo.ts
+cd /var/www/tourpilot   # or your DEPLOY_PATH
+docker compose -f docker-compose.prod.yml --env-file .env exec api npx tsx prisma/seed.ts
+# full demo dataset:
+# docker compose -f docker-compose.prod.yml --env-file .env exec api npx tsx prisma/seed-demo.ts
 ```
 
-> Seed needs `tsx` in the image. If missing, run seed from a one-off container or temporarily enable it. Prefer creating the admin via seed on first boot only.
+Default admin after `seed.ts`: phone `+94779998888` / password `admin123` (override with `ADMIN_SEED_PASSWORD`).
 
 ### 1.5 Point domain + HTTPS (recommended)
 

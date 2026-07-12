@@ -30,8 +30,11 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages/shared ./packages/shared
 COPY --from=build /app/apps/api/package.json ./apps/api/
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+# Seed scripts import from ../src (tsx); keep source available for one-off seeding.
+COPY --from=build /app/apps/api/src ./apps/api/src
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
+COPY --from=build /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
 COPY docker/api-entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh \
   && chmod +x /entrypoint.sh \
