@@ -371,12 +371,11 @@ export function AgencyDetailPage() {
   const hasScenicContent =
     hasCmsOffers || showTours || showShowcase;
   const hasGallery = showGallery && gallery.length > 0;
-  const heroSectionLinks: { id: string; label: string }[] = [
-    { id: "who-we-are", label: "Who we are" },
-  ];
+  const heroSectionLinks: { id: string; label: string }[] = [];
   if ((showOffers && hasOffers) || showStripBanner) {
     heroSectionLinks.push({ id: "offers", label: "Offers" });
   }
+  heroSectionLinks.push({ id: "who-we-are", label: "Who we are" });
   if (showTours) heroSectionLinks.push({ id: "packages", label: "Packages" });
   if (showShowcase && showReviews) heroSectionLinks.push({ id: "reviews", label: "Reviews" });
   if (hasGallery) heroSectionLinks.push({ id: "gallery", label: "Gallery" });
@@ -413,7 +412,10 @@ export function AgencyDetailPage() {
         </nav>
       </header>
 
-      <section className="agency-hero-banner" aria-label={`${agency.name} hero`}>
+      <section
+        className={`agency-hero-banner${showStripBanner ? " agency-hero-banner--with-offer-strip" : ""}`}
+        aria-label={`${agency.name} hero`}
+      >
         <AgencyHeroBanner slides={heroSlides} />
         <div className="agency-hero-banner__content">
           <div className="agency-display-intro agency-display-intro--hero">
@@ -447,6 +449,20 @@ export function AgencyDetailPage() {
           </div>
         </div>
         <AgencyHeroSectionNav links={heroSectionLinks} />
+        {showStripBanner && (
+          <div className="agency-hero-offer-slot">
+            <AgencyOfferFreeBanner
+              agencyId={agency.id}
+              agencyName={agency.name}
+              agencySlug={agency.slug}
+              packages={stripPackages}
+              offers={loyaltyOffers}
+              returnTo={agencyReturnPath}
+              refCode={refCode}
+              socialTagHandle={content.socialTagHandle}
+            />
+          </div>
+        )}
       </section>
 
       <div className="agency-display-body">
@@ -461,19 +477,6 @@ export function AgencyDetailPage() {
             />
           </div>
         </div>
-
-        {showStripBanner && (
-          <AgencyOfferFreeBanner
-            agencyId={agency.id}
-            agencyName={agency.name}
-            agencySlug={agency.slug}
-            packages={stripPackages}
-            offers={loyaltyOffers}
-            returnTo={agencyReturnPath}
-            refCode={refCode}
-            socialTagHandle={content.socialTagHandle}
-          />
-        )}
 
         {showCardOffers && (
           <AgencyOffersFlipShowcase
