@@ -181,7 +181,7 @@ Repo → **Settings → Secrets and variables → Actions**:
 | `DEPLOY_HOST` | VPS IP or hostname |
 | `DEPLOY_USER` | e.g. `deploy` or `ubuntu` |
 | `DEPLOY_SSH_KEY` | **Private** SSH key (full PEM) |
-| `DEPLOY_PORT` | `22` (optional) |
+| `DEPLOY_PORT` | `22` (optional; digits only — no trailing newline/space) |
 | `DEPLOY_PATH` | `/var/www/tourpilot` |
 | `GHCR_PULL_USER` | your GitHub username |
 | `GHCR_PULL_TOKEN` | PAT with `read:packages` |
