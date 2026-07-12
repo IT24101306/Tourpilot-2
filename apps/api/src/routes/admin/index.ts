@@ -13,6 +13,11 @@ import {
   notifyCommissionPaid,
 } from "../../services/notifications.js";
 import { creditCommissionPayout } from "../../services/wallet.js";
+import {
+  agencyFeatureDbFields,
+  serializeAgencyFeatures,
+  type AgencyFeatures,
+} from "../../lib/agencyFeatures.js";
 
 export const adminRouter = Router();
 
@@ -110,6 +115,7 @@ adminRouter.get("/agencies", async (req, res, next) => {
         kyc: a.kyc,
         kycSubmittedAt: a.kycSubmittedAt,
         createdAt: a.createdAt,
+        features: serializeAgencyFeatures(a),
       }))
     );
   } catch (e) {
@@ -215,6 +221,45 @@ adminRouter.patch("/agencies/:id/status", async (req, res, next) => {
   }
 });
 
+adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        driversAndPartners: z.boolean().optional(),
+        support: z.boolean().optional(),
+        walletTopup: z.boolean().optional(),
+        offers: z.boolean().optional(),
+      })
+      .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
+      .parse(req.body) as Partial<AgencyFeatures>;
+
+    const agency = await prisma.agency.update({
+      where: { id: req.params.id },
+      data: agencyFeatureDbFields(body),
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        featureDriversAndPartners: true,
+        featureSupport: true,
+        featureWalletTopup: true,
+        featureOffers: true,
+      },
+    });
+
+    res.json({
+      id: agency.id,
+      name: agency.name,
+      slug: agency.slug,
+      status: agency.status,
+      features: serializeAgencyFeatures(agency),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 adminRouter.get("/users", async (req, res, next) => {
   try {
     const role = req.query.role as UserRole | undefined;
@@ -242,15 +287,61 @@ adminRouter.get("/users", async (req, res, next) => {
         walletBalance: true,
         isActive: true,
         createdAt: true,
-        agency: { select: { id: true, name: true, slug: true, status: true } },
+        agency: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            featureDriversAndPartners: true,
+            featureSupport: true,
+            featureWalletTopup: true,
+            featureOffers: true,
+          },
+        },
+        agencyStaff: {
+          take: 1,
+          select: {
+            agency: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                status: true,
+                featureDriversAndPartners: true,
+                featureSupport: true,
+                featureWalletTopup: true,
+                featureOffers: true,
+              },
+            },
+          },
+        },
       },
     });
 
     res.json(
-      users.map((u) => ({
-        ...u,
-        walletBalance: Number(u.walletBalance),
-      }))
+      users.map((u) => {
+        const agencyRow = u.agency ?? u.agencyStaff[0]?.agency ?? null;
+        return {
+          id: u.id,
+          name: u.name,
+          phone: u.phone,
+          email: u.email,
+          role: u.role,
+          walletBalance: Number(u.walletBalance),
+          isActive: u.isActive,
+          createdAt: u.createdAt,
+          agency: agencyRow
+            ? {
+                id: agencyRow.id,
+                name: agencyRow.name,
+                slug: agencyRow.slug,
+                status: agencyRow.status,
+                features: serializeAgencyFeatures(agencyRow),
+              }
+            : null,
+        };
+      })
     );
   } catch (e) {
     next(e);

@@ -7,6 +7,7 @@ import {
   parseBlockedDates,
 } from "../lib/driverBlockedDates.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
+import { requireAgencyFeature } from "../lib/agencyFeatures.js";
 import { asJson } from "../utils/json.js";
 import { ensureDriverUserAccount, profileStatusFromAgency } from "../services/agencyDriverLink.js";
 import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
@@ -353,7 +354,7 @@ driversRouter.get("/me/assignments", authRequired, requireRoles("DRIVER"), async
   }
 });
 
-driversRouter.get("/agency/assignments", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+driversRouter.get("/agency/assignments", authRequired, requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -374,7 +375,7 @@ driversRouter.get("/agency/assignments", authRequired, requireRoles("AGENCY"), a
 driversRouter.get(
   "/agency/lookup-by-phone",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -433,7 +434,7 @@ driversRouter.get(
   }
 );
 
-driversRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+driversRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -481,7 +482,7 @@ driversRouter.get("/agency/mine", authRequired, requireRoles("AGENCY"), async (r
 driversRouter.delete(
   "/assignments/:assignmentId",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -506,7 +507,7 @@ driversRouter.delete(
 driversRouter.patch(
   "/assignments/:assignmentId",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -556,7 +557,7 @@ driversRouter.patch(
   }
 );
 
-driversRouter.get("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+driversRouter.get("/:id", authRequired, requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -611,7 +612,7 @@ driversRouter.get("/:id", authRequired, requireRoles("AGENCY"), async (req, res,
   }
 });
 
-driversRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+driversRouter.patch("/:id", authRequired, requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -660,7 +661,7 @@ driversRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, re
 driversRouter.get(
   "/:id/assignments",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -684,7 +685,7 @@ driversRouter.get(
   }
 );
 
-driversRouter.post("/:id/assignments", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+driversRouter.post("/:id/assignments", authRequired, requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -787,7 +788,7 @@ driversRouter.post("/:id/assignments", authRequired, requireRoles("AGENCY"), asy
 driversRouter.get(
   "/:id/blocked-dates",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -821,7 +822,7 @@ driversRouter.get(
   }
 );
 
-driversRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+driversRouter.post("/", authRequired, requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -919,7 +920,7 @@ driversRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, n
   }
 });
 
-driversRouter.patch("/:id/status", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+driversRouter.patch("/:id/status", authRequired, requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });

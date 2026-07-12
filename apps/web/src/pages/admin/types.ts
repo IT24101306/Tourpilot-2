@@ -25,6 +25,12 @@ export type AdminAgency = {
   kyc: Record<string, unknown> | null;
   kycSubmittedAt: string | null;
   createdAt: string;
+  features?: {
+    driversAndPartners: boolean;
+    support: boolean;
+    walletTopup: boolean;
+    offers: boolean;
+  };
 };
 
 export type AdminUser = {
@@ -36,7 +42,18 @@ export type AdminUser = {
   walletBalance: number;
   isActive: boolean;
   createdAt: string;
-  agency: { id: string; name: string; slug: string; status: string } | null;
+  agency: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    features?: {
+      driversAndPartners: boolean;
+      support: boolean;
+      walletTopup: boolean;
+      offers: boolean;
+    };
+  } | null;
 };
 
 export type AdminTour = {

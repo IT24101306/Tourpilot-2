@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth, type AgencyFeatures, DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { RejectAgencyModal } from "../../components/admin/RejectAgencyModal";
 import { AgencyKycModal } from "../../components/admin/AgencyKycModal";
+import { AgencyFeaturesModal } from "../../components/admin/AgencyFeaturesModal";
 import type { AgencyKycRecord } from "@tourpilot/shared";
 import type { AdminAgency } from "./types";
 
@@ -23,6 +24,8 @@ export function AdminAgenciesPage() {
   const [kycTarget, setKycTarget] = useState<{ name: string; kyc: AgencyKycRecord | null } | null>(
     null
   );
+  const [featuresAgency, setFeaturesAgency] = useState<AdminAgency | null>(null);
+  const [savingFeatures, setSavingFeatures] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -88,6 +91,39 @@ export function AdminAgenciesPage() {
     }
   }
 
+  function saveFeatures(features: AgencyFeatures) {
+    if (!token || !featuresAgency) return;
+    requestConfirm({
+      title: "Update agency features?",
+      description: "The agency dashboard will show or hide these modules.",
+      confirmLabel: "Save features",
+      summary: [
+        { label: "Agency", value: featuresAgency.name },
+        { label: "Drivers & Partners", value: features.driversAndPartners ? "On" : "Off" },
+        { label: "Support", value: features.support ? "On" : "Off" },
+        { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
+        { label: "Offers", value: features.offers ? "On" : "Off" },
+      ],
+      onConfirm: async () => {
+        setSavingFeatures(true);
+        try {
+          await api(`/admin/agencies/${featuresAgency.id}/features`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify(features),
+          });
+          setMsg(`Features updated for ${featuresAgency.name}.`);
+          setFeaturesAgency(null);
+          await load();
+        } catch {
+          setMsg("Could not update features.");
+        } finally {
+          setSavingFeatures(false);
+        }
+      },
+    });
+  }
+
   return (
     <div className="module-shell module-governance">
       <ModuleHeader module="governance" title="Agencies" subtitle="Full marketplace operator control." />
@@ -145,6 +181,13 @@ export function AdminAgenciesPage() {
                   </td>
                   <td>{a.tourCount}</td>
                   <td className="gov-table-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-nav"
+                      onClick={() => setFeaturesAgency(a)}
+                    >
+                      Features
+                    </button>
                     {a.status === "APPROVED" && (
                       <Link to={`/agencies/${a.slug}`} className="btn btn-ghost btn-nav" target="_blank">
                         View
@@ -224,6 +267,18 @@ export function AdminAgenciesPage() {
         loading={!!workingId}
         onClose={() => setRejectTarget(null)}
         onConfirm={reject}
+      />
+
+      <AgencyFeaturesModal
+        agencyName={featuresAgency?.name ?? ""}
+        open={!!featuresAgency}
+        loading={savingFeatures}
+        initial={{
+          ...DEFAULT_AGENCY_FEATURES,
+          ...(featuresAgency?.features ?? {}),
+        }}
+        onClose={() => setFeaturesAgency(null)}
+        onSave={saveFeatures}
       />
     </div>
   );

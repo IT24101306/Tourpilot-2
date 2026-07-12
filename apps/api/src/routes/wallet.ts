@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authRequired } from "../middleware/auth.js";
+import { assertAgencyFeature } from "../lib/agencyFeatures.js";
 import { topUpWallet } from "../services/wallet.js";
 
 export const walletRouter = Router();
@@ -17,6 +18,12 @@ walletRouter.get("/balance", authRequired, async (req, res, next) => {
 
 walletRouter.post("/topup", authRequired, async (req, res, next) => {
   try {
+    // Agency product flag — tourists/influencers keep profile topup.
+    if (req.user!.role === "AGENCY") {
+      const denied = await assertAgencyFeature(req.user!.id, "walletTopup");
+      if (denied) return res.status(denied.status).json({ error: denied.error });
+    }
+
     const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
     const result = await topUpWallet(req.user!.id, amount);
     res.json(result);

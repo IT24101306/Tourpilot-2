@@ -19,7 +19,13 @@ export type AuthUser = {
   avatarUrl?: string | null;
   walletBalance: number;
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
-  agency?: { id: string; name: string; slug: string; status: string } | null;
+  agency?: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    features?: AgencyFeatures;
+  } | null;
   agencyDriver?: {
     id: string;
     agencyId: string;
@@ -28,6 +34,24 @@ export type AuthUser = {
     status: string;
   } | null;
 };
+
+export type AgencyFeatures = {
+  driversAndPartners: boolean;
+  support: boolean;
+  walletTopup: boolean;
+  offers: boolean;
+};
+
+export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
+  driversAndPartners: true,
+  support: true,
+  walletTopup: true,
+  offers: true,
+};
+
+export function agencyFeaturesOf(user: AuthUser | null | undefined): AgencyFeatures {
+  return { ...DEFAULT_AGENCY_FEATURES, ...(user?.agency?.features ?? {}) };
+}
 
 type AuthContextValue = {
   user: AuthUser | null;

@@ -13,6 +13,7 @@ import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 import { slugify } from "../utils/slug.js";
 import { buildDisplayPayload, defaultInfluencerDisplay } from "../lib/influencerDisplay.js";
 import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
+import { serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 import { buildAgencyKycRecord, parseAgencyKyc } from "../lib/agencyKyc.js";
 import { asJson } from "../utils/json.js";
 
@@ -345,7 +346,14 @@ authRouter.post("/verify-otp", async (req, res, next) => {
     const feeResult = await chargeLoginFee(user.id, user.role);
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
-    const refreshed = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    const refreshed = await prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      include: {
+        agency: true,
+        touristProfile: true,
+        agencyDriver: { include: { agency: { select: { id: true, name: true, slug: true } } } },
+      },
+    });
 
     res.json({
       token,
@@ -385,7 +393,16 @@ function serializeUser(user: {
   avatarUrl: string | null;
   walletBalance: unknown;
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
-  agency?: { id: string; name: string; slug: string; status: string } | null;
+  agency?: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    featureDriversAndPartners?: boolean;
+    featureSupport?: boolean;
+    featureWalletTopup?: boolean;
+    featureOffers?: boolean;
+  } | null;
   agencyDriver?: {
     id: string;
     agencyId: string;
@@ -413,6 +430,7 @@ function serializeUser(user: {
           name: user.agency.name,
           slug: user.agency.slug,
           status: user.agency.status,
+          features: serializeAgencyFeatures(user.agency),
         }
       : null,
     agencyDriver: user.agencyDriver

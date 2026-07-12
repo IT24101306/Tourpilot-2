@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth, type AgencyFeatures, DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { WalletAdjustModal } from "../../components/admin/WalletAdjustModal";
+import { AgencyFeaturesModal } from "../../components/admin/AgencyFeaturesModal";
 import type { AdminUser } from "./types";
 
 const ROLES = ["", "TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"] as const;
@@ -17,6 +18,7 @@ export function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [adjustUser, setAdjustUser] = useState<AdminUser | null>(null);
+  const [featuresUser, setFeaturesUser] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -88,9 +90,51 @@ export function AdminUsersPage() {
     }
   }
 
+  function saveFeatures(features: AgencyFeatures) {
+    if (!token || !featuresUser?.agency) return;
+    const agency = featuresUser.agency;
+    requestConfirm({
+      title: "Update agency features?",
+      description: "The agency dashboard will show or hide these modules.",
+      confirmLabel: "Save features",
+      summary: [
+        { label: "Agency", value: agency.name },
+        { label: "Owner", value: featuresUser.name },
+        {
+          label: "Drivers & Partners",
+          value: features.driversAndPartners ? "On" : "Off",
+        },
+        { label: "Support", value: features.support ? "On" : "Off" },
+        { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
+        { label: "Offers", value: features.offers ? "On" : "Off" },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await api(`/admin/agencies/${agency.id}/features`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify(features),
+          });
+          setMsg(`Features updated for ${agency.name}.`);
+          setFeaturesUser(null);
+          await load();
+        } catch {
+          setMsg("Could not update features.");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
+  }
+
   return (
     <div className="module-shell module-governance">
-      <ModuleHeader module="governance" title="Users" subtitle="Every account on the platform." />
+      <ModuleHeader
+        module="governance"
+        title="Users"
+        subtitle="Accounts, access, and agency feature entitlements."
+      />
 
       <div className="gov-toolbar">
         <input
@@ -132,11 +176,32 @@ export function AdminUsersPage() {
                     <strong>{u.name}</strong>
                     <br />
                     <span className="muted">{u.phone}</span>
+                    {u.agency && (
+                      <>
+                        <br />
+                        <span className="muted">{u.agency.name}</span>
+                      </>
+                    )}
                   </td>
                   <td>{u.role}</td>
                   <td>LKR {u.walletBalance.toLocaleString()}</td>
                   <td>{u.isActive ? "Active" : "Disabled"}</td>
                   <td className="gov-table-actions">
+                    {(u.agency || u.role === "AGENCY") && (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-nav"
+                        disabled={!u.agency || saving}
+                        title={
+                          u.agency
+                            ? "Toggle Drivers, Support, Wallet, Offers"
+                            : "No agency profile linked to this user"
+                        }
+                        onClick={() => u.agency && setFeaturesUser(u)}
+                      >
+                        Features
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn-ghost btn-nav"
@@ -166,6 +231,18 @@ export function AdminUsersPage() {
         loading={saving}
         onClose={() => setAdjustUser(null)}
         onConfirm={adjust}
+      />
+
+      <AgencyFeaturesModal
+        agencyName={featuresUser?.agency?.name ?? ""}
+        open={!!featuresUser?.agency}
+        loading={saving}
+        initial={{
+          ...DEFAULT_AGENCY_FEATURES,
+          ...(featuresUser?.agency?.features ?? {}),
+        }}
+        onClose={() => setFeaturesUser(null)}
+        onSave={saveFeatures}
       />
     </div>
   );

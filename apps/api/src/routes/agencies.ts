@@ -14,6 +14,8 @@ import { prisma } from "../lib/prisma.js";
 
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 
+import { requireAgencyFeature } from "../lib/agencyFeatures.js";
+
 import { asJson } from "../utils/json.js";
 
 import { storedImageUrlSchema, storedImageUrlWithFallback } from "../lib/imageUrlSchema.js";
@@ -673,7 +675,7 @@ agenciesRouter.put("/mine/display", authRequired, requireRoles("AGENCY"), async 
 
 });
 
-agenciesRouter.get("/mine/offers", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+agenciesRouter.get("/mine/offers", authRequired, requireRoles("AGENCY"), requireAgencyFeature("offers"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -689,7 +691,7 @@ agenciesRouter.get("/mine/offers", authRequired, requireRoles("AGENCY"), async (
   }
 });
 
-agenciesRouter.post("/mine/offers", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+agenciesRouter.post("/mine/offers", authRequired, requireRoles("AGENCY"), requireAgencyFeature("offers"), async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -737,7 +739,7 @@ agenciesRouter.post("/mine/offers", authRequired, requireRoles("AGENCY"), async 
 agenciesRouter.patch(
   "/mine/offers/:id",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("offers"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -774,7 +776,7 @@ agenciesRouter.patch(
 agenciesRouter.delete(
   "/mine/offers/:id",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("offers"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -796,7 +798,7 @@ agenciesRouter.delete(
 agenciesRouter.get(
   "/mine/offers/:id/registrations",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("offers"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -822,7 +824,7 @@ agenciesRouter.get(
 agenciesRouter.get(
   "/mine/influencer-commission-requests",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);
@@ -839,7 +841,7 @@ agenciesRouter.get(
 agenciesRouter.patch(
   "/mine/influencer-commission-requests/:id",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles("AGENCY"), requireAgencyFeature("driversAndPartners"),
   async (req, res, next) => {
     try {
       const agency = await getAgencyForUser(req.user!.id);

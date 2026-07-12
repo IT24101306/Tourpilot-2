@@ -168,9 +168,11 @@ export function ProfilePage() {
       actions.push(
         { label: "Manage tours", to: "/dashboard/agency/tours", variant: "teal" },
         { label: "Bookings", to: "/dashboard/agency/bookings" },
-        { label: "Negotiations", to: "/dashboard/agency/negotiations" },
-        { label: "Offers", to: "/dashboard/agency/offers" }
+        { label: "Negotiations", to: "/dashboard/agency/negotiations" }
       );
+      if (user.agency?.features?.offers !== false) {
+        actions.push({ label: "Offers", to: "/dashboard/agency/offers" });
+      }
       break;
     }
     case "DRIVER": {

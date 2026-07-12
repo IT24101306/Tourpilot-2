@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { api, ApiError } from "../api/client";
-import { useAuth } from "../context/AuthContext";
+import { agencyFeaturesOf, useAuth } from "../context/AuthContext";
 import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "./NotificationBell";
 import { ConfirmActionProvider, useConfirmAction } from "./confirm/ConfirmActionContext";
@@ -9,14 +9,14 @@ import { TourPilotBrand } from "./TourPilotBrand";
 import { DashboardSupportButton } from "./support/SupportAgentsModal";
 import "../styles/dashboard.css";
 
-const AGENCY_TABS: { to: string; label: string; end?: boolean }[] = [
+const AGENCY_TABS: { to: string; label: string; end?: boolean; feature?: "offers" }[] = [
   { to: "/dashboard/agency", label: "Overview", end: true },
   { to: "/dashboard/agency/bookings", label: "Bookings" },
   { to: "/dashboard/agency/negotiations", label: "Negotiations" },
   { to: "/dashboard/agency/tasks", label: "Tasks" },
   { to: "/dashboard/agency/travelers", label: "Travelers" },
   { to: "/dashboard/agency/display", label: "Display" },
-  { to: "/dashboard/agency/offers", label: "Offers" },
+  { to: "/dashboard/agency/offers", label: "Offers", feature: "offers" },
 ];
 
 const BUILD_STEPS: { step: number; to: string; label: string; hint: string }[] = [
@@ -116,6 +116,7 @@ function AgencyDashboardLayoutInner() {
   const { user, token, refreshUser, logout } = useAuth();
   const { requestConfirm } = useConfirmAction();
   const location = useLocation();
+  const features = agencyFeaturesOf(user);
   const agencyStatus = user?.agency?.status;
   const [topupOpen, setTopupOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
@@ -124,6 +125,16 @@ function AgencyDashboardLayoutInner() {
   const [stepsMenuOpen, setStepsMenuOpen] = useState(false);
   const [networkMenuOpen, setNetworkMenuOpen] = useState(false);
   const sideMenusRef = useRef<HTMLDivElement>(null);
+
+  const visibleTabs = useMemo(
+    () =>
+      AGENCY_TABS.filter((tab) => {
+        if (tab.feature === "offers") return features.offers;
+        return true;
+      }),
+    [features.offers]
+  );
+
   const onBuildStep = BUILD_STEPS.some(
     (step) =>
       location.pathname === step.to || location.pathname.startsWith(`${step.to}/`)
@@ -132,6 +143,16 @@ function AgencyDashboardLayoutInner() {
     (link) =>
       location.pathname === link.to || location.pathname.startsWith(`${link.to}/`)
   );
+
+  const blockedByFeature =
+    (!features.offers && location.pathname.startsWith("/dashboard/agency/offers")) ||
+    (!features.driversAndPartners &&
+      (location.pathname.startsWith("/dashboard/agency/drivers") ||
+        location.pathname.startsWith("/dashboard/agency/partners")));
+
+  if (blockedByFeature) {
+    return <Navigate to="/dashboard/agency" replace />;
+  }
 
   useEffect(() => {
     if (!stepsMenuOpen && !networkMenuOpen) return;
@@ -213,10 +234,12 @@ function AgencyDashboardLayoutInner() {
         </div>
         <nav className="nav nav--light" aria-label="Dashboard utilities">
           <div className="nav-actions nav-actions--light">
-            <DashboardSupportButton />
-            <button type="button" className="nav-link-light" onClick={() => setTopupOpen(true)}>
-              Topup
-            </button>
+            {features.support && <DashboardSupportButton />}
+            {features.walletTopup && (
+              <button type="button" className="nav-link-light" onClick={() => setTopupOpen(true)}>
+                Topup
+              </button>
+            )}
             <NavLink to="/profile" className={navLinkLightClass}>
               Profile
             </NavLink>
@@ -244,6 +267,8 @@ function AgencyDashboardLayoutInner() {
 
       <nav className="agency-tabs" aria-label="Dashboard tabs">
         <div className="agency-tabs__menu" ref={sideMenusRef}>
+          {features.driversAndPartners && (
+            <>
           <button
             type="button"
             className={`agency-tabs__icon-btn${networkMenuOpen ? " is-open" : ""}${
@@ -282,6 +307,8 @@ function AgencyDashboardLayoutInner() {
                 </NavLink>
               ))}
             </div>
+          )}
+            </>
           )}
           <button
             type="button"
@@ -327,7 +354,7 @@ function AgencyDashboardLayoutInner() {
           )}
         </div>
         <div className="agency-tabs__list">
-          {AGENCY_TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <NavLink
               key={tab.to}
               to={tab.to}
