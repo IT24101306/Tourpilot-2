@@ -6,6 +6,7 @@ import { InquiryThread, type ThreadMessage } from "./InquiryThread";
 import { InquiryTourChip } from "./InquiryTourChip";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
+import { newId } from "../../lib/newId";
 import { TourFormModal } from "../tour/TourFormModal";
 import {
   buildItineraryFromTourForm,
@@ -215,7 +216,7 @@ export function InquiryReplyModal({
     }
 
     const draft: DraftCustom = {
-      key: editingCustomKey || crypto.randomUUID(),
+      key: editingCustomKey || newId(),
       title: itinerary.title,
       itinerary,
     };

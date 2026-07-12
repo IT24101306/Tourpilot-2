@@ -1,4 +1,5 @@
 import { transportLabelFor } from "../display/transportOptions";
+import { newId } from "../../lib/newId";
 import { resolveTourBasePriceLkr } from "../../lib/tourFormPricing";
 
 export type TourKind = "READY_MADE" | "CUSTOM";
@@ -79,12 +80,12 @@ export function createEntry(
   costLkr = 0,
   sellingPriceLkr = 0
 ): DayEntry {
-  return { id: crypto.randomUUID(), time, entityId, costLkr, sellingPriceLkr };
+  return { id: newId(), time, entityId, costLkr, sellingPriceLkr };
 }
 
 export function createDayPlan(dayNumber: number): DayPlan {
   return {
-    id: crypto.randomUUID(),
+    id: newId(),
     dayNumber,
     entries: [createEntry()],
     transportVehicleId: "",
@@ -139,7 +140,7 @@ export function tourToFormState(tour: AgencyTourDetail): TourFormState {
   const days: DayPlan[] =
     tour.tourDays && tour.tourDays.length > 0
       ? tour.tourDays.map((day) => ({
-          id: crypto.randomUUID(),
+          id: newId(),
           dayNumber: day.dayNumber,
           transportVehicleId: day.transportVehicleId ?? "",
           transportRateLkr: day.transportRateLkr ?? 0,

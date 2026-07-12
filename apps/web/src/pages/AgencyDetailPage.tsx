@@ -12,6 +12,7 @@ import {
 } from "@tourpilot/shared";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { newId } from "../lib/newId";
 import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
 import { AgencyOfferFreeBanner } from "../components/discovery/AgencyOfferFreeBanner";
 import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
@@ -256,7 +257,7 @@ export function AgencyDetailPage() {
     if (refCode) {
       api("/influencer/track/" + refCode, {
         method: "POST",
-        body: JSON.stringify({ sessionId: crypto.randomUUID() }),
+        body: JSON.stringify({ sessionId: newId() }),
       }).catch(() => {});
     }
   }, [slug, refCode]);
