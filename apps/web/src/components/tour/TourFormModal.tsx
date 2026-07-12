@@ -48,7 +48,6 @@ type Props = {
 export function TourFormModal({
   open,
   mode,
-  tourKind,
   form,
   entities,
   groups,
