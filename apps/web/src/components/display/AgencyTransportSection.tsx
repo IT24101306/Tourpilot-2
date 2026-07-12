@@ -24,30 +24,22 @@ export function AgencyTransportSection({ agencyName, options = AGENCY_TRANSPORT_
         {options.map((option, index) => (
           <article key={`${option.id}-${index}`} className="agency-transport-card">
             <div className="agency-transport-card__icon-wrap" aria-hidden="true">
-              <TransportVehicleIcon vehicleId={option.id} size={22} />
+              <TransportVehicleIcon vehicleId={option.id} size={40} />
             </div>
 
             <div className="agency-transport-card__body">
               <div className="agency-transport-card__title-row">
                 <h3 className="agency-transport-card__title">{option.name}</h3>
                 {option.variant ? (
-                  <span className="agency-transport-card__variant brand-pill brand-pill--teal">
-                    {option.variant}
-                  </span>
+                  <span className="agency-transport-card__variant">{option.variant}</span>
                 ) : null}
               </div>
               <p className="agency-transport-card__desc">{option.description}</p>
-
-              <div className="agency-transport-card__chips">
-                <span className="agency-transport-chip">
-                  <span className="agency-transport-chip__label">Seats</span>
-                  <span className="agency-transport-chip__value">{option.seating}</span>
-                </span>
-                <span className="agency-transport-chip">
-                  <span className="agency-transport-chip__label">Luggage</span>
-                  <span className="agency-transport-chip__value">{option.luggage}</span>
-                </span>
-              </div>
+              <p className="agency-transport-card__meta">
+                Seats: {option.seating}
+                <span aria-hidden="true"> · </span>
+                Luggage: {option.luggage}
+              </p>
             </div>
           </article>
         ))}

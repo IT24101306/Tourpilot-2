@@ -624,8 +624,8 @@ button.agency-hero-banner__ghost {
 
 .agency-transport-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .agency-transport-card {
@@ -633,11 +633,11 @@ button.agency-hero-banner__ghost {
   background: #fff;
   border: 1px solid color-mix(in srgb, var(--brand-dark-green) 8%, transparent);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 16px;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
   min-height: 0;
   box-shadow: 0 3px 10px rgba(11, 48, 34, 0.05);
   transition:
@@ -653,81 +653,70 @@ button.agency-hero-banner__ghost {
 }
 
 .agency-transport-card__icon-wrap {
-  width: 40px;
-  height: 40px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   color: var(--brand-dark-green);
-  background: #fff;
-  border: 1px solid color-mix(in srgb, var(--brand-accent-teal) 20%, transparent);
-  box-shadow: 0 1px 4px rgba(11, 48, 34, 0.08);
+  background: color-mix(in srgb, var(--brand-surface) 55%, #fff);
+  border: none;
+  box-shadow: none;
 }
 
 .agency-transport-card__body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .agency-transport-card__title-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
+  align-items: baseline;
+  gap: 6px 8px;
 }
 
 .agency-transport-card__title {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 0.86rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--brand-dark-green);
   letter-spacing: -0.02em;
 }
 
 .agency-transport-card__variant {
-  font-size: 0.58rem;
-  padding: 1px 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5a6d63;
+  padding: 0;
 }
 
 .agency-transport-card__desc {
-  display: none;
+  display: block;
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #4a5c52;
 }
 
-.agency-transport-card__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 0;
-  padding-top: 0;
+.agency-transport-card__meta {
+  margin: 2px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: #33443b;
+  font-weight: 600;
 }
 
-.agency-transport-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--brand-surface) 70%, #fff);
-  border: 1px solid color-mix(in srgb, var(--brand-black) 6%, transparent);
-}
-
-.agency-transport-chip__label {
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--brand-accent-teal);
-}
-
-.agency-transport-chip__value {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--brand-black);
+@media (max-width: 900px) {
+  .agency-transport-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -1596,21 +1585,54 @@ button.agency-hero-banner__ghost {
 }
 
 /* —— Style 2 free-tour strip (flat banner, not a card) —— */
+.agency-hero-banner--with-offer-strip {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+
+.agency-hero-banner--with-offer-strip .agency-hero-banner__content {
+  padding-bottom: clamp(20px, 3vh, 32px);
+}
+
+.agency-hero-banner--with-offer-strip .agency-hero-section-nav {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: 6;
+  padding-bottom: 12px;
+}
+
+.agency-hero-offer-slot {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  margin-top: 0;
+  padding-bottom: 0;
+}
+
 .agency-display-band--offer-strip {
   padding: 0;
   background: transparent;
 }
 
+.agency-hero-offer-slot .agency-display-band--offer-strip {
+  margin: 0;
+}
+
 .agency-offer-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px 16px;
   width: 100%;
+  min-height: clamp(64px, 8vw, 88px);
   margin: 0;
-  padding: 14px clamp(16px, 4vw, 40px);
+  padding: 16px clamp(16px, 4vw, 40px);
   border: none;
-  border-radius: 0;
+  border-radius: 18px 18px 0 0;
   box-shadow: none;
   background: #0a7a3e;
   color: #fff;
@@ -1619,10 +1641,11 @@ button.agency-hero-banner__ghost {
 .agency-offer-strip__text {
   margin: 0;
   font-family: "Anton", sans-serif;
-  font-size: clamp(1.35rem, 3.2vw, 2rem);
+  font-size: clamp(2rem, 5vw, 3.25rem);
   font-weight: 400;
   letter-spacing: 0.04em;
-  line-height: 1.15;
+  line-height: 1.1;
+  text-align: center;
   text-transform: uppercase;
 }
 
@@ -1630,29 +1653,30 @@ button.agency-hero-banner__ghost {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 10px;
   background: transparent;
   color: #fff;
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   cursor: pointer;
+  backdrop-filter: blur(6px);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .agency-offer-strip__cta:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.85);
 }
 
 .agency-offer-strip__arrow {
-  font-size: 1rem;
+  font-size: 0.85rem;
   line-height: 1;
 }
 
@@ -2172,17 +2196,21 @@ button.agency-hero-banner__ghost {
   .agency-offer-strip {
     flex-direction: row;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 10px;
+    min-height: 56px;
     padding: 12px 16px;
   }
 
   .agency-offer-strip__text {
-    font-size: 1.1rem;
+    font-size: clamp(1.35rem, 6vw, 1.75rem);
+    text-align: center;
   }
 
   .agency-offer-strip__cta {
-    padding: 7px 10px;
-    font-size: 0.75rem;
+    padding: 7px 12px;
+    font-size: 0.7rem;
+    border-radius: 9px;
   }
 
   .agency-offer-month-form {
@@ -3735,6 +3763,10 @@ button.agency-gallery-item {
 
   .agency-hero-section-nav {
     padding: 0 16px 12px;
+  }
+
+  .agency-hero-banner--with-offer-strip .agency-hero-section-nav {
+    padding-bottom: 10px;
   }
 
   .agency-hero-section-nav__list {
