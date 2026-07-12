@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
 
+UPLOADS="${UPLOAD_DIR:-/app/apps/api/uploads}"
+mkdir -p "$UPLOADS"
+
+# Named volumes often mount as root; the API process runs as `tourpilot`.
+if [ "$(id -u)" = "0" ]; then
+  chown -R tourpilot:tourpilot "$UPLOADS"
+fi
+
 echo "[api] Syncing Prisma schema..."
 i=0
 until npx prisma db push --skip-generate; do
@@ -14,4 +22,7 @@ until npx prisma db push --skip-generate; do
 done
 
 echo "[api] Starting TourPilot API..."
+if [ "$(id -u)" = "0" ]; then
+  exec gosu tourpilot "$@"
+fi
 exec "$@"

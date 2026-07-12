@@ -47,6 +47,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: mysql://${MYSQL_USER:-tourpilot}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-tourpilot}
+      UPLOAD_DIR: /app/apps/api/uploads
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       WEB_APP_URL: ${WEB_APP_URL}

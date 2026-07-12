@@ -21,7 +21,8 @@ RUN npm run build -w @tourpilot/shared \
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+ENV UPLOAD_DIR=/app/apps/api/uploads
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates gosu \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd -r tourpilot && useradd -r -g tourpilot tourpilot
 
@@ -41,7 +42,7 @@ RUN sed -i 's/\r$//' /entrypoint.sh \
   && mkdir -p /app/apps/api/uploads \
   && chown -R tourpilot:tourpilot /app
 
-USER tourpilot
+# Entrypoint starts as root to fix volume ownership, then drops to tourpilot via gosu.
 WORKDIR /app/apps/api
 EXPOSE 4000
 ENTRYPOINT ["/entrypoint.sh"]

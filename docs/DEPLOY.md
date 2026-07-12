@@ -123,13 +123,16 @@ server {
 }
 ```
 
-If host nginx and Docker both want port 80, change compose:
+If host nginx and Docker both want port 80, set `HTTP_PORT=8080` in `.env` and use `proxy_pass http://127.0.0.1:8080;`.
 
-```env
-HTTP_PORT=8080
+Keep `client_max_body_size 25m;` — the default (1m) causes upload failures (HTTP 413).
+
+If uploads fail with permission / “not writable”, fix the volume once:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env exec -u root api \
+  chown -R tourpilot:tourpilot /app/apps/api/uploads
 ```
-
-Then `proxy_pass http://127.0.0.1:8080;`
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/tourpilot /etc/nginx/sites-enabled/

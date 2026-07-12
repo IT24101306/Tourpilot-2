@@ -4,7 +4,7 @@ export function SiteFooter() {
       <p className="site-footer__text">
         Designed &amp; Developed by{" "}
         <a
-          href="https://iyyoslutions.com"
+          href="https://iyyosolutions.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="site-footer__link"
