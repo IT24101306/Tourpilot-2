@@ -633,8 +633,8 @@ model OfferRegistration {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tourId          String?  @db.VarChar(25)
   tour            Tour?    @relation(fields: [tourId], references: [id], onDelete: SetNull)
-  screenshotUrl   String   @default("") @db.Text
-  message         String   @default("") @db.Text
+  screenshotUrl   String   @db.Text
+  message         String   @db.Text
   termsAcceptedAt DateTime @default(now())
   createdAt       DateTime @default(now())
 

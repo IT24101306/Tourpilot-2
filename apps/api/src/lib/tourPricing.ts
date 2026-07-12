@@ -2,14 +2,17 @@ import { commissionLkrFromBase, tourCommissionLkr, tourPublicPriceLkr } from "@t
 
 export { commissionLkrFromBase, tourCommissionLkr, tourPublicPriceLkr };
 
-type TourWithAgency = {
-  basePriceLkr: unknown;
+type TourCommissionSource = {
   influencerCommissionPct?: unknown | null;
   influencerCommissionLkr?: unknown;
   agency?: { influencerCommissionPct?: unknown } | null;
 };
 
-export function agencyCommissionPct(tour: TourWithAgency, fallbackPct?: number | null): number {
+type TourWithAgency = TourCommissionSource & {
+  basePriceLkr: unknown;
+};
+
+export function agencyCommissionPct(tour: TourCommissionSource, fallbackPct?: number | null): number {
   const fromTour = tour.influencerCommissionPct;
   if (fromTour != null && Number(fromTour) >= 0) return Number(fromTour);
   const fromAgency = tour.agency?.influencerCommissionPct;

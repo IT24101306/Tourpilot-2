@@ -3,9 +3,12 @@ dist/
 build/
 .env
 .env.local
+.env.local.docker
 *.log
 .DS_Store
 .expo/
 apps/mobile/.expo/
 apps/api/uploads/*
 !apps/api/uploads/.gitkeep
+tourpilot_deploy
+tourpilot_deploy.pub

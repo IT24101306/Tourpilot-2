@@ -30,7 +30,6 @@ import {
   type DisplaySocialLink,
   type DisplayTransportOption,
   type GalleryItem,
-  type GalleryEntitySnapshot,
   type HeroSlide,
   type WhoWeAreImage,
 } from "./displayTypes";
@@ -990,6 +989,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       title: "Reset transport list?",
       description: "This replaces your custom vehicles with the standard line-up.",
       confirmLabel: "Reset list",
+      summary: [{ label: "Vehicles", value: `${AGENCY_TRANSPORT_OPTIONS.length} default options` }],
       onConfirm: () => {
         void applyAndPersist(
           (prev) => ({

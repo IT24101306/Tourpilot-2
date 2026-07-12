@@ -8,7 +8,7 @@ import { ModuleHeader } from "../module/ModuleHeader";
 import { formatOfferMonthLabel, type OfferRewardTier } from "@tourpilot/shared";
 import { isFreeOffer } from "../../lib/offerPricing";
 import { validateOfferDraft } from "../../lib/offerForm";
-import { FormFieldError, FormValidationMessages } from "../FormFieldError";
+import { FormValidationMessages } from "../FormFieldError";
 import { offerShareFeedback, offerShareUrl, shareOffer } from "../../lib/offerShare";
 import { OfferRewardTiersEditor } from "./OfferRewardTiersEditor";
 

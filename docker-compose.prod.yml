@@ -1,0 +1,104 @@
+# Production stack — MySQL + API + Web (nginx)
+# Usage on server:
+#   cp .env.production.example .env
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+#
+# Images can also be pulled from GHCR after CI builds them.
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tourpilot}
+      MYSQL_USER: ${MYSQL_USER:-tourpilot}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - tourpilot_mysql_data:/var/lib/mysql
+    command:
+      [
+        "--mysql-native-password=ON",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - tourpilot
+
+  api:
+    image: ${API_IMAGE:-tourpilot-api:local}
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: mysql://${MYSQL_USER:-tourpilot}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-tourpilot}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      WEB_APP_URL: ${WEB_APP_URL}
+      EMAIL_MODE: ${EMAIL_MODE:-log}
+      EMAIL_FROM: ${EMAIL_FROM:-TourPilot <noreply@example.com>}
+      EMAIL_WEBHOOK_URL: ${EMAIL_WEBHOOK_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      DEV_BYPASS_OTP: ${DEV_BYPASS_OTP:-false}
+      DEMO_OTP_IN_RESPONSE: ${DEMO_OTP_IN_RESPONSE:-false}
+      LOG_OTP_TO_CONSOLE: ${LOG_OTP_TO_CONSOLE:-false}
+      INQUIRY_EXPIRY_DAYS: ${INQUIRY_EXPIRY_DAYS:-14}
+      BUILD_SHA: ${BUILD_SHA:-manual}
+      BUILD_TIME: ${BUILD_TIME:-}
+    volumes:
+      - tourpilot_uploads:/app/apps/api/uploads
+    networks:
+      - tourpilot
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  web:
+    image: ${WEB_IMAGE:-tourpilot-web:local}
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    networks:
+      - tourpilot
+
+volumes:
+  tourpilot_mysql_data:
+  tourpilot_uploads:
+
+networks:
+  tourpilot:
+    driver: bridge

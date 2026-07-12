@@ -37,7 +37,7 @@ export function AgencyPartnerRequestsPage() {
   return (
     <div className="module-shell module-agency">
       <ModuleHeader
-        module="agency"
+        module="partner"
         title="Influencer commission requests"
         subtitle="Negotiate custom commission rates with influencers — agree, reject, or counter-offer."
       />

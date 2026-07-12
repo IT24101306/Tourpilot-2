@@ -108,3 +108,15 @@ npm run dev:mobile
 ```
 
 Set `EXPO_PUBLIC_API_URL` to your machine IP (see `apps/mobile/.env.example`).
+
+## Production (Docker + CI/CD)
+
+See **[docs/DEPLOY.md](docs/DEPLOY.md)** for Ubuntu + Docker Compose + GitHub Actions.
+
+Quick start on a VPS:
+
+```bash
+cp .env.production.example .env   # edit secrets
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+curl -s http://127.0.0.1/api/health
+```

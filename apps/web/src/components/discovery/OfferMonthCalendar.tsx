@@ -49,6 +49,9 @@ export function OfferMonthCalendar({
 
   if (!months.length || !highlightParts || !monthLabel) return null;
 
+  const highlightYear = highlightParts.year;
+  const highlightMonth = highlightParts.month;
+
   const rootClass = [
     "offer-month-calendar",
     variant === "hero" && "offer-month-calendar--hero",
@@ -84,8 +87,7 @@ export function OfferMonthCalendar({
       const monthNumber = index + 1;
       const monthKey = `${year}-${String(monthNumber).padStart(2, "0")}`;
       const hasOffer = offeredMonths.has(monthNumber);
-      const isCurrent =
-        highlightParts.year === year && highlightParts.month === monthNumber;
+      const isCurrent = highlightYear === year && highlightMonth === monthNumber;
       const classNames = [
         "offer-month-calendar__month",
         layout === "grid" && "offer-month-calendar__month--grid",
