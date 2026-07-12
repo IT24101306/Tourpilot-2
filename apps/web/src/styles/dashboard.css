@@ -940,6 +940,16 @@
   cursor: pointer;
 }
 
+.mini-btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
 .remove-day-btn {
   border: 1px solid #e8d0d0;
   background: #fff8f8;
@@ -1732,13 +1742,22 @@
 }
 
 .display-step-tab:hover {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--green-soft);
 }
 
 .display-step-tab.active {
-  background: #fff;
-  border-color: var(--border, #dbe3ec);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  background: var(--green-soft);
+  border-color: var(--green);
+  box-shadow: 0 1px 3px rgba(0, 175, 2, 0.18);
+}
+
+.display-step-tab.active .display-step-tab-label {
+  color: var(--green-dark);
+}
+
+.display-step-tab.active .display-step-tab-hint {
+  color: var(--green-dark);
+  opacity: 0.75;
 }
 
 .display-step-tab-label {

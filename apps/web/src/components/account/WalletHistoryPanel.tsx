@@ -10,6 +10,8 @@ import { WalletTopupPanel } from "../wallet/WalletTopupPanel";
 import "../../styles/dashboard.css";
 import { LOGIN_FEE_LKR } from "@tourpilot/shared";
 
+const HISTORY_PREVIEW_COUNT = 3;
+
 type Props = {
   refreshKey?: number;
 };
@@ -23,9 +25,15 @@ function HistoryTable({
   emptyMessage: string;
   showType?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (rows.length === 0) {
     return <p className="muted wallet-history-empty">{emptyMessage}</p>;
   }
+
+  const canExpand = rows.length > HISTORY_PREVIEW_COUNT;
+  const visibleRows = expanded || !canExpand ? rows : rows.slice(0, HISTORY_PREVIEW_COUNT);
+  const hiddenCount = rows.length - HISTORY_PREVIEW_COUNT;
 
   return (
     <div className="wallet-history-table-wrap">
@@ -40,7 +48,7 @@ function HistoryTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <tr key={row.id}>
               <td>{new Date(row.createdAt).toLocaleString()}</td>
               {showType && <td>{walletTxnLabel(row.type)}</td>}
@@ -53,6 +61,20 @@ function HistoryTable({
           ))}
         </tbody>
       </table>
+      {canExpand && (
+        <div className="wallet-history-expand">
+          <button
+            type="button"
+            className="wallet-history-expand__btn"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+          >
+            {expanded
+              ? "Show less"
+              : `Expand · ${hiddenCount} more`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

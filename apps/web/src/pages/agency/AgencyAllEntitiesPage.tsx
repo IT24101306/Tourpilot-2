@@ -37,6 +37,7 @@ const PICKER_TYPES: { value: EntityTypeKey; label: string }[] = [
   { value: "VIEWPOINT", label: "Viewpoint" },
   { value: "ACTIVITY", label: "Activity" },
   { value: "RESTAURANT", label: "Restaurant" },
+  { value: "OTHER", label: "Other" },
 ];
 
 type AgencyEntity = {
@@ -268,19 +269,6 @@ export function AgencyAllEntitiesPage() {
           </span>
         </div>
       )}
-
-      <header className="entities-studio-hero cat-studio-hero">
-        <div className="entities-studio-stats">
-          <div className="entities-stat-pill">
-            <span className="entities-stat-value">{stats.total}</span>
-            <span className="entities-stat-label">In view</span>
-          </div>
-          <div className="entities-stat-pill accent">
-            <span className="entities-stat-value">{Object.keys(stats.byType).length}</span>
-            <span className="entities-stat-label">Types used</span>
-          </div>
-        </div>
-      </header>
 
       <div className="entities-type-tabs" role="tablist" aria-label="Filter by type">
         {filterTabs.map((t) => {

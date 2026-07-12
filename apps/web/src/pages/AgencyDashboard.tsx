@@ -53,7 +53,7 @@ const DASHBOARD_TABS: { id: TabId; label: string }[] = [
   { id: "tours", label: "Tours" },
   { id: "drivers", label: "Drivers" },
   { id: "travelers", label: "Travelers" },
-  { id: "all", label: "ALL" },
+  { id: "all", label: "Entities" },
   { id: "groups", label: "Groups" },
   { id: "display", label: "Display" },
 ];
@@ -74,9 +74,8 @@ export function AgencyDashboard() {
   const [replyInquiryId, setReplyInquiryId] = useState<string | null>(null);
   const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState("all");
-  const [tourSubTab, setTourSubTab] = useState<"READY_MADE" | "CUSTOM">("READY_MADE");
   const [tourModalOpen, setTourModalOpen] = useState(false);
-  const [tourModalKind, setTourModalKind] = useState<TourKind>("READY_MADE");
+  const [tourStatusFilter, setTourStatusFilter] = useState<"all" | "published" | "draft">("all");
   const [tourForm, setTourForm] = useState<TourFormState>(defaultTourForm());
   const [tourStatus, setTourStatus] = useState("");
   const [tourSaving, setTourSaving] = useState(false);
@@ -131,10 +130,13 @@ export function AgencyDashboard() {
     [groups]
   );
 
-  const filteredTours = useMemo(
-    () => tours.filter((t) => t.tourKind === tourSubTab),
-    [tours, tourSubTab]
-  );
+  const filteredTours = useMemo(() => {
+    return tours.filter((t) => {
+      if (tourStatusFilter === "published") return t.isPublished;
+      if (tourStatusFilter === "draft") return !t.isPublished;
+      return true;
+    });
+  }, [tours, tourStatusFilter]);
 
   const selectedTour = useMemo(
     () => tours.find((t) => t.id === selectedTourId) ?? null,
@@ -306,11 +308,10 @@ export function AgencyDashboard() {
     setEntityModalOpen(true);
   }
 
-  function openTourModal(kind: TourKind) {
-    setTourModalKind(kind);
+  function openTourModal() {
     setTourForm({
       ...defaultTourForm(),
-      isPublished: kind === "READY_MADE",
+      isPublished: true,
     });
     setOfferLink(emptyTourOfferLink());
     setTourStatus("");
@@ -342,14 +343,13 @@ export function AgencyDashboard() {
         method: "POST",
         token,
         body: JSON.stringify(
-          buildTourSavePayload(tourForm, tourModalKind, offerLink, [], entityOptions)
+          buildTourSavePayload(tourForm, "READY_MADE", offerLink, [], entityOptions)
         ),
       });
       setTourStatus(
         offerLink.enabled ? "Tour saved with offer links." : "Tour saved successfully."
       );
       await refresh(token);
-      setTourSubTab(tourModalKind);
       setTab("tours");
       setTimeout(() => {
         setTourModalOpen(false);
@@ -442,7 +442,7 @@ export function AgencyDashboard() {
           <article className="agent-tab-panel">
             <div className="panel-head">
               <h2>Inquiries</h2>
-              <p>Custom tour requests from tourists. Open an inquiry to send a reply.</p>
+              <p>Tour requests from tourists. Open an inquiry to send a reply.</p>
             </div>
             <div className="table-tools">
               <select
@@ -573,7 +573,7 @@ export function AgencyDashboard() {
               <p>Confirmed and in-progress reservations.</p>
             </div>
             <p className="muted">
-              New custom tour requests are listed under the <strong>Inquiries</strong> tab.
+              New tour requests are listed under the <strong>Inquiries</strong> tab.
             </p>
           </article>
         )}
@@ -586,44 +586,55 @@ export function AgencyDashboard() {
             </div>
 
             <div className="table-tools">
-              <div className="tools-left" />
+              <div className="tools-left">
+                <div className="sub-tabs" role="tablist" aria-label="Filter tours">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tourStatusFilter === "all"}
+                    className={`sub-tab-btn ${tourStatusFilter === "all" ? "active" : ""}`}
+                    onClick={() => {
+                      setTourStatusFilter("all");
+                      setSelectedTourId(null);
+                    }}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tourStatusFilter === "published"}
+                    className={`sub-tab-btn ${tourStatusFilter === "published" ? "active" : ""}`}
+                    onClick={() => {
+                      setTourStatusFilter("published");
+                      setSelectedTourId(null);
+                    }}
+                  >
+                    Published
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tourStatusFilter === "draft"}
+                    className={`sub-tab-btn ${tourStatusFilter === "draft" ? "active" : ""}`}
+                    onClick={() => {
+                      setTourStatusFilter("draft");
+                      setSelectedTourId(null);
+                    }}
+                  >
+                    Drafts
+                  </button>
+                </div>
+              </div>
               <div className="tools-right">
-                <button type="button" className="btn btn-primary" onClick={() => openTourModal("READY_MADE")}>
-                  Create Ready-Made Tour
-                </button>
-                <button type="button" className="btn btn-primary" onClick={() => openTourModal("CUSTOM")}>
-                  Create Custom Tour
+                <button type="button" className="btn btn-primary" onClick={() => openTourModal()}>
+                  Create tour
                 </button>
               </div>
             </div>
 
-            <div className="sub-tabs">
-              <button
-                type="button"
-                className={`sub-tab-btn ${tourSubTab === "READY_MADE" ? "active" : ""}`}
-                onClick={() => {
-                  setTourSubTab("READY_MADE");
-                  setSelectedTourId(null);
-                }}
-              >
-                Ready-Made Tours
-              </button>
-              <button
-                type="button"
-                className={`sub-tab-btn ${tourSubTab === "CUSTOM" ? "active" : ""}`}
-                onClick={() => {
-                  setTourSubTab("CUSTOM");
-                  setSelectedTourId(null);
-                }}
-              >
-                Custom Tours
-              </button>
-            </div>
-
             {filteredTours.length === 0 ? (
-              <p className="muted">
-                No {tourSubTab === "READY_MADE" ? "ready-made" : "custom"} tours yet.
-              </p>
+              <p className="muted">No tours in this category yet.</p>
             ) : (
               filteredTours.map((t) => (
                 <div
@@ -634,7 +645,7 @@ export function AgencyDashboard() {
                   <span>
                     {t.title} — {t.durationLabel || `${t.days} days`}
                   </span>
-                  <span className="status-badge">{t.isPublished ? "Active" : "Draft"}</span>
+                  <span className="status-badge">{t.isPublished ? "Published" : "Draft"}</span>
                 </div>
               ))
             )}
@@ -831,6 +842,7 @@ export function AgencyDashboard() {
                   <option value="ACTIVITY">Activity</option>
                   <option value="VIEWPOINT">Viewpoint</option>
                   <option value="RESTAURANT">Restaurant</option>
+                  <option value="OTHER">Other</option>
                 </select>
                 <button type="button" className="btn btn-primary" onClick={openAddEntity}>
                   ADD
@@ -906,7 +918,7 @@ export function AgencyDashboard() {
 
             {groups.length === 0 ? (
               <p className="empty-text">
-                No groups created yet. Select items in ALL and click Make Group.
+                No groups created yet. Select items in Entities and click Make Group.
               </p>
             ) : (
               <div className="group-cards">
@@ -974,7 +986,7 @@ export function AgencyDashboard() {
       <TourFormModal
         open={tourModalOpen}
         mode="create"
-        tourKind={tourModalKind}
+        tourKind="READY_MADE"
         form={tourForm}
         entities={entityOptions}
         groups={groupOptions}

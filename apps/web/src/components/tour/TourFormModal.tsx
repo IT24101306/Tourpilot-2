@@ -41,7 +41,7 @@ type Props = {
   offers?: ManagedOffer[];
   offerLink?: TourOfferLinkState;
   onOfferLinkChange?: (next: TourOfferLinkState) => void;
-  /** Save draft and open ALL tab to add a catalog entity, then return to this package. */
+  /** Save draft and open Entities tab to add a catalog entity, then return to this package. */
   onAddNewEntity?: () => void;
 };
 
@@ -130,13 +130,13 @@ export function TourFormModal({
   const effectiveCommissionPct = form.influencerCommissionPct ?? agencyInfluencerCommissionPct;
   const pricing = computeTourFormPricing(form, entities, agencyInfluencerCommissionPct);
 
-  const kindLabel = tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
+  const kindLabel = "Tour";
   const modalTitle =
     mode === "edit"
-      ? `Edit ${kindLabel} Tour`
+      ? `Edit ${kindLabel}`
       : mode === "duplicate"
-        ? `Duplicate ${kindLabel} Tour`
-        : `Create ${kindLabel} Tour`;
+        ? `Duplicate ${kindLabel}`
+        : `Create ${kindLabel}`;
   const canSave = isTourFormSavable(form);
 
   function updateDays(days: DayPlan[]) {
@@ -361,7 +361,7 @@ export function TourFormModal({
                 + Add new entity
               </button>
               <span className="muted">
-                Opens the ALL tab to add a place, then brings you back to this package.
+                Opens the Entities tab to add a place, then brings you back to this package.
               </span>
             </div>
           )}
@@ -386,6 +386,7 @@ export function TourFormModal({
               <option value="ACTIVITY">Activity</option>
               <option value="VIEWPOINT">View point</option>
               <option value="RESTAURANT">Restaurant</option>
+              <option value="OTHER">Other</option>
             </select>
             <select
               className="table-filter"
@@ -431,7 +432,7 @@ export function TourFormModal({
 
           {filteredEntities.length === 0 && (
             <p className="entity-filter-hint muted">
-              No entities match your search or filters. Adjust them or add entities in the ALL tab.
+              No entities match your search or filters. Adjust them or add entities in the Entities tab.
             </p>
           )}
 
@@ -767,7 +768,7 @@ function DayRow({
 }) {
   const emptyLabel =
     allEntitiesCount === 0
-      ? "No entities available — add some in ALL tab"
+      ? "No entities available — add some in Entities tab"
       : entities.length === 0
         ? "No entities match filters"
         : "Select entity";

@@ -31,6 +31,7 @@ const titleByType: Record<EntityTypeKey, string> = {
   ACTIVITY: "Add activity",
   VIEWPOINT: "Add viewpoint",
   RESTAURANT: "Add restaurant",
+  OTHER: "Add other entity",
 };
 
 export function EntityFormModal({

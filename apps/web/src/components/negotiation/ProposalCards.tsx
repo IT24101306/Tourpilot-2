@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { formatDisplayMoney } from "@tourpilot/shared";
 import { useFormatMoney } from "../../context/CurrencyContext";
 import { displayTourPrice } from "../../lib/tourPricing";
 import type { ProposalItem } from "../../types/negotiation";
@@ -10,7 +11,7 @@ type Props = {
 };
 
 export function ProposalCards({ items, agencySlug, compare = true }: Props) {
-  const { format, formatFrom } = useFormatMoney();
+  const { format } = useFormatMoney();
 
   if (!items.length) {
     return (
@@ -31,7 +32,7 @@ export function ProposalCards({ items, agencySlug, compare = true }: Props) {
               <span className="neg-proposal-tag">Ready-made</span>
               <h4>{item.tour.title}</h4>
               <p className="neg-proposal-meta">
-                {item.tour.days} days · {formatFrom(displayTourPrice(item.tour)).toLowerCase()}
+                {item.tour.days} days · {formatDisplayMoney(displayTourPrice(item.tour), "USD")}
               </p>
               {agencySlug && (
                 <Link

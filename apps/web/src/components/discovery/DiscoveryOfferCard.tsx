@@ -5,11 +5,10 @@ import { CoverImage } from "../CoverImage";
 import { isFreeOffer } from "../../lib/offerPricing";
 import { OfferCountdown } from "./OfferCountdown";
 import { OfferRegistrantsModal } from "./OfferRegistrantsModal";
-import { formatOfferMonthLabel } from "@tourpilot/shared";
+import { formatOfferMonthLabel, formatDisplayMoney } from "@tourpilot/shared";
 import { OfferRewardRoadmap } from "./OfferRewardRoadmap";
 import { OfferShareButton } from "./OfferShareButton";
 import type { OfferRewardTier } from "@tourpilot/shared";
-import { useFormatMoney } from "../../context/CurrencyContext";
 
 export type OfferTourOption = {
   id: string;
@@ -58,19 +57,17 @@ type Props = {
 
 function OfferPrice({
   offer,
-  format,
-  formatFrom,
 }: {
   offer: DiscoveryOffer;
-  format: (amountLkr: number) => string;
-  formatFrom: (amountLkr: number) => string;
 }) {
+  const price = (amountLkr: number) => formatDisplayMoney(amountLkr, "USD");
+
   if (isFreeOffer(offer.discountedLkr)) {
     return (
       <>
         <span className="disc-offer-price-now disc-offer-price-free">FREE</span>
         {offer.tourPriceLkr > 0 && (
-          <span className="disc-offer-price-was">{format(offer.tourPriceLkr)}</span>
+          <span className="disc-offer-price-was">{price(offer.tourPriceLkr)}</span>
         )}
       </>
     );
@@ -79,13 +76,13 @@ function OfferPrice({
   if (offer.discountedLkr != null) {
     return (
       <>
-        <span className="disc-offer-price-now">{formatFrom(offer.discountedLkr)}</span>
-        <span className="disc-offer-price-was">{format(offer.tourPriceLkr)}</span>
+        <span className="disc-offer-price-now">{price(offer.discountedLkr)}</span>
+        <span className="disc-offer-price-was">{price(offer.tourPriceLkr)}</span>
       </>
     );
   }
 
-  return <span className="disc-offer-price-now">{formatFrom(offer.tourPriceLkr)}</span>;
+  return <span className="disc-offer-price-now">{price(offer.tourPriceLkr)}</span>;
 }
 
 export function DiscoveryOfferCard({
@@ -99,7 +96,6 @@ export function DiscoveryOfferCard({
   cardId,
 }: Props) {
   const location = useLocation();
-  const { format, formatFrom } = useFormatMoney();
   const [registrantsOpen, setRegistrantsOpen] = useState(false);
 
   function openRegistrants(e: MouseEvent<HTMLElement>) {
@@ -161,7 +157,7 @@ export function DiscoveryOfferCard({
           )}
 
           <div className="disc-offer-price disc-offer-price--stacked">
-            <OfferPrice offer={offer} format={format} formatFrom={formatFrom} />
+            <OfferPrice offer={offer} />
           </div>
 
           <div className="disc-offer-meta-row">
@@ -230,7 +226,7 @@ export function DiscoveryOfferCard({
       {!compact && offer.description && <p className="disc-offer-desc">{offer.description}</p>}
       <p className={`disc-offer-reward${hero ? " disc-offer-reward--hero" : ""}`}>{offer.rewardText}</p>
       <p className="disc-offer-price">
-        <OfferPrice offer={offer} format={format} formatFrom={formatFrom} />
+        <OfferPrice offer={offer} />
       </p>
       {!hero && offer.registeredCount != null && (
         <p className="disc-offer-social muted">{offer.registeredCount} travelers registered</p>

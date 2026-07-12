@@ -268,7 +268,7 @@ export function AgencyGroupsPage() {
                 <h4>Entities in this group</h4>
                 <p className="muted">
                   {groupForm.entityIds.length} selected
-                  {entities.length === 0 && " — add entities in ALL first"}
+                  {entities.length === 0 && " — add entities in Entities first"}
                 </p>
               </div>
               {entities.length > 0 && (
@@ -292,7 +292,7 @@ export function AgencyGroupsPage() {
               <div className="groups-picker-empty">
                 <p className="muted">No entities in your catalog yet.</p>
                 <Link to="/dashboard/agency/all" className="btn btn-ghost">
-                  Go to ALL → add entities
+                  Go to Entities → add entities
                 </Link>
               </div>
             ) : (

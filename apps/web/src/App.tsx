@@ -70,6 +70,7 @@ import { TouristTravelLayout } from "./components/tourist/TouristTravelLayout";
 import { TouristTripRoomPage } from "./pages/TouristTripRoomPage";
 import { AgencyTasksPage } from "./pages/agency/AgencyTasksPage";
 import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
+import { SiteFooter } from "./components/SiteFooter";
 
 function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[] }) {
   const { user, loading } = useAuth();
@@ -114,7 +115,9 @@ export default function App() {
     <AuthProvider>
       <CurrencyProvider>
       <BrowserRouter>
-        <Routes>
+        <div className="app-root">
+          <div className="app-root__main">
+            <Routes>
           <Route element={<PublicLayout />}>
             <Route index element={<HomeRoute />} />
             <Route path="agencies" element={<AgenciesListingRedirect />} />
@@ -256,7 +259,10 @@ export default function App() {
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            </Routes>
+          </div>
+          <SiteFooter />
+        </div>
       </BrowserRouter>
       </CurrencyProvider>
     </AuthProvider>

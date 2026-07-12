@@ -6,7 +6,7 @@ import {
   formatTourDaysNights,
   resolveImageUrl,
 } from "@tourpilot/shared";
-import { FormatLkr } from "../components/currency/FormatLkr";
+import { FormatTourPrice } from "../components/currency/FormatLkr";
 import { type DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
@@ -92,11 +92,8 @@ function InfluencerPackageCard({
           <p>{tour.agency.name}</p>
         ) : null}
         <strong>
-          <FormatLkr amount={tour.publicPriceLkr} prefix="from" />
+          <FormatTourPrice amount={tour.publicPriceLkr} />
         </strong>
-        <span className="influencer-package-price-lkr muted">
-          LKR {tour.publicPriceLkr.toLocaleString()}
-        </span>
         <span className="agency-package-cta">
           {tour.shareAsMine ? "View details →" : "View itinerary →"}
         </span>
@@ -232,7 +229,7 @@ export function InfluencerDetailPage() {
       <header
         className={`topbar topbar--site topbar--hero${navSolid ? " topbar--hero-solid" : ""}`}
       >
-        <TourPilotBrand onImage />
+        <TourPilotBrand onImage showLogo={false} />
         <nav className="nav nav--light" aria-label="Creator storefront">
           <div className="nav-actions nav-actions--light">
             <NotificationBell />
@@ -353,10 +350,8 @@ export function InfluencerDetailPage() {
               alt=""
             />
             <p className="muted">
-              {formatTourDaysNights(selectedTour.days)} · from{" "}
-              <FormatLkr amount={selectedTour.publicPriceLkr} />
-              {" · "}
-              LKR {selectedTour.publicPriceLkr.toLocaleString()}
+              {formatTourDaysNights(selectedTour.days)} ·{" "}
+              <FormatTourPrice amount={selectedTour.publicPriceLkr} />
             </p>
             {selectedTour.summary ? <p>{selectedTour.summary}</p> : null}
             {(selectedTour.galleryImages?.length ?? 0) > 0 && (

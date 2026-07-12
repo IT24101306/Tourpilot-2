@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CoverImage } from "../components/CoverImage";
-import { FormatLkr } from "../components/currency/FormatLkr";
+import { FormatTourPrice } from "../components/currency/FormatLkr";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -70,7 +70,7 @@ export function TouristSavedPage() {
                 <Link to={tour.tourPath}>{tour.title}</Link>
               </h3>
               <p className="saved-tour-card-meta muted">
-                {tour.days} days · <FormatLkr amount={tour.publicPriceLkr} prefix="from" />
+                {tour.days} days · <FormatTourPrice amount={tour.publicPriceLkr} />
               </p>
               {tour.summary && <p className="saved-tour-card-summary">{tour.summary}</p>}
               <div className="saved-tour-card-actions">

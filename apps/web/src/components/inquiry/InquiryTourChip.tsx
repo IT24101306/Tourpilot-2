@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { formatTourDaysNights } from "@tourpilot/shared";
-import { useFormatMoney } from "../../context/CurrencyContext";
+import { formatDisplayMoney, formatTourDaysNights } from "@tourpilot/shared";
 
 export type InquiryTourRef = {
   id: string;
@@ -20,7 +19,6 @@ type Props = {
 };
 
 export function InquiryTourChip({ tour, agencySlug, compact, hideAgencyLink }: Props) {
-  const { formatFrom } = useFormatMoney();
   const price = tour.publicPriceLkr ?? tour.basePriceLkr;
   const tourHref = `/tours/${agencySlug}/${tour.slug}`;
 
@@ -31,7 +29,7 @@ export function InquiryTourChip({ tour, agencySlug, compact, hideAgencyLink }: P
         <strong>{tour.title}</strong>
         <span className="muted">
           {formatTourDaysNights(tour.days)}
-          {price != null ? ` · ${formatFrom(price)}` : ""}
+          {price != null ? ` · ${formatDisplayMoney(price, "USD")}` : ""}
         </span>
       </div>
       {!hideAgencyLink && (

@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { CoverImage } from "../components/CoverImage";
 import { TourItineraryPreview } from "../components/itinerary/TourItineraryPreview";
 import { formatTourDaysNights } from "@tourpilot/shared";
-import { FormatLkr } from "../components/currency/FormatLkr";
+import { FormatTourPrice } from "../components/currency/FormatLkr";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 
 export function TourDetailPage() {
@@ -93,7 +93,7 @@ export function TourDetailPage() {
           </div>
           <div className="tour-detail-hero-strip__aside">
             <p className="tour-detail-price">
-              <FormatLkr amount={tour.publicPriceLkr ?? tour.basePriceLkr} prefix="from" />
+              <FormatTourPrice amount={tour.publicPriceLkr ?? tour.basePriceLkr} />
             </p>
             <SaveTourButton tourId={tour.id} showLabel className="tour-detail-save" />
           </div>

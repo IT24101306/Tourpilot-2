@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
@@ -50,8 +50,7 @@ type GroupRow = {
   items: Array<{ entity: { id: string } }>;
 };
 
-type KindTab = "all" | TourKind;
-type StatusFilter = "all" | "published" | "draft";
+type StatusFilter = "all" | "published" | "draft" | "offers";
 
 export function AgencyToursPage() {
   const { token, user } = useAuth();
@@ -63,7 +62,6 @@ export function AgencyToursPage() {
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [kindTab, setKindTab] = useState<KindTab>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState("");
@@ -120,7 +118,7 @@ export function AgencyToursPage() {
     if (!draft) return;
 
     setModalMode(draft.modalMode);
-    setModalKind(draft.modalKind);
+    setModalKind("READY_MADE");
     setEditingTourId(draft.editingTourId);
     setTourForm(normalizeTourForm(draft.form));
     setOfferLink(draft.offerLink);
@@ -157,36 +155,35 @@ export function AgencyToursPage() {
 
   const filtered = useMemo(() => {
     return tours.filter((t) => {
-      if (kindTab !== "all" && t.tourKind !== kindTab) return false;
       if (statusFilter === "published" && !t.isPublished) return false;
       if (statusFilter === "draft" && t.isPublished) return false;
+      if (statusFilter === "offers" && !(t.linkedOffers?.length)) return false;
       return true;
     });
-  }, [tours, kindTab, statusFilter]);
+  }, [tours, statusFilter]);
 
   const stats = useMemo(() => {
     const published = tours.filter((t) => t.isPublished);
     const drafts = tours.filter((t) => !t.isPublished);
+    const withOffers = tours.filter((t) => (t.linkedOffers?.length ?? 0) > 0);
     return {
       total: tours.length,
       published: published.length,
       drafts: drafts.length,
-      readyMade: tours.filter((t) => t.tourKind === "READY_MADE").length,
-      custom: tours.filter((t) => t.tourKind === "CUSTOM").length,
-      catalogValue: published.reduce((s, t) => s + displayTourPrice(t), 0),
+      withOffers: withOffers.length,
     };
   }, [tours]);
 
   const expandedTour = expandedId ? tours.find((t) => t.id === expandedId) : null;
 
-  function openCreate(kind: TourKind) {
+  function openCreate() {
     clearTourBuilderDraft();
     setModalMode("create");
-    setModalKind(kind);
+    setModalKind("READY_MADE");
     setEditingTourId(null);
     setTourForm({
       ...defaultTourForm(),
-      isPublished: kind === "READY_MADE",
+      isPublished: true,
       priceFromCatalog: true,
     });
     setTourStatus("");
@@ -211,7 +208,7 @@ export function AgencyToursPage() {
   function openDuplicate(tour: AgencyTour) {
     clearTourBuilderDraft();
     setModalMode("duplicate");
-    setModalKind(tour.tourKind);
+    setModalKind("READY_MADE");
     setEditingTourId(null);
     setTourForm(tourToDuplicateFormState(tour));
     setTourStatus("");
@@ -222,7 +219,7 @@ export function AgencyToursPage() {
 
   function openEdit(tour: AgencyTour) {
     setModalMode("edit");
-    setModalKind(tour.tourKind);
+    setModalKind("READY_MADE");
     setEditingTourId(tour.id);
     const formState = normalizeTourForm(tourToFormState(tour));
     const catalogPricing = computeTourFormPricing(formState, entityOptions, influencerCommissionPct);
@@ -342,7 +339,7 @@ export function AgencyToursPage() {
             : "Save changes",
       summary: [
         { label: "Title", value: tourForm.title.trim() || "(untitled)" },
-        { label: "Type", value: modalKind === "READY_MADE" ? "Ready-made" : "Custom" },
+        { label: "Type", value: "Tour package" },
         { label: "Days", value: String(itineraryDays) },
         { label: "Activities", value: String(activityCount) },
         {
@@ -434,79 +431,60 @@ export function AgencyToursPage() {
       <ModuleHeader
         module="catalog"
         title="Tour catalog"
-        subtitle="Create ready-made packages, build day-by-day itineraries from your entities, and publish to your storefront."
+        subtitle="Create packages, build day-by-day itineraries from your entities, and publish to your storefront."
       >
         <div className="cat-toolbar-actions">
-            <button type="button" className="btn btn-primary" onClick={() => openCreate("READY_MADE")}>
-              + Ready-made tour
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => openCreate("CUSTOM")}>
-              + Custom tour
+            <button type="button" className="btn btn-primary" onClick={() => openCreate()}>
+              + New tour
             </button>
           </div>
       </ModuleHeader>
 
       {actionStatus && <p className="cat-action-toast">{actionStatus}</p>}
 
-      <div className="cat-stat-row">
-        <div className="cat-stat">
-          <span className="cat-stat-value">{stats.total}</span>
-          <span className="cat-stat-label">Total tours</span>
-        </div>
-        <div className="cat-stat">
-          <span className="cat-stat-value">{stats.published}</span>
-          <span className="cat-stat-label">Published</span>
-        </div>
-        <div className="cat-stat">
-          <span className="cat-stat-value">{stats.drafts}</span>
-          <span className="cat-stat-label">Drafts</span>
-        </div>
-        <div className="cat-stat">
-          <span className="cat-stat-value">LKR {stats.catalogValue.toLocaleString()}</span>
-          <span className="cat-stat-label">Published value</span>
-        </div>
-      </div>
-
-      <div className="cat-filters">
-        <div className="agency-sub-tabs cat-tabs">
-          <button
-            type="button"
-            className={`agency-sub-tab${kindTab === "all" ? " active" : ""}`}
-            onClick={() => setKindTab("all")}
-          >
-            All ({stats.total})
-          </button>
-          <button
-            type="button"
-            className={`agency-sub-tab${kindTab === "READY_MADE" ? " active" : ""}`}
-            onClick={() => setKindTab("READY_MADE")}
-          >
-            Ready-made ({stats.readyMade})
-          </button>
-          <button
-            type="button"
-            className={`agency-sub-tab${kindTab === "CUSTOM" ? " active" : ""}`}
-            onClick={() => setKindTab("CUSTOM")}
-          >
-            Custom ({stats.custom})
-          </button>
-        </div>
-        <select
-          className="table-filter cat-status-filter"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          aria-label="Filter by publish status"
+      <div className="agency-sub-tabs cat-tabs" role="tablist" aria-label="Filter tours">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={statusFilter === "all"}
+          className={`agency-sub-tab${statusFilter === "all" ? " active" : ""}`}
+          onClick={() => setStatusFilter("all")}
         >
-          <option value="all">All statuses</option>
-          <option value="published">Published only</option>
-          <option value="draft">Drafts only</option>
-        </select>
+          All ({stats.total})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={statusFilter === "published"}
+          className={`agency-sub-tab${statusFilter === "published" ? " active" : ""}`}
+          onClick={() => setStatusFilter("published")}
+        >
+          Published ({stats.published})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={statusFilter === "draft"}
+          className={`agency-sub-tab${statusFilter === "draft" ? " active" : ""}`}
+          onClick={() => setStatusFilter("draft")}
+        >
+          Drafts ({stats.drafts})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={statusFilter === "offers"}
+          className={`agency-sub-tab${statusFilter === "offers" ? " active" : ""}`}
+          onClick={() => setStatusFilter("offers")}
+        >
+          With offers ({stats.withOffers})
+        </button>
       </div>
 
       {entities.length === 0 && (
         <p className="cat-hint muted">
           Add entities in the{" "}
-          <Link to="/dashboard/agency/all">ALL</Link> tab before building tour itineraries.
+          <Link to="/dashboard/agency/all">Entities</Link> tab before building tour itineraries.
         </p>
       )}
 
@@ -515,122 +493,143 @@ export function AgencyToursPage() {
       ) : filtered.length === 0 ? (
         <div className="cat-empty">
           <p>No tours match these filters.</p>
-          <button type="button" className="btn btn-primary" onClick={() => openCreate("READY_MADE")}>
+          <button type="button" className="btn btn-primary" onClick={() => openCreate()}>
             Create your first tour
           </button>
         </div>
       ) : (
-        <ul className="cat-tour-list">
-          {filtered.map((t) => (
-            <li key={t.id}>
-              <article
-                className={`cat-tour-card${expandedId === t.id ? " cat-tour-card--expanded" : ""}`}
-              >
-                <div className="cat-tour-main">
-                  <div className="cat-tour-head">
-                    <h3>{t.title}</h3>
-                    <div className="cat-tour-badges">
-                      <span className={`cat-kind-badge cat-kind-badge--${t.tourKind.toLowerCase()}`}>
-                        {t.tourKind === "READY_MADE" ? "Ready-made" : "Custom"}
-                      </span>
+        <div className="table-wrap cat-tour-table-wrap">
+          <table className="hotel-table cat-tour-table">
+            <thead>
+              <tr>
+                <th>Tour</th>
+                <th>Days</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((t) => (
+                <Fragment key={t.id}>
+                  <tr className={expandedId === t.id ? "is-expanded" : undefined}>
+                    <td>
+                      <strong>{t.title}</strong>
+                      <div className="muted cat-tour-table__meta">
+                        /{t.slug}
+                        {(t.linkedOffers?.length ?? 0) > 0
+                          ? ` · ${t.linkedOffers!.length} offer${
+                              t.linkedOffers!.length === 1 ? "" : "s"
+                            }`
+                          : ""}
+                      </div>
+                    </td>
+                    <td>{t.days}</td>
+                    <td>LKR {displayTourPrice(t).toLocaleString()}</td>
+                    <td>
                       <span className={`agency-status ${t.isPublished ? "ok" : "warn"}`}>
                         {t.isPublished ? "Published" : "Draft"}
                       </span>
-                      {(t.linkedOffers?.length ?? 0) > 0 && (
+                    </td>
+                    <td>
+                      <div className="cat-tour-table__actions">
                         <button
                           type="button"
-                          className="cat-offer-badge"
-                          onClick={() => navigate("/dashboard/agency/offers")}
-                          title={t.linkedOffers!.map((o) => o.title).join(", ")}
+                          className="mini-btn"
+                          onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
                         >
-                          {t.linkedOffers!.length} offer{t.linkedOffers!.length === 1 ? "" : "s"}
+                          {expandedId === t.id ? "Hide" : "Plan"}
                         </button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="muted">
-                    {t.days} days · LKR {displayTourPrice(t).toLocaleString()} listed
-                    {(t.influencerCommissionLkr ?? 0) > 0
-                      ? ` · incl. LKR ${t.influencerCommissionLkr!.toLocaleString()} influencer`
-                      : ""}{" "}
-                    · /{t.slug}
-                  </p>
-                  {t.summary && <p className="cat-tour-summary">{t.summary}</p>}
-                </div>
-
-                <div className="cat-tour-actions">
-                  <button
-                    type="button"
-                    className="mini-btn"
-                    onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
-                  >
-                    {expandedId === t.id ? "Hide plan" : "View plan"}
-                  </button>
-                  <button type="button" className="mini-btn" onClick={() => openEdit(t)}>
-                    Edit
-                  </button>
-                  <button type="button" className="mini-btn" onClick={() => openDuplicate(t)}>
-                    Duplicate
-                  </button>
-                  <button type="button" className="mini-btn" onClick={() => togglePublish(t)}>
-                    {t.isPublished ? "Unpublish" : "Publish"}
-                  </button>
-                  {t.isPublished && agencySlug && (
-                    <Link
-                      to={`/tours/${agencySlug}/${t.slug}`}
-                      className="mini-btn"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View live
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    className="mini-btn mini-btn--danger"
-                    onClick={() => deleteTour(t)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </article>
-
-              {expandedId === t.id && expandedTour?.id === t.id && (
-                <div className="cat-tour-detail">
-                  {expandedTour.tourDays?.length ? (
-                    <>
-                      <TourPackagePricingNotice />
-                      {expandedTour.tourDays.map((day) => (
-                      <div key={day.dayNumber} className="cat-tour-day">
-                        <h4>Day {day.dayNumber}</h4>
-                        {day.transportLabel && day.transportRateLkr != null && (
-                          <p className="muted cat-tour-transport">
-                            Vehicle: {day.transportLabel} · LKR{" "}
-                            {Number(day.transportRateLkr).toLocaleString()}
-                          </p>
+                        <button type="button" className="mini-btn" onClick={() => openEdit(t)}>
+                          Edit
+                        </button>
+                        <button type="button" className="mini-btn" onClick={() => openDuplicate(t)}>
+                          Duplicate
+                        </button>
+                        <button type="button" className="mini-btn" onClick={() => togglePublish(t)}>
+                          {t.isPublished ? "Unpublish" : "Publish"}
+                        </button>
+                        {t.isPublished && agencySlug && (
+                          <Link
+                            to={`/tours/${agencySlug}/${t.slug}`}
+                            className="mini-btn mini-btn--icon"
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label="View live tour"
+                            title="View live tour"
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </Link>
                         )}
-                        <ul>
-                          {day.items.map((item, idx) => (
-                            <li key={idx}>
-                              <span className="cat-tour-time">{item.scheduledTime || "—"}</span>
-                              {item.entityName}
-                              {item.entityType && (
-                                <span className="muted"> · {item.entityType}</span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                        <button
+                          type="button"
+                          className="mini-btn mini-btn--danger"
+                          onClick={() => deleteTour(t)}
+                        >
+                          Delete
+                        </button>
                       </div>
-                    ))}
-                    </>
-                  ) : (
-                    <p className="muted">No day plan saved. Edit this tour to add entities.</p>
+                    </td>
+                  </tr>
+                  {expandedId === t.id && expandedTour?.id === t.id && (
+                    <tr className="cat-tour-table__detail-row">
+                      <td colSpan={5}>
+                        <div className="cat-tour-detail">
+                          {expandedTour.tourDays?.length ? (
+                            <>
+                              <TourPackagePricingNotice />
+                              {expandedTour.tourDays.map((day) => (
+                                <div key={day.dayNumber} className="cat-tour-day">
+                                  <h4>Day {day.dayNumber}</h4>
+                                  {day.transportLabel && day.transportRateLkr != null && (
+                                    <p className="muted cat-tour-transport">
+                                      Vehicle: {day.transportLabel} · LKR{" "}
+                                      {Number(day.transportRateLkr).toLocaleString()}
+                                    </p>
+                                  )}
+                                  <ul>
+                                    {day.items.map((item, idx) => (
+                                      <li key={idx}>
+                                        <span className="cat-tour-time">
+                                          {item.scheduledTime || "—"}
+                                        </span>
+                                        {item.entityName}
+                                        {item.entityType && (
+                                          <span className="muted"> · {item.entityType}</span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </>
+                          ) : (
+                            <p className="muted">
+                              No day plan saved. Edit this tour to add entities.
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <TourFormModal

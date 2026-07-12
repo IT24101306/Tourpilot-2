@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   displayTourPrice,
+  formatDisplayMoney,
   isUsableImageUrl,
   MAX_AGENCY_HERO_SLIDES,
   MEDIA,
@@ -412,7 +413,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     const pkg: DisplayPackage = {
       title: tour.title,
       location: districts[0] || tour.summary || `${tour.days} day tour`,
-      priceLabel: `LKR ${displayTourPrice(tour).toLocaleString()} / per person`,
+      priceLabel: `${formatDisplayMoney(displayTourPrice(tour), "USD")} / per person`,
       imageUrl: tour.coverUrl || "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
       tourId: tour.id,
     };

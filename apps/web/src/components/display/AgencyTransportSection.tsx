@@ -24,7 +24,7 @@ export function AgencyTransportSection({ agencyName, options = AGENCY_TRANSPORT_
         {options.map((option, index) => (
           <article key={`${option.id}-${index}`} className="agency-transport-card">
             <div className="agency-transport-card__icon-wrap" aria-hidden="true">
-              <TransportVehicleIcon vehicleId={option.id} size={40} />
+              <TransportVehicleIcon vehicleId={option.id} size={26} />
             </div>
 
             <div className="agency-transport-card__body">

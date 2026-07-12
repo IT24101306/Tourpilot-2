@@ -184,6 +184,13 @@ export function EntityTypeLineIcon({
           <path d="M6 4v8c0 2 1 3 3 3s3-1 3-3V4M12 4v16M18 4v8c0 2-1 3-3 3" />
         </svg>
       );
+    case "OTHER":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 8v4M12 16h.01" />
+        </svg>
+      );
     case "TRANSPORT":
       return (
         <svg {...common}>
