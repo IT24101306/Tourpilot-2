@@ -15,7 +15,8 @@ import { useAuth } from "../context/AuthContext";
 import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
 import { AgencyOfferFreeBanner } from "../components/discovery/AgencyOfferFreeBanner";
 import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
-import { FormatLkr } from "../components/currency/FormatLkr";
+import { FormatLkr, FormatTourPrice } from "../components/currency/FormatLkr";
+import { displayTourPrice } from "../lib/tourPricing";
 import { offerBookPath } from "../lib/offerBookPaths";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
@@ -201,7 +202,7 @@ function PackageCard({
         <p>{pkg.location}</p>
         <strong>
           {tour ? (
-            <FormatLkr amount={tour.basePriceLkr} prefix="from" />
+            <FormatTourPrice amount={displayTourPrice(tour)} />
           ) : (
             pkg.priceLabel
           )}
@@ -387,7 +388,7 @@ export function AgencyDetailPage() {
       <header
         className={`topbar topbar--site topbar--hero${navSolid ? " topbar--hero-solid" : ""}`}
       >
-        <TourPilotBrand onImage />
+        <TourPilotBrand onImage showLogo={false} />
         <nav className="nav nav--light" aria-label="Agency storefront">
           <div className="nav-actions nav-actions--light">
             <NotificationBell />

@@ -506,6 +506,29 @@
   background: var(--ap-card);
 }
 
+.wallet-history-expand {
+  display: flex;
+  justify-content: center;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--ap-line);
+}
+
+.wallet-history-expand__btn {
+  border: 0;
+  background: transparent;
+  color: var(--green-dark, #008c02);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.wallet-history-expand__btn:hover {
+  background: var(--green-soft, #e5fbe5);
+}
+
 .wallet-history-table {
   width: 100%;
   border-collapse: collapse;

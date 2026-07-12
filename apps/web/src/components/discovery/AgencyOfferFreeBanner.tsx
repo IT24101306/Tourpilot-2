@@ -17,7 +17,7 @@ import { CoverImage } from "../CoverImage";
 import { DashboardModal } from "../DashboardModal";
 import { FormFieldError } from "../FormFieldError";
 import { ImageUrlField } from "../ImageUrlField";
-import { FormatLkr } from "../currency/FormatLkr";
+import { FormatTourPrice } from "../currency/FormatLkr";
 import { AgencyInquirySection } from "../inquiry/AgencyInquirySection";
 import { TourItineraryPreview } from "../itinerary/TourItineraryPreview";
 import type { DiscoveryOffer } from "./DiscoveryOfferCard";
@@ -476,7 +476,7 @@ export function AgencyOfferFreeBanner({
                                 <span className="muted">{tour.location}</span>
                               ) : null}
                               <span className="agency-offer-package-pick__price">
-                                <FormatLkr amount={tour.basePriceLkr} prefix="from" />
+                                <FormatTourPrice amount={tour.basePriceLkr} />
                               </span>
                               <div className="agency-offer-package-pick__actions">
                                 <button
@@ -558,7 +558,7 @@ export function AgencyOfferFreeBanner({
                       <div className="agency-offer-side-tour__meta">
                         <strong>{selectedTour.title}</strong>
                         <span className="agency-offer-package-pick__price">
-                          <FormatLkr amount={selectedTour.basePriceLkr} prefix="from" />
+                          <FormatTourPrice amount={selectedTour.basePriceLkr} />
                         </span>
                       </div>
                       {itineraryLoadingId === selectedTour.id ? (

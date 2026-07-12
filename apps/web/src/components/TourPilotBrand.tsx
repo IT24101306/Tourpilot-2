@@ -4,12 +4,19 @@ type Props = {
   className?: string;
   onDark?: boolean;
   onImage?: boolean;
+  /** When false, render text mark only (no logo image). */
+  showLogo?: boolean;
 };
 
-export function TourPilotBrand({ className = "", onDark = false, onImage = false }: Props) {
+export function TourPilotBrand({
+  className = "",
+  onDark = false,
+  onImage = false,
+  showLogo = true,
+}: Props) {
   const classes = [
     "brand",
-    "brand--with-logo",
+    showLogo && "brand--with-logo",
     onDark && "brand--on-dark",
     onImage && "brand--on-image",
     className,
@@ -19,14 +26,16 @@ export function TourPilotBrand({ className = "", onDark = false, onImage = false
 
   return (
     <Link to="/" className={classes}>
-      <img
-        src="/images/tourpilot-logo.png"
-        alt=""
-        className="brand__logo"
-        width={52}
-        height={52}
-        decoding="async"
-      />
+      {showLogo ? (
+        <img
+          src="/images/tourpilot-logo.png"
+          alt=""
+          className="brand__logo"
+          width={52}
+          height={52}
+          decoding="async"
+        />
+      ) : null}
       <span className="brand__text">
         Tour<span>Pilot</span>
       </span>

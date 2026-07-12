@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { resolveImageUrl } from "@tourpilot/shared";
+import { formatDisplayMoney, resolveImageUrl } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
-import { useFormatMoney } from "../../context/CurrencyContext";
 import { CoverImage } from "../CoverImage";
 import { DashboardModal, ModalActions } from "../DashboardModal";
 import { FormFieldError } from "../FormFieldError";
@@ -51,7 +50,6 @@ export function OfferRegistrationModal({
   onClose,
   onSuccess,
 }: Props) {
-  const { formatFrom } = useFormatMoney();
   const [step, setStep] = useState<Step>("tour");
   const [tours, setTours] = useState<OfferTourOption[]>([]);
   const [toursLoading, setToursLoading] = useState(false);
@@ -229,7 +227,7 @@ export function OfferRegistrationModal({
                       <div className="offer-package-card__body">
                         <strong>{tour.title}</strong>
                         <span className="offer-package-card__price">
-                          {formatFrom(tour.basePriceLkr)}
+                          {formatDisplayMoney(tour.basePriceLkr, "USD")}
                         </span>
                       </div>
                       <span className="offer-package-card__check" aria-hidden="true">

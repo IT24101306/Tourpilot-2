@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { formatDisplayMoney } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
 import { InquiryThread, type ThreadMessage } from "./InquiryThread";
@@ -419,7 +420,7 @@ export function InquiryReplyModal({
                                 {" "}
                                 · {t.days} days
                                 {t.basePriceLkr != null
-                                  ? ` · from LKR ${(t.publicPriceLkr ?? t.basePriceLkr).toLocaleString()}`
+                                  ? ` · ${formatDisplayMoney(t.publicPriceLkr ?? t.basePriceLkr, "USD")}`
                                   : ""}
                               </span>
                             </span>
@@ -493,7 +494,7 @@ export function InquiryReplyModal({
                         ? "Update & resend to tourist"
                         : "Send to tourist"
                   }
-                  saving={saving}
+                  saving={saving}
                 />
               </form>
             )}

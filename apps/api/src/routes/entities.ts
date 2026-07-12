@@ -6,7 +6,7 @@ import { asJson } from "../utils/json.js";
 
 export const entitiesRouter = Router();
 
-const publicEntityTypeSchema = z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT"]);
+const publicEntityTypeSchema = z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT", "OTHER"]);
 
 // Public: used by the tourist "Build my trip" page to browse an agency's catalog.
 // NOTE: This intentionally does not require auth.
@@ -129,7 +129,7 @@ const entityMediaSchema = z.union([
 
 const entityBodySchema = z.object({
   name: z.string().min(1, "Name is required"),
-  type: z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT"]),
+  type: z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT", "OTHER"]),
   city: z.string().optional(),
   district: z.string().optional(),
   description: z.string().optional(),

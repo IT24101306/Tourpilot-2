@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   DEFAULT_TOUR_COVER_URL,
+  formatDisplayMoney,
   MAX_AGENCY_HERO_SLIDES,
   MEDIA,
   resolveImageUrl,
@@ -1042,7 +1043,7 @@ function resolvePackages(
     return {
       title: t.title,
       location: districts[0] || `${t.days} day tour`,
-      priceLabel: `LKR ${attachTourPricing(t, commissionPct).publicPriceLkr.toLocaleString()} / per person`,
+      priceLabel: `${formatDisplayMoney(attachTourPricing(t, commissionPct).publicPriceLkr, "USD")} / per person`,
       imageUrl: resolveImageUrl(t.coverUrl, DEFAULT_TOUR_COVER_URL),
       tourId: t.id,
     };

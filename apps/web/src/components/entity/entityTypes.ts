@@ -1,10 +1,11 @@
-export type EntityTypeKey = "HOTEL" | "ACTIVITY" | "VIEWPOINT" | "RESTAURANT";
+export type EntityTypeKey = "HOTEL" | "ACTIVITY" | "VIEWPOINT" | "RESTAURANT" | "OTHER";
 
 export const ALLOWED_ENTITY_TYPES: EntityTypeKey[] = [
   "HOTEL",
   "VIEWPOINT",
   "ACTIVITY",
   "RESTAURANT",
+  "OTHER",
 ];
 
 export type EntityFormState = {
@@ -108,6 +109,7 @@ export const ENTITY_TYPE_OPTIONS: { value: EntityTypeKey; label: string }[] = [
   { value: "ACTIVITY", label: "Activity" },
   { value: "VIEWPOINT", label: "Viewpoint" },
   { value: "RESTAURANT", label: "Restaurant" },
+  { value: "OTHER", label: "Other" },
 ];
 
 /** Fields shown per type (name + type selector always shown separately). */
@@ -184,6 +186,19 @@ export const FIELDS_BY_TYPE: Record<EntityTypeKey, FieldDef[]> = {
     { key: "dressCode", label: "Dress code", placeholder: "Smart casual, no shorts…", fullWidth: true },
     { key: "otherInfo", label: "Other info", input: "textarea", fullWidth: true },
   ],
+  OTHER: [
+    DESCRIPTION_FIELD,
+    { key: "location", label: "Location", placeholder: "Area or address", fullWidth: true },
+    { key: "priceHint", label: "Price hint (LKR)", input: "number", placeholder: "Optional" },
+    { key: "contact", label: "Contact no", input: "tel", placeholder: "Optional" },
+    {
+      key: "otherInfo",
+      label: "Notes",
+      input: "textarea",
+      placeholder: "Any extra details travelers should know…",
+      fullWidth: true,
+    },
+  ],
 };
 
 function trim(v: string) {
@@ -249,6 +264,11 @@ export function buildEntityPayload(form: EntityFormState) {
     if (trim(form.dressCode)) metadata.dressCode = trim(form.dressCode);
   }
 
+  if (form.type === "OTHER") {
+    if (num(form.priceHint) != null) payload.priceHint = num(form.priceHint);
+    if (trim(form.contact)) payload.contact = trim(form.contact);
+  }
+
   if (Object.keys(metadata).length > 0) payload.metadata = metadata;
 
   return payload;
@@ -297,6 +317,9 @@ export function entityDetailsSummary(entity: {
     if (m.reservationRequired) parts.push("Reservation required");
     if (m.dressCode) parts.push(String(m.dressCode));
     if (m.openHoursDays) parts.push(String(m.openHoursDays));
+  }
+  if (entity.type === "OTHER") {
+    if (m.location) parts.push(String(m.location));
   }
   if (m.otherInfo && parts.length < 2) {
     parts.push(String(m.otherInfo).slice(0, 40) + (String(m.otherInfo).length > 40 ? "…" : ""));
