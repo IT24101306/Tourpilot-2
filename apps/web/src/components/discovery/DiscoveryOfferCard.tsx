@@ -5,7 +5,7 @@ import { CoverImage } from "../CoverImage";
 import { isFreeOffer } from "../../lib/offerPricing";
 import { OfferCountdown } from "./OfferCountdown";
 import { OfferRegistrantsModal } from "./OfferRegistrantsModal";
-import { formatOfferMonthLabel, formatDisplayMoney } from "@tourpilot/shared";
+import { formatOfferMonthLabel, formatDisplayMoney, MEDIA } from "@tourpilot/shared";
 import { OfferRewardRoadmap } from "./OfferRewardRoadmap";
 import { OfferShareButton } from "./OfferShareButton";
 import type { OfferRewardTier } from "@tourpilot/shared";
@@ -116,7 +116,7 @@ export function DiscoveryOfferCard({
         onClick={openRegistrants}
       >
         <div className="disc-offer-media">
-          <CoverImage src={offer.imageUrl} className="disc-offer-media-img" alt="" />
+          <CoverImage src={offer.imageUrl} fallback={MEDIA.tourCover} className="disc-offer-media-img" alt="" />
           <OfferCountdown validUntil={offer.validUntil} overlay />
           {offer.spotsLeft <= 10 && (
             <span className="disc-offer-scarcity disc-offer-scarcity--overlay">
