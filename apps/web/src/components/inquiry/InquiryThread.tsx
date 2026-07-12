@@ -1,6 +1,6 @@
 export type ThreadMessage = {
   id: string;
-  kind: "TOURIST" | "AGENCY" | "ADMIN";
+  kind: "TOURIST" | "AGENCY" | "ADMIN" | "INFLUENCER";
   body: string;
   action: string | null;
   createdAt: string;
@@ -29,6 +29,9 @@ export function InquiryThread({ messages, compact, hideTitle }: Props) {
               <strong>{displayAuthor(msg)}</strong>
               {msg.kind === "ADMIN" && (
                 <span className="inquiry-thread-role-badge">Platform</span>
+              )}
+              {msg.kind === "INFLUENCER" && (
+                <span className="inquiry-thread-role-badge">Partner</span>
               )}
               <span className="muted">{formatWhen(msg.createdAt)}</span>
               {msg.action && (

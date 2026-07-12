@@ -15,9 +15,11 @@ type Props = {
   tour: InquiryTourRef;
   agencySlug: string;
   compact?: boolean;
+  /** Hide link to agency tour page (share-as-mine / white-label) */
+  hideAgencyLink?: boolean;
 };
 
-export function InquiryTourChip({ tour, agencySlug, compact }: Props) {
+export function InquiryTourChip({ tour, agencySlug, compact, hideAgencyLink }: Props) {
   const { formatFrom } = useFormatMoney();
   const price = tour.publicPriceLkr ?? tour.basePriceLkr;
   const tourHref = `/tours/${agencySlug}/${tour.slug}`;
@@ -29,12 +31,14 @@ export function InquiryTourChip({ tour, agencySlug, compact }: Props) {
         <strong>{tour.title}</strong>
         <span className="muted">
           {formatTourDaysNights(tour.days)}
-          {price != null ? ` · ${formatFrom(price).toLowerCase()}` : ""}
+          {price != null ? ` · ${formatFrom(price)}` : ""}
         </span>
       </div>
-      <Link to={tourHref} className="inquiry-tour-chip-link">
-        View itinerary
-      </Link>
+      {!hideAgencyLink && (
+        <Link to={tourHref} className="inquiry-tour-chip-link">
+          View itinerary
+        </Link>
+      )}
     </div>
   );
 }

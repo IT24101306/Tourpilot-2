@@ -54,6 +54,7 @@ enum InquiryMessageKind {
   TOURIST
   AGENCY
   ADMIN
+  INFLUENCER
 }
 
 enum EntityType {
@@ -217,6 +218,7 @@ model InfluencerProfile {
   codes              ReferralCode[]
   commissions        Commission[]
   commissionRequests InfluencerCommissionRequest[]
+  handledInquiries   Inquiry[]                     @relation("InquiryHandlerInfluencer")
 }
 
 model DriverProfile {
@@ -434,32 +436,37 @@ model TourDayItem {
 }
 
 model Inquiry {
-  id             String             @id @default(cuid()) @db.VarChar(25)
-  touristId      String             @db.VarChar(25)
-  tourist        User               @relation("TouristInquiries", fields: [touristId], references: [id])
-  agencyId       String             @db.VarChar(25)
-  agency         Agency             @relation(fields: [agencyId], references: [id])
-  tourId         String?            @db.VarChar(25)
-  tour           Tour?              @relation(fields: [tourId], references: [id], onDelete: SetNull)
-  type           InquiryType
-  status         InquiryStatus      @default(NEW)
-  pax            Int                @default(2)
-  startDate      DateTime?
-  endDate        DateTime?
-  budgetBand     String?
-  interests      Json?
-  message        String?            @db.Text
-  referralCodeId String?            @db.VarChar(25)
-  referralCode   ReferralCode?      @relation(fields: [referralCodeId], references: [id], onDelete: SetNull)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  itineraries    Itinerary[]
-  responses      InquiryResponse[]
-  proposal       InquiryProposal?
-  messages       InquiryMessage[]
-  statusHistory  InquiryStatusLog[]
-  commission     Commission?
-  driverAssignments DriverAssignment[]
+  id                  String             @id @default(cuid()) @db.VarChar(25)
+  touristId           String             @db.VarChar(25)
+  tourist             User               @relation("TouristInquiries", fields: [touristId], references: [id])
+  agencyId            String             @db.VarChar(25)
+  agency              Agency             @relation(fields: [agencyId], references: [id])
+  tourId              String?            @db.VarChar(25)
+  tour                Tour?              @relation(fields: [tourId], references: [id], onDelete: SetNull)
+  type                InquiryType
+  status              InquiryStatus      @default(NEW)
+  pax                 Int                @default(2)
+  startDate           DateTime?
+  endDate             DateTime?
+  budgetBand          String?
+  interests           Json?
+  message             String?            @db.Text
+  referralCodeId      String?            @db.VarChar(25)
+  referralCode        ReferralCode?      @relation(fields: [referralCodeId], references: [id], onDelete: SetNull)
+  /// When set, influencer fronts the chat (share-as-mine); agency still fulfills.
+  handlerInfluencerId String?            @db.VarChar(25)
+  handlerInfluencer   InfluencerProfile? @relation("InquiryHandlerInfluencer", fields: [handlerInfluencerId], references: [id], onDelete: SetNull)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  itineraries         Itinerary[]
+  responses           InquiryResponse[]
+  proposal            InquiryProposal?
+  messages            InquiryMessage[]
+  statusHistory       InquiryStatusLog[]
+  commission          Commission?
+  driverAssignments   DriverAssignment[]
+
+  @@index([handlerInfluencerId])
 }
 
 model InquiryMessage {

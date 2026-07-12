@@ -15,7 +15,13 @@ export type InfluencerSocialLink = {
 
 export type InfluencerTourDisplaySettings = {
   termsAcceptedAt?: string;
+  /** @deprecated Prefer shareAsMine — kept for older display JSON */
   hideAgencyName?: boolean;
+  /**
+   * Share as the influencer's own listing: hide agency branding on the
+   * storefront, open a tour popup, and route inquire chat to the influencer.
+   */
+  shareAsMine?: boolean;
   displayPriceLkr?: number;
   coverUrl?: string;
   galleryImages?: InfluencerHeroSlide[];
@@ -120,7 +126,12 @@ function parseTourSettings(raw: unknown): Record<string, InfluencerTourDisplaySe
     if (typeof row.termsAcceptedAt === "string" && row.termsAcceptedAt.trim()) {
       settings.termsAcceptedAt = row.termsAcceptedAt.trim();
     }
-    if (row.hideAgencyName === true) settings.hideAgencyName = true;
+    if (row.shareAsMine === true) {
+      settings.shareAsMine = true;
+      settings.hideAgencyName = true;
+    } else if (row.hideAgencyName === true) {
+      settings.hideAgencyName = true;
+    }
     if (row.displayPriceLkr != null) {
       const price = Number(row.displayPriceLkr);
       if (Number.isFinite(price) && price > 0) settings.displayPriceLkr = Math.round(price);

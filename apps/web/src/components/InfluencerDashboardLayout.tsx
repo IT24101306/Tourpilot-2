@@ -12,6 +12,7 @@ const INFLUENCER_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/i", label: "Overview", end: true },
   { to: "/dashboard/i/tours", label: "Tours" },
   { to: "/dashboard/i/display", label: "Display" },
+  { to: "/dashboard/i/inquiries", label: "Chats" },
   { to: "/dashboard/i/codes", label: "Codes" },
   { to: "/dashboard/i/commission-requests", label: "Rate talks" },
   { to: "/dashboard/i/commissions", label: "Commissions" },

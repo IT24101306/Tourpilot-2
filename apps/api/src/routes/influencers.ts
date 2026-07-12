@@ -83,7 +83,9 @@ influencersRouter.get("/:slug", async (req, res, next) => {
         const pricing = attachTourPricing(t);
         const refCode = codeByTourId.get(t.id);
         const listedPrice = settings?.displayPriceLkr ?? pricing.publicPriceLkr;
-        const hideAgency = settings?.hideAgencyName === true;
+        const shareAsMine =
+          settings?.shareAsMine === true || settings?.hideAgencyName === true;
+        const hideAgency = shareAsMine;
         const coverUrl = resolveImageUrl(
           settings?.coverUrl?.trim() || t.coverUrl,
           DEFAULT_TOUR_COVER_URL
@@ -101,8 +103,10 @@ influencersRouter.get("/:slug", async (req, res, next) => {
           publicPriceLkr: listedPrice,
           coverUrl,
           galleryImages,
+          agencyId: t.agency.id,
           agency: hideAgency ? null : t.agency,
           hideAgencyName: hideAgency,
+          shareAsMine,
           refCode: refCode ?? null,
           tourPath: `/tours/${t.agency.slug}/${t.slug}${refCode ? `?ref=${refCode}` : ""}`,
         };

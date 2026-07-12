@@ -2,7 +2,9 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { resolveReferralCommissionLkr } from "../lib/referralCommission.js";
+import { parseInfluencerDisplay } from "../lib/influencerDisplay.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
+import { InquiryMessageKind } from "@prisma/client";
 import { calculateItineraryTotals } from "../utils/pricing.js";
 import { createShareToken } from "../services/otp.js";
 import {
@@ -18,6 +20,7 @@ import {
   upsertInquiryProposal,
 } from "../services/inquiryProposal.js";
 import { serializeItineraryEntity } from "../lib/entitySerialize.js";
+import { asJson } from "../utils/json.js";
 import {
   buildInquiryThread,
   createInquiryMessage,
@@ -26,6 +29,7 @@ import {
 } from "../services/inquiryMessages.js";
 import {
   notifyCommissionApproved,
+  notifyInquiryChatMessage,
   notifyInquiryCreated,
   notifyInquiryStatusChange,
   notifyProposalSent,
@@ -88,7 +92,15 @@ const inquiryIncludeForAgency = {
   tourist: {
     select: { id: true, name: true, phone: true, email: true, role: true, avatarUrl: true },
   },
+  agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
+  handlerInfluencer: {
+    select: {
+      id: true,
+      slug: true,
+      user: { select: { id: true, name: true } },
+    },
+  },
   responses: {
     orderBy: { createdAt: "asc" as const },
     include: {
@@ -122,6 +134,13 @@ const inquiryIncludeForTourist = {
   agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
   tourist: { select: { id: true, name: true, role: true } },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
+  handlerInfluencer: {
+    select: {
+      id: true,
+      slug: true,
+      user: { select: { id: true, name: true } },
+    },
+  },
   responses: {
     orderBy: { createdAt: "asc" as const },
     include: {
@@ -164,15 +183,54 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
         message: z.string().optional(),
         email: z.string().email("A valid email address is required"),
         refCode: z.string().optional(),
+        influencerSlug: z.string().optional(),
       })
       .parse(req.body);
 
     let referralCodeId: string | undefined;
+    let handlerInfluencerId: string | undefined;
     if (body.refCode) {
       const code = await prisma.referralCode.findUnique({
         where: { code: body.refCode.toUpperCase() },
+        include: {
+          influencer: {
+            select: { id: true, display: true, user: { select: { name: true } } },
+          },
+        },
       });
-      if (code?.isActive) referralCodeId = code.id;
+      if (code?.isActive) {
+        referralCodeId = code.id;
+        if (body.tourId || code.tourId) {
+          const tourKey = body.tourId ?? code.tourId!;
+          const display = parseInfluencerDisplay(
+            code.influencer.display,
+            code.influencer.user.name
+          );
+          if (
+            display.tourSettings[tourKey]?.shareAsMine === true ||
+            display.tourSettings[tourKey]?.hideAgencyName === true
+          ) {
+            handlerInfluencerId = code.influencer.id;
+          }
+        }
+      }
+    }
+
+    if (!handlerInfluencerId && body.influencerSlug && body.tourId) {
+      const profile = await prisma.influencerProfile.findFirst({
+        where: { slug: body.influencerSlug },
+        select: { id: true, display: true, user: { select: { name: true } } },
+      });
+      if (profile) {
+        const display = parseInfluencerDisplay(profile.display, profile.user.name);
+        if (
+          display.tourIds.includes(body.tourId) &&
+          (display.tourSettings[body.tourId]?.shareAsMine === true ||
+            display.tourSettings[body.tourId]?.hideAgencyName === true)
+        ) {
+          handlerInfluencerId = profile.id;
+        }
+      }
     }
 
     let tourId: string | undefined = body.tripPlan ? undefined : body.tourId;
@@ -229,9 +287,10 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
           startDate: body.startDate ? new Date(body.startDate) : undefined,
           endDate: body.endDate ? new Date(body.endDate) : undefined,
           budgetBand: body.budgetBand,
-          interests: interestsPayload ?? [],
+          interests: asJson(interestsPayload ?? []),
           message: messageBody,
           referralCodeId,
+          handlerInfluencerId,
           statusHistory: { create: { status: "NEW", actorId: req.user!.id } },
         },
         include: { agency: true, tour: true },
@@ -279,6 +338,21 @@ inquiriesRouter.get("/mine", authRequired, async (req, res, next) => {
       const list = await prisma.inquiry.findMany({
         where: { agencyId: agency.id },
         include: inquiryIncludeForAgency,
+        orderBy: { createdAt: "desc" },
+      });
+      return res.json(list.map(serializeInquiryForClient));
+    }
+
+    if (req.user!.role === "INFLUENCER") {
+      const profile = await prisma.influencerProfile.findUnique({
+        where: { userId: req.user!.id },
+        select: { id: true },
+      });
+      if (!profile) return res.status(404).json({ error: "Influencer profile not found" });
+
+      const list = await prisma.inquiry.findMany({
+        where: { handlerInfluencerId: profile.id },
+        include: inquiryIncludeForTourist,
         orderBy: { createdAt: "desc" },
       });
       return res.json(list.map(serializeInquiryForClient));
@@ -337,7 +411,77 @@ inquiriesRouter.get("/:id", authRequired, async (req, res, next) => {
       }
     }
 
+    if (role === "INFLUENCER") {
+      const profile = await prisma.influencerProfile.findUnique({
+        where: { userId: req.user!.id },
+        select: { id: true },
+      });
+      if (!profile || inquiry.handlerInfluencerId !== profile.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
+
+    if (role !== "TOURIST" && role !== "AGENCY" && role !== "ADMIN" && role !== "INFLUENCER") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     res.json(serializeInquiryForClient(inquiry));
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Free-form chat for tourist, agency, or handling influencer. */
+inquiriesRouter.post("/:id/messages", authRequired, async (req, res, next) => {
+  try {
+    const body = z.object({ message: z.string().min(1).max(4000) }).parse(req.body);
+    const role = req.user!.role;
+
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        touristId: true,
+        agencyId: true,
+        handlerInfluencerId: true,
+      },
+    });
+    if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
+
+    let kind: InquiryMessageKind;
+    if (role === "TOURIST") {
+      if (inquiry.touristId !== req.user!.id) return res.status(403).json({ error: "Forbidden" });
+      kind = InquiryMessageKind.TOURIST;
+    } else if (role === "AGENCY") {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency || inquiry.agencyId !== agency.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      kind = InquiryMessageKind.AGENCY;
+    } else if (role === "INFLUENCER") {
+      const profile = await prisma.influencerProfile.findUnique({
+        where: { userId: req.user!.id },
+        select: { id: true },
+      });
+      if (!profile || inquiry.handlerInfluencerId !== profile.id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      kind = InquiryMessageKind.INFLUENCER;
+    } else {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const message = await createInquiryMessage(
+      inquiry.id,
+      req.user!.id,
+      kind,
+      body.message,
+      "CHAT_MESSAGE"
+    );
+
+    void notifyInquiryChatMessage(inquiry.id, req.user!.id, body.message, kind).catch(console.error);
+
+    res.status(201).json(serializeInquiryMessage(message));
   } catch (e) {
     next(e);
   }
@@ -744,6 +888,11 @@ function serializeInquiryForClient(inquiry: {
     avatarUrl?: string | null;
   };
   agency?: { id: string; name: string; slug: string; logoUrl?: string | null };
+  handlerInfluencer?: {
+    id: string;
+    slug: string | null;
+    user: { id: string; name: string };
+  } | null;
   tour?: {
     id: string;
     title: string;
@@ -784,6 +933,15 @@ function serializeInquiryForClient(inquiry: {
     updatedAt: inquiry.updatedAt,
     tourist: inquiry.tourist,
     agency: inquiry.agency,
+    handlerInfluencer: inquiry.handlerInfluencer
+      ? {
+          id: inquiry.handlerInfluencer.id,
+          slug: inquiry.handlerInfluencer.slug,
+          name: inquiry.handlerInfluencer.user.name,
+          userId: inquiry.handlerInfluencer.user.id,
+        }
+      : null,
+    whiteLabel: Boolean(inquiry.handlerInfluencer),
     tour: inquiry.tour
       ? {
           ...inquiry.tour,

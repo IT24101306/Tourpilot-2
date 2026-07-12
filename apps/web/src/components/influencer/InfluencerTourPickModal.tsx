@@ -112,7 +112,9 @@ export function InfluencerTourPickModal({
 
   const [termsAccepted, setTermsAccepted] = useState(Boolean(settings.termsAcceptedAt));
 
-  const [hideAgencyName, setHideAgencyName] = useState(Boolean(settings.hideAgencyName));
+  const [shareAsMine, setShareAsMine] = useState(
+    Boolean(settings.shareAsMine ?? settings.hideAgencyName)
+  );
 
   const [displayPrice, setDisplayPrice] = useState(
 
@@ -144,7 +146,7 @@ export function InfluencerTourPickModal({
 
     setTermsAccepted(Boolean(settings.termsAcceptedAt));
 
-    setHideAgencyName(Boolean(settings.hideAgencyName));
+    setShareAsMine(Boolean(settings.shareAsMine ?? settings.hideAgencyName));
 
     setDisplayPrice(settings.displayPriceLkr ? String(settings.displayPriceLkr) : "");
 
@@ -214,9 +216,10 @@ export function InfluencerTourPickModal({
 
       termsAcceptedAt: settings.termsAcceptedAt || new Date().toISOString(),
 
-      hideAgencyName,
+      shareAsMine,
+      hideAgencyName: shareAsMine,
 
-      ...(parsedDisplayPrice != null && parsedDisplayPrice > minPrice
+      ...(parsedDisplayPrice != null && parsedDisplayPrice >= minPrice
 
         ? { displayPriceLkr: Math.round(parsedDisplayPrice) }
 
@@ -724,21 +727,59 @@ export function InfluencerTourPickModal({
 
 
 
-        <label className="influencer-tour-pick-hide-agency">
+        <fieldset className="influencer-tour-share-mode">
 
-          <input
+          <legend>How should travelers see this tour?</legend>
 
-            type="checkbox"
+          <label className="influencer-tour-pick-hide-agency">
 
-            checked={hideAgencyName}
+            <input
 
-            onChange={(e) => setHideAgencyName(e.target.checked)}
+              type="radio"
 
-          />
+              name={`share-mode-${tour.id}`}
 
-          <span>Hide agency name on my public page</span>
+              checked={!shareAsMine}
 
-        </label>
+              onChange={() => setShareAsMine(false)}
+
+            />
+
+            <span>
+
+              <strong>Share with agency details</strong>
+
+              <em>Agency name shown · inquire goes to the agency</em>
+
+            </span>
+
+          </label>
+
+          <label className="influencer-tour-pick-hide-agency">
+
+            <input
+
+              type="radio"
+
+              name={`share-mode-${tour.id}`}
+
+              checked={shareAsMine}
+
+              onChange={() => setShareAsMine(true)}
+
+            />
+
+            <span>
+
+              <strong>Share as mine</strong>
+
+              <em>Agency hidden · popup on your page · you chat with the traveler</em>
+
+            </span>
+
+          </label>
+
+        </fieldset>
 
 
 

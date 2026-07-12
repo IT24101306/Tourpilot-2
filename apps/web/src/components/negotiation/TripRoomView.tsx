@@ -18,7 +18,7 @@ import { formatInquiryStatus, inquiryStatusClass } from "../../pages/agency/type
 
 const RESPONDABLE = new Set(["SENT_TO_TOURIST", "TOURIST_VIEWED"]);
 
-type TripRoomRole = "AGENCY" | "TOURIST" | "ADMIN";
+type TripRoomRole = "AGENCY" | "TOURIST" | "ADMIN" | "INFLUENCER";
 
 type Props = {
   inquiryId: string;
@@ -49,6 +49,8 @@ export function TripRoomView({
   const [revisionNote, setRevisionNote] = useState("");
   const [adminMessage, setAdminMessage] = useState("");
   const [adminSending, setAdminSending] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatSending, setChatSending] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -162,12 +164,37 @@ export function TripRoomView({
     });
   }
 
+  function sendChatMessage(e: FormEvent) {
+    e.preventDefault();
+    const text = chatMessage.trim();
+    if (!text) return;
+    void (async () => {
+      setChatSending(true);
+      setActionStatus("");
+      try {
+        await api(`/inquiries/${inquiryId}/messages`, {
+          method: "POST",
+          token,
+          body: JSON.stringify({ message: text }),
+        });
+        setChatMessage("");
+        await load();
+      } catch (err) {
+        setActionStatus(err instanceof ApiError ? err.message : "Failed to send message");
+      } finally {
+        setChatSending(false);
+      }
+    })();
+  }
+
   const shellClass =
     role === "TOURIST"
       ? "section trip-room-page module-shell module-guided module-negotiation"
       : role === "ADMIN"
         ? "section trip-room-page module-shell module-governance module-negotiation"
-        : "section trip-room-page module-shell module-negotiation";
+        : role === "INFLUENCER"
+          ? "section trip-room-page module-shell module-partner module-negotiation"
+          : "section trip-room-page module-shell module-negotiation";
 
   if (loading) {
     return (
@@ -188,32 +215,52 @@ export function TripRoomView({
     );
   }
 
+  const whiteLabel = Boolean(inquiry.whiteLabel && inquiry.handlerInfluencer);
   const counterparty =
     role === "AGENCY"
       ? inquiry.tourist?.name ?? "Traveler"
       : role === "ADMIN"
         ? `${inquiry.tourist?.name ?? "Traveler"} · ${inquiry.agency?.name ?? "Agency"}`
-        : inquiry.agency?.name ?? "Agency";
+        : role === "INFLUENCER"
+          ? inquiry.tourist?.name ?? "Traveler"
+          : whiteLabel
+            ? inquiry.handlerInfluencer?.name ?? "Partner"
+            : inquiry.agency?.name ?? "Agency";
   const agencySlug = inquiry.agency?.slug ?? user?.agency?.slug;
   const canRespond = role === "TOURIST" && RESPONDABLE.has(inquiry.status) && inquiry.proposal;
+  const canChat = role === "TOURIST" || role === "AGENCY" || role === "INFLUENCER";
 
   return (
     <section className={shellClass}>
       <ModuleHeader
-        module={role === "TOURIST" ? "guided" : role === "ADMIN" ? "governance" : "negotiation"}
+        module={
+          role === "TOURIST"
+            ? "guided"
+            : role === "ADMIN"
+              ? "governance"
+              : role === "INFLUENCER"
+                ? "partner"
+                : "negotiation"
+        }
         title={
           role === "TOURIST"
             ? `Your trip with ${counterparty}`
             : role === "ADMIN"
               ? `Admin trip room · ${counterparty}`
-              : `Trip room · ${counterparty}`
+              : role === "INFLUENCER"
+                ? `Chat · ${counterparty}`
+                : `Trip room · ${counterparty}`
         }
         subtitle={
           role === "TOURIST"
-            ? "Follow each step — chat, compare options, and confirm when you are ready."
+            ? whiteLabel
+              ? "Chat with your partner — refine details and confirm when you are ready."
+              : "Follow each step — chat, compare options, and confirm when you are ready."
             : role === "ADMIN"
               ? "Review the negotiation and post platform messages visible to both parties."
-              : "Plan together — clarify details, compare options, and confirm the trip."
+              : role === "INFLUENCER"
+                ? "Reply to travelers who inquired from your shared tours."
+                : "Plan together — clarify details, compare options, and confirm the trip."
         }
       >
         <Link to={backTo} className="btn btn-ghost">
@@ -267,7 +314,7 @@ export function TripRoomView({
           <h3 className="neg-panel-title">Conversation</h3>
           <p className="neg-panel-hint">Ask questions and refine the plan together.</p>
 
-          {inquiry.tour && agencySlug && (
+          {inquiry.tour && agencySlug && !whiteLabel && (
             <InquiryTourChip
               tour={{
                 id: inquiry.tour.id,
@@ -279,6 +326,11 @@ export function TripRoomView({
               agencySlug={agencySlug}
               compact
             />
+          )}
+          {inquiry.tour && whiteLabel && (
+            <p className="muted neg-request-meta">
+              Tour: <strong>{inquiry.tour.title}</strong>
+            </p>
           )}
 
           {(inquiry.startDate || inquiry.budgetBand) && (
@@ -303,8 +355,35 @@ export function TripRoomView({
                 ? "Send a proposal to start the conversation."
                 : role === "ADMIN"
                   ? "No messages yet."
-                  : "Your agency will reply here soon."}
+                  : role === "INFLUENCER"
+                    ? "Reply below to start chatting with this traveler."
+                    : whiteLabel
+                      ? "Your partner will reply here soon."
+                      : "Your agency will reply here soon."}
             </p>
+          )}
+
+          {canChat && (
+            <form className="neg-admin-compose" onSubmit={sendChatMessage}>
+              <label htmlFor="tripChatMessage">
+                {role === "INFLUENCER" ? "Message traveler" : "Send a message"}
+              </label>
+              <textarea
+                id="tripChatMessage"
+                rows={3}
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder={
+                  role === "INFLUENCER"
+                    ? "Answer questions, share details, or suggest next steps…"
+                    : "Write a message…"
+                }
+                required
+              />
+              <button type="submit" className="btn btn-primary" disabled={chatSending}>
+                {chatSending ? "Sending…" : "Send message"}
+              </button>
+            </form>
           )}
 
           {role === "ADMIN" && (

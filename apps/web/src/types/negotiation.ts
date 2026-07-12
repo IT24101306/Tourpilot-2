@@ -40,6 +40,13 @@ export type InquiryDetail = {
   proposalEditable?: boolean;
   tourist?: { id: string; name: string; phone: string; email?: string | null };
   agency?: { id: string; name: string; slug: string; logoUrl?: string | null };
+  handlerInfluencer?: {
+    id: string;
+    slug: string | null;
+    name: string;
+    userId: string;
+  } | null;
+  whiteLabel?: boolean;
   tour?: { id: string; title: string; slug: string; days?: number; basePriceLkr?: number } | null;
   proposal?: {
     id: string;
@@ -59,6 +66,8 @@ export type NegotiationListItem = {
   createdAt: string;
   tourist?: { id: string; name: string; phone: string };
   agency?: { id: string; name: string; slug: string };
+  handlerInfluencer?: { id: string; name: string; slug: string | null } | null;
+  whiteLabel?: boolean;
   tour?: { title: string } | null;
   proposal?: { items: Array<{ id: string }> } | null;
   thread?: ThreadMessage[];

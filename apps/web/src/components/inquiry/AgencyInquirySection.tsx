@@ -18,6 +18,8 @@ type Props = {
   agencyName: string;
   agencySlug: string;
   refCode?: string | null;
+  /** When set with share-as-mine tours, inquire chat is handled by this influencer */
+  influencerSlug?: string | null;
   tour?: InquiryTourRef | null;
   /** Scroll this section into view once after mount (e.g. from tour inquire link). */
   focusOnMount?: boolean;
@@ -31,6 +33,7 @@ export function AgencyInquirySection({
   agencyName,
   agencySlug,
   refCode,
+  influencerSlug,
   tour,
   focusOnMount,
   embedded,
@@ -136,11 +139,16 @@ export function AgencyInquirySection({
           message: message.trim(),
           email: email.trim(),
           refCode: refCode || undefined,
+          influencerSlug: influencerSlug || undefined,
         }),
       });
       await refreshUser().catch(() => {});
       setSentInquiryId(result.id);
-      setStatus("Your inquiry was sent! The agency will reply in your trip room.");
+      setStatus(
+        influencerSlug
+          ? "Your inquiry was sent! Continue the chat in your trip room."
+          : "Your inquiry was sent! The agency will reply in your trip room."
+      );
       onSuccess?.(result.id);
       if (!tour) {
         setMessage("");
@@ -211,12 +219,19 @@ export function AgencyInquirySection({
               <header className="agency-inquiry-embedded-head">
                 <h3>{isTourInquiry ? `Inquire about ${tour!.title}` : "Request a custom tour"}</h3>
                 <p className="muted">
-                  Tell the agency what to change, then continue with offer registration.
+                  {influencerSlug
+                    ? "Add your dates and details — you’ll chat with the creator in your trip room."
+                    : "Tell the agency what to change, then continue with offer registration."}
                 </p>
               </header>
             )}
             {isTourInquiry && tour && (
-              <InquiryTourChip tour={tour} agencySlug={agencySlug} compact={embedded} />
+              <InquiryTourChip
+                tour={tour}
+                agencySlug={agencySlug}
+                compact={embedded}
+                hideAgencyLink={Boolean(influencerSlug)}
+              />
             )}
 
             {!token && (

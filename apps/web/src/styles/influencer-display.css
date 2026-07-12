@@ -273,3 +273,92 @@
   display: grid;
   gap: 10px;
 }
+
+.influencer-tour-share-mode {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 0 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.influencer-tour-share-mode legend {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+.influencer-tour-share-mode .influencer-tour-pick-hide-agency span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.influencer-tour-share-mode .influencer-tour-pick-hide-agency em {
+  font-style: normal;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted, #5c6b65);
+}
+
+.influencer-package-card--button {
+  position: relative;
+}
+
+.influencer-package-card__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+.influencer-package-card--button .agency-package-save {
+  position: relative;
+  z-index: 2;
+}
+
+.influencer-package-price-lkr {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.influencer-tour-popup {
+  display: grid;
+  gap: 14px;
+}
+
+.influencer-tour-popup__cover {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.influencer-tour-popup__gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.influencer-tour-popup__thumb {
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.influencer-tour-popup-dialog {
+  max-width: min(560px, 96vw);
+}
+
+.inquiry-thread-item--influencer {
+  border-left: 3px solid var(--brand-accent-teal, #1fa19d);
+}
+

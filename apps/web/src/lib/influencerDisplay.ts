@@ -3,7 +3,10 @@ import type { DisplaySocialLink, HeroSlide } from "../components/display/display
 
 export type InfluencerTourDisplaySettings = {
   termsAcceptedAt?: string;
+  /** @deprecated Prefer shareAsMine */
   hideAgencyName?: boolean;
+  /** Hide agency + influencer handles inquire chat */
+  shareAsMine?: boolean;
   displayPriceLkr?: number;
   coverUrl?: string;
   galleryImages?: HeroSlide[];

@@ -7,9 +7,7 @@ import {
   resolveImageUrl,
 } from "@tourpilot/shared";
 import { FormatLkr } from "../components/currency/FormatLkr";
-import {
-  type DiscoveryOffer,
-} from "../components/discovery/DiscoveryOfferCard";
+import { type DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
 import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav";
@@ -19,6 +17,8 @@ import { LineUserIcon } from "../components/icons/LineIcons";
 import { NotificationBell } from "../components/NotificationBell";
 import { TourPilotBrand } from "../components/TourPilotBrand";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
+import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
+import { DashboardModal } from "../components/DashboardModal";
 import { offerBookPath } from "../lib/offerBookPaths";
 import { loginPath } from "../utils/authRedirect";
 import { navLinkLightClass } from "../utils/navLinkClass";
@@ -37,8 +37,10 @@ type StorefrontTour = {
   publicPriceLkr: number;
   coverUrl: string;
   galleryImages?: HeroSlide[];
+  agencyId: string;
   agency: { id: string; name: string; slug: string } | null;
   hideAgencyName?: boolean;
+  shareAsMine?: boolean;
   refCode: string | null;
   tourPath: string;
 };
@@ -58,12 +60,17 @@ type Storefront = {
   offers: DiscoveryOffer[];
 };
 
-function InfluencerPackageCard({ tour }: { tour: StorefrontTour }) {
+function InfluencerPackageCard({
+  tour,
+  onOpen,
+}: {
+  tour: StorefrontTour;
+  onOpen?: () => void;
+}) {
   const image = resolveImageUrl(tour.coverUrl, DEFAULT_TOUR_COVER_URL);
   const gallery = tour.galleryImages ?? [];
-
-  return (
-    <Link to={tour.tourPath} className="agency-package-card influencer-package-card">
+  const body = (
+    <>
       <CoverImage src={image} className="agency-package-card-bg" />
       <SaveTourButton tourId={tour.id} className="agency-package-save" />
       <span className="agency-package-days">{formatTourDaysNights(tour.days)}</span>
@@ -81,12 +88,39 @@ function InfluencerPackageCard({ tour }: { tour: StorefrontTour }) {
       ) : null}
       <div className="agency-package-card-body">
         <h3>{tour.title}</h3>
-        {!tour.hideAgencyName && tour.agency ? <p>{tour.agency.name}</p> : null}
+        {!tour.shareAsMine && !tour.hideAgencyName && tour.agency ? (
+          <p>{tour.agency.name}</p>
+        ) : null}
         <strong>
           <FormatLkr amount={tour.publicPriceLkr} prefix="from" />
         </strong>
-        <span className="agency-package-cta">View itinerary →</span>
+        <span className="influencer-package-price-lkr muted">
+          LKR {tour.publicPriceLkr.toLocaleString()}
+        </span>
+        <span className="agency-package-cta">
+          {tour.shareAsMine ? "View details →" : "View itinerary →"}
+        </span>
       </div>
+    </>
+  );
+
+  if (tour.shareAsMine && onOpen) {
+    return (
+      <div className="agency-package-card influencer-package-card influencer-package-card--button">
+        <button
+          type="button"
+          className="influencer-package-card__hit"
+          onClick={onOpen}
+          aria-label={`View ${tour.title}`}
+        />
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link to={tour.tourPath} className="agency-package-card influencer-package-card">
+      {body}
     </Link>
   );
 }
@@ -100,6 +134,7 @@ export function InfluencerDetailPage() {
   const [missing, setMissing] = useState(false);
   const [shareMsg, setShareMsg] = useState("");
   const [navSolid, setNavSolid] = useState(false);
+  const [selectedTour, setSelectedTour] = useState<StorefrontTour | null>(null);
 
   useEffect(() => {
     function onScroll() {
@@ -150,8 +185,7 @@ export function InfluencerDetailPage() {
   const hasOffers = (storefront.offers?.length ?? 0) > 0;
   const hasTours = storefront.tours.length > 0;
   const aboutBody = storefront.aboutDescription?.trim() || storefront.bio?.trim() || "";
-  const hasAbout =
-    Boolean(aboutBody) || (storefront.socialLinks?.length ?? 0) > 0;
+  const hasAbout = Boolean(aboutBody) || (storefront.socialLinks?.length ?? 0) > 0;
 
   const heroSectionLinks: { id: string; label: string }[] = [];
   if (hasAbout) heroSectionLinks.push({ id: "who-we-are", label: "About" });
@@ -292,7 +326,11 @@ export function InfluencerDetailPage() {
               ) : (
                 <div className="agency-package-grid">
                   {storefront.tours.map((t) => (
-                    <InfluencerPackageCard key={t.id} tour={t} />
+                    <InfluencerPackageCard
+                      key={t.id}
+                      tour={t}
+                      onOpen={t.shareAsMine ? () => setSelectedTour(t) : undefined}
+                    />
                   ))}
                 </div>
               )}
@@ -300,6 +338,62 @@ export function InfluencerDetailPage() {
           </div>
         </div>
       </div>
+
+      <DashboardModal
+        open={Boolean(selectedTour)}
+        title={selectedTour?.title ?? "Tour"}
+        onClose={() => setSelectedTour(null)}
+        dialogClassName="influencer-tour-popup-dialog"
+      >
+        {selectedTour && (
+          <div className="influencer-tour-popup">
+            <CoverImage
+              src={resolveImageUrl(selectedTour.coverUrl, DEFAULT_TOUR_COVER_URL)}
+              className="influencer-tour-popup__cover"
+              alt=""
+            />
+            <p className="muted">
+              {formatTourDaysNights(selectedTour.days)} · from{" "}
+              <FormatLkr amount={selectedTour.publicPriceLkr} />
+              {" · "}
+              LKR {selectedTour.publicPriceLkr.toLocaleString()}
+            </p>
+            {selectedTour.summary ? <p>{selectedTour.summary}</p> : null}
+            {(selectedTour.galleryImages?.length ?? 0) > 0 && (
+              <div className="influencer-tour-popup__gallery">
+                {selectedTour.galleryImages!.map((slide, i) => (
+                  <CoverImage
+                    key={`${slide.url}-${i}`}
+                    src={slide.url}
+                    className="influencer-tour-popup__thumb"
+                    alt={slide.label || `Photo ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+            <AgencyInquirySection
+              agencyId={selectedTour.agencyId}
+              agencyName={storefront.name}
+              agencySlug={selectedTour.agency?.slug ?? "partner"}
+              influencerSlug={storefront.slug}
+              refCode={selectedTour.refCode}
+              tour={{
+                id: selectedTour.id,
+                title: selectedTour.title,
+                slug: selectedTour.slug,
+                days: selectedTour.days,
+                basePriceLkr: selectedTour.publicPriceLkr,
+                publicPriceLkr: selectedTour.publicPriceLkr,
+              }}
+              embedded
+              onSuccess={(inquiryId) => {
+                setSelectedTour(null);
+                navigate(`/trips/${inquiryId}`);
+              }}
+            />
+          </div>
+        )}
+      </DashboardModal>
     </div>
   );
 }

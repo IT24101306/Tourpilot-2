@@ -362,7 +362,10 @@ export function InfluencerDisplayPage() {
                       <span className="influencer-display-tour-main">
                         <strong>{t.title}</strong>
                         <span className="muted">
-                          {settings?.hideAgencyName ? "Agency hidden" : t.agency.name} · {t.days} days ·
+                          {settings?.shareAsMine || settings?.hideAgencyName
+                            ? "Shared as yours"
+                            : t.agency.name}{" "}
+                          · {t.days} days ·
                           LKR {shownPrice.toLocaleString()}
                           {photoCount > 0 ? ` · ${photoCount} custom photo${photoCount === 1 ? "" : "s"}` : ""}
                           {` · ${t.influencerCommissionPct}% commission (LKR ${t.influencerCommissionLkr.toLocaleString()})`}

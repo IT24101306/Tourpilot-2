@@ -40,11 +40,11 @@ export async function createNotification(input: NotifyInput) {
   return row;
 }
 
-function tripUrl(inquiryId: string, role: "agency" | "tourist") {
+function tripUrl(inquiryId: string, role: "agency" | "tourist" | "influencer") {
   const base = config.webAppUrl;
-  return role === "agency"
-    ? `${base}/dashboard/agency/trip-room/${inquiryId}`
-    : `${base}/trips/${inquiryId}`;
+  if (role === "agency") return `${base}/dashboard/agency/trip-room/${inquiryId}`;
+  if (role === "influencer") return `${base}/dashboard/i/trip-room/${inquiryId}`;
+  return `${base}/trips/${inquiryId}`;
 }
 
 export async function notifyInquiryCreated(inquiryId: string) {
@@ -53,9 +53,36 @@ export async function notifyInquiryCreated(inquiryId: string) {
     include: {
       agency: { include: { owner: { select: { id: true, name: true, email: true } } } },
       tourist: { select: { id: true, name: true, email: true } },
+      handlerInfluencer: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
     },
   });
   if (!inquiry) return;
+
+  if (inquiry.handlerInfluencer) {
+    const url = tripUrl(inquiryId, "influencer");
+    await createNotification({
+      userId: inquiry.handlerInfluencer.user.id,
+      type: "INQUIRY_CREATED",
+      title: "New traveler inquiry",
+      body: `${inquiry.tourist.name} inquired about a tour you shared.`,
+      inquiryId,
+      email: inquiry.handlerInfluencer.user.email,
+      emailContent: {
+        subject: `New inquiry via your TourPilot page`,
+        text: [
+          `Hello ${inquiry.handlerInfluencer.user.name},`,
+          "",
+          `${inquiry.tourist.name} sent an inquiry on a tour you share as yours.`,
+          "",
+          `Open chat: ${url}`,
+          "",
+          "— TourPilot",
+        ].join("\n"),
+      },
+    });
+  }
 
   const url = tripUrl(inquiryId, "agency");
   const email = inquiryCreatedEmail({
@@ -67,12 +94,71 @@ export async function notifyInquiryCreated(inquiryId: string) {
   await createNotification({
     userId: inquiry.agency.owner.id,
     type: "INQUIRY_CREATED",
-    title: "New trip inquiry",
-    body: `${inquiry.tourist.name} submitted a new inquiry.`,
+    title: inquiry.handlerInfluencer
+      ? "New inquiry (influencer-handled chat)"
+      : "New trip inquiry",
+    body: inquiry.handlerInfluencer
+      ? `${inquiry.tourist.name} inquired via ${inquiry.handlerInfluencer.user.name}'s page.`
+      : `${inquiry.tourist.name} submitted a new inquiry.`,
     inquiryId,
     email: inquiry.agency.owner.email ?? inquiry.agency.contactEmail,
     emailContent: email,
   });
+}
+
+export async function notifyInquiryChatMessage(
+  inquiryId: string,
+  authorId: string,
+  body: string,
+  kind: string
+) {
+  const inquiry = await prisma.inquiry.findUnique({
+    where: { id: inquiryId },
+    include: {
+      agency: { include: { owner: { select: { id: true, email: true, name: true } } } },
+      tourist: { select: { id: true, name: true, email: true } },
+      handlerInfluencer: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+      },
+    },
+  });
+  if (!inquiry) return;
+
+  const preview = body.length > 120 ? `${body.slice(0, 117)}…` : body;
+  const recipients: Array<{ userId: string; email?: string | null; url: string }> = [];
+
+  if (kind !== "TOURIST") {
+    recipients.push({
+      userId: inquiry.tourist.id,
+      email: inquiry.tourist.email,
+      url: tripUrl(inquiryId, "tourist"),
+    });
+  }
+  if (kind !== "AGENCY") {
+    recipients.push({
+      userId: inquiry.agency.owner.id,
+      email: inquiry.agency.owner.email ?? inquiry.agency.contactEmail,
+      url: tripUrl(inquiryId, "agency"),
+    });
+  }
+  if (inquiry.handlerInfluencer && kind !== "INFLUENCER") {
+    recipients.push({
+      userId: inquiry.handlerInfluencer.user.id,
+      email: inquiry.handlerInfluencer.user.email,
+      url: tripUrl(inquiryId, "influencer"),
+    });
+  }
+
+  for (const party of recipients) {
+    if (party.userId === authorId) continue;
+    await createNotification({
+      userId: party.userId,
+      type: "INQUIRY_CHAT",
+      title: "New trip message",
+      body: preview,
+      inquiryId,
+    });
+  }
 }
 
 export async function notifyProposalSent(inquiryId: string) {

@@ -40,6 +40,8 @@ import { InfluencerCommissionsPage } from "./pages/influencer/InfluencerCommissi
 import { InfluencerCommissionRequestsPage } from "./pages/influencer/InfluencerCommissionRequestsPage";
 import { InfluencerGuidePage } from "./pages/influencer/InfluencerGuidePage";
 import { InfluencerDisplayPage } from "./pages/influencer/InfluencerDisplayPage";
+import { InfluencerInquiriesPage } from "./pages/influencer/InfluencerInquiriesPage";
+import { InfluencerTripRoomPage } from "./pages/influencer/InfluencerTripRoomPage";
 import { InfluencerDetailPage } from "./pages/InfluencerDetailPage";
 import { AdminOverviewPage } from "./pages/admin/AdminOverviewPage";
 import { AdminAgenciesPage } from "./pages/admin/AdminAgenciesPage";
@@ -221,6 +223,8 @@ export default function App() {
             <Route index element={<InfluencerOverviewPage />} />
             <Route path="tours" element={<InfluencerToursPage />} />
             <Route path="display" element={<InfluencerDisplayPage />} />
+            <Route path="inquiries" element={<InfluencerInquiriesPage />} />
+            <Route path="trip-room/:inquiryId" element={<InfluencerTripRoomPage />} />
             <Route path="codes" element={<InfluencerCodesPage />} />
             <Route path="commissions" element={<InfluencerCommissionsPage />} />
             <Route path="commission-requests" element={<InfluencerCommissionRequestsPage />} />

@@ -405,6 +405,7 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
             z.object({
               termsAcceptedAt: z.string().optional(),
               hideAgencyName: z.boolean().optional(),
+              shareAsMine: z.boolean().optional(),
               displayPriceLkr: z.number().positive().optional(),
               coverUrl: z.string().url().max(500).optional(),
               galleryImages: z
@@ -450,6 +451,7 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
       {
         termsAcceptedAt?: string;
         hideAgencyName?: boolean;
+        shareAsMine?: boolean;
         displayPriceLkr?: number;
         coverUrl?: string;
         galleryImages?: { url: string; label?: string }[];
@@ -471,10 +473,11 @@ influencerRouter.put("/mine/display", authRequired, requireRoles("INFLUENCER"), 
           error: `Displayed price for "${tour.title}" cannot be lower than LKR ${minPrice.toLocaleString()}.`,
         });
       }
+      const shareAsMine = settings.shareAsMine === true || settings.hideAgencyName === true;
       tourSettings[tourId] = {
         termsAcceptedAt: settings.termsAcceptedAt.trim(),
-        ...(settings.hideAgencyName ? { hideAgencyName: true } : {}),
-        ...(settings.displayPriceLkr != null && settings.displayPriceLkr > minPrice
+        ...(shareAsMine ? { shareAsMine: true, hideAgencyName: true } : {}),
+        ...(settings.displayPriceLkr != null && settings.displayPriceLkr >= minPrice
           ? { displayPriceLkr: Math.round(settings.displayPriceLkr) }
           : {}),
         ...(settings.coverUrl?.trim() ? { coverUrl: settings.coverUrl.trim() } : {}),
