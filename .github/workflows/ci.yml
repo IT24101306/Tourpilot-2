@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # Include sha so re-running an old failed run cannot cancel CI for a newer commit.
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
