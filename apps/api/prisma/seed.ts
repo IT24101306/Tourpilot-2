@@ -161,6 +161,7 @@ async function main() {
     update: {
       sections: {
         enabled: {
+          branding: true,
           whoWeAre: true,
           tours: true,
           showcase: true,
@@ -176,6 +177,7 @@ async function main() {
       agencyId: agency.id,
       sections: {
         enabled: {
+          branding: true,
           whoWeAre: true,
           tours: true,
           showcase: true,

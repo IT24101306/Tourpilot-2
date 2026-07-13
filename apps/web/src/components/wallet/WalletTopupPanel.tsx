@@ -5,9 +5,17 @@ type Props = {
   onTopup: (amount: number) => Promise<number>;
   feeHint?: number;
   className?: string;
+  /** Stronger top-up prompt for profile / account surfaces. */
+  emphasize?: boolean;
 };
 
-export function WalletTopupPanel({ balance, onTopup, feeHint, className = "" }: Props) {
+export function WalletTopupPanel({
+  balance,
+  onTopup,
+  feeHint,
+  className = "",
+  emphasize = false,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState("");
@@ -18,7 +26,15 @@ export function WalletTopupPanel({ balance, onTopup, feeHint, className = "" }: 
     setDisplayBalance(balance);
   }, [balance]);
 
-  const rootClass = ["login-wallet-panel", className].filter(Boolean).join(" ");
+  const rootClass = [
+    "login-wallet-panel",
+    emphasize && "login-wallet-panel--emphasize",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const lowBalance = feeHint != null && feeHint > 0 && displayBalance < feeHint;
 
   async function submitTopup(value: number) {
     setLoading(true);
@@ -56,10 +72,18 @@ export function WalletTopupPanel({ balance, onTopup, feeHint, className = "" }: 
           <span className="login-wallet-panel__label">Wallet balance</span>
           <strong className="login-wallet-panel__value">LKR {displayBalance.toLocaleString()}</strong>
           {feeHint != null && feeHint > 0 ? (
-            <span className="login-wallet-panel__fee">Login fee: LKR {feeHint.toLocaleString()}</span>
+            <span className="login-wallet-panel__fee">
+              {lowBalance
+                ? `Balance is below the LKR ${feeHint.toLocaleString()} login fee — top up to keep access smooth.`
+                : `Login fee: LKR ${feeHint.toLocaleString()}`}
+            </span>
           ) : null}
         </div>
-        <button type="button" className="btn btn-teal login-wallet-panel__btn" onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className={`btn ${emphasize ? "btn-primary" : "btn-teal"} login-wallet-panel__btn`}
+          onClick={() => setOpen(true)}
+        >
           Top up
         </button>
       </div>

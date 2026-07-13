@@ -90,7 +90,7 @@ export function RegisterPage() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Sign up with your name and phone (including country code). We verify you with a one-time code — no password."
+      subtitle="Enter your name and phone number — we'll send a one-time code to verify you."
     >
       <AuthSwitch mode="register" returnTo={returnTo} />
 
@@ -109,9 +109,8 @@ export function RegisterPage() {
             required
           />
           <PhoneInput value={phoneInput} onChange={setPhoneInput} id="register-phone" />
-          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-            A tourist profile is created for you so you can save tours, send inquiries, and track
-            itineraries.
+          <p className="auth-benefit muted">
+            Save tours, send inquiries, and keep your trip plans in one place.
           </p>
           <RegisterTermsConsent checked={termsAccepted} onChange={setTermsAccepted} />
           <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>

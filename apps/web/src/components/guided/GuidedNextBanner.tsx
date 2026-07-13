@@ -3,10 +3,11 @@ import { guidedStatusCopy } from "../../lib/guidedUtils";
 type Props = {
   status: string;
   hasProposal?: boolean;
+  partnerName?: string | null;
 };
 
-export function GuidedNextBanner({ status, hasProposal }: Props) {
-  const copy = guidedStatusCopy(status);
+export function GuidedNextBanner({ status, hasProposal, partnerName }: Props) {
+  const copy = guidedStatusCopy(status, { partnerName });
   const showCtaHint =
     (status === "SENT_TO_TOURIST" || status === "TOURIST_VIEWED") && hasProposal;
 

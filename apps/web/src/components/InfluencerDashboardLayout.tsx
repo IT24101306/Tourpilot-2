@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CreateReferralCodeModal } from "./influencer/CreateReferralCodeModal";
-import { TourPilotBrand } from "./TourPilotBrand";
+import { ClientBrand } from "./ClientBrand";
 import { DashboardSupportButton } from "./support/SupportAgentsModal";
 import {
   InfluencerDashboardContext,
@@ -20,7 +20,7 @@ const INFLUENCER_TABS: { to: string; label: string; end?: boolean }[] = [
 ];
 
 export function InfluencerDashboardLayout() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const value = useInfluencerDashboardProvider();
 
   return (
@@ -29,8 +29,13 @@ export function InfluencerDashboardLayout() {
         <div className="agency-dash-chrome">
         <header className="topbar topbar--agency-dash">
           <div className="topbar-brand">
-            <TourPilotBrand onDark />
-            <span className="topbar-context">Partner growth</span>
+            <ClientBrand
+              name={user?.name ?? "Partner"}
+              logoUrl={user?.avatarUrl}
+              to="/dashboard/i"
+              onDark
+              subtitle="Partner growth"
+            />
           </div>
           <nav className="nav nav--light" aria-label="Partner utilities">
             <div className="nav-actions nav-actions--light">

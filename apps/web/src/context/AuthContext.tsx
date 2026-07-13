@@ -24,6 +24,7 @@ export type AuthUser = {
     name: string;
     slug: string;
     status: string;
+    logoUrl?: string | null;
     features?: AgencyFeatures;
   } | null;
   agencyDriver?: {

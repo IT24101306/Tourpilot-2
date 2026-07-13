@@ -25,50 +25,65 @@ export function guidedStepIndex(status: string): number {
   return 0;
 }
 
-export function guidedStatusCopy(status: string): { title: string; hint: string; cta?: string } {
+type GuidedCopyOptions = {
+  /** Agency or creator name for personalized tourist messaging. */
+  partnerName?: string | null;
+};
+
+function partnerLabel(partnerName?: string | null, fallback = "your travel partner") {
+  const name = partnerName?.trim();
+  return name || fallback;
+}
+
+export function guidedStatusCopy(
+  status: string,
+  options: GuidedCopyOptions = {}
+): { title: string; hint: string; cta?: string } {
+  const partner = partnerLabel(options.partnerName);
+
   switch (status) {
     case "NEW":
       return {
         title: "We received your request",
-        hint: "Your agency is reviewing the details. You can add notes in the trip room anytime.",
+        hint: `${partner} is reviewing the details. Visit the chat room anytime to add notes.`,
       };
     case "AGENCY_REVIEWING":
     case "ITINERARY_DRAFT":
       return {
-        title: "Your agency is building options",
+        title: `${partner} is building options`,
         hint: "They are shaping itineraries and pricing. Check back soon for proposals.",
       };
     case "SENT_TO_TOURIST":
     case "TOURIST_VIEWED":
       return {
         title: "Proposals are ready for you",
-        hint: "Compare options, ask questions in chat, then accept or request changes.",
+        hint: "Compare options, ask questions in the chat room, then accept or request changes.",
         cta: "Review proposals",
       };
     case "REVISION_REQUESTED":
       return {
         title: "Changes requested",
-        hint: "Your agency is updating the proposal based on your feedback.",
+        hint: `${partner} is updating the proposal based on your feedback.`,
       };
     case "ACCEPTED":
       return {
         title: "You are all set",
-        hint: "Your trip is confirmed. Your agency will share final details before departure.",
+        hint: `Your trip is confirmed. ${partner} will share final details before departure.`,
       };
     case "DECLINED":
       return {
         title: "Proposal declined",
-        hint: "You can message your agency in the trip room if you want to explore other options.",
+        hint: `You can message ${partner} in the chat room if you want to explore other options.`,
       };
     case "EXPIRED":
       return {
         title: "This request expired",
-        hint: "Start a new inquiry with an agency when you are ready to plan again.",
+        hint: "Start a new inquiry when you are ready to plan again.",
       };
     default:
       return {
         title: "Your trip is in progress",
-        hint: "Open the trip room to see messages and proposals.",
+        hint: "Visit the chat room to see messages and proposals.",
       };
   }
 }
@@ -77,5 +92,5 @@ export function guidedListCta(status: string): string {
   if (status === "SENT_TO_TOURIST" || status === "TOURIST_VIEWED") return "Review proposals";
   if (status === "ACCEPTED") return "View trip details";
   if (status === "REVISION_REQUESTED") return "View updates";
-  return "Open trip room";
+  return "Visit the chat room";
 }

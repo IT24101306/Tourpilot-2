@@ -10,14 +10,20 @@ type Props = {
   compare?: boolean;
 };
 
-export function ProposalCards({ items, agencySlug, compare = true }: Props) {
+export function ProposalCards({
+  items,
+  agencySlug,
+  compare = true,
+  partnerName,
+}: Props & { partnerName?: string | null }) {
   const { format } = useFormatMoney();
+  const partner = partnerName?.trim() || "Your travel partner";
 
   if (!items.length) {
     return (
       <div className="neg-proposal-empty">
         <p>No tour options yet.</p>
-        <p className="muted">Your agency is preparing a personalized proposal.</p>
+        <p className="muted">{partner} is preparing a personalized proposal.</p>
       </div>
     );
   }

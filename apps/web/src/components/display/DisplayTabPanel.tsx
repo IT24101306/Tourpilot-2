@@ -7,6 +7,7 @@ import {
   MEDIA,
 } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
@@ -115,6 +116,7 @@ const defaultTransportForm = (): DisplayTransportOption => ({
 });
 
 export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
+  const { refreshUser } = useAuth();
   const { requestConfirm } = useConfirmAction();
   const [activeStep, setActiveStep] = useState<DisplayStep>("hero");
   const [config, setConfig] = useState<DisplayConfig>(defaultDisplayConfig);
@@ -181,7 +183,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
       setPublishedTours(data.publishedTours);
       setConfig({
-        enabled: data.enabled,
+        enabled: { ...defaultDisplayConfig().enabled, ...data.enabled },
         content: {
           ...data.content,
           transportOptions: Array.isArray(data.content.transportOptions)
@@ -293,11 +295,12 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         setLogoUrl(data.logoUrl || logoUrl);
         setInfluencerCommissionPct(data.influencerCommissionPct ?? influencerCommissionPct);
         setConfig({
-          enabled: data.enabled,
+          enabled: { ...defaultDisplayConfig().enabled, ...data.enabled },
           content: data.content,
           gallery: data.gallery,
           reviews: data.reviews,
         });
+        await refreshUser().catch(() => {});
         setSaveStatus(statusMessage);
       } catch (err) {
         if (seq !== persistSeqRef.current) return;
@@ -306,7 +309,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
         if (seq === persistSeqRef.current) setSaving(false);
       }
     },
-    [token, logoUrl, influencerCommissionPct]
+    [token, logoUrl, influencerCommissionPct, refreshUser]
   );
 
   useEffect(() => {
@@ -1056,7 +1059,14 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
             title="Hero banner"
             description="First thing visitors see — logo, scrolling photos, headline and subheadline."
           >
-            <div className="display-field-stack">
+            <DisplayVisibilityToggle
+              label="Show company logo & name"
+              hint="Logo, agency name, tagline, and location on the hero banner"
+              checked={config.enabled.branding}
+              onChange={(checked) => toggleSection("branding", checked)}
+            />
+
+            <div className="display-field-stack display-field-stack--spaced">
               <ImageUrlField
                 label="Agency logo"
                 className="image-url-field--embedded"

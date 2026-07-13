@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { GuidedStepper } from "./GuidedStepper";
 import { guidedListCta } from "../../lib/guidedUtils";
 import { formatInquiryStatus, inquiryStatusClass } from "../../pages/agency/types";
@@ -6,13 +5,18 @@ import type { NegotiationListItem } from "../../types/negotiation";
 
 type Props = {
   inquiry: NegotiationListItem;
+  onOpen?: () => void;
 };
 
-export function GuidedTripCard({ inquiry }: Props) {
+export function GuidedTripCard({ inquiry, onOpen }: Props) {
   const tourLabel = inquiry.tour?.title ?? "Custom trip";
   const cta = guidedListCta(inquiry.status);
   const needsAttention =
     inquiry.status === "SENT_TO_TOURIST" || inquiry.status === "TOURIST_VIEWED";
+  const partnerName =
+    inquiry.whiteLabel && inquiry.handlerInfluencer?.name
+      ? inquiry.handlerInfluencer.name
+      : inquiry.agency?.name ?? "Your travel partner";
 
   return (
     <article
@@ -22,7 +26,13 @@ export function GuidedTripCard({ inquiry }: Props) {
         <div>
           <p className="guided-trip-eyebrow">Trip with</p>
           <h3>
-            <Link to={`/trips/${inquiry.id}`}>{inquiry.agency?.name ?? "Your agency"}</Link>
+            {onOpen ? (
+              <button type="button" className="guided-trip-card__title-btn" onClick={onOpen}>
+                {partnerName}
+              </button>
+            ) : (
+              partnerName
+            )}
           </h3>
         </div>
         <span className={`agency-status ${inquiryStatusClass(inquiry.status)}`}>
@@ -39,9 +49,11 @@ export function GuidedTripCard({ inquiry }: Props) {
         {tourLabel} · {inquiry.pax} traveler{inquiry.pax === 1 ? "" : "s"}
       </p>
 
-      <Link to={`/trips/${inquiry.id}`} className="btn btn-primary">
-        {cta}
-      </Link>
+      {onOpen ? (
+        <button type="button" className="btn btn-primary" onClick={onOpen}>
+          {cta}
+        </button>
+      ) : null}
     </article>
   );
 }

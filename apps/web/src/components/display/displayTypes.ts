@@ -2,6 +2,7 @@ import { DEFAULT_TOUR_COVER_URL, resolveImageUrl } from "@tourpilot/shared";
 import { AGENCY_TRANSPORT_OPTIONS, type TransportOption } from "./transportOptions";
 
 export type DisplaySectionFlags = {
+  branding: boolean;
   whoWeAre: boolean;
   tours: boolean;
   showcase: boolean;
@@ -152,6 +153,7 @@ export const defaultDisplayContent = (): DisplayContent => ({
 
 export const defaultDisplayConfig = (): DisplayConfig => ({
   enabled: {
+    branding: true,
     whoWeAre: true,
     tours: true,
     showcase: true,

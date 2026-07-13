@@ -233,11 +233,6 @@ function AgencyDashboardLayoutInner() {
       <header className="topbar topbar--agency-dash">
         <div className="topbar-brand">
           <TourPilotBrand onDark />
-          <span className="topbar-context">
-            {user?.agency?.name
-              ? `${user.agency.name} agency dashboard`
-              : "Agency dashboard"}
-          </span>
         </div>
         <nav className="nav nav--light" aria-label="Dashboard utilities">
           <div className="nav-actions nav-actions--light">

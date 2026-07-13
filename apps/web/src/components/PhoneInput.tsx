@@ -18,7 +18,7 @@ export function PhoneInput({ value, onChange, id = "phone" }: PhoneInputProps) {
         required
       />
       <p className="phone-input-hint muted">
-        Include country code (e.g. +94771234567). Use the same number when logging in.
+        Use your full number with + country code. You'll use this to log in.
       </p>
     </>
   );

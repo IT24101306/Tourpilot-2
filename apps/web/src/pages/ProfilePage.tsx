@@ -9,13 +9,20 @@ import type {
   AccountHighlight,
   AccountStat,
 } from "../components/account/accountProfileUtils";
+import { AgencyLogoPanel } from "../components/account/AgencyLogoPanel";
 import { CurrencyPreferencePanel } from "../components/account/CurrencyPreferencePanel";
 import { WalletHistoryPanel } from "../components/account/WalletHistoryPanel";
 import { lkr, roleLabel } from "../components/account/accountProfileUtils";
 import { useAuth } from "../context/AuthContext";
 import type { InfluencerDashboardData } from "./influencer/types";
 
-type InquirySummary = { id: string; status: string };
+type InquirySummary = {
+  id: string;
+  status: string;
+  agency?: { id: string; name: string; slug: string; logoUrl?: string | null } | null;
+  handlerInfluencer?: { id: string; name: string; slug: string | null } | null;
+  whiteLabel?: boolean;
+};
 
 export function ProfilePage() {
   const { user, token } = useAuth();
@@ -75,6 +82,9 @@ export function ProfilePage() {
   const actions: AccountAction[] = [];
   const highlights: AccountHighlight[] = [];
   let tagline: string | null = null;
+  let contextLabel: string | null = null;
+  let contextPartners: { name: string; slug?: string | null; logoUrl?: string | null; href?: string }[] =
+    [];
 
   const dashPath = dashboardPathForRole(user.role);
   if (dashPath !== "/profile") {
@@ -90,6 +100,41 @@ export function ProfilePage() {
       const loyalty = user.touristProfile?.loyaltyPoints ?? 0;
       const inquiryCount = inquiries.length;
       const bookingCount = inquiries.filter((i) => i.status === "ACCEPTED").length;
+
+      const partnerMap = new Map<string, { name: string; slug?: string | null; logoUrl?: string | null; href?: string }>();
+      for (const inquiry of inquiries) {
+        if (inquiry.whiteLabel && inquiry.handlerInfluencer?.name) {
+          const key = `i:${inquiry.handlerInfluencer.id}`;
+          if (!partnerMap.has(key)) {
+            partnerMap.set(key, {
+              name: inquiry.handlerInfluencer.name,
+              slug: inquiry.handlerInfluencer.slug,
+              href: inquiry.handlerInfluencer.slug
+                ? `/i/${inquiry.handlerInfluencer.slug}`
+                : `/trips?room=${inquiry.id}`,
+            });
+          }
+          continue;
+        }
+        if (inquiry.agency) {
+          const key = `a:${inquiry.agency.id}`;
+          if (!partnerMap.has(key)) {
+            partnerMap.set(key, {
+              name: inquiry.agency.name,
+              slug: inquiry.agency.slug,
+              logoUrl: inquiry.agency.logoUrl,
+              href: `/agencies/${inquiry.agency.slug}`,
+            });
+          }
+        }
+      }
+      contextPartners = Array.from(partnerMap.values()).slice(0, 4);
+      contextLabel =
+        contextPartners.length === 1
+          ? `Planning with ${contextPartners[0]!.name}`
+          : contextPartners.length > 1
+            ? `Planning with ${contextPartners.length} partners`
+            : "Traveler account";
 
       highlights.push({
         id: "journey",
@@ -114,12 +159,14 @@ export function ProfilePage() {
 
       actions.push(
         { label: "Inquiries", to: "/trips", variant: "teal" },
-        { label: "Bookings", to: "/trips/bookings" },
-        { label: "Saved", to: "/saved" }
+        { label: "Bookings", to: "/trips?tab=bookings" },
+        { label: "Saved", to: "/trips?tab=saved" }
       );
       break;
     }
     case "INFLUENCER": {
+      contextLabel = "Partner workspace";
+      contextPartners = [{ name: user.name, href: "/dashboard/i" }];
       if (partner) {
         tagline = partner.profile.bio;
         highlights.push({
@@ -152,7 +199,16 @@ export function ProfilePage() {
     }
     case "AGENCY": {
       if (user.agency) {
-        tagline = user.agency.name;
+        contextLabel = `${user.agency.name} · Agency dashboard`;
+        tagline = "You are managing this agency workspace.";
+        contextPartners = [
+          {
+            name: user.agency.name,
+            slug: user.agency.slug,
+            logoUrl: user.agency.logoUrl,
+            href: `/agencies/${user.agency.slug}`,
+          },
+        ];
         highlights.push({
           id: "storefront",
           label: "Public storefront",
@@ -164,6 +220,8 @@ export function ProfilePage() {
           label: "Store URL",
           value: `tourpilot.app/agencies/${user.agency.slug}`,
         });
+      } else {
+        contextLabel = "Agency account";
       }
       actions.push(
         { label: "Manage tours", to: "/dashboard/agency/tours", variant: "teal" },
@@ -176,6 +234,18 @@ export function ProfilePage() {
       break;
     }
     case "DRIVER": {
+      if (user.agencyDriver) {
+        contextLabel = `Driver for ${user.agencyDriver.agencyName}`;
+        contextPartners = [
+          {
+            name: user.agencyDriver.agencyName,
+            slug: user.agencyDriver.agencySlug,
+            href: `/agencies/${user.agencyDriver.agencySlug}`,
+          },
+        ];
+      } else {
+        contextLabel = "Driver account";
+      }
       highlights.push({
         id: "schedule",
         label: "Today on the road",
@@ -193,6 +263,7 @@ export function ProfilePage() {
       break;
     }
     case "ADMIN": {
+      contextLabel = "TourPilot platform admin";
       highlights.push({
         id: "governance",
         label: "Platform oversight",
@@ -221,13 +292,16 @@ export function ProfilePage() {
       actions={actions}
       highlights={highlights}
       tagline={tagline}
+      contextLabel={contextLabel}
+      contextPartners={contextPartners}
+      leading={<WalletHistoryPanel />}
     >
       {loadError && <p className="form-error">{loadError}</p>}
       {loadingExtra && user.role === "TOURIST" && (
         <p className="muted">Refreshing your travel activity…</p>
       )}
       {user.role === "TOURIST" && <CurrencyPreferencePanel />}
-      <WalletHistoryPanel />
+      {user.role === "AGENCY" && <AgencyLogoPanel />}
     </AccountProfileShell>
   );
 }

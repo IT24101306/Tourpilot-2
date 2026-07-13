@@ -1,20 +1,71 @@
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { NotificationBell } from "./NotificationBell";
+import { ClientBrand } from "./ClientBrand";
 import { TourPilotBrand } from "./TourPilotBrand";
 import { navLinkClass } from "../utils/navLinkClass";
+
+function ProfileTopBrand() {
+  const { user } = useAuth();
+  if (!user) return <span className="topbar-context">My account</span>;
+
+  if (user.role === "AGENCY" && user.agency) {
+    return (
+      <ClientBrand
+        name={user.agency.name}
+        logoUrl={user.agency.logoUrl}
+        to={`/agencies/${user.agency.slug}`}
+        subtitle="My account"
+      />
+    );
+  }
+  if (user.role === "INFLUENCER") {
+    return (
+      <ClientBrand
+        name={user.name}
+        logoUrl={user.avatarUrl}
+        to="/profile"
+        subtitle="My account"
+      />
+    );
+  }
+  if (user.role === "DRIVER" && user.agencyDriver) {
+    return (
+      <ClientBrand
+        name={user.agencyDriver.agencyName}
+        to="/dashboard/driver"
+        subtitle="My account"
+      />
+    );
+  }
+  if (user.role === "ADMIN") {
+    return <TourPilotBrand />;
+  }
+  return <span className="topbar-context">My account</span>;
+}
 
 export function PublicLayout() {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
   const onProfile = pathname === "/profile";
+  const onTravel = pathname === "/trips";
+  const travelTab = searchParams.get("tab");
+  const onInquiries = onTravel && (!travelTab || travelTab === "inquiries");
+  const onBookings = onTravel && travelTab === "bookings";
+  const onSaved = onTravel && travelTab === "saved";
 
   return (
     <div className="shell">
       <header className="topbar topbar--site">
-        <TourPilotBrand />
+        {onProfile ? <ProfileTopBrand /> : <TourPilotBrand />}
         <nav className="nav" aria-label="Primary">
           <div className="nav-links">
+            {user?.role === "TOURIST" && (
+              <NavLink to="/trips" className={() => navLinkClass({ isActive: onInquiries })}>
+                Inquiries
+              </NavLink>
+            )}
             {!onProfile && (
               <NavLink to="/offers" className={navLinkClass}>
                 Offers
@@ -22,10 +73,16 @@ export function PublicLayout() {
             )}
             {user?.role === "TOURIST" && (
               <>
-                <NavLink to="/trips" className={navLinkClass}>
-                  My travel
+                <NavLink
+                  to="/trips?tab=bookings"
+                  className={() => navLinkClass({ isActive: onBookings })}
+                >
+                  Bookings
                 </NavLink>
-                <NavLink to="/saved" className={navLinkClass}>
+                <NavLink
+                  to="/trips?tab=saved"
+                  className={() => navLinkClass({ isActive: onSaved })}
+                >
                   Saved
                 </NavLink>
               </>

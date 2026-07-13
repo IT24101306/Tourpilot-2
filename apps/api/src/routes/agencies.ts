@@ -18,7 +18,7 @@ import { requireAgencyFeature } from "../lib/agencyFeatures.js";
 
 import { asJson } from "../utils/json.js";
 
-import { storedImageUrlSchema, storedImageUrlWithFallback } from "../lib/imageUrlSchema.js";
+import { storedImageUrlSchema, storedImageUrlWithFallback, optionalImageUrlSchema } from "../lib/imageUrlSchema.js";
 import {
   buildSectionsPayload,
   enrichGalleryWithEntities,
@@ -169,6 +169,8 @@ const contentSchema = z.object({
 
 const enabledSchema = z.object({
 
+  branding: z.boolean().default(true),
+
   whoWeAre: z.boolean().default(true),
 
   tours: z.boolean(),
@@ -269,9 +271,9 @@ agenciesRouter.patch("/mine", authRequired, requireRoles("AGENCY"), async (req, 
 
         description: z.string().optional(),
 
-        logoUrl: z.string().optional(),
+        logoUrl: optionalImageUrlSchema,
 
-        coverUrl: z.string().optional(),
+        coverUrl: optionalImageUrlSchema,
 
         district: z.string().optional(),
 

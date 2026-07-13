@@ -8,7 +8,7 @@ export const touristRouter = Router();
 
 const displayCurrencySchema = z.object({
   displayCurrency: z.string().refine(isDisplayCurrency, {
-    message: "displayCurrency must be USD or LKR",
+    message: "displayCurrency must be a supported currency code",
   }),
 });
 

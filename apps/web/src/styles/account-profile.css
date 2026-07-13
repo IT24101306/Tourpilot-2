@@ -44,40 +44,50 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(31, 161, 157, 0.18), transparent 50%),
-    radial-gradient(ellipse 40% 50% at 0% 100%, rgba(20, 184, 29, 0.1), transparent 45%);
+    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(31, 161, 157, 0.22), transparent 52%),
+    radial-gradient(ellipse 45% 55% at 0% 100%, rgba(20, 184, 29, 0.14), transparent 48%);
   pointer-events: none;
 }
 
 .account-profile-hero-inner {
   position: relative;
-  max-width: min(960px, 100%);
+  max-width: min(1040px, 100%);
   margin: 0 auto;
-  padding: clamp(24px, 3.5vw, 36px) var(--appbar-padding-x, 20px);
+  padding: clamp(28px, 4vw, 44px) var(--appbar-padding-x, 20px);
+}
+
+.account-profile-hero-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: clamp(20px, 4vw, 36px);
 }
 
 .account-profile-identity {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: clamp(14px, 2vw, 20px);
   min-width: 0;
+  flex: 1;
 }
 
 .account-profile-avatar {
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-heading);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--brand-on-dark);
   background: linear-gradient(145deg, var(--brand-accent-teal) 0%, var(--brand-accent-green) 100%);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.16),
+    0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
 .account-profile-intro {
@@ -86,18 +96,18 @@
 }
 
 .account-profile-eyebrow {
-  margin: 0 0 4px;
-  font-size: 0.68rem;
+  margin: 0 0 6px;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.65);
+  color: #7dcf8a;
 }
 
 .account-profile-name {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-family: var(--font-heading);
-  font-size: clamp(1.35rem, 2.8vw, 1.75rem);
+  font-size: clamp(1.45rem, 3vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -108,53 +118,173 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
+  gap: 8px 12px;
 }
 
 .account-profile-phone {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.78);
   font-variant-numeric: tabular-nums;
 }
 
-.account-profile-wallet-inline {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 0.8125rem;
+.account-profile-wallet {
+  flex-shrink: 0;
+  align-self: center;
+  min-width: min(220px, 100%);
+  margin-left: auto;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
 }
 
-.account-profile-wallet-inline-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+.account-profile-wallet__label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.72);
 }
 
-.account-profile-wallet-inline strong {
-  font-weight: 700;
+.account-profile-wallet__value {
+  font-family: var(--font-heading);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
 
+.account-profile-wallet__hint {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.account-profile-wallet__cta {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-dark-green, #0f2a1f);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.account-profile-wallet__cta:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.account-profile-band--wallet {
+  background: linear-gradient(180deg, #e8f6ee 0%, var(--ap-surface) 100%);
+  border-bottom: 1px solid var(--ap-line);
+  padding-top: clamp(20px, 2.5vw, 28px);
+  padding-bottom: clamp(20px, 2.5vw, 28px);
+}
+
 .account-profile-tagline {
-  margin: 8px 0 0;
-  font-size: 0.875rem;
+  margin: 10px 0 0;
+  font-size: 0.9rem;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.8);
   max-width: 48ch;
+}
+
+.account-profile-partners {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.account-profile-partners__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.account-profile-partners__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.account-profile-partners__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 700;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+a.account-profile-partners__chip:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(125, 207, 138, 0.55);
+}
+
+.account-profile-partners__logo,
+.account-profile-partners__mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.account-profile-partners__logo {
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.account-profile-partners__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 175, 2, 0.35);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.account-profile-partners__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
 }
 
 .account-role-pill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.625rem;
   font-weight: 700;
@@ -163,6 +293,16 @@
   background: rgba(255, 255, 255, 0.12);
   color: var(--brand-on-dark);
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.account-role-pill--agency {
+  background: rgba(0, 175, 2, 0.22);
+  border-color: rgba(125, 207, 138, 0.45);
+}
+
+.account-role-pill--tourist {
+  background: rgba(26, 168, 160, 0.22);
+  border-color: rgba(26, 168, 160, 0.4);
 }
 
 /* —— Body —— */
@@ -184,7 +324,7 @@
 }
 
 .account-profile-inner {
-  max-width: min(960px, 100%);
+  max-width: min(1040px, 100%);
   margin: 0 auto;
   padding: 0 var(--appbar-padding-x, 20px);
 }
@@ -199,6 +339,12 @@
   margin-top: 28px;
   padding-top: 28px;
   border-top: 1px solid var(--ap-line);
+}
+
+.account-profile-block + .account-profile-block--meta {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ap-line);
 }
 
 .account-block-head {
@@ -223,8 +369,8 @@
 /* —— Shortcuts grid —— */
 .account-shortcuts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
 }
 
 .account-shortcut {
@@ -232,15 +378,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 52px;
-  padding: 12px 14px;
-  border-radius: 12px;
+  min-height: 58px;
+  padding: 14px 16px;
+  border-radius: 14px;
   border: 1px solid var(--ap-line);
   background: var(--ap-card);
   text-decoration: none;
   color: var(--ap-ink);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  box-shadow: 0 1px 0 rgba(15, 26, 22, 0.03);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
@@ -249,8 +396,8 @@
 
 .account-shortcut:hover {
   border-color: color-mix(in srgb, var(--ap-teal) 35%, transparent);
-  box-shadow: 0 6px 16px rgba(15, 26, 22, 0.07);
-  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(15, 26, 22, 0.08);
+  transform: translateY(-2px);
 }
 
 .account-shortcut-label {
@@ -390,7 +537,70 @@
   color: var(--brand-dark-green);
 }
 
-/* —— Details list —— */
+/* —— Compact read-only account meta —— */
+.account-profile-block--meta {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--ap-line);
+}
+
+.account-profile-block + .account-profile-block--meta {
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.account-meta-note {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--ap-muted);
+}
+
+.account-meta-note__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ap-muted) 85%, transparent);
+}
+
+.account-meta-note__item {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  color: var(--ap-ink);
+  opacity: 0.78;
+}
+
+.account-meta-note__key {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ap-muted);
+}
+
+.account-meta-note__sep {
+  margin-right: 2px;
+  color: var(--ap-muted);
+  opacity: 0.7;
+}
+
+.account-meta-note__hint {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ap-muted) 75%, transparent);
+}
+
+/* —— Details list (legacy) —— */
 .account-details-list {
   margin: 0;
   border: 1px solid var(--ap-line);
@@ -463,9 +673,35 @@
 
 .wallet-history-panel__topup.login-wallet-panel {
   margin-bottom: 18px;
-  background: var(--ap-surface);
-  border: 1px solid var(--ap-line);
-  border-radius: 12px;
+  background: #0f2a1f;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 18px 20px;
+  gap: 16px;
+}
+
+.wallet-history-panel__topup.login-wallet-panel--emphasize {
+  box-shadow: 0 14px 32px rgba(15, 42, 31, 0.16);
+}
+
+.wallet-history-panel__topup .login-wallet-panel__label {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.wallet-history-panel__topup .login-wallet-panel__value {
+  color: #fff;
+  font-size: 1.45rem;
+}
+
+.wallet-history-panel__topup .login-wallet-panel__fee {
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 42ch;
+}
+
+.wallet-history-panel__topup .login-wallet-panel__btn {
+  min-height: 44px;
+  padding: 0 22px;
+  font-weight: 800;
 }
 
 .wallet-history-section {
@@ -568,7 +804,7 @@
 
 .account-currency-panel__options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
 }
 
@@ -656,6 +892,19 @@
 }
 
 @media (max-width: 640px) {
+  .account-profile-hero-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .account-profile-wallet {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    text-align: left;
+    align-items: flex-start;
+  }
+
   .account-profile-identity {
     align-items: flex-start;
   }

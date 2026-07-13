@@ -22,7 +22,7 @@ import { offerBookPath } from "../lib/offerBookPaths";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { EntityTypeLineIcon, LineCheckIcon, LineUserIcon } from "../components/icons/LineIcons";
-import { TourPilotBrand } from "../components/TourPilotBrand";
+import { ClientBrand } from "../components/ClientBrand";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
 import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav";
 import { AgencyReviewsFlipShowcase } from "../components/display/AgencyReviewsFlipShowcase";
@@ -350,6 +350,7 @@ export function AgencyDetailPage() {
   }
 
   const [col1, col2, col3] = splitGalleryColumns(gallery);
+  const showBranding = sectionEnabled(enabled, "branding");
   const showTours = sectionEnabled(enabled, "tours");
   const showShowcase = sectionEnabled(enabled, "showcase");
   const showReviews = sectionEnabled(enabled, "reviews");
@@ -389,7 +390,12 @@ export function AgencyDetailPage() {
       <header
         className={`topbar topbar--site topbar--hero${navSolid ? " topbar--hero-solid" : ""}`}
       >
-        <TourPilotBrand onImage showLogo={false} />
+        <ClientBrand
+          name={agency.name}
+          logoUrl={agency.logoUrl}
+          to={`/agencies/${agency.slug}`}
+          onImage
+        />
         <nav className="nav nav--light" aria-label="Agency storefront">
           <div className="nav-actions nav-actions--light">
             <NotificationBell />
@@ -420,20 +426,22 @@ export function AgencyDetailPage() {
       >
         <AgencyHeroBanner slides={heroSlides} />
         <div className="agency-hero-banner__content">
-          <div className="agency-display-intro agency-display-intro--hero">
-            {agency.logoUrl ? (
-              <img src={agency.logoUrl} alt={agency.name} className="agency-display-logo" />
-            ) : (
-              <div className="agency-display-logo-fallback">{agency.name.charAt(0)}</div>
-            )}
-            <div>
-              <p className="agency-display-eyebrow">{agency.name}</p>
-              {agency.tagline && <p className="agency-display-tagline">{agency.tagline}</p>}
-              {agency.district && (
-                <p className="agency-display-region">{agency.district}, Sri Lanka</p>
+          {showBranding && (
+            <div className="agency-display-intro agency-display-intro--hero">
+              {agency.logoUrl ? (
+                <img src={agency.logoUrl} alt={agency.name} className="agency-display-logo" />
+              ) : (
+                <div className="agency-display-logo-fallback">{agency.name.charAt(0)}</div>
               )}
+              <div>
+                <p className="agency-display-eyebrow">{agency.name}</p>
+                {agency.tagline && <p className="agency-display-tagline">{agency.tagline}</p>}
+                {agency.district && (
+                  <p className="agency-display-region">{agency.district}, Sri Lanka</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="agency-hero-banner__copy">
             <h1>{content.heroHeadline}</h1>

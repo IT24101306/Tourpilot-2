@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { TourPilotBrand } from "./TourPilotBrand";
+import { useAuth } from "../context/AuthContext";
+import { ClientBrand } from "./ClientBrand";
 
 const DRIVER_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/driver", label: "Today", end: true },
@@ -12,13 +13,20 @@ const DRIVER_TABS: { to: string; label: string; end?: boolean }[] = [
 ];
 
 export function DriverDashboardLayout() {
+  const { user } = useAuth();
+  const agencyName = user?.agencyDriver?.agencyName ?? "Agency";
+
   return (
     <div className="agency-dashboard">
       <div className="agency-dash-chrome">
       <header className="topbar topbar--agency-dash">
         <div className="topbar-brand">
-          <TourPilotBrand onDark />
-          <span className="topbar-context">Driver dashboard</span>
+          <ClientBrand
+            name={agencyName}
+            to="/dashboard/driver"
+            onDark
+            subtitle="Driver"
+          />
         </div>
         <nav className="nav nav--light" aria-label="Driver utilities">
           <div className="nav-actions nav-actions--light">

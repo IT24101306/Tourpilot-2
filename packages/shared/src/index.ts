@@ -101,6 +101,8 @@ export {
 
 export {
   DISPLAY_CURRENCIES,
+  DISPLAY_CURRENCY_LABELS,
+  LKR_PER_DISPLAY_UNIT,
   LKR_PER_USD,
   convertLkrToDisplay,
   formatDisplayMoney,

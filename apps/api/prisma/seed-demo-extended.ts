@@ -301,6 +301,7 @@ export async function seedExtendedData(ctx: DemoContext) {
     data: {
       sections: {
         enabled: {
+          branding: true,
           tours: true,
           showcase: true,
           reviews: true,

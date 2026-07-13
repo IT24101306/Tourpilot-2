@@ -1,5 +1,9 @@
 import type { DisplayCurrency } from "@tourpilot/shared";
-import { DISPLAY_CURRENCIES, LKR_PER_USD } from "@tourpilot/shared";
+import {
+  DISPLAY_CURRENCIES,
+  DISPLAY_CURRENCY_LABELS,
+  LKR_PER_USD,
+} from "@tourpilot/shared";
 import { useCurrency } from "../../context/CurrencyContext";
 
 export function CurrencyPreferencePanel() {
@@ -14,7 +18,7 @@ export function CurrencyPreferencePanel() {
           Display currency
         </h2>
         <p className="account-currency-panel__lead">
-          How prices are shown across TourPilot (~{LKR_PER_USD} LKR = 1 USD).
+          How prices are shown across TourPilot (approx. {LKR_PER_USD} LKR = 1 USD).
         </p>
       </header>
       <div className="account-currency-panel__options" role="radiogroup" aria-label="Display currency">
@@ -32,9 +36,7 @@ export function CurrencyPreferencePanel() {
               onChange={() => setCurrency(code as DisplayCurrency)}
             />
             <span className="account-currency-option__label">{code}</span>
-            <span className="account-currency-option__hint">
-              {code === "USD" ? "US dollars" : "Sri Lankan rupees"}
-            </span>
+            <span className="account-currency-option__hint">{DISPLAY_CURRENCY_LABELS[code]}</span>
           </label>
         ))}
       </div>

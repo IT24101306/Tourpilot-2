@@ -16,7 +16,7 @@ type NotificationRow = {
 function notificationLink(n: NotificationRow, role: string | undefined) {
   if (!n.inquiryId) return null;
   if (role === "AGENCY") return `/dashboard/agency/trip-room/${n.inquiryId}`;
-  if (role === "TOURIST") return `/trips/${n.inquiryId}`;
+  if (role === "TOURIST") return `/trips?room=${n.inquiryId}`;
   if (role === "INFLUENCER") return `/dashboard/i/trip-room/${n.inquiryId}`;
   if (role === "ADMIN") return `/dashboard/admin/inquiries/${n.inquiryId}/trip-room`;
   return null;

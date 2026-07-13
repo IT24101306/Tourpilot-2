@@ -126,12 +126,12 @@ export function WalletHistoryPanel({ refreshKey = 0 }: Props) {
   const loginFee = LOGIN_FEE_LKR[user.role];
 
   return (
-    <section className="wallet-history-panel" aria-label="Wallet activity">
+    <section id="account-wallet" className="wallet-history-panel" aria-label="Wallet activity">
       <div className="wallet-history-panel__head account-block-head">
         <div>
           <h2 className="wallet-history-panel__title">Wallet</h2>
           <p className="wallet-history-panel__subtitle">
-            Top up, login fees, and transaction history.
+            Keep a balance ready for login fees — top up anytime.
           </p>
         </div>
       </div>
@@ -141,6 +141,7 @@ export function WalletHistoryPanel({ refreshKey = 0 }: Props) {
         feeHint={loginFee > 0 ? loginFee : undefined}
         onTopup={handleTopup}
         className="wallet-history-panel__topup"
+        emphasize
       />
 
       {error && <p className="form-error">{error}</p>}

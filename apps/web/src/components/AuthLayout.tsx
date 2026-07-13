@@ -24,10 +24,8 @@ export function AuthLayout({
           <div className="auth-box auth-box--floating auth-glass">
             <div className="auth-glass__shine" aria-hidden="true" />
             <div className="auth-glass__content">
-              <h2 style={{ margin: "0 0 8px" }}>{title}</h2>
-              <p className="muted auth-glass__subtitle" style={{ marginBottom: 20 }}>
-                {subtitle}
-              </p>
+              <h2 className="auth-box__title">{title}</h2>
+              <p className="muted auth-glass__subtitle auth-box__subtitle">{subtitle}</p>
               {children}
             </div>
           </div>
@@ -39,26 +37,19 @@ export function AuthLayout({
   return (
     <div className="auth-page">
       <div className="auth-hero">
-        <TourPilotBrand />
-        <div
-          className="hero-image"
-          style={{
-            margin: "24px 0 0",
-            minHeight: 480,
-            backgroundImage:
-              'linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,.2)), url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1800")',
-          }}
-        >
-          <h1>Your Sri Lanka journey starts here</h1>
-          <p>Phone + OTP. No passwords. Secure and simple.</p>
+        <TourPilotBrand onDark />
+        <div className="auth-hero__panel">
+          <div className="auth-hero__copy">
+            <p className="auth-hero__eyebrow">Sri Lanka travel</p>
+            <h1>Your Sri Lanka journey starts here</h1>
+            <p>Discover tours, save favorites, and plan with confidence.</p>
+          </div>
         </div>
       </div>
       <div className="auth-card">
         <div className="auth-box">
-          <h2 style={{ margin: "0 0 8px" }}>{title}</h2>
-          <p className="muted" style={{ marginBottom: 20 }}>
-            {subtitle}
-          </p>
+          <h2 className="auth-box__title">{title}</h2>
+          <p className="muted auth-box__subtitle">{subtitle}</p>
           {children}
         </div>
       </div>
@@ -95,7 +86,7 @@ export function AuthSwitch({
         <>
           Already have an account?{" "}
           <Link to={loginTo} className="auth-switch-link">
-            Log in with OTP
+            Log in
           </Link>
         </>
       )}

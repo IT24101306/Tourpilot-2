@@ -1,6 +1,7 @@
 import { MAX_AGENCY_HERO_SLIDES, MEDIA } from "@tourpilot/shared";
 
 export type DisplaySectionFlags = {
+  branding: boolean;
   whoWeAre: boolean;
   tours: boolean;
   showcase: boolean;
@@ -155,6 +156,7 @@ export type DisplaySectionsPayload = {
 };
 
 export const defaultDisplayEnabled = (): DisplaySectionFlags => ({
+  branding: true,
   whoWeAre: true,
   tours: true,
   showcase: true,
@@ -203,6 +205,7 @@ export function parseDisplaySections(raw: unknown): DisplaySectionFlags {
   if (obj.enabled && typeof obj.enabled === "object") {
     const e = obj.enabled as Record<string, unknown>;
     return {
+      branding: e.branding !== false,
       whoWeAre: e.whoWeAre !== false,
       tours: e.tours !== false,
       showcase: e.showcase !== false,

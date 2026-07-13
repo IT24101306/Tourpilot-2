@@ -63,11 +63,7 @@ import { AdminOffersPage } from "./pages/admin/AdminOffersPage";
 import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
 import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
 import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";
-import { TouristTripsPage } from "./pages/TouristTripsPage";
-import { TouristBookingsPage } from "./pages/TouristBookingsPage";
-import { TouristSavedPage } from "./pages/TouristSavedPage";
-import { TouristTravelLayout } from "./components/tourist/TouristTravelLayout";
-import { TouristTripRoomPage } from "./pages/TouristTripRoomPage";
+import { TouristTravelHub } from "./components/tourist/TouristTravelHub";
 import { AgencyTasksPage } from "./pages/agency/AgencyTasksPage";
 import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
 import { SiteFooter } from "./components/SiteFooter";
@@ -110,6 +106,11 @@ function BuildMyTripLegacyRedirect() {
   return <Navigate to={slug ? `/agencies/${slug}` : "/"} replace />;
 }
 
+function TouristTripRoomRedirect() {
+  const { inquiryId } = useParams<{ inquiryId: string }>();
+  return <Navigate to={inquiryId ? `/trips?room=${inquiryId}` : "/trips"} replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -135,30 +136,22 @@ export default function App() {
               path="trips"
               element={
                 <Protected roles={["TOURIST"]}>
-                  <TouristTravelLayout />
+                  <TouristTravelHub />
                 </Protected>
               }
-            >
-              <Route index element={<TouristTripsPage />} />
-              <Route path="bookings" element={<TouristBookingsPage />} />
-            </Route>
+            />
+            <Route path="trips/bookings" element={<Navigate to="/trips?tab=bookings" replace />} />
             <Route
               path="saved"
               element={
                 <Protected roles={["TOURIST"]}>
-                  <TouristTravelLayout />
+                  <Navigate to="/trips?tab=saved" replace />
                 </Protected>
               }
-            >
-              <Route index element={<TouristSavedPage />} />
-            </Route>
+            />
             <Route
               path="trips/:inquiryId"
-              element={
-                <Protected roles={["TOURIST"]}>
-                  <TouristTripRoomPage />
-                </Protected>
-              }
+              element={<TouristTripRoomRedirect />}
             />
           </Route>
 

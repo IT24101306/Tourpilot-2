@@ -13,8 +13,8 @@ const FLIP_MS = 700;
 const CYCLE_MS = 6000;
 
 function starString(rating: number) {
-  const rounded = Math.max(0, Math.min(5, Math.round(rating)));
-  return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+  const filled = Math.max(0, Math.min(5, Math.floor(rating)));
+  return "★".repeat(filled) + "☆".repeat(5 - filled);
 }
 
 export function AgencyReviewsFlipShowcase({
@@ -65,14 +65,18 @@ export function AgencyReviewsFlipShowcase({
         <h3 className="agency-reviews-title">{title}</h3>
         <div
           className="agency-review-flip__score"
-          aria-label={`Average rating ${avgRating.toFixed(1)} out of 5`}
+          aria-label={`Average rating ${avgRating.toFixed(1)} out of 5 from ${reviewCount} reviews`}
         >
+          <span className="agency-review-flip__score-label">Average</span>
           <span className="agency-review-flip__score-num">{avgRating.toFixed(1)}</span>
+          <span className="agency-review-flip__score-out">/ 5</span>
           <span className="agency-review-flip__score-stars" aria-hidden="true">
             {starString(avgRating)}
           </span>
           <span className="agency-review-flip__score-count">
-            {reviewCount > 0 ? `${reviewCount}+ reviews` : "Traveler reviews"}
+            {reviewCount > 0
+              ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}`
+              : "Traveler reviews"}
           </span>
         </div>
       </div>
@@ -101,7 +105,9 @@ export function AgencyReviewsFlipShowcase({
             }`}
           >
             <div className="agency-review-flip__rating">
+              <span className="agency-review-flip__rating-label">This review</span>
               <span className="agency-review-flip__rating-num">{review.rating.toFixed(1)}</span>
+              <span className="agency-review-flip__rating-out">/ 5</span>
               <span
                 className="agency-review-flip__stars"
                 aria-label={`${review.rating} out of 5 stars`}

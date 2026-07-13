@@ -186,6 +186,7 @@ async function main() {
 
   const lankaTourTrailsDisplayContent = {
     enabled: {
+      branding: true,
       whoWeAre: true,
       tours: true,
       showcase: true,

@@ -15,9 +15,10 @@ import { AgencyWhoWeAreSection } from "../components/display/AgencyWhoWeAreSecti
 import type { DisplaySocialLink, HeroSlide } from "../components/display/displayTypes";
 import { LineUserIcon } from "../components/icons/LineIcons";
 import { NotificationBell } from "../components/NotificationBell";
-import { TourPilotBrand } from "../components/TourPilotBrand";
+import { ClientBrand } from "../components/ClientBrand";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
+import { ChatRoomPopup } from "../components/inquiry/ChatRoomPopup";
 import { DashboardModal } from "../components/DashboardModal";
 import { offerBookPath } from "../lib/offerBookPaths";
 import { loginPath } from "../utils/authRedirect";
@@ -132,6 +133,7 @@ export function InfluencerDetailPage() {
   const [shareMsg, setShareMsg] = useState("");
   const [navSolid, setNavSolid] = useState(false);
   const [selectedTour, setSelectedTour] = useState<StorefrontTour | null>(null);
+  const [chatInquiryId, setChatInquiryId] = useState<string | null>(null);
 
   useEffect(() => {
     function onScroll() {
@@ -229,7 +231,7 @@ export function InfluencerDetailPage() {
       <header
         className={`topbar topbar--site topbar--hero${navSolid ? " topbar--hero-solid" : ""}`}
       >
-        <TourPilotBrand onImage showLogo={false} />
+        <ClientBrand name={storefront.name} to={`/i/${storefront.slug}`} onImage subtitle="Creator" />
         <nav className="nav nav--light" aria-label="Creator storefront">
           <div className="nav-actions nav-actions--light">
             <NotificationBell />
@@ -381,14 +383,21 @@ export function InfluencerDetailPage() {
                 publicPriceLkr: selectedTour.publicPriceLkr,
               }}
               embedded
+              openChatOnSuccess={false}
               onSuccess={(inquiryId) => {
                 setSelectedTour(null);
-                navigate(`/trips/${inquiryId}`);
+                setChatInquiryId(inquiryId);
               }}
             />
           </div>
         )}
       </DashboardModal>
+      <ChatRoomPopup
+        open={Boolean(chatInquiryId)}
+        inquiryId={chatInquiryId}
+        partnerName={storefront?.name}
+        onClose={() => setChatInquiryId(null)}
+      />
     </div>
   );
 }

@@ -26,6 +26,9 @@ type Props = {
   role: TripRoomRole;
   backTo: string;
   backLabel?: string;
+  /** Render inside a drawer/panel without leaving the parent page. */
+  embedded?: boolean;
+  onClose?: () => void;
 };
 
 export function TripRoomView({
@@ -34,6 +37,8 @@ export function TripRoomView({
   role,
   backTo,
   backLabel = "Back",
+  embedded = false,
+  onClose,
 }: Props) {
   const { user } = useAuth();
   const { requestConfirm } = useConfirmAction();
@@ -187,8 +192,9 @@ export function TripRoomView({
     })();
   }
 
-  const shellClass =
-    role === "TOURIST"
+  const shellClass = embedded
+    ? "trip-room-embedded"
+    : role === "TOURIST"
       ? "section trip-room-page module-shell module-guided module-negotiation"
       : role === "ADMIN"
         ? "section trip-room-page module-shell module-governance module-negotiation"
@@ -199,6 +205,16 @@ export function TripRoomView({
   if (loading) {
     return (
       <section className={shellClass}>
+        {embedded && onClose ? (
+          <header className="trip-room-embedded__bar">
+            <p className="muted" style={{ margin: 0 }}>
+              Opening trip room…
+            </p>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              Close
+            </button>
+          </header>
+        ) : null}
         <p className="muted">Opening trip room…</p>
       </section>
     );
@@ -208,9 +224,15 @@ export function TripRoomView({
     return (
       <section className={shellClass}>
         <p className="form-error">{error || "Trip not found"}</p>
-        <Link to={backTo} className="btn btn-ghost">
-          {backLabel}
-        </Link>
+        {embedded && onClose ? (
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            Close
+          </button>
+        ) : (
+          <Link to={backTo} className="btn btn-ghost">
+            {backLabel}
+          </Link>
+        )}
       </section>
     );
   }
@@ -232,51 +254,83 @@ export function TripRoomView({
 
   return (
     <section className={shellClass}>
-      <ModuleHeader
-        module={
-          role === "TOURIST"
-            ? "guided"
-            : role === "ADMIN"
-              ? "governance"
-              : role === "INFLUENCER"
-                ? "partner"
-                : "negotiation"
-        }
-        title={
-          role === "TOURIST"
-            ? `Your trip with ${counterparty}`
-            : role === "ADMIN"
-              ? `Admin trip room · ${counterparty}`
-              : role === "INFLUENCER"
-                ? `Chat · ${counterparty}`
-                : `Trip room · ${counterparty}`
-        }
-        subtitle={
-          role === "TOURIST"
-            ? whiteLabel
-              ? "Chat with your partner — refine details and confirm when you are ready."
-              : "Follow each step — chat, compare options, and confirm when you are ready."
-            : role === "ADMIN"
-              ? "Review the negotiation and post platform messages visible to both parties."
-              : role === "INFLUENCER"
-                ? "Reply to travelers who inquired from your shared tours."
-                : "Plan together — clarify details, compare options, and confirm the trip."
-        }
-      >
-        <Link to={backTo} className="btn btn-ghost">
-          {backLabel}
-        </Link>
-        {role === "AGENCY" && (
+      {embedded ? (
+        <header className="trip-room-embedded__bar">
+          <div className="trip-room-embedded__titles">
+            <p className="trip-room-embedded__eyebrow">Trip room</p>
+            <h2>
+              {role === "TOURIST" ? `Your trip with ${counterparty}` : `Trip room · ${counterparty}`}
+            </h2>
+          </div>
+          {onClose ? (
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              Back to list
+            </button>
+          ) : null}
+        </header>
+      ) : (
+        <ModuleHeader
+          module={
+            role === "TOURIST"
+              ? "guided"
+              : role === "ADMIN"
+                ? "governance"
+                : role === "INFLUENCER"
+                  ? "partner"
+                  : "negotiation"
+          }
+          title={
+            role === "TOURIST"
+              ? `Your trip with ${counterparty}`
+              : role === "ADMIN"
+                ? `Admin trip room · ${counterparty}`
+                : role === "INFLUENCER"
+                  ? `Chat · ${counterparty}`
+                  : `Trip room · ${counterparty}`
+          }
+          subtitle={
+            role === "TOURIST"
+              ? whiteLabel
+                ? "Chat with your partner — refine details and confirm when you are ready."
+                : "Follow each step — chat, compare options, and confirm when you are ready."
+              : role === "ADMIN"
+                ? "Review the negotiation and post platform messages visible to both parties."
+                : role === "INFLUENCER"
+                  ? "Reply to travelers who inquired from your shared tours."
+                  : "Plan together — clarify details, compare options, and confirm the trip."
+          }
+        >
+          <Link to={backTo} className="btn btn-ghost">
+            {backLabel}
+          </Link>
+          {role === "AGENCY" && (
+            <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
+              {inquiry.proposal ? "Update proposal" : "Send proposal"}
+            </button>
+          )}
+        </ModuleHeader>
+      )}
+
+      {embedded && role === "AGENCY" ? (
+        <div className="trip-room-embedded__actions">
           <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
             {inquiry.proposal ? "Update proposal" : "Send proposal"}
           </button>
-        )}
-      </ModuleHeader>
+        </div>
+      ) : null}
 
       <div className="trip-room-surface">
         {role === "TOURIST" ? (
           <>
-            <GuidedNextBanner status={inquiry.status} hasProposal={!!inquiry.proposal} />
+            <GuidedNextBanner
+              status={inquiry.status}
+              hasProposal={!!inquiry.proposal}
+              partnerName={
+                inquiry.whiteLabel && inquiry.handlerInfluencer?.name
+                  ? inquiry.handlerInfluencer.name
+                  : inquiry.agency?.name
+              }
+            />
             <GuidedStepper status={inquiry.status} />
           </>
         ) : role === "ADMIN" ? (
@@ -426,6 +480,11 @@ export function TripRoomView({
             items={inquiry.proposal?.items ?? []}
             agencySlug={agencySlug}
             compare={(inquiry.proposal?.items.length ?? 0) > 1}
+            partnerName={
+              inquiry.whiteLabel && inquiry.handlerInfluencer?.name
+                ? inquiry.handlerInfluencer.name
+                : inquiry.agency?.name
+            }
           />
 
           {canRespond && (

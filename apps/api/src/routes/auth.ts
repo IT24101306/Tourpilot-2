@@ -140,6 +140,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
             agencyId: agency.id,
             sections: {
               enabled: {
+                branding: true,
                 whoWeAre: true,
                 tours: true,
                 showcase: true,
@@ -398,6 +399,7 @@ function serializeUser(user: {
     name: string;
     slug: string;
     status: string;
+    logoUrl?: string | null;
     featureDriversAndPartners?: boolean;
     featureSupport?: boolean;
     featureWalletTopup?: boolean;
@@ -431,6 +433,7 @@ function serializeUser(user: {
           name: user.agency.name,
           slug: user.agency.slug,
           status: user.agency.status,
+          logoUrl: user.agency.logoUrl ?? null,
           features: serializeAgencyFeatures(user.agency),
         }
       : null,
