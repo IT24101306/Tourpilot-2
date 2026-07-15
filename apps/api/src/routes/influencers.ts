@@ -3,18 +3,21 @@ import { DEFAULT_TOUR_COVER_URL, resolveImageUrl, resolveSocialTagHandle } from 
 import { prisma } from "../lib/prisma.js";
 import { parseInfluencerDisplay } from "../lib/influencerDisplay.js";
 import {
-  activeOfferWhere,
   offerIncludeActive,
   serializeActiveOffer,
 } from "../lib/offers.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
+import { publicAgencyWhere, publicOfferWhere } from "../lib/publicVisibility.js";
 
 export const influencersRouter = Router();
 
 influencersRouter.get("/:slug", async (req, res, next) => {
   try {
     const profile = await prisma.influencerProfile.findFirst({
-      where: { slug: req.params.slug },
+      where: {
+        slug: req.params.slug,
+        user: { isActive: true },
+      },
       include: {
         user: { select: { name: true } },
         codes: {
@@ -39,6 +42,7 @@ influencersRouter.get("/:slug", async (req, res, next) => {
               id: { in: tourIds },
               isPublished: true,
               tourKind: "READY_MADE",
+              agency: publicAgencyWhere(),
             },
             include: {
               agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } },
@@ -54,7 +58,7 @@ influencersRouter.get("/:slug", async (req, res, next) => {
         : await prisma.offer.findMany({
             where: {
               id: { in: offerIds },
-              ...activeOfferWhere(now),
+              ...publicOfferWhere(now),
             },
             include: offerIncludeActive,
           });

@@ -232,6 +232,12 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
         code: "USER_NOT_FOUND",
       });
     }
+    if (!user.isActive) {
+      return res.status(403).json({
+        error: "This account has been disabled. Contact TourPilot support.",
+        code: "ACCOUNT_DISABLED",
+      });
+    }
 
     if (user.role === "ADMIN") {
       if (!user.passwordHash) {
@@ -305,6 +311,9 @@ authRouter.post("/login-password", async (req, res, next) => {
     if (!user || user.role !== "ADMIN") {
       return res.status(401).json({ error: "Invalid phone or password" });
     }
+    if (!user.isActive) {
+      return res.status(403).json({ error: "This account has been disabled" });
+    }
     if (!user.passwordHash) {
       return res.status(503).json({ error: "Admin password is not configured" });
     }
@@ -340,6 +349,12 @@ authRouter.post("/verify-otp", async (req, res, next) => {
     await verifyOtpChallenge(body.challengeId, phone, body.otp, "login");
 
     const user = await prisma.user.findUniqueOrThrow({ where: { phone } });
+    if (!user.isActive) {
+      return res.status(403).json({
+        error: "This account has been disabled. Contact TourPilot support.",
+        code: "ACCOUNT_DISABLED",
+      });
+    }
     if (user.role === "ADMIN") {
       return res.status(403).json({ error: "Admin accounts must log in with a password" });
     }

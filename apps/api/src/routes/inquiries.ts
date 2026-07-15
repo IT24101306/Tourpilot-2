@@ -21,6 +21,7 @@ import {
 } from "../services/inquiryProposal.js";
 import { serializeItineraryEntity } from "../lib/entitySerialize.js";
 import { asJson } from "../utils/json.js";
+import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import {
   buildInquiryThread,
   createInquiryMessage,
@@ -186,6 +187,14 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
         influencerSlug: z.string().optional(),
       })
       .parse(req.body);
+
+    const agency = await prisma.agency.findFirst({
+      where: { id: body.agencyId, ...publicAgencyWhere() },
+      select: { id: true },
+    });
+    if (!agency) {
+      return res.status(404).json({ error: "Agency is not available" });
+    }
 
     let referralCodeId: string | undefined;
     let handlerInfluencerId: string | undefined;

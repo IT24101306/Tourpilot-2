@@ -11,6 +11,7 @@ import {
   validateTourOfferLinkBody,
 } from "../services/tourOfferLinks.js";
 import { slugify } from "../utils/slug.js";
+import { publicAgencyWhere } from "../lib/publicVisibility.js";
 
 export const toursRouter = Router();
 
@@ -146,7 +147,7 @@ toursRouter.get("/admin/all", authRequired, requireRoles("ADMIN"), async (_req, 
 toursRouter.get("/public/:agencySlug/:tourSlug", async (req, res, next) => {
   try {
     const agency = await prisma.agency.findFirst({
-      where: { slug: req.params.agencySlug, status: "APPROVED" },
+      where: { slug: req.params.agencySlug, ...publicAgencyWhere() },
     });
     if (!agency) return res.status(404).json({ error: "Not found" });
 

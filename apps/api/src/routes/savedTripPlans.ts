@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
+import { publicAgencyWhere } from "../lib/publicVisibility.js";
 
 export const savedTripPlansRouter = Router();
 
@@ -74,7 +75,7 @@ savedTripPlansRouter.post("/", authRequired, requireRoles("TOURIST"), async (req
       .parse(req.body);
 
     const agency = await prisma.agency.findFirst({
-      where: { id: body.agencyId, status: "APPROVED" },
+      where: { id: body.agencyId, ...publicAgencyWhere() },
       select: { id: true, slug: true },
     });
     if (!agency) return res.status(404).json({ error: "Agency not found" });

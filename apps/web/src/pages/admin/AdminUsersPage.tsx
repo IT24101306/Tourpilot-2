@@ -43,8 +43,8 @@ export function AdminUsersPage() {
     requestConfirm({
       title: nextActive ? "Enable user?" : "Disable user?",
       description: nextActive
-        ? "The user can sign in and use the platform again."
-        : "The user will be blocked from signing in.",
+        ? "The user can sign in and use the platform again. If they own an agency, the public storefront becomes visible again."
+        : "The user cannot sign in. Agency storefronts, tours, and offers are hidden from public pages.",
       confirmLabel: nextActive ? "Enable user" : "Disable user",
       variant: nextActive ? "default" : "danger",
       summary: [
@@ -53,6 +53,14 @@ export function AdminUsersPage() {
         { label: "Phone", value: u.phone },
         { label: "Current status", value: u.isActive ? "Active" : "Disabled" },
         { label: "New status", value: nextActive ? "Active" : "Disabled" },
+        ...(u.role === "AGENCY"
+          ? [
+              {
+                label: "Public agency page",
+                value: nextActive ? "Visible (if approved)" : "Hidden",
+              },
+            ]
+          : []),
       ],
       onConfirm: async () => {
         setSaving(true);

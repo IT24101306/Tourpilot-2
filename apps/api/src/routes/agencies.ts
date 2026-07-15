@@ -41,6 +41,7 @@ import {
 } from "../lib/offers.js";
 import { applyOfferUpdate } from "../lib/offers.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
+import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import {
   applyCommissionRequestAction,
   getAgencyCommissionRequests,
@@ -197,7 +198,7 @@ agenciesRouter.get("/", async (_req, res, next) => {
 
     const agencies = await prisma.agency.findMany({
 
-      where: { status: "APPROVED" },
+      where: publicAgencyWhere(),
 
       orderBy: { avgRating: "desc" },
 
@@ -896,7 +897,7 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
     const agency = await prisma.agency.findFirst({
 
-      where: { slug: req.params.slug, status: "APPROVED" },
+      where: { slug: req.params.slug, ...publicAgencyWhere() },
 
       include: {
 

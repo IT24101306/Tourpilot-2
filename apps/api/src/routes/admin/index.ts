@@ -363,20 +363,40 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       })
       .parse(req.body);
 
-    const user = await prisma.user.update({
-      where: { id: req.params.id },
-      data: body,
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        email: true,
-        role: true,
-        isActive: true,
-        walletBalance: true,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: req.params.id },
+        data: body,
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          role: true,
+          isActive: true,
+          walletBalance: true,
+          agency: { select: { id: true, status: true } },
+        },
+      });
+
+      // Hide / restore agency storefront when owner account is toggled.
+      if (body.isActive === false && updated.agency?.status === "APPROVED") {
+        await tx.agency.update({
+          where: { id: updated.agency.id },
+          data: { status: "SUSPENDED" },
+        });
+      }
+      if (body.isActive === true && updated.agency?.status === "SUSPENDED") {
+        await tx.agency.update({
+          where: { id: updated.agency.id },
+          data: { status: "APPROVED" },
+        });
+      }
+
+      return updated;
     });
-    res.json({ ...user, walletBalance: Number(user.walletBalance) });
+
+    res.json({ ...user, walletBalance: Number(user.walletBalance), agency: undefined });
   } catch (e) {
     next(e);
   }

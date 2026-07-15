@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { asJson } from "../utils/json.js";
+import { publicAgencyWhere } from "../lib/publicVisibility.js";
 
 export const entitiesRouter = Router();
 
@@ -19,7 +20,7 @@ entitiesRouter.get("/public/:agencySlug", async (req, res, next) => {
         : null;
 
     const agency = await prisma.agency.findFirst({
-      where: { slug: req.params.agencySlug, status: "APPROVED" },
+      where: { slug: req.params.agencySlug, ...publicAgencyWhere() },
       select: { id: true },
     });
 

@@ -24,7 +24,7 @@ export function signAccessToken(user: AuthUser) {
   });
 }
 
-export function authRequired(req: Request, res: Response, next: NextFunction) {
+export async function authRequired(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
 
@@ -38,7 +38,14 @@ export function authRequired(req: Request, res: Response, next: NextFunction) {
       phone: string;
       role: UserRole;
     };
-    req.user = { id: payload.sub, phone: payload.phone, role: payload.role };
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, phone: true, role: true, isActive: true },
+    });
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: "Account disabled" });
+    }
+    req.user = { id: user.id, phone: user.phone, role: user.role };
     next();
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });

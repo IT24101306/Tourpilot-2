@@ -14,6 +14,7 @@ import {
   validateOfferDates,
 } from "../lib/offers.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
+import { publicOfferWhere } from "../lib/publicVisibility.js";
 
 export const offersRouter = Router();
 
@@ -28,7 +29,7 @@ offersRouter.get("/active", async (_req, res, next) => {
   try {
     const now = new Date();
     const offers = await prisma.offer.findMany({
-      where: { isActive: true, validFrom: { lte: now }, validUntil: { gte: now } },
+      where: publicOfferWhere(now),
       include: offerIncludeActive,
       orderBy: { validUntil: "asc" },
     });
@@ -45,7 +46,7 @@ offersRouter.get("/ending-soon", async (req, res, next) => {
     const limit = Math.min(10, Math.max(1, Number(req.query.limit) || 3));
     const now = new Date();
     const offers = await prisma.offer.findMany({
-      where: { isActive: true, validFrom: { lte: now }, validUntil: { gte: now } },
+      where: publicOfferWhere(now),
       include: offerIncludeActive,
       orderBy: { validUntil: "asc" },
       take: limit * 2,
@@ -80,7 +81,7 @@ offersRouter.get("/", authRequired, requireRoles("ADMIN"), async (_req, res, nex
 offersRouter.get("/:id/registrations", async (req, res, next) => {
   try {
     const offer = await prisma.offer.findFirst({
-      where: { id: req.params.id, isActive: true },
+      where: { id: req.params.id, ...publicOfferWhere() },
     });
     if (!offer) {
       return res.status(404).json({ error: "Offer not found" });
@@ -116,9 +117,7 @@ offersRouter.get("/:id", async (req, res, next) => {
     const offer = await prisma.offer.findFirst({
       where: {
         id: req.params.id,
-        isActive: true,
-        validFrom: { lte: now },
-        validUntil: { gte: now },
+        ...publicOfferWhere(now),
       },
       include: offerIncludeActive,
     });
@@ -135,15 +134,15 @@ offersRouter.post("/:id/register", authRequired, async (req, res, next) => {
   try {
     const body = offerRegisterBodySchema.parse(req.body);
     const now = new Date();
-    const offer = await prisma.offer.findUnique({
-      where: { id: req.params.id },
+    const offer = await prisma.offer.findFirst({
+      where: { id: req.params.id, ...publicOfferWhere(now) },
       include: {
         _count: { select: { registrations: true } },
         tours: { select: { tourId: true } },
       },
     });
 
-    if (!offer || !offer.isActive) {
+    if (!offer) {
       return res.status(404).json({ error: "Offer not found" });
     }
 
