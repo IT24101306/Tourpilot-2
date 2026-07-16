@@ -16,6 +16,9 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - tourpilot_mysql_data:/var/lib/mysql
+    # Bind to localhost only — use SSH tunnel from your PC (do NOT open 3306 to the internet).
+    ports:
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306"
     command:
       [
         "--mysql-native-password=ON",

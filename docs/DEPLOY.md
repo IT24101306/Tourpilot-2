@@ -253,6 +253,41 @@ docker compose -f docker-compose.prod.yml --env-file .env restart api
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```
 
+### Remote MySQL from your PC (recommended: SSH tunnel)
+
+MySQL is bound to **127.0.0.1 on the VPS only** (`MYSQL_HOST_PORT`, default `3306`). Do **not** open port 3306 in the firewall.
+
+**1. On the VPS** — recreate so the port bind applies (after pulling the compose change):
+
+```bash
+cd /var/www/tourpilot
+docker compose -f docker-compose.prod.yml --env-file .env up -d mysql
+```
+
+**2. On your Windows PC** — open a tunnel (keep this window open):
+
+```powershell
+ssh -L 3307:127.0.0.1:3306 YOUR_SSH_USER@200.97.168.95
+```
+
+**3. Connect from MySQL Workbench / DBeaver / VS Code:**
+
+| Field | Value |
+|--------|--------|
+| Host | `127.0.0.1` |
+| Port | `3307` |
+| User | `tourpilot` (or `root`) |
+| Password | from VPS `.env` → `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD` |
+| Database | `tourpilot` |
+
+Connection URL for apps:
+
+```text
+mysql://tourpilot:YOUR_PASSWORD@127.0.0.1:3307/tourpilot
+```
+
+Optional in server `.env`: `MYSQL_HOST_PORT=3306` (only changes the VPS localhost port).
+
 ### Backups (do this)
 
 ```bash
