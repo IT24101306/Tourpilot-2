@@ -42,6 +42,9 @@ export type AgencyFeatures = {
   walletTopup: boolean;
   offers: boolean;
   display: boolean;
+  readyMadeTours: boolean;
+  customInquiries: boolean;
+  negotiationsBookings: boolean;
 };
 
 export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
@@ -50,6 +53,9 @@ export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
   walletTopup: true,
   offers: true,
   display: true,
+  readyMadeTours: true,
+  customInquiries: true,
+  negotiationsBookings: true,
 };
 
 export function agencyFeaturesOf(user: AuthUser | null | undefined): AgencyFeatures {

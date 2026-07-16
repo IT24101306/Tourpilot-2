@@ -13,18 +13,24 @@ const AGENCY_TABS: {
   to: string;
   label: string;
   end?: boolean;
-  feature?: "offers" | "display";
+  feature?: "offers" | "display" | "negotiationsBookings";
 }[] = [
   { to: "/dashboard/agency", label: "Overview", end: true },
-  { to: "/dashboard/agency/bookings", label: "Bookings" },
-  { to: "/dashboard/agency/negotiations", label: "Negotiations" },
+  { to: "/dashboard/agency/bookings", label: "Bookings", feature: "negotiationsBookings" },
+  { to: "/dashboard/agency/negotiations", label: "Negotiations", feature: "negotiationsBookings" },
   { to: "/dashboard/agency/tasks", label: "Tasks" },
   { to: "/dashboard/agency/travelers", label: "Travelers" },
   { to: "/dashboard/agency/display", label: "Display", feature: "display" },
   { to: "/dashboard/agency/offers", label: "Offers", feature: "offers" },
 ];
 
-const BUILD_STEPS: { step: number; to: string; label: string; hint: string }[] = [
+const BUILD_STEPS: {
+  step: number;
+  to: string;
+  label: string;
+  hint: string;
+  feature?: "readyMadeTours";
+}[] = [
   {
     step: 1,
     to: "/dashboard/agency/all",
@@ -42,6 +48,7 @@ const BUILD_STEPS: { step: number; to: string; label: string; hint: string }[] =
     to: "/dashboard/agency/tours",
     label: "Tours",
     hint: "Build and publish tour packages",
+    feature: "readyMadeTours",
   },
 ];
 
@@ -136,12 +143,22 @@ function AgencyDashboardLayoutInner() {
       AGENCY_TABS.filter((tab) => {
         if (tab.feature === "offers") return features.offers;
         if (tab.feature === "display") return features.display;
+        if (tab.feature === "negotiationsBookings") return features.negotiationsBookings;
         return true;
       }),
-    [features.offers, features.display]
+    [features.offers, features.display, features.negotiationsBookings]
   );
 
-  const onBuildStep = BUILD_STEPS.some(
+  const visibleBuildSteps = useMemo(
+    () =>
+      BUILD_STEPS.filter((step) => {
+        if (step.feature === "readyMadeTours") return features.readyMadeTours;
+        return true;
+      }),
+    [features.readyMadeTours]
+  );
+
+  const onBuildStep = visibleBuildSteps.some(
     (step) =>
       location.pathname === step.to || location.pathname.startsWith(`${step.to}/`)
   );
@@ -153,13 +170,14 @@ function AgencyDashboardLayoutInner() {
   const blockedByFeature =
     (!features.offers && location.pathname.startsWith("/dashboard/agency/offers")) ||
     (!features.display && location.pathname.startsWith("/dashboard/agency/display")) ||
+    (!features.negotiationsBookings &&
+      (location.pathname.startsWith("/dashboard/agency/negotiations") ||
+        location.pathname.startsWith("/dashboard/agency/bookings") ||
+        location.pathname.startsWith("/dashboard/agency/trip-room"))) ||
+    (!features.readyMadeTours && location.pathname.startsWith("/dashboard/agency/tours")) ||
     (!features.driversAndPartners &&
       (location.pathname.startsWith("/dashboard/agency/drivers") ||
         location.pathname.startsWith("/dashboard/agency/partners")));
-
-  if (blockedByFeature) {
-    return <Navigate to="/dashboard/agency" replace />;
-  }
 
   useEffect(() => {
     if (!stepsMenuOpen && !networkMenuOpen) return;
@@ -185,6 +203,10 @@ function AgencyDashboardLayoutInner() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [stepsMenuOpen, networkMenuOpen]);
+
+  if (blockedByFeature) {
+    return <Navigate to="/dashboard/agency" replace />;
+  }
 
   async function executeTopup(value: number) {
     if (!token) return;
@@ -330,10 +352,12 @@ function AgencyDashboardLayoutInner() {
             <span aria-hidden="true" />
           </button>
           {stepsMenuOpen && (
-            <div className="agency-tabs-steps" role="menu" aria-label="Build your catalog in 3 steps">
-              <p className="agency-tabs-steps__title">Build in 3 steps</p>
+            <div className="agency-tabs-steps" role="menu" aria-label="Build your catalog">
+              <p className="agency-tabs-steps__title">
+                Build in {visibleBuildSteps.length} step{visibleBuildSteps.length === 1 ? "" : "s"}
+              </p>
               <ol className="agency-tabs-steps__list">
-                {BUILD_STEPS.map((item) => (
+                {visibleBuildSteps.map((item, index) => (
                   <li key={item.to}>
                     <NavLink
                       to={item.to}
@@ -343,7 +367,7 @@ function AgencyDashboardLayoutInner() {
                       }
                       onClick={() => setStepsMenuOpen(false)}
                     >
-                      <span className="agency-tabs-steps__num">{item.step}</span>
+                      <span className="agency-tabs-steps__num">{index + 1}</span>
                       <span className="agency-tabs-steps__copy">
                         <strong>{item.label}</strong>
                         <span>{item.hint}</span>

@@ -420,6 +420,9 @@ function serializeUser(user: {
     featureWalletTopup?: boolean;
     featureOffers?: boolean;
     featureDisplay?: boolean;
+    featureReadyMadeTours?: boolean;
+    featureCustomInquiries?: boolean;
+    featureNegotiationsBookings?: boolean;
   } | null;
   agencyDriver?: {
     id: string;

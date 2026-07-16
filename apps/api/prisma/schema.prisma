@@ -258,11 +258,14 @@ model Agency {
   rejectionReason String?          @db.Text
   rejectedAt      DateTime?
   /** Product access flags — admin toggles per agency (defaults keep current behavior). */
-  featureDriversAndPartners Boolean @default(true)
-  featureSupport            Boolean @default(true)
-  featureWalletTopup        Boolean @default(true)
-  featureOffers             Boolean @default(true)
-  featureDisplay            Boolean @default(true)
+  featureDriversAndPartners     Boolean @default(true)
+  featureSupport                Boolean @default(true)
+  featureWalletTopup            Boolean @default(true)
+  featureOffers                 Boolean @default(true)
+  featureDisplay                Boolean @default(true)
+  featureReadyMadeTours         Boolean @default(true)
+  featureCustomInquiries        Boolean @default(true)
+  featureNegotiationsBookings   Boolean @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   staff           AgencyStaff[]

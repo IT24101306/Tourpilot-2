@@ -230,6 +230,9 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         walletTopup: z.boolean().optional(),
         offers: z.boolean().optional(),
         display: z.boolean().optional(),
+        readyMadeTours: z.boolean().optional(),
+        customInquiries: z.boolean().optional(),
+        negotiationsBookings: z.boolean().optional(),
       })
       .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
       .parse(req.body) as Partial<AgencyFeatures>;
@@ -247,6 +250,9 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureWalletTopup: true,
         featureOffers: true,
         featureDisplay: true,
+        featureReadyMadeTours: true,
+        featureCustomInquiries: true,
+        featureNegotiationsBookings: true,
       },
     });
 
@@ -300,6 +306,9 @@ adminRouter.get("/users", async (req, res, next) => {
             featureWalletTopup: true,
             featureOffers: true,
             featureDisplay: true,
+            featureReadyMadeTours: true,
+            featureCustomInquiries: true,
+            featureNegotiationsBookings: true,
           },
         },
         agencyStaff: {
@@ -316,6 +325,9 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureWalletTopup: true,
                 featureOffers: true,
                 featureDisplay: true,
+                featureReadyMadeTours: true,
+                featureCustomInquiries: true,
+                featureNegotiationsBookings: true,
               },
             },
           },

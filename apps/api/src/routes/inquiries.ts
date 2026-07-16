@@ -23,6 +23,10 @@ import { serializeItineraryEntity } from "../lib/entitySerialize.js";
 import { asJson } from "../utils/json.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import {
+  agencyHasFeature,
+  requireAgencyFeature,
+} from "../lib/agencyFeatures.js";
+import {
   buildInquiryThread,
   createInquiryMessage,
   inquiryMessagesInclude,
@@ -190,10 +194,21 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
 
     const agency = await prisma.agency.findFirst({
       where: { id: body.agencyId, ...publicAgencyWhere() },
-      select: { id: true },
     });
     if (!agency) {
       return res.status(404).json({ error: "Agency is not available" });
+    }
+
+    const isCustom = Boolean(body.tripPlan) || body.type === "CUSTOM";
+    if (isCustom && !agencyHasFeature(agency, "customInquiries")) {
+      return res.status(403).json({
+        error: "Custom tour inquiries are disabled for this agency.",
+      });
+    }
+    if (!isCustom && !agencyHasFeature(agency, "readyMadeTours")) {
+      return res.status(403).json({
+        error: "Ready-made tours are disabled for this agency.",
+      });
     }
 
     let referralCodeId: string | undefined;
@@ -496,7 +511,12 @@ inquiriesRouter.post("/:id/messages", authRequired, async (req, res, next) => {
   }
 });
 
-inquiriesRouter.put("/:id/proposal", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+inquiriesRouter.put(
+  "/:id/proposal",
+  authRequired,
+  requireRoles("AGENCY"),
+  requireAgencyFeature("negotiationsBookings"),
+  async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -821,6 +841,19 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
 
     if (action === "revision" && !note?.trim()) {
       return res.status(400).json({ error: "Please describe what you would like changed." });
+    }
+
+    if (action === "accept") {
+      const existing = await prisma.inquiry.findFirst({
+        where: { id: req.params.id, touristId: req.user!.id },
+        include: { agency: true },
+      });
+      if (!existing) return res.status(404).json({ error: "Inquiry not found" });
+      if (!agencyHasFeature(existing.agency, "negotiationsBookings")) {
+        return res.status(403).json({
+          error: "Bookings are currently disabled for this agency.",
+        });
+      }
     }
 
     const statusMap = {

@@ -54,6 +54,14 @@ type Tour = {
   coverUrl: string | null;
 };
 
+type AgencyPublicFeatures = {
+  readyMadeTours?: boolean;
+  customInquiries?: boolean;
+  negotiationsBookings?: boolean;
+  offers?: boolean;
+  display?: boolean;
+};
+
 type Agency = {
   id: string;
   name: string;
@@ -73,6 +81,7 @@ type Agency = {
     content: DisplayContent;
   };
   loyaltyOffers?: DiscoveryOffer[];
+  features?: AgencyPublicFeatures;
 };
 
 function splitGalleryColumns(items: GalleryItem[]) {
@@ -350,13 +359,20 @@ export function AgencyDetailPage() {
   }
 
   const [col1, col2, col3] = splitGalleryColumns(gallery);
+  const agencyFeatures = agency.features ?? {};
+  const readyMadeEnabled = agencyFeatures.readyMadeTours !== false;
+  const customInquiriesEnabled = agencyFeatures.customInquiries !== false;
   const showBranding = sectionEnabled(enabled, "branding");
-  const showTours = sectionEnabled(enabled, "tours");
+  const showTours = sectionEnabled(enabled, "tours") && readyMadeEnabled;
   const showShowcase = sectionEnabled(enabled, "showcase");
   const showReviews = sectionEnabled(enabled, "reviews");
   const showGallery = sectionEnabled(enabled, "gallery");
-  const showOffers = sectionEnabled(enabled, "offers");
-  const inquiryEnabled = sectionEnabled(enabled, "inquiry");
+  const showOffers = sectionEnabled(enabled, "offers") && agencyFeatures.offers !== false;
+  const displayInquiryOn = sectionEnabled(enabled, "inquiry");
+  const canCustomInquire = displayInquiryOn && customInquiriesEnabled;
+  const canTourInquire =
+    displayInquiryOn && readyMadeEnabled && Boolean(inquireTourId);
+  const inquiryEnabled = canCustomInquire || canTourInquire;
   const showTransport = sectionEnabled(enabled, "transport");
 
   const ratingDisplay = content.ratingScore || String(agency.avgRating.toFixed(1));
@@ -383,7 +399,7 @@ export function AgencyDetailPage() {
   if (showShowcase && showReviews) heroSectionLinks.push({ id: "reviews", label: "Reviews" });
   if (hasGallery) heroSectionLinks.push({ id: "gallery", label: "Gallery" });
   if (showTransport && transportOptions.length > 0) heroSectionLinks.push({ id: "transport", label: "Transport" });
-  if (inquiryEnabled) heroSectionLinks.push({ id: "request-custom-tour", label: "Inquire" });
+  if (canCustomInquire) heroSectionLinks.push({ id: "request-custom-tour", label: "Inquire" });
 
   return (
     <div className="agency-display">

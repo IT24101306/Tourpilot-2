@@ -4,6 +4,31 @@ import { DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 
 const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[] = [
   {
+    key: "readyMadeTours",
+    label: "Ready-made tours",
+    hint: "Publish packages with a public price on the storefront",
+  },
+  {
+    key: "customInquiries",
+    label: "Custom tour inquiries",
+    hint: "Travelers can request custom itineraries / build-my-trip",
+  },
+  {
+    key: "negotiationsBookings",
+    label: "Negotiations → bookings",
+    hint: "Proposal chat, accept proposal, and bookings tab",
+  },
+  {
+    key: "offers",
+    label: "Loyalty / promo offers",
+    hint: "Special offers linked to tours",
+  },
+  {
+    key: "display",
+    label: "Display",
+    hint: "Storefront editor — hero, packages, gallery, reviews",
+  },
+  {
     key: "driversAndPartners",
     label: "Drivers & Partners",
     hint: "Handshake menu, fleet, and partner requests",
@@ -17,16 +42,6 @@ const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[]
     key: "walletTopup",
     label: "Wallet topup",
     hint: "Self-service wallet funding",
-  },
-  {
-    key: "offers",
-    label: "Offers",
-    hint: "Loyalty offers tab and management",
-  },
-  {
-    key: "display",
-    label: "Display",
-    hint: "Storefront editor — hero, packages, gallery, reviews",
   },
 ];
 

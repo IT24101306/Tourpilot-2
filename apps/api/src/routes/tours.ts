@@ -12,6 +12,7 @@ import {
 } from "../services/tourOfferLinks.js";
 import { slugify } from "../utils/slug.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
+import { agencyHasFeature } from "../lib/agencyFeatures.js";
 
 export const toursRouter = Router();
 
@@ -150,6 +151,9 @@ toursRouter.get("/public/:agencySlug/:tourSlug", async (req, res, next) => {
       where: { slug: req.params.agencySlug, ...publicAgencyWhere() },
     });
     if (!agency) return res.status(404).json({ error: "Not found" });
+    if (!agencyHasFeature(agency, "readyMadeTours")) {
+      return res.status(404).json({ error: "Not found" });
+    }
 
     const tour = await prisma.tour.findFirst({
       where: { agencyId: agency.id, slug: req.params.tourSlug, isPublished: true },
@@ -251,6 +255,12 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
     const kindLabel = body.tourKind === "READY_MADE" ? "Ready-Made" : "Custom";
     const willPublish = body.isPublished ?? body.tourKind === "READY_MADE";
 
+    if (willPublish && !agencyHasFeature(agency, "readyMadeTours")) {
+      return res.status(403).json({
+        error: "Ready-made tours is disabled for this agency. Contact TourPilot admin.",
+      });
+    }
+
     if (body.offerLink) {
       const linkErr = validateTourOfferLinkBody(body.offerLink, { isPublished: willPublish });
       if (linkErr) return res.status(400).json({ error: linkErr });
@@ -339,6 +349,12 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
 
     const willPublish = body.isPublished ?? existing.isPublished;
 
+    if (willPublish && !agencyHasFeature(agency, "readyMadeTours")) {
+      return res.status(403).json({
+        error: "Ready-made tours is disabled for this agency. Contact TourPilot admin.",
+      });
+    }
+
     if (body.offerLink) {
       const linkErr = validateTourOfferLinkBody(body.offerLink, { isPublished: willPublish });
       if (linkErr) return res.status(400).json({ error: linkErr });
@@ -416,6 +432,13 @@ toursRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res,
       })
       .parse(req.body);
 
+    const nextPublished = body.isPublished !== undefined ? body.isPublished : existing.isPublished;
+    if (nextPublished && !agencyHasFeature(agency, "readyMadeTours")) {
+      return res.status(403).json({
+        error: "Ready-made tours is disabled for this agency. Contact TourPilot admin.",
+      });
+    }
+
     let slug = existing.slug;
     if (body.title && slugify(body.title) !== slugify(existing.title)) {
       slug = slugify(body.title);
@@ -492,6 +515,12 @@ toursRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, nex
         isPublished: z.boolean().optional(),
       })
       .parse(req.body);
+
+    if ((body.isPublished ?? false) && !agencyHasFeature(agency, "readyMadeTours")) {
+      return res.status(403).json({
+        error: "Ready-made tours is disabled for this agency. Contact TourPilot admin.",
+      });
+    }
 
     let slug = slugify(body.title);
     const exists = await prisma.tour.findFirst({ where: { agencyId: agency.id, slug } });

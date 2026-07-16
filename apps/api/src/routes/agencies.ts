@@ -14,7 +14,7 @@ import { prisma } from "../lib/prisma.js";
 
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 
-import { requireAgencyFeature } from "../lib/agencyFeatures.js";
+import { agencyHasFeature, requireAgencyFeature } from "../lib/agencyFeatures.js";
 
 import { asJson } from "../utils/json.js";
 
@@ -921,7 +921,17 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
     if (!agency) return res.status(404).json({ error: "Agency not found" });
 
+    const features = {
+      readyMadeTours: agencyHasFeature(agency, "readyMadeTours"),
+      customInquiries: agencyHasFeature(agency, "customInquiries"),
+      negotiationsBookings: agencyHasFeature(agency, "negotiationsBookings"),
+      offers: agencyHasFeature(agency, "offers"),
+      display: agencyHasFeature(agency, "display"),
+    };
 
+    const publicTours = features.readyMadeTours
+      ? agency.tours
+      : agency.tours.filter(() => false);
 
     const display = parseDisplayPayload(agency.displaySettings?.sections);
 
@@ -955,23 +965,27 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
     const gallery = enrichGalleryWithEntities(rawGallery, galleryEntityMap);
 
-    const packages = resolvePackages(
-      display.content.packages,
-      agency.tours,
-      Number(agency.influencerCommissionPct)
-    );
+    const packages = features.readyMadeTours
+      ? resolvePackages(
+          display.content.packages,
+          publicTours,
+          Number(agency.influencerCommissionPct)
+        )
+      : [];
 
     const now = new Date();
-    const loyaltyOffers = await prisma.offer.findMany({
-      where: {
-        ...agencyOfferWhere(agency.id),
-        isActive: true,
-        validFrom: { lte: now },
-        validUntil: { gte: now },
-      },
-      include: offerIncludeActive,
-      orderBy: { validUntil: "asc" },
-    });
+    const loyaltyOffers = features.offers
+      ? await prisma.offer.findMany({
+          where: {
+            ...agencyOfferWhere(agency.id),
+            isActive: true,
+            validFrom: { lte: now },
+            validUntil: { gte: now },
+          },
+          include: offerIncludeActive,
+          orderBy: { validUntil: "asc" },
+        })
+      : [];
 
     res.json({
 
@@ -995,7 +1009,7 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
       reviewCount: agency.reviewCount,
 
-      tours: agency.tours.map((t) =>
+      tours: publicTours.map((t) =>
         serializeTourCard(t, Number(agency.influencerCommissionPct))
       ),
 
@@ -1006,6 +1020,8 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
       gallery,
 
       loyaltyOffers: loyaltyOffers.map(serializeActiveOffer),
+
+      features,
 
     });
 

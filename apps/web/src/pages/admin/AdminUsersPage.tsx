@@ -108,14 +108,20 @@ export function AdminUsersPage() {
       summary: [
         { label: "Agency", value: agency.name },
         { label: "Owner", value: featuresUser.name },
+        { label: "Ready-made tours", value: features.readyMadeTours ? "On" : "Off" },
+        { label: "Custom inquiries", value: features.customInquiries ? "On" : "Off" },
+        {
+          label: "Negotiations → bookings",
+          value: features.negotiationsBookings ? "On" : "Off",
+        },
+        { label: "Offers", value: features.offers ? "On" : "Off" },
+        { label: "Display", value: features.display ? "On" : "Off" },
         {
           label: "Drivers & Partners",
           value: features.driversAndPartners ? "On" : "Off",
         },
         { label: "Support", value: features.support ? "On" : "Off" },
         { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
-        { label: "Offers", value: features.offers ? "On" : "Off" },
-        { label: "Display", value: features.display ? "On" : "Off" },
       ],
       onConfirm: async () => {
         setSaving(true);
