@@ -67,7 +67,7 @@ nano .env
 | `MYSQL_PASSWORD` | long random string |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | `openssl rand -hex 32` |
-| `WEB_APP_URL` | `https://your-domain.com` |
+| `WEB_APP_URL` | `https://srilankatourpilot.com` |
 
 **Never commit `.env`.**
 
@@ -97,7 +97,16 @@ docker compose -f docker-compose.prod.yml --env-file .env exec api npx tsx prism
 
 Default admin after `seed.ts`: phone `+94779998888` / password `admin123` (override with `ADMIN_SEED_PASSWORD`).
 
-### 1.5 Point domain + HTTPS (recommended)
+### 1.5 Point domain + HTTPS (srilankatourpilot.com)
+
+**DNS (at your registrar — Hostinger, Cloudflare, etc.)**
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| A | `@` | `200.97.168.95` | 300 |
+| A | `www` | `200.97.168.95` | 300 |
+
+Wait until `dig +short srilankatourpilot.com` returns the VPS IP.
 
 **Option A — Host nginx + Certbot (common on Hostinger VPS)**
 
@@ -105,15 +114,29 @@ Default admin after `seed.ts`: phone `+94779998888` / password `admin123` (overr
 sudo apt install -y nginx certbot python3-certbot-nginx
 ```
 
+Set Docker web off port 80 so host nginx can terminate TLS. In `/var/www/tourpilot/.env`:
+
+```bash
+WEB_APP_URL=https://srilankatourpilot.com
+HTTP_PORT=8080
+```
+
+Recreate web so it binds 8080:
+
+```bash
+cd /var/www/tourpilot
+docker compose -f docker-compose.prod.yml --env-file .env up -d web
+```
+
 `/etc/nginx/sites-available/tourpilot`:
 
 ```nginx
 server {
   listen 80;
-  server_name tourism.example.com;
+  server_name srilankatourpilot.com www.srilankatourpilot.com;
 
   location / {
-    proxy_pass http://127.0.0.1:80;
+    proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -122,8 +145,6 @@ server {
   }
 }
 ```
-
-If host nginx and Docker both want port 80, set `HTTP_PORT=8080` in `.env` and use `proxy_pass http://127.0.0.1:8080;`.
 
 Keep `client_max_body_size 25m;` — the default (1m) causes upload failures (HTTP 413).
 
@@ -135,15 +156,26 @@ docker compose -f docker-compose.prod.yml --env-file .env exec -u root api \
 ```
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/tourpilot /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/tourpilot /etc/nginx/sites-enabled/
+# remove default site if it conflicts:
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d tourism.example.com
+sudo certbot --nginx -d srilankatourpilot.com -d www.srilankatourpilot.com
 ```
 
-Set `WEB_APP_URL=https://tourism.example.com` in `.env` and recreate api:
+Set `WEB_APP_URL=https://srilankatourpilot.com` in `.env` and recreate api (email/notification links):
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env up -d
+```
+
+In Admin → **Platform settings**, set Public site URL to `https://srilankatourpilot.com` as well (overrides env when set).
+
+Verify:
+
+```bash
+curl -fsS https://srilankatourpilot.com/api/health
+curl -fsS https://www.srilankatourpilot.com/api/health
 ```
 
 ---

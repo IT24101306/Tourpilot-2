@@ -9,6 +9,7 @@ import { topUpWallet } from "../services/wallet.js";
 import { verifyPassword } from "../services/password.js";
 import { linkAgencyDriverOnDriverSignup } from "../services/agencyDriverLink.js";
 import { chargeLoginFee } from "../services/wallet.js";
+import { resolveLoginFeeForUser } from "../services/platformSettings.js";
 import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 import { slugify } from "../utils/slug.js";
 import { buildDisplayPayload, defaultInfluencerDisplay } from "../lib/influencerDisplay.js";
@@ -211,7 +212,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
 
     res.status(201).json({
       token,
-      user: serializeUser(user),
+      user: await serializeUser(user),
       redirectTo: dashboardPathForRole(user.role),
     });
   } catch (e) {
@@ -239,6 +240,8 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
       });
     }
 
+    const loginFee = await resolveLoginFeeForUser(user);
+
     if (user.role === "ADMIN") {
       if (!user.passwordHash) {
         return res.status(503).json({ error: "Admin password is not configured" });
@@ -248,6 +251,7 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
         authMethod: "password",
         role: user.role,
         walletBalance: Number(user.walletBalance),
+        loginFee,
         topupChallengeId: topupGate.challengeId,
         redirectTo: dashboardPathForRole(user.role),
       });
@@ -261,6 +265,7 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
       bypassOtp: result.bypassOtp,
       role: user.role,
       walletBalance: Number(user.walletBalance),
+      loginFee,
       redirectTo: dashboardPathForRole(user.role),
     });
   } catch (e) {
@@ -327,7 +332,7 @@ authRouter.post("/login-password", async (req, res, next) => {
 
     res.json({
       token,
-      user: serializeUser(user),
+      user: await serializeUser(user),
       redirectTo: dashboardPathForRole(user.role),
     });
   } catch (e) {
@@ -373,7 +378,7 @@ authRouter.post("/verify-otp", async (req, res, next) => {
 
     res.json({
       token,
-      user: serializeUser(refreshed),
+      user: await serializeUser(refreshed),
       loginFeeCharged: feeResult.charged,
       redirectTo: dashboardPathForRole(user.role),
     });
@@ -394,13 +399,13 @@ authRouter.get("/me", authRequired, async (req, res, next) => {
         agencyDriver: { include: { agency: { select: { id: true, name: true, slug: true } } } },
       },
     });
-    res.json({ user: serializeUser(user) });
+    res.json({ user: await serializeUser(user) });
   } catch (e) {
     next(e);
   }
 });
 
-function serializeUser(user: {
+async function serializeUser(user: {
   id: string;
   phone: string;
   name: string;
@@ -408,6 +413,7 @@ function serializeUser(user: {
   email: string | null;
   avatarUrl: string | null;
   walletBalance: unknown;
+  loginFeeLkr?: unknown;
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: {
     id: string;
@@ -431,6 +437,10 @@ function serializeUser(user: {
     agency: { id: string; name: string; slug: string };
   } | null;
 }) {
+  const loginFee = await resolveLoginFeeForUser(user);
+  const loginFeeOverride =
+    user.loginFeeLkr != null ? Number(user.loginFeeLkr) : null;
+
   return {
     id: user.id,
     phone: user.phone,
@@ -439,6 +449,11 @@ function serializeUser(user: {
     email: user.email,
     avatarUrl: user.avatarUrl,
     walletBalance: Number(user.walletBalance),
+    loginFee,
+    loginFeeOverride:
+      loginFeeOverride != null && Number.isFinite(loginFeeOverride)
+        ? Math.round(loginFeeOverride)
+        : null,
     touristProfile: user.touristProfile
       ? {
           loyaltyPoints: user.touristProfile.loyaltyPoints,

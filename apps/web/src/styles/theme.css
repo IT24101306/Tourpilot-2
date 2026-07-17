@@ -6146,6 +6146,52 @@ a.agency-icon-btn {
   gap: 6px;
 }
 
+.gov-form-card {
+  max-width: 640px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  display: grid;
+  gap: 14px;
+}
+
+.gov-form-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.gov-fee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.gov-fee-field {
+  display: grid;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.gov-fee-field input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.gov-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 12px;
+  font-weight: 600;
+}
+
 .gov-approval-actions {
   display: flex;
   flex-wrap: wrap;

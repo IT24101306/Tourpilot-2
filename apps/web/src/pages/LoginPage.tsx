@@ -26,11 +26,13 @@ type LoginStartResponse =
       bypassOtp?: string;
       role?: UserRole;
       walletBalance?: number;
+      loginFee?: number;
     }
   | {
       authMethod: "password";
       role: "ADMIN";
       walletBalance?: number;
+      loginFee?: number;
       topupChallengeId?: string;
     };
 
@@ -57,6 +59,7 @@ export function LoginPage() {
   const [challengeId, setChallengeId] = useState("");
   const [topupChallengeId, setTopupChallengeId] = useState("");
   const [loginRole, setLoginRole] = useState<UserRole | null>(null);
+  const [loginFee, setLoginFee] = useState<number | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [demoOtp, setDemoOtp] = useState<string | undefined>();
   const [bypassCode, setBypassCode] = useState<string | undefined>();
@@ -70,11 +73,13 @@ export function LoginPage() {
 
   const panelBalance = walletBalance ?? user?.walletBalance ?? 0;
   const panelFee =
-    loginRole != null
+    loginFee ??
+    user?.loginFee ??
+    (loginRole != null
       ? LOGIN_FEE_LKR[loginRole]
       : user?.role != null
         ? LOGIN_FEE_LKR[user.role]
-        : undefined;
+        : undefined);
 
   useEffect(() => {
     if (!user) return;
@@ -136,6 +141,7 @@ export function LoginPage() {
         setDemoOtp(undefined);
         setBypassCode(undefined);
         setLoginRole(data.role);
+        setLoginFee(data.loginFee ?? null);
         setWalletBalance(data.walletBalance ?? 0);
         setTopupChallengeId(data.topupChallengeId ?? "");
         setStep("password");
@@ -145,6 +151,7 @@ export function LoginPage() {
       setChallengeId(data.challengeId);
       setTopupChallengeId(data.challengeId);
       setLoginRole(data.role ?? null);
+      setLoginFee(data.loginFee ?? null);
       setWalletBalance(data.walletBalance ?? 0);
       setDemoOtp(data.otp);
       setBypassCode(data.bypassOtp);

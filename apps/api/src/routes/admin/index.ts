@@ -18,6 +18,11 @@ import {
   serializeAgencyFeatures,
   type AgencyFeatures,
 } from "../../lib/agencyFeatures.js";
+import {
+  getPlatformSettings,
+  resolveLoginFeeForUser,
+  updatePlatformSettings,
+} from "../../services/platformSettings.js";
 
 export const adminRouter = Router();
 
@@ -36,6 +41,31 @@ const inquiryStatusSchema = z.enum([
 ]);
 
 const commissionStatusSchema = z.enum(["PENDING", "APPROVED", "PAID", "CANCELLED"]);
+
+const loginFeesSchema = z.object({
+  TOURIST: z.number().min(0).optional(),
+  AGENCY: z.number().min(0).optional(),
+  INFLUENCER: z.number().min(0).optional(),
+  DRIVER: z.number().min(0).optional(),
+  ADMIN: z.number().min(0).optional(),
+});
+
+adminRouter.get("/settings", async (_req, res, next) => {
+  try {
+    res.json(await getPlatformSettings());
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.put("/settings", async (req, res, next) => {
+  try {
+    const body = z.object({ loginFees: loginFeesSchema.optional() }).parse(req.body);
+    res.json(await updatePlatformSettings(body));
+  } catch (e) {
+    next(e);
+  }
+});
 
 adminRouter.get("/stats", async (_req, res, next) => {
   try {
@@ -293,6 +323,7 @@ adminRouter.get("/users", async (req, res, next) => {
         email: true,
         role: true,
         walletBalance: true,
+        loginFeeLkr: true,
         isActive: true,
         createdAt: true,
         agency: {
@@ -335,9 +366,11 @@ adminRouter.get("/users", async (req, res, next) => {
       },
     });
 
-    res.json(
-      users.map((u) => {
+    const payload = await Promise.all(
+      users.map(async (u) => {
         const agencyRow = u.agency ?? u.agencyStaff[0]?.agency ?? null;
+        const loginFeeOverride =
+          u.loginFeeLkr != null ? Math.round(Number(u.loginFeeLkr)) : null;
         return {
           id: u.id,
           name: u.name,
@@ -345,6 +378,8 @@ adminRouter.get("/users", async (req, res, next) => {
           email: u.email,
           role: u.role,
           walletBalance: Number(u.walletBalance),
+          loginFeeOverride,
+          loginFee: await resolveLoginFeeForUser(u),
           isActive: u.isActive,
           createdAt: u.createdAt,
           agency: agencyRow
@@ -359,6 +394,7 @@ adminRouter.get("/users", async (req, res, next) => {
         };
       })
     );
+    res.json(payload);
   } catch (e) {
     next(e);
   }
@@ -372,13 +408,25 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
         role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]).optional(),
         name: z.string().min(1).optional(),
         email: z.string().email().nullable().optional(),
+        /** null clears override (use role default). */
+        loginFeeLkr: z.number().min(0).nullable().optional(),
       })
       .parse(req.body);
+
+    const data: Prisma.UserUpdateInput = {};
+    if (body.isActive !== undefined) data.isActive = body.isActive;
+    if (body.role !== undefined) data.role = body.role;
+    if (body.name !== undefined) data.name = body.name;
+    if (body.email !== undefined) data.email = body.email;
+    if (body.loginFeeLkr !== undefined) {
+      data.loginFeeLkr =
+        body.loginFeeLkr === null ? null : Math.round(body.loginFeeLkr);
+    }
 
     const user = await prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
         where: { id: req.params.id },
-        data: body,
+        data,
         select: {
           id: true,
           name: true,
@@ -387,6 +435,7 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
           role: true,
           isActive: true,
           walletBalance: true,
+          loginFeeLkr: true,
           agency: { select: { id: true, status: true } },
         },
       });
@@ -408,7 +457,20 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       return updated;
     });
 
-    res.json({ ...user, walletBalance: Number(user.walletBalance), agency: undefined });
+    const loginFeeOverride =
+      user.loginFeeLkr != null ? Math.round(Number(user.loginFeeLkr)) : null;
+
+    res.json({
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      walletBalance: Number(user.walletBalance),
+      loginFeeOverride,
+      loginFee: await resolveLoginFeeForUser(user),
+    });
   } catch (e) {
     next(e);
   }

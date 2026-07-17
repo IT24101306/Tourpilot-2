@@ -1,12 +1,12 @@
 import type { UserRole, WalletTxnType } from "@prisma/client";
-import { LOGIN_FEE_LKR } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
+import { resolveLoginFeeForUser } from "./platformSettings.js";
 
-export async function chargeLoginFee(userId: string, role: UserRole) {
-  const fee = LOGIN_FEE_LKR[role as keyof typeof LOGIN_FEE_LKR] ?? 0;
+export async function chargeLoginFee(userId: string, _role?: UserRole) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const fee = await resolveLoginFeeForUser(user);
   if (fee <= 0) return { charged: 0, balance: null as number | null };
 
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   const balance = Number(user.walletBalance);
 
   if (balance < fee) {
@@ -16,6 +16,9 @@ export async function chargeLoginFee(userId: string, role: UserRole) {
   }
 
   const newBalance = balance - fee;
+  const noteSuffix =
+    user.loginFeeLkr != null ? `${user.role}, custom` : user.role;
+
   await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
@@ -27,7 +30,7 @@ export async function chargeLoginFee(userId: string, role: UserRole) {
         type: "LOGIN_FEE" as WalletTxnType,
         amountLkr: -fee,
         balanceAfter: newBalance,
-        note: `Login fee (${role})`,
+        note: `Login fee (${noteSuffix})`,
       },
     }),
   ]);

@@ -120,6 +120,8 @@ model User {
   district             String?
   country              String?               @default("LK")
   walletBalance        Decimal               @default(0) @db.Decimal(12, 2)
+  /** When set, overrides platform role login fee. Null = use role default. */
+  loginFeeLkr          Decimal?              @db.Decimal(12, 2)
   passwordHash         String?               @db.VarChar(64)
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
@@ -765,4 +767,11 @@ model RefreshToken {
   tokenHash String   @unique @db.VarChar(64)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+/** Singleton platform config (id = "default"). Role login fees live in loginFees JSON. */
+model PlatformSettings {
+  id        String   @id @db.VarChar(32)
+  loginFees Json
+  updatedAt DateTime @updatedAt
 }

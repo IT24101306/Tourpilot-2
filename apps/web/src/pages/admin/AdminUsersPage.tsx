@@ -5,6 +5,7 @@ import { useConfirmAction } from "../../components/confirm/ConfirmActionContext"
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { WalletAdjustModal } from "../../components/admin/WalletAdjustModal";
 import { AgencyFeaturesModal } from "../../components/admin/AgencyFeaturesModal";
+import { LoginFeeModal } from "../../components/admin/LoginFeeModal";
 import type { AdminUser } from "./types";
 
 const ROLES = ["", "TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"] as const;
@@ -19,6 +20,7 @@ export function AdminUsersPage() {
   const [msg, setMsg] = useState("");
   const [adjustUser, setAdjustUser] = useState<AdminUser | null>(null);
   const [featuresUser, setFeaturesUser] = useState<AdminUser | null>(null);
+  const [feeUser, setFeeUser] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -93,6 +95,29 @@ export function AdminUsersPage() {
       await load();
     } catch {
       setMsg("Adjustment failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveLoginFee(loginFeeLkr: number | null) {
+    if (!token || !feeUser) return;
+    setSaving(true);
+    try {
+      await api(`/admin/users/${feeUser.id}`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ loginFeeLkr }),
+      });
+      setMsg(
+        loginFeeLkr == null
+          ? `Login fee reset to role default for ${feeUser.name}.`
+          : `Custom login fee set for ${feeUser.name}.`
+      );
+      setFeeUser(null);
+      await load();
+    } catch {
+      setMsg("Could not update login fee.");
     } finally {
       setSaving(false);
     }
@@ -180,6 +205,7 @@ export function AdminUsersPage() {
                 <th>Name</th>
                 <th>Role</th>
                 <th>Wallet</th>
+                <th>Login fee</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -200,6 +226,20 @@ export function AdminUsersPage() {
                   </td>
                   <td>{u.role}</td>
                   <td>LKR {u.walletBalance.toLocaleString()}</td>
+                  <td>
+                    LKR {(u.loginFee ?? 0).toLocaleString()}
+                    {u.loginFeeOverride != null ? (
+                      <>
+                        <br />
+                        <span className="muted">Custom</span>
+                      </>
+                    ) : (
+                      <>
+                        <br />
+                        <span className="muted">Role default</span>
+                      </>
+                    )}
+                  </td>
                   <td>{u.isActive ? "Active" : "Disabled"}</td>
                   <td className="gov-table-actions">
                     {(u.agency || u.role === "AGENCY") && (
@@ -217,6 +257,13 @@ export function AdminUsersPage() {
                         Features
                       </button>
                     )}
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-nav"
+                      onClick={() => setFeeUser(u)}
+                    >
+                      Login fee
+                    </button>
                     <button
                       type="button"
                       className="btn btn-ghost btn-nav"
@@ -246,6 +293,17 @@ export function AdminUsersPage() {
         loading={saving}
         onClose={() => setAdjustUser(null)}
         onConfirm={adjust}
+      />
+
+      <LoginFeeModal
+        open={!!feeUser}
+        userName={feeUser?.name ?? ""}
+        role={feeUser?.role ?? ""}
+        effectiveFee={feeUser?.loginFee ?? 0}
+        override={feeUser?.loginFeeOverride ?? null}
+        loading={saving}
+        onClose={() => setFeeUser(null)}
+        onSave={saveLoginFee}
       />
 
       <AgencyFeaturesModal

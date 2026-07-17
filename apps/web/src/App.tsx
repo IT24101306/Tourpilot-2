@@ -60,6 +60,7 @@ import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
 import { AdminOffersPage } from "./pages/admin/AdminOffersPage";
+import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
 import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
 import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";
@@ -249,6 +250,7 @@ export default function App() {
             <Route path="influencers" element={<AdminInfluencersPage />} />
             <Route path="itineraries" element={<AdminItinerariesPage />} />
             <Route path="cms" element={<AdminCmsPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
