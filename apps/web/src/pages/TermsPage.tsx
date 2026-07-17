@@ -58,7 +58,7 @@ export function TermsPage() {
 
           <h2>8. Contact</h2>
           <p>
-            Questions: support@tourpilot.app
+            Questions: support@srilankatourpilot.com
           </p>
         </div>
       </div>

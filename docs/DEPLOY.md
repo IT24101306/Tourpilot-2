@@ -17,7 +17,7 @@ Internet
    └── mysql (persistent volume)
 ```
 
-Mobile apps (Expo) do **not** run on the server. They call `https://your-domain/api`.
+Mobile apps (Expo) do **not** run on the server. They call `https://srilankatourpilot.com/api`.
 
 ---
 
@@ -67,7 +67,7 @@ nano .env
 | `MYSQL_PASSWORD` | long random string |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | `openssl rand -hex 32` |
-| `WEB_APP_URL` | `https://your-domain.com` |
+| `WEB_APP_URL` | `https://srilankatourpilot.com` |
 
 **Never commit `.env`.**
 
@@ -110,7 +110,7 @@ sudo apt install -y nginx certbot python3-certbot-nginx
 ```nginx
 server {
   listen 80;
-  server_name tourism.example.com;
+  server_name srilankatourpilot.com www.srilankatourpilot.com;
 
   location / {
     proxy_pass http://127.0.0.1:80;
@@ -137,10 +137,10 @@ docker compose -f docker-compose.prod.yml --env-file .env exec -u root api \
 ```bash
 sudo ln -s /etc/nginx/sites-available/tourpilot /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d tourism.example.com
+sudo certbot --nginx -d srilankatourpilot.com -d www.srilankatourpilot.com
 ```
 
-Set `WEB_APP_URL=https://tourism.example.com` in `.env` and recreate api:
+Set `WEB_APP_URL=https://srilankatourpilot.com` in `.env` and recreate api:
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env up -d
@@ -302,7 +302,7 @@ Schedule with `cron` weekly.
 - [ ] Firewall: only 22, 80, 443 open (`ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable`)
 - [ ] Backups for MySQL + uploads
 - [ ] Real email (`EMAIL_MODE=smtp` or webhook) when you need OTP/notifications off console
-- [ ] Mobile apps point to `https://your-domain/api`
+- [ ] Mobile apps point to `https://srilankatourpilot.com/api`
 
 ---
 

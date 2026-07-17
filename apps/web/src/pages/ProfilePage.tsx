@@ -218,7 +218,7 @@ export function ProfilePage() {
         });
         fields.push({
           label: "Store URL",
-          value: `tourpilot.app/agencies/${user.agency.slug}`,
+          value: `srilankatourpilot.com/agencies/${user.agency.slug}`,
         });
       } else {
         contextLabel = "Agency account";
