@@ -100,6 +100,39 @@ export function AdminUsersPage() {
     }
   }
 
+  function changeRole(u: AdminUser, nextRole: string) {
+    if (!token || nextRole === u.role) return;
+    requestConfirm({
+      title: "Change user role?",
+      description:
+        "Changing role updates what the account can access. Agency/influencer profiles are not auto-created or removed.",
+      confirmLabel: "Change role",
+      variant: "danger",
+      summary: [
+        { label: "User", value: u.name },
+        { label: "Phone", value: u.phone },
+        { label: "Current role", value: u.role },
+        { label: "New role", value: nextRole },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await api(`/admin/users/${u.id}`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ role: nextRole }),
+          });
+          setMsg(`Role updated for ${u.name}.`);
+          await load();
+        } catch {
+          setMsg("Could not change role.");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
+  }
+
   async function saveLoginFee(loginFeeLkr: number | null) {
     if (!token || !feeUser) return;
     setSaving(true);
@@ -224,7 +257,21 @@ export function AdminUsersPage() {
                       </>
                     )}
                   </td>
-                  <td>{u.role}</td>
+                  <td>
+                    <select
+                      className="agency-filter"
+                      value={u.role}
+                      disabled={saving}
+                      aria-label={`Role for ${u.name}`}
+                      onChange={(e) => changeRole(u, e.target.value)}
+                    >
+                      {ROLES.filter(Boolean).map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td>LKR {u.walletBalance.toLocaleString()}</td>
                   <td>
                     LKR {(u.loginFee ?? 0).toLocaleString()}

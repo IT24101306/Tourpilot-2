@@ -5,7 +5,11 @@ import type { AgencyStatus, CommissionStatus, InquiryStatus, Prisma, UserRole } 
 import { prisma } from "../../lib/prisma.js";
 import { authRequired, requireRoles } from "../../middleware/auth.js";
 import { asJson } from "../../utils/json.js";
-import { agencyRejectionEmail, sendPlatformEmail } from "../../services/email.js";
+import {
+  agencyRejectionEmail,
+  finalizeEmailTemplate,
+  sendPlatformEmail,
+} from "../../services/email.js";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
@@ -60,7 +64,25 @@ adminRouter.get("/settings", async (_req, res, next) => {
 
 adminRouter.put("/settings", async (req, res, next) => {
   try {
-    const body = z.object({ loginFees: loginFeesSchema.optional() }).parse(req.body);
+    const body = z
+      .object({
+        loginFees: loginFeesSchema.optional(),
+        inquiryExpiryDays: z.number().int().min(1).max(365).optional(),
+        webAppUrl: z.string().max(255).nullable().optional(),
+        emailFrom: z.string().max(255).nullable().optional(),
+        walletTopupMinLkr: z.number().int().min(1).optional(),
+        walletTopupMaxLkr: z.number().int().min(1).nullable().optional(),
+        emailTemplates: z
+          .record(
+            z.string(),
+            z.object({
+              subject: z.string().max(200).optional(),
+              body: z.string().max(8000).optional(),
+            })
+          )
+          .optional(),
+      })
+      .parse(req.body);
     res.json(await updatePlatformSettings(body));
   } catch (e) {
     next(e);
@@ -208,11 +230,19 @@ adminRouter.patch("/agencies/:id/reject", async (req, res, next) => {
     if (body.sendEmail) {
       const to = existing.contactEmail?.trim() || existing.owner.email?.trim() || "";
       if (to) {
-        const template = agencyRejectionEmail({
-          agencyName: existing.name,
-          ownerName: existing.owner.name,
-          reason: body.reason.trim(),
-        });
+        const template = await finalizeEmailTemplate(
+          "agencyRejection",
+          agencyRejectionEmail({
+            agencyName: existing.name,
+            ownerName: existing.owner.name,
+            reason: body.reason.trim(),
+          }),
+          {
+            agencyName: existing.name,
+            ownerName: existing.owner.name,
+            reason: body.reason.trim(),
+          }
+        );
         emailResult = await sendPlatformEmail({ to, ...template });
       } else {
         emailResult = { delivered: false, mode: "log" as const, error: "No email on file" };

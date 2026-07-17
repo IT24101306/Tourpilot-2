@@ -929,9 +929,9 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
       display: agencyHasFeature(agency, "display"),
     };
 
-    const publicTours = features.readyMadeTours
-      ? agency.tours
-      : agency.tours.filter(() => false);
+    // Display / packages / offers stay visible to travelers even when the agency
+    // feature is off (they just can't manage them). Inquiry/booking actions are gated separately.
+    const publicTours = agency.tours;
 
     const display = parseDisplayPayload(agency.displaySettings?.sections);
 
@@ -965,27 +965,23 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
     const gallery = enrichGalleryWithEntities(rawGallery, galleryEntityMap);
 
-    const packages = features.readyMadeTours
-      ? resolvePackages(
-          display.content.packages,
-          publicTours,
-          Number(agency.influencerCommissionPct)
-        )
-      : [];
+    const packages = resolvePackages(
+      display.content.packages,
+      publicTours,
+      Number(agency.influencerCommissionPct)
+    );
 
     const now = new Date();
-    const loyaltyOffers = features.offers
-      ? await prisma.offer.findMany({
-          where: {
-            ...agencyOfferWhere(agency.id),
-            isActive: true,
-            validFrom: { lte: now },
-            validUntil: { gte: now },
-          },
-          include: offerIncludeActive,
-          orderBy: { validUntil: "asc" },
-        })
-      : [];
+    const loyaltyOffers = await prisma.offer.findMany({
+      where: {
+        ...agencyOfferWhere(agency.id),
+        isActive: true,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
+      include: offerIncludeActive,
+      orderBy: { validUntil: "asc" },
+    });
 
     res.json({
 

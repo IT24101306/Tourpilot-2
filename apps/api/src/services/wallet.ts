@@ -1,6 +1,9 @@
 import type { UserRole, WalletTxnType } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
-import { resolveLoginFeeForUser } from "./platformSettings.js";
+import {
+  resolveLoginFeeForUser,
+  resolveWalletTopupBounds,
+} from "./platformSettings.js";
 
 export async function chargeLoginFee(userId: string, _role?: UserRole) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
@@ -41,6 +44,18 @@ export async function chargeLoginFee(userId: string, _role?: UserRole) {
 export async function topUpWallet(userId: string, amount: number) {
   if (amount <= 0) {
     const err = new Error("Amount must be positive");
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+
+  const { min, max } = await resolveWalletTopupBounds();
+  if (amount < min) {
+    const err = new Error(`Minimum top-up is LKR ${min}`);
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+  if (max != null && amount > max) {
+    const err = new Error(`Maximum top-up is LKR ${max}`);
     (err as Error & { status: number }).status = 400;
     throw err;
   }

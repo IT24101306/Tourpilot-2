@@ -1,7 +1,7 @@
 import type { InquiryStatus } from "@prisma/client";
-import { config } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import { notifyInquiryExpired } from "./notifications.js";
+import { getPlatformSettings } from "./platformSettings.js";
 
 const EXPIRABLE: InquiryStatus[] = [
   "NEW",
@@ -13,7 +13,9 @@ const EXPIRABLE: InquiryStatus[] = [
 ];
 
 export async function expireStaleInquiries() {
-  const cutoff = new Date(Date.now() - config.inquiryExpiryDays * 24 * 60 * 60 * 1000);
+  const settings = await getPlatformSettings();
+  const days = settings.inquiryExpiryDays;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const stale = await prisma.inquiry.findMany({
     where: {
@@ -35,7 +37,7 @@ export async function expireStaleInquiries() {
         statusHistory: {
           create: {
             status: "EXPIRED",
-            note: `Auto-expired after ${config.inquiryExpiryDays} days of inactivity`,
+            note: `Auto-expired after ${days} days of inactivity`,
           },
         },
       },

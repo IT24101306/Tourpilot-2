@@ -2,12 +2,14 @@ import { config } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import {
   commissionPaidEmail,
+  finalizeEmailTemplate,
   inquiryCreatedEmail,
   inquiryExpiredEmail,
   inquiryStatusEmail,
   proposalSentEmail,
   sendPlatformEmail,
 } from "./email.js";
+import { getPlatformSettings } from "./platformSettings.js";
 
 export type NotifyInput = {
   userId: string;
@@ -40,8 +42,13 @@ export async function createNotification(input: NotifyInput) {
   return row;
 }
 
-function tripUrl(inquiryId: string, role: "agency" | "tourist" | "influencer") {
-  const base = config.webAppUrl;
+async function appBaseUrl() {
+  const settings = await getPlatformSettings().catch(() => null);
+  return (settings?.webAppUrl?.trim() || config.webAppUrl).replace(/\/$/, "");
+}
+
+async function tripUrl(inquiryId: string, role: "agency" | "tourist" | "influencer") {
+  const base = await appBaseUrl();
   if (role === "agency") return `${base}/dashboard/agency/trip-room/${inquiryId}`;
   if (role === "influencer") return `${base}/dashboard/i/trip-room/${inquiryId}`;
   return `${base}/trips/${inquiryId}`;
@@ -61,7 +68,7 @@ export async function notifyInquiryCreated(inquiryId: string) {
   if (!inquiry) return;
 
   if (inquiry.handlerInfluencer) {
-    const url = tripUrl(inquiryId, "influencer");
+    const url = await tripUrl(inquiryId, "influencer");
     await createNotification({
       userId: inquiry.handlerInfluencer.user.id,
       type: "INQUIRY_CREATED",
@@ -84,12 +91,20 @@ export async function notifyInquiryCreated(inquiryId: string) {
     });
   }
 
-  const url = tripUrl(inquiryId, "agency");
-  const email = inquiryCreatedEmail({
-    agencyName: inquiry.agency.name,
-    touristName: inquiry.tourist.name,
-    tripUrl: url,
-  });
+  const url = await tripUrl(inquiryId, "agency");
+  const email = await finalizeEmailTemplate(
+    "inquiryCreated",
+    inquiryCreatedEmail({
+      agencyName: inquiry.agency.name,
+      touristName: inquiry.tourist.name,
+      tripUrl: url,
+    }),
+    {
+      agencyName: inquiry.agency.name,
+      touristName: inquiry.tourist.name,
+      tripUrl: url,
+    }
+  );
 
   await createNotification({
     userId: inquiry.agency.owner.id,
@@ -131,21 +146,21 @@ export async function notifyInquiryChatMessage(
     recipients.push({
       userId: inquiry.tourist.id,
       email: inquiry.tourist.email,
-      url: tripUrl(inquiryId, "tourist"),
+      url: await tripUrl(inquiryId, "tourist"),
     });
   }
   if (kind !== "AGENCY") {
     recipients.push({
       userId: inquiry.agency.owner.id,
       email: inquiry.agency.owner.email ?? inquiry.agency.contactEmail,
-      url: tripUrl(inquiryId, "agency"),
+      url: await tripUrl(inquiryId, "agency"),
     });
   }
   if (inquiry.handlerInfluencer && kind !== "INFLUENCER") {
     recipients.push({
       userId: inquiry.handlerInfluencer.user.id,
       email: inquiry.handlerInfluencer.user.email,
-      url: tripUrl(inquiryId, "influencer"),
+      url: await tripUrl(inquiryId, "influencer"),
     });
   }
 
@@ -171,12 +186,20 @@ export async function notifyProposalSent(inquiryId: string) {
   });
   if (!inquiry) return;
 
-  const url = tripUrl(inquiryId, "tourist");
-  const email = proposalSentEmail({
-    touristName: inquiry.tourist.name,
-    agencyName: inquiry.agency.name,
-    tripUrl: url,
-  });
+  const url = await tripUrl(inquiryId, "tourist");
+  const email = await finalizeEmailTemplate(
+    "proposalSent",
+    proposalSentEmail({
+      touristName: inquiry.tourist.name,
+      agencyName: inquiry.agency.name,
+      tripUrl: url,
+    }),
+    {
+      touristName: inquiry.tourist.name,
+      agencyName: inquiry.agency.name,
+      tripUrl: url,
+    }
+  );
 
   await createNotification({
     userId: inquiry.tourist.id,
@@ -203,17 +226,27 @@ export async function notifyInquiryStatusChange(
   });
   if (!inquiry) return;
 
-  const agencyUrl = tripUrl(inquiryId, "agency");
-  const touristUrl = tripUrl(inquiryId, "tourist");
-
-  const agencyEmail = inquiryStatusEmail({
-    recipientName: inquiry.agency.owner.name,
+  const agencyUrl = await tripUrl(inquiryId, "agency");
+  const touristUrl = await tripUrl(inquiryId, "tourist");
+  const statusVars = {
     agencyName: inquiry.agency.name,
     touristName: inquiry.tourist.name,
     status,
-    tripUrl: agencyUrl,
-    note,
-  });
+    note: note || "",
+  };
+
+  const agencyEmail = await finalizeEmailTemplate(
+    "inquiryStatus",
+    inquiryStatusEmail({
+      recipientName: inquiry.agency.owner.name,
+      agencyName: inquiry.agency.name,
+      touristName: inquiry.tourist.name,
+      status,
+      tripUrl: agencyUrl,
+      note,
+    }),
+    { ...statusVars, recipientName: inquiry.agency.owner.name, tripUrl: agencyUrl }
+  );
 
   await createNotification({
     userId: inquiry.agency.owner.id,
@@ -225,14 +258,18 @@ export async function notifyInquiryStatusChange(
     emailContent: agencyEmail,
   });
 
-  const touristEmail = inquiryStatusEmail({
-    recipientName: inquiry.tourist.name,
-    agencyName: inquiry.agency.name,
-    touristName: inquiry.tourist.name,
-    status,
-    tripUrl: touristUrl,
-    note,
-  });
+  const touristEmail = await finalizeEmailTemplate(
+    "inquiryStatus",
+    inquiryStatusEmail({
+      recipientName: inquiry.tourist.name,
+      agencyName: inquiry.agency.name,
+      touristName: inquiry.tourist.name,
+      status,
+      tripUrl: touristUrl,
+      note,
+    }),
+    { ...statusVars, recipientName: inquiry.tourist.name, tripUrl: touristUrl }
+  );
 
   await createNotification({
     userId: inquiry.tourist.id,
@@ -255,8 +292,8 @@ export async function notifyInquiryExpired(inquiryId: string) {
   });
   if (!inquiry) return;
 
-  const agencyUrl = tripUrl(inquiryId, "agency");
-  const touristUrl = tripUrl(inquiryId, "tourist");
+  const agencyUrl = await tripUrl(inquiryId, "agency");
+  const touristUrl = await tripUrl(inquiryId, "tourist");
 
   for (const party of [
     {
@@ -272,11 +309,19 @@ export async function notifyInquiryExpired(inquiryId: string) {
       url: touristUrl,
     },
   ]) {
-    const mail = inquiryExpiredEmail({
-      recipientName: party.name,
-      agencyName: inquiry.agency.name,
-      tripUrl: party.url,
-    });
+    const mail = await finalizeEmailTemplate(
+      "inquiryExpired",
+      inquiryExpiredEmail({
+        recipientName: party.name,
+        agencyName: inquiry.agency.name,
+        tripUrl: party.url,
+      }),
+      {
+        recipientName: party.name,
+        agencyName: inquiry.agency.name,
+        tripUrl: party.url,
+      }
+    );
     await createNotification({
       userId: party.userId,
       type: "INQUIRY_EXPIRED",
@@ -382,7 +427,15 @@ export async function notifyCommissionPaid(
   amountLkr: number,
   walletBalance: number
 ) {
-  const mail = commissionPaidEmail({ influencerName, amountLkr, walletBalance });
+  const mail = await finalizeEmailTemplate(
+    "commissionPaid",
+    commissionPaidEmail({ influencerName, amountLkr, walletBalance }),
+    {
+      influencerName,
+      amountLkr: String(amountLkr),
+      walletBalance: String(walletBalance),
+    }
+  );
   await createNotification({
     userId,
     type: "COMMISSION_PAID",

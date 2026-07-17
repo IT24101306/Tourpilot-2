@@ -19,6 +19,7 @@ import { savedToursRouter } from "./routes/savedTours.js";
 import { savedTripPlansRouter } from "./routes/savedTripPlans.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { touristRouter } from "./routes/tourist.js";
+import { cmsRouter } from "./routes/cms.js";
 
 export function createApp() {
   const app = express();
@@ -56,6 +57,7 @@ export function createApp() {
   app.use("/api/saved-trip-plans", savedTripPlansRouter);
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/tourist", touristRouter);
+  app.use("/api/cms", cmsRouter);
 
   app.use(
     (

@@ -137,16 +137,22 @@ export function ItineraryDreamView({
             {showRespondActions && onRespond && (
               <div className="itin-respond-card">
                 <h3>Love this journey?</h3>
-                <p className="muted">Confirm or ask your agency to refine the plan.</p>
+                <p className="muted">
+                  {agency?.features?.negotiationsBookings === false
+                    ? "Bookings are unavailable with this agency right now. You can still request changes or decline."
+                    : "Confirm or ask your agency to refine the plan."}
+                </p>
                 <div className="itin-respond-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={responding}
-                    onClick={() => onRespond("accept")}
-                  >
-                    Accept itinerary
-                  </button>
+                  {agency?.features?.negotiationsBookings !== false && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={responding}
+                      onClick={() => onRespond("accept")}
+                    >
+                      Accept itinerary
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-ghost"

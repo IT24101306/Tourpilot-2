@@ -360,18 +360,19 @@ export function AgencyDetailPage() {
 
   const [col1, col2, col3] = splitGalleryColumns(gallery);
   const agencyFeatures = agency.features ?? {};
-  const readyMadeEnabled = agencyFeatures.readyMadeTours !== false;
+  /** Content stays visible; only inquiry/booking actions respect sell features. */
+  const readyMadeInquireEnabled = agencyFeatures.readyMadeTours !== false;
   const customInquiriesEnabled = agencyFeatures.customInquiries !== false;
   const showBranding = sectionEnabled(enabled, "branding");
-  const showTours = sectionEnabled(enabled, "tours") && readyMadeEnabled;
+  const showTours = sectionEnabled(enabled, "tours");
   const showShowcase = sectionEnabled(enabled, "showcase");
   const showReviews = sectionEnabled(enabled, "reviews");
   const showGallery = sectionEnabled(enabled, "gallery");
-  const showOffers = sectionEnabled(enabled, "offers") && agencyFeatures.offers !== false;
+  const showOffers = sectionEnabled(enabled, "offers");
   const displayInquiryOn = sectionEnabled(enabled, "inquiry");
   const canCustomInquire = displayInquiryOn && customInquiriesEnabled;
   const canTourInquire =
-    displayInquiryOn && readyMadeEnabled && Boolean(inquireTourId);
+    displayInquiryOn && readyMadeInquireEnabled && Boolean(inquireTourId);
   const inquiryEnabled = canCustomInquire || canTourInquire;
   const showTransport = sectionEnabled(enabled, "transport");
 
@@ -702,6 +703,18 @@ export function AgencyDetailPage() {
               tour={inquireTour}
               focusOnMount={focusInquiryForm}
             />
+          </div>
+        )}
+
+        {displayInquiryOn && !inquiryEnabled && (
+          <div className="agency-display-band agency-display-band--green">
+            <div className="agency-display-inner">
+              <p className="feature-unavailable-note" id="request-custom-tour">
+                Online inquiries are not available for this agency right now. Packages or custom
+                trip requests may be disabled — please check back later or contact the agency
+                directly if you already have their details.
+              </p>
+            </div>
           </div>
         )}
       </div>

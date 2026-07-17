@@ -12,7 +12,7 @@ import {
 } from "../services/tourOfferLinks.js";
 import { slugify } from "../utils/slug.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
-import { agencyHasFeature } from "../lib/agencyFeatures.js";
+import { agencyHasFeature, serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 
 export const toursRouter = Router();
 
@@ -151,9 +151,6 @@ toursRouter.get("/public/:agencySlug/:tourSlug", async (req, res, next) => {
       where: { slug: req.params.agencySlug, ...publicAgencyWhere() },
     });
     if (!agency) return res.status(404).json({ error: "Not found" });
-    if (!agencyHasFeature(agency, "readyMadeTours")) {
-      return res.status(404).json({ error: "Not found" });
-    }
 
     const tour = await prisma.tour.findFirst({
       where: { agencyId: agency.id, slug: req.params.tourSlug, isPublished: true },
@@ -172,7 +169,10 @@ toursRouter.get("/public/:agencySlug/:tourSlug", async (req, res, next) => {
     });
 
     if (!tour) return res.status(404).json({ error: "Tour not found" });
-    res.json(serializeTourDetail(tour));
+    res.json({
+      ...serializeTourDetail(tour),
+      features: serializeAgencyFeatures(agency),
+    });
   } catch (e) {
     next(e);
   }

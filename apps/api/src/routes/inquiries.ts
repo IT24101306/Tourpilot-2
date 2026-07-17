@@ -25,6 +25,7 @@ import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import {
   agencyHasFeature,
   requireAgencyFeature,
+  serializeAgencyFeatures,
 } from "../lib/agencyFeatures.js";
 import {
   buildInquiryThread,
@@ -97,7 +98,19 @@ const inquiryIncludeForAgency = {
   tourist: {
     select: { id: true, name: true, phone: true, email: true, role: true, avatarUrl: true },
   },
-  agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
+  agency: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      featureReadyMadeTours: true,
+      featureCustomInquiries: true,
+      featureNegotiationsBookings: true,
+      featureOffers: true,
+      featureDisplay: true,
+    },
+  },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
   handlerInfluencer: {
     select: {
@@ -136,7 +149,19 @@ const inquiryIncludeForAgency = {
 };
 
 const inquiryIncludeForTourist = {
-  agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
+  agency: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      featureReadyMadeTours: true,
+      featureCustomInquiries: true,
+      featureNegotiationsBookings: true,
+      featureOffers: true,
+      featureDisplay: true,
+    },
+  },
   tourist: { select: { id: true, name: true, role: true } },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
   handlerInfluencer: {
@@ -398,11 +423,18 @@ inquiriesRouter.get("/share/:token", async (req, res, next) => {
       },
     });
     if (!itinerary) return res.status(404).json({ error: "Not found" });
+    const agency = itinerary.inquiry.agency;
     res.json({
       ...serializeItinerary(itinerary),
       inquiry: {
         id: itinerary.inquiry.id,
-        agency: itinerary.inquiry.agency,
+        agency: {
+          id: agency.id,
+          name: agency.name,
+          slug: agency.slug,
+          logoUrl: agency.logoUrl,
+          features: serializeAgencyFeatures(agency),
+        },
         tourist: itinerary.inquiry.tourist,
       },
     });
@@ -929,7 +961,17 @@ function serializeInquiryForClient(inquiry: {
     role?: string;
     avatarUrl?: string | null;
   };
-  agency?: { id: string; name: string; slug: string; logoUrl?: string | null };
+  agency?: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl?: string | null;
+    featureReadyMadeTours?: boolean;
+    featureCustomInquiries?: boolean;
+    featureNegotiationsBookings?: boolean;
+    featureOffers?: boolean;
+    featureDisplay?: boolean;
+  };
   handlerInfluencer?: {
     id: string;
     slug: string | null;
@@ -974,7 +1016,15 @@ function serializeInquiryForClient(inquiry: {
     createdAt: inquiry.createdAt,
     updatedAt: inquiry.updatedAt,
     tourist: inquiry.tourist,
-    agency: inquiry.agency,
+    agency: inquiry.agency
+      ? {
+          id: inquiry.agency.id,
+          name: inquiry.agency.name,
+          slug: inquiry.agency.slug,
+          logoUrl: inquiry.agency.logoUrl ?? null,
+          features: serializeAgencyFeatures(inquiry.agency),
+        }
+      : undefined,
     handlerInfluencer: inquiry.handlerInfluencer
       ? {
           id: inquiry.handlerInfluencer.id,

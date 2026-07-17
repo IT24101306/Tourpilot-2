@@ -45,7 +45,18 @@ influencersRouter.get("/:slug", async (req, res, next) => {
               agency: publicAgencyWhere(),
             },
             include: {
-              agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } },
+              agency: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  influencerCommissionPct: true,
+                  featureReadyMadeTours: true,
+                  featureCustomInquiries: true,
+                  featureNegotiationsBookings: true,
+                  featureOffers: true,
+                },
+              },
             },
           });
 
@@ -108,7 +119,20 @@ influencersRouter.get("/:slug", async (req, res, next) => {
           coverUrl,
           galleryImages,
           agencyId: t.agency.id,
-          agency: hideAgency ? null : t.agency,
+          agency: hideAgency
+            ? null
+            : {
+                id: t.agency.id,
+                name: t.agency.name,
+                slug: t.agency.slug,
+                influencerCommissionPct: t.agency.influencerCommissionPct,
+              },
+          features: {
+            readyMadeTours: t.agency.featureReadyMadeTours !== false,
+            customInquiries: t.agency.featureCustomInquiries !== false,
+            negotiationsBookings: t.agency.featureNegotiationsBookings !== false,
+            offers: t.agency.featureOffers !== false,
+          },
           hideAgencyName: hideAgency,
           shareAsMine,
           refCode: refCode ?? null,

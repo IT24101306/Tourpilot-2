@@ -249,7 +249,14 @@ export function TripRoomView({
             ? inquiry.handlerInfluencer?.name ?? "Partner"
             : inquiry.agency?.name ?? "Agency";
   const agencySlug = inquiry.agency?.slug ?? user?.agency?.slug;
-  const canRespond = role === "TOURIST" && RESPONDABLE.has(inquiry.status) && inquiry.proposal;
+  const bookingsEnabled = inquiry.agency?.features?.negotiationsBookings !== false;
+  const canRespond =
+    role === "TOURIST" &&
+    RESPONDABLE.has(inquiry.status) &&
+    Boolean(inquiry.proposal) &&
+    bookingsEnabled;
+  const canRequestChanges =
+    role === "TOURIST" && RESPONDABLE.has(inquiry.status) && Boolean(inquiry.proposal);
   const canChat = role === "TOURIST" || role === "AGENCY" || role === "INFLUENCER";
 
   return (
@@ -487,34 +494,44 @@ export function TripRoomView({
             }
           />
 
-          {canRespond && (
+          {(canRespond || canRequestChanges) && (
             <div className="neg-decision-bar">
-              <p className="neg-decision-lead">Ready to decide?</p>
+              <p className="neg-decision-lead">
+                {bookingsEnabled
+                  ? "Ready to decide?"
+                  : "Bookings are currently unavailable with this agency. You can still request changes or decline."}
+              </p>
               <div className="neg-decision-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={acting}
-                  onClick={() => touristRespond("accept")}
-                >
-                  Accept proposal
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={acting}
-                  onClick={() => setRevisionOpen((v) => !v)}
-                >
-                  Request changes
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={acting}
-                  onClick={() => touristRespond("decline")}
-                >
-                  Decline
-                </button>
+                {canRespond && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={acting}
+                    onClick={() => touristRespond("accept")}
+                  >
+                    Accept proposal
+                  </button>
+                )}
+                {canRequestChanges && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={acting}
+                    onClick={() => setRevisionOpen((v) => !v)}
+                  >
+                    Request changes
+                  </button>
+                )}
+                {canRequestChanges && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={acting}
+                    onClick={() => touristRespond("decline")}
+                  >
+                    Decline
+                  </button>
+                )}
               </div>
               {revisionOpen && (
                 <form className="neg-revision-form" onSubmit={onRevisionSubmit}>

@@ -29,7 +29,12 @@ export type ItineraryView = {
   days?: ItineraryDay[];
   inquiry?: {
     id: string;
-    agency?: { name: string; slug: string; logoUrl?: string | null };
+    agency?: {
+      name: string;
+      slug: string;
+      logoUrl?: string | null;
+      features?: { negotiationsBookings?: boolean };
+    };
     tourist?: { name: string };
   };
 };

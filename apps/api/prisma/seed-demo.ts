@@ -939,6 +939,33 @@ async function main() {
     },
   });
 
+  await prisma.cmsPage.upsert({
+    where: { slug: "terms" },
+    update: {},
+    create: {
+      slug: "terms",
+      title: "Terms & Conditions",
+      isPublished: true,
+      blocks: [
+        {
+          type: "section",
+          heading: "1. Using TourPilot",
+          body: "TourPilot connects travelers with licensed tour operators in Sri Lanka.",
+        },
+        {
+          type: "section",
+          heading: "2. Wallet & fees",
+          body: "Some account types may incur platform login fees from the in-app wallet.",
+        },
+        {
+          type: "section",
+          heading: "3. Contact",
+          body: "Questions: support@srilankatourpilot.com",
+        },
+      ],
+    },
+  });
+
   // —— Agency staff (optional demo) ——
   const staffPhone = "+94771230001";
   const staffUser = await prisma.user.upsert({

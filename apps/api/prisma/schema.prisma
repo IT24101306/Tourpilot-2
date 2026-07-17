@@ -769,9 +769,16 @@ model RefreshToken {
   createdAt DateTime @default(now())
 }
 
-/** Singleton platform config (id = "default"). Role login fees live in loginFees JSON. */
+/** Singleton platform config (id = "default"). */
 model PlatformSettings {
-  id        String   @id @db.VarChar(32)
-  loginFees Json
-  updatedAt DateTime @updatedAt
+  id                 String   @id @db.VarChar(32)
+  loginFees          Json
+  inquiryExpiryDays  Int      @default(14)
+  webAppUrl          String?  @db.VarChar(255)
+  emailFrom          String?  @db.VarChar(255)
+  walletTopupMinLkr  Int      @default(100)
+  walletTopupMaxLkr  Int?
+  /** Optional subject/body overrides keyed by template id. */
+  emailTemplates     Json?
+  updatedAt          DateTime @updatedAt
 }

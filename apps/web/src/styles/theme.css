@@ -6192,6 +6192,67 @@ a.agency-icon-btn {
   font-weight: 600;
 }
 
+.gov-settings-stack {
+  display: grid;
+  gap: 18px;
+  max-width: 820px;
+}
+
+.gov-settings-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.gov-settings-fields label,
+.gov-template-item label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.gov-settings-fields input,
+.gov-template-item input,
+.gov-template-item textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.gov-template-list {
+  display: grid;
+  gap: 10px;
+}
+
+.gov-template-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+.gov-template-item summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.gov-template-vars {
+  font-size: 0.8rem;
+  margin: 8px 0;
+}
+
+.feature-unavailable-note {
+  margin: 0 0 1.25rem;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: #f7faf8;
+  color: #334155;
+  max-width: 40rem;
+}
+
 .gov-approval-actions {
   display: flex;
   flex-wrap: wrap;

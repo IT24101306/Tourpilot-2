@@ -22,13 +22,10 @@ export function publicOfferWhere(now = new Date()): Prisma.OfferWhereInput {
   };
 }
 
-/** Published tours from publicly visible agencies with ready-made tours enabled. */
+/** Published tours from publicly visible agencies. */
 export function publicTourAgencyFilter(): Prisma.TourWhereInput {
   return {
     isPublished: true,
-    agency: {
-      ...publicAgencyWhere(),
-      featureReadyMadeTours: true,
-    },
+    agency: publicAgencyWhere(),
   };
 }
