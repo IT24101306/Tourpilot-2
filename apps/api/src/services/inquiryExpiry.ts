@@ -1,4 +1,5 @@
 import type { InquiryStatus } from "@prisma/client";
+import { config } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import { notifyInquiryExpired } from "./notifications.js";
 import { getPlatformSettings } from "./platformSettings.js";
