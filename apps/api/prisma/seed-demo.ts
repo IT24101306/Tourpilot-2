@@ -24,7 +24,7 @@ const PHONES = {
   influencer1: "+94774445566",
   influencer2: "+94775556677",
   driver1: "+94776655443",
-  driver2: "+9477776654",
+  driver2: "+947777665",
 } as const;
 
 function daysFromNow(n: number) {
