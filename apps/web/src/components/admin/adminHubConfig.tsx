@@ -6,7 +6,7 @@ export type HubModule = {
   category: string;
   title: string;
   description: string;
-  icon: "agency" | "users" | "inquiry" | "tour" | "commission" | "ledger" | "offer" | "review" | "driver" | "cms";
+  icon: "agency" | "users" | "inquiry" | "tour" | "commission" | "ledger" | "offer" | "review" | "driver" | "cms" | "settings";
   stat?: (s: AdminStats) => number | string;
 };
 
@@ -101,6 +101,14 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
   {
     title: "Platform & content",
     modules: [
+      {
+        id: "settings",
+        to: "/dashboard/admin/settings",
+        category: "Control",
+        title: "Settings",
+        description: "Login fees, expiry, URL, and wallet limits",
+        icon: "settings",
+      },
       {
         id: "ledger",
         to: "/dashboard/admin/ledger",

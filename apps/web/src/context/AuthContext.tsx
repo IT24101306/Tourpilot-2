@@ -18,6 +18,9 @@ export type AuthUser = {
   email?: string | null;
   avatarUrl?: string | null;
   walletBalance: number;
+  /** Effective login fee (role default or user override). */
+  loginFee?: number;
+  loginFeeCustom?: boolean;
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: {
     id: string;

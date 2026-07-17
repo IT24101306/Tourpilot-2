@@ -140,6 +140,13 @@ export function AdminCmsPage() {
               Published
             </label>
             <label htmlFor="cms-blocks">Blocks (JSON array)</label>
+            <p className="muted gov-cms-hint">
+              <code>home</code>:{" "}
+              {`[{ "type": "hero", "headline": "...", "lead": "...", "tags": ["..."], "badge": "..." }, { "type": "featured_agencies", "title": "...", "subtitle": "..." }]`}
+              <br />
+              <code>terms</code>:{" "}
+              {`[{ "type": "section", "heading": "1. Title", "body": "..." }]`}
+            </p>
             <textarea
               id="cms-blocks"
               className="gov-cms-json"

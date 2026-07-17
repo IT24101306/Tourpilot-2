@@ -479,9 +479,50 @@ async function main() {
       slug: "home",
       title: "TourPilot Home",
       blocks: [
-        { type: "hero", headline: "Navigate Sri Lanka with confidence" },
-        { type: "featured_agencies" },
+        {
+          type: "hero",
+          headline: "Navigate Sri Lanka with confidence",
+          lead: "Discover curated tours, compare agencies, and receive transparent itineraries.",
+          tags: ["Sri Lanka", "Verified agencies", "Custom itineraries"],
+          badge: "Inspired exploration",
+        },
+        {
+          type: "featured_agencies",
+          title: "Start with trusted operators",
+          subtitle: "Highly rated teams ready to craft your Sri Lanka journey.",
+        },
         { type: "offers" },
+      ],
+    },
+  });
+
+  await prisma.cmsPage.upsert({
+    where: { slug: "terms" },
+    update: {},
+    create: {
+      slug: "terms",
+      title: "Terms & Conditions",
+      blocks: [
+        {
+          type: "section",
+          heading: "1. Using TourPilot",
+          body: "TourPilot connects travelers with licensed tour operators, influencers, and service providers in Sri Lanka. By creating an account you agree to use the platform lawfully and provide accurate information.",
+        },
+        {
+          type: "section",
+          heading: "2. Accounts & verification",
+          body: "You are responsible for activity on your account. Phone verification via OTP is required. Professional accounts may be subject to additional review before going live.",
+        },
+        {
+          type: "section",
+          heading: "3. Wallet & fees",
+          body: "Some account types may incur platform login or service fees debited from your in-app wallet. Top-ups and ledger entries are recorded in your profile.",
+        },
+        {
+          type: "section",
+          heading: "4. Contact",
+          body: "Questions: support@srilankatourpilot.com",
+        },
       ],
     },
   });

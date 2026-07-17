@@ -922,8 +922,18 @@ async function main() {
       slug: "home",
       title: "TourPilot Home",
       blocks: [
-        { type: "hero", headline: "Navigate Sri Lanka with confidence" },
-        { type: "featured_agencies" },
+        {
+          type: "hero",
+          headline: "Navigate Sri Lanka with confidence",
+          lead: "Discover curated tours, compare agencies, and receive transparent itineraries.",
+          tags: ["Sri Lanka", "Verified agencies", "Custom itineraries"],
+          badge: "Inspired exploration",
+        },
+        {
+          type: "featured_agencies",
+          title: "Start with trusted operators",
+          subtitle: "Highly rated teams ready to craft your Sri Lanka journey.",
+        },
         { type: "offers" },
       ],
     },
@@ -936,6 +946,27 @@ async function main() {
       slug: "about",
       title: "About TourPilot",
       blocks: [{ type: "text", body: "Connecting tourists, agencies, influencers, and drivers." }],
+    },
+  });
+
+  await prisma.cmsPage.upsert({
+    where: { slug: "terms" },
+    update: {},
+    create: {
+      slug: "terms",
+      title: "Terms & Conditions",
+      blocks: [
+        {
+          type: "section",
+          heading: "1. Using TourPilot",
+          body: "TourPilot connects travelers with licensed tour operators in Sri Lanka.",
+        },
+        {
+          type: "section",
+          heading: "2. Contact",
+          body: "Questions: support@srilankatourpilot.com",
+        },
+      ],
     },
   });
 

@@ -16,6 +16,7 @@ const ADMIN_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/admin/reviews", label: "Reviews" },
   { to: "/dashboard/admin/drivers", label: "Drivers" },
   { to: "/dashboard/admin/cms", label: "CMS" },
+  { to: "/dashboard/admin/settings", label: "Settings" },
 ];
 
 export function AdminDashboardLayout() {

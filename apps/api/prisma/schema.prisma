@@ -120,6 +120,8 @@ model User {
   district             String?
   country              String?               @default("LK")
   walletBalance        Decimal               @default(0) @db.Decimal(12, 2)
+  /** When set, overrides platform role login fee. Null = use role default. */
+  loginFeeLkr          Decimal?              @db.Decimal(12, 2)
   passwordHash         String?               @db.VarChar(64)
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
@@ -695,6 +697,22 @@ model CmsPage {
   isPublished Boolean  @default(true)
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+}
+
+/** Singleton platform knobs (id always "default"). */
+model PlatformSettings {
+  id                 String   @id @default("default") @db.VarChar(25)
+  loginFeeTourist    Decimal  @default(0) @db.Decimal(12, 2)
+  loginFeeAgency     Decimal  @default(50) @db.Decimal(12, 2)
+  loginFeeInfluencer Decimal  @default(25) @db.Decimal(12, 2)
+  loginFeeDriver     Decimal  @default(25) @db.Decimal(12, 2)
+  loginFeeAdmin      Decimal  @default(0) @db.Decimal(12, 2)
+  inquiryExpiryDays  Int      @default(14)
+  webAppUrl          String?  @db.VarChar(500)
+  emailFrom          String?  @db.VarChar(255)
+  walletTopupMinLkr  Decimal  @default(100) @db.Decimal(12, 2)
+  walletTopupMaxLkr  Decimal? @db.Decimal(12, 2)
+  updatedAt          DateTime @updatedAt
 }
 
 model DisplaySettings {

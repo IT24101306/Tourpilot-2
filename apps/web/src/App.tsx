@@ -53,6 +53,7 @@ import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
 import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
 import { AdminDriversPage } from "./pages/admin/AdminDriversPage";
 import { AdminCmsPage } from "./pages/admin/AdminCmsPage";
+import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminInfluencersPage } from "./pages/admin/AdminInfluencersPage";
 import { AdminItinerariesPage } from "./pages/admin/AdminItinerariesPage";
 import { AdminTripRoomPage } from "./pages/admin/AdminTripRoomPage";
@@ -249,6 +250,7 @@ export default function App() {
             <Route path="influencers" element={<AdminInfluencersPage />} />
             <Route path="itineraries" element={<AdminItinerariesPage />} />
             <Route path="cms" element={<AdminCmsPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

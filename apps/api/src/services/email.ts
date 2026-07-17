@@ -1,5 +1,6 @@
 import type { Transporter } from "nodemailer";
 import { config } from "../lib/config.js";
+import { getPlatformSettings } from "./platformSettings.js";
 
 type EmailPayload = {
   to: string;
@@ -38,9 +39,12 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
   }
 
   const mode = config.email.mode;
+  const settings = await getPlatformSettings();
+  const from = settings.emailFrom || config.email.from;
 
   if (mode === "log") {
     console.log("[TourPilot email]");
+    console.log(`  From: ${from}`);
     console.log(`  To: ${to}`);
     console.log(`  Subject: ${subject}`);
     console.log(`  Body:\n${text}`);
@@ -57,7 +61,7 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: config.email.from,
+          from,
           to,
           subject,
           text,
@@ -85,7 +89,7 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
 
   try {
     await transport.sendMail({
-      from: config.email.from,
+      from,
       to,
       subject,
       text,

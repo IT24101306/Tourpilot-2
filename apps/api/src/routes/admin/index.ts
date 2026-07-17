@@ -18,6 +18,10 @@ import {
   serializeAgencyFeatures,
   type AgencyFeatures,
 } from "../../lib/agencyFeatures.js";
+import {
+  getPlatformSettings,
+  updatePlatformSettings,
+} from "../../services/platformSettings.js";
 
 export const adminRouter = Router();
 
@@ -36,6 +40,58 @@ const inquiryStatusSchema = z.enum([
 ]);
 
 const commissionStatusSchema = z.enum(["PENDING", "APPROVED", "PAID", "CANCELLED"]);
+
+const roleFeeSchema = z.object({
+  TOURIST: z.number().min(0).optional(),
+  AGENCY: z.number().min(0).optional(),
+  INFLUENCER: z.number().min(0).optional(),
+  DRIVER: z.number().min(0).optional(),
+  ADMIN: z.number().min(0).optional(),
+});
+
+adminRouter.get("/settings", async (_req, res, next) => {
+  try {
+    const settings = await getPlatformSettings({ bypassCache: true });
+    res.json(settings);
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch("/settings", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        loginFees: roleFeeSchema.optional(),
+        inquiryExpiryDays: z.number().int().min(1).max(365).optional(),
+        webAppUrl: z
+          .union([z.string().url(), z.literal(""), z.null()])
+          .optional()
+          .transform((v) => (v === "" ? null : v)),
+        emailFrom: z
+          .union([z.string().min(3).max(255), z.literal(""), z.null()])
+          .optional()
+          .transform((v) => (v === "" ? null : v)),
+        walletTopupMinLkr: z.number().min(0).optional(),
+        walletTopupMaxLkr: z.number().min(0).nullable().optional(),
+      })
+      .refine((v) => Object.keys(v).length > 0, { message: "At least one setting is required" })
+      .parse(req.body);
+
+    if (
+      body.walletTopupMinLkr != null &&
+      body.walletTopupMaxLkr != null &&
+      body.walletTopupMaxLkr < body.walletTopupMinLkr
+    ) {
+      return res.status(400).json({ error: "Max top-up must be >= min top-up" });
+    }
+
+    const settings = await updatePlatformSettings(body);
+    res.json(settings);
+  } catch (e) {
+    next(e);
+  }
+});
 
 adminRouter.get("/stats", async (_req, res, next) => {
   try {
@@ -287,6 +343,7 @@ adminRouter.get("/users", async (req, res, next) => {
         email: true,
         role: true,
         walletBalance: true,
+        loginFeeLkr: true,
         isActive: true,
         createdAt: true,
         agency: {
@@ -333,6 +390,7 @@ adminRouter.get("/users", async (req, res, next) => {
           email: u.email,
           role: u.role,
           walletBalance: Number(u.walletBalance),
+          loginFeeLkr: u.loginFeeLkr == null ? null : Number(u.loginFeeLkr),
           isActive: u.isActive,
           createdAt: u.createdAt,
           agency: agencyRow
@@ -360,6 +418,7 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
         role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]).optional(),
         name: z.string().min(1).optional(),
         email: z.string().email().nullable().optional(),
+        loginFeeLkr: z.number().min(0).nullable().optional(),
       })
       .parse(req.body);
 
@@ -375,6 +434,7 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
           role: true,
           isActive: true,
           walletBalance: true,
+          loginFeeLkr: true,
           agency: { select: { id: true, status: true } },
         },
       });
@@ -396,7 +456,12 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       return updated;
     });
 
-    res.json({ ...user, walletBalance: Number(user.walletBalance), agency: undefined });
+    res.json({
+      ...user,
+      walletBalance: Number(user.walletBalance),
+      loginFeeLkr: user.loginFeeLkr == null ? null : Number(user.loginFeeLkr),
+      agency: undefined,
+    });
   } catch (e) {
     next(e);
   }

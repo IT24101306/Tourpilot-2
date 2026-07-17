@@ -10,6 +10,7 @@ import { WalletTopupPanel } from "../wallet/WalletTopupPanel";
 import "../../styles/dashboard.css";
 import { LOGIN_FEE_LKR } from "@tourpilot/shared";
 
+
 const HISTORY_PREVIEW_COUNT = 3;
 
 type Props = {
@@ -123,7 +124,7 @@ export function WalletHistoryPanel({ refreshKey = 0 }: Props) {
 
   if (!token || !user) return null;
 
-  const loginFee = LOGIN_FEE_LKR[user.role];
+  const loginFee = user.loginFee ?? LOGIN_FEE_LKR[user.role];
 
   return (
     <section id="account-wallet" className="wallet-history-panel" aria-label="Wallet activity">

@@ -8,6 +8,7 @@ import {
   proposalSentEmail,
   sendPlatformEmail,
 } from "./email.js";
+import { getPlatformSettings } from "./platformSettings.js";
 
 export type NotifyInput = {
   userId: string;
@@ -40,8 +41,9 @@ export async function createNotification(input: NotifyInput) {
   return row;
 }
 
-function tripUrl(inquiryId: string, role: "agency" | "tourist" | "influencer") {
-  const base = config.webAppUrl;
+async function tripUrl(inquiryId: string, role: "agency" | "tourist" | "influencer") {
+  const settings = await getPlatformSettings();
+  const base = settings.webAppUrl || config.webAppUrl;
   if (role === "agency") return `${base}/dashboard/agency/trip-room/${inquiryId}`;
   if (role === "influencer") return `${base}/dashboard/i/trip-room/${inquiryId}`;
   return `${base}/trips/${inquiryId}`;
@@ -61,7 +63,7 @@ export async function notifyInquiryCreated(inquiryId: string) {
   if (!inquiry) return;
 
   if (inquiry.handlerInfluencer) {
-    const url = tripUrl(inquiryId, "influencer");
+    const url = await tripUrl(inquiryId, "influencer");
     await createNotification({
       userId: inquiry.handlerInfluencer.user.id,
       type: "INQUIRY_CREATED",
@@ -84,7 +86,7 @@ export async function notifyInquiryCreated(inquiryId: string) {
     });
   }
 
-  const url = tripUrl(inquiryId, "agency");
+  const url = await tripUrl(inquiryId, "agency");
   const email = inquiryCreatedEmail({
     agencyName: inquiry.agency.name,
     touristName: inquiry.tourist.name,
@@ -131,21 +133,21 @@ export async function notifyInquiryChatMessage(
     recipients.push({
       userId: inquiry.tourist.id,
       email: inquiry.tourist.email,
-      url: tripUrl(inquiryId, "tourist"),
+      url: await tripUrl(inquiryId, "tourist"),
     });
   }
   if (kind !== "AGENCY") {
     recipients.push({
       userId: inquiry.agency.owner.id,
       email: inquiry.agency.owner.email ?? inquiry.agency.contactEmail,
-      url: tripUrl(inquiryId, "agency"),
+      url: await tripUrl(inquiryId, "agency"),
     });
   }
   if (inquiry.handlerInfluencer && kind !== "INFLUENCER") {
     recipients.push({
       userId: inquiry.handlerInfluencer.user.id,
       email: inquiry.handlerInfluencer.user.email,
-      url: tripUrl(inquiryId, "influencer"),
+      url: await tripUrl(inquiryId, "influencer"),
     });
   }
 
@@ -171,7 +173,7 @@ export async function notifyProposalSent(inquiryId: string) {
   });
   if (!inquiry) return;
 
-  const url = tripUrl(inquiryId, "tourist");
+  const url = await tripUrl(inquiryId, "tourist");
   const email = proposalSentEmail({
     touristName: inquiry.tourist.name,
     agencyName: inquiry.agency.name,
@@ -203,8 +205,8 @@ export async function notifyInquiryStatusChange(
   });
   if (!inquiry) return;
 
-  const agencyUrl = tripUrl(inquiryId, "agency");
-  const touristUrl = tripUrl(inquiryId, "tourist");
+  const agencyUrl = await tripUrl(inquiryId, "agency");
+  const touristUrl = await tripUrl(inquiryId, "tourist");
 
   const agencyEmail = inquiryStatusEmail({
     recipientName: inquiry.agency.owner.name,
@@ -255,8 +257,8 @@ export async function notifyInquiryExpired(inquiryId: string) {
   });
   if (!inquiry) return;
 
-  const agencyUrl = tripUrl(inquiryId, "agency");
-  const touristUrl = tripUrl(inquiryId, "tourist");
+  const agencyUrl = await tripUrl(inquiryId, "agency");
+  const touristUrl = await tripUrl(inquiryId, "tourist");
 
   for (const party of [
     {
@@ -300,8 +302,8 @@ export async function notifyAdminInquiryMessage(inquiryId: string, body: string)
   if (!inquiry) return;
 
   const preview = body.length > 120 ? `${body.slice(0, 117)}…` : body;
-  const agencyUrl = `${config.webAppUrl}/dashboard/agency/trip-room/${inquiryId}`;
-  const touristUrl = `${config.webAppUrl}/trips/${inquiryId}`;
+  const agencyUrl = await tripUrl(inquiryId, "agency");
+  const touristUrl = await tripUrl(inquiryId, "tourist");
 
   for (const party of [
     {

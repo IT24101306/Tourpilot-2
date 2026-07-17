@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
+import type { UserRole } from "@tourpilot/shared";
+import { DEFAULT_LOGIN_FEE_LKR } from "@tourpilot/shared";
 import { api } from "../../api/client";
 import { useAuth, type AgencyFeatures, DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { WalletAdjustModal } from "../../components/admin/WalletAdjustModal";
 import { AgencyFeaturesModal } from "../../components/admin/AgencyFeaturesModal";
+import { UserLoginFeeModal } from "../../components/admin/UserLoginFeeModal";
 import type { AdminUser } from "./types";
 
 const ROLES = ["", "TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"] as const;
@@ -19,6 +22,8 @@ export function AdminUsersPage() {
   const [msg, setMsg] = useState("");
   const [adjustUser, setAdjustUser] = useState<AdminUser | null>(null);
   const [featuresUser, setFeaturesUser] = useState<AdminUser | null>(null);
+  const [feeUser, setFeeUser] = useState<AdminUser | null>(null);
+  const [roleFees, setRoleFees] = useState<Record<UserRole, number>>(DEFAULT_LOGIN_FEE_LKR);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -27,8 +32,14 @@ export function AdminUsersPage() {
     const params = new URLSearchParams();
     if (role) params.set("role", role);
     if (q.trim()) params.set("q", q.trim());
-    const data = await api<AdminUser[]>(`/admin/users?${params}`, { token });
+    const [data, settings] = await Promise.all([
+      api<AdminUser[]>(`/admin/users?${params}`, { token }),
+      api<{ loginFees: Record<UserRole, number> }>("/admin/settings", { token }).catch(
+        () => null
+      ),
+    ]);
     setRows(data);
+    if (settings?.loginFees) setRoleFees(settings.loginFees);
     setLoading(false);
   }, [token, role, q]);
 
@@ -137,12 +148,52 @@ export function AdminUsersPage() {
     });
   }
 
+  function saveLoginFee(loginFeeLkr: number | null) {
+    if (!token || !feeUser) return;
+    requestConfirm({
+      title: "Update user login fee?",
+      description:
+        loginFeeLkr == null
+          ? "This user will use the role default fee from Platform settings."
+          : "This custom fee overrides the role default on every login.",
+      confirmLabel: "Save fee",
+      summary: [
+        { label: "User", value: feeUser.name },
+        { label: "Role", value: feeUser.role },
+        {
+          label: "Fee",
+          value:
+            loginFeeLkr == null
+              ? `Role default (LKR ${roleFees[feeUser.role as UserRole] ?? 0})`
+              : `Custom LKR ${loginFeeLkr}`,
+        },
+      ],
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await api(`/admin/users/${feeUser.id}`, {
+            method: "PATCH",
+            token,
+            body: JSON.stringify({ loginFeeLkr }),
+          });
+          setMsg(`Login fee updated for ${feeUser.name}.`);
+          setFeeUser(null);
+          await load();
+        } catch {
+          setMsg("Could not update login fee.");
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
+  }
+
   return (
     <div className="module-shell module-governance">
       <ModuleHeader
         module="governance"
         title="Users"
-        subtitle="Accounts, access, and agency feature entitlements."
+        subtitle="Accounts, access, login fees, and agency feature entitlements."
       />
 
       <div className="gov-toolbar">
@@ -174,12 +225,19 @@ export function AdminUsersPage() {
                 <th>Name</th>
                 <th>Role</th>
                 <th>Wallet</th>
+                <th>Login fee</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((u) => (
+              {rows.map((u) => {
+                const roleDefault = roleFees[u.role as UserRole] ?? 0;
+                const feeLabel =
+                  u.loginFeeLkr != null
+                    ? `LKR ${u.loginFeeLkr.toLocaleString()} (custom)`
+                    : `LKR ${roleDefault.toLocaleString()}`;
+                return (
                 <tr key={u.id}>
                   <td>
                     <strong>{u.name}</strong>
@@ -194,6 +252,7 @@ export function AdminUsersPage() {
                   </td>
                   <td>{u.role}</td>
                   <td>LKR {u.walletBalance.toLocaleString()}</td>
+                  <td>{feeLabel}</td>
                   <td>{u.isActive ? "Active" : "Disabled"}</td>
                   <td className="gov-table-actions">
                     {(u.agency || u.role === "AGENCY") && (
@@ -214,6 +273,14 @@ export function AdminUsersPage() {
                     <button
                       type="button"
                       className="btn btn-ghost btn-nav"
+                      disabled={saving}
+                      onClick={() => setFeeUser(u)}
+                    >
+                      Login fee
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-nav"
                       onClick={() => setAdjustUser(u)}
                     >
                       Adjust wallet
@@ -228,7 +295,8 @@ export function AdminUsersPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -240,6 +308,19 @@ export function AdminUsersPage() {
         loading={saving}
         onClose={() => setAdjustUser(null)}
         onConfirm={adjust}
+      />
+
+      <UserLoginFeeModal
+        userName={feeUser?.name ?? ""}
+        role={feeUser?.role ?? ""}
+        roleDefaultFee={
+          feeUser ? roleFees[feeUser.role as UserRole] ?? 0 : 0
+        }
+        currentOverride={feeUser?.loginFeeLkr ?? null}
+        open={!!feeUser}
+        loading={saving}
+        onClose={() => setFeeUser(null)}
+        onSave={saveLoginFee}
       />
 
       <AgencyFeaturesModal
