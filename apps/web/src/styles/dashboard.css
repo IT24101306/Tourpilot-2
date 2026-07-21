@@ -1223,6 +1223,50 @@
   color: var(--green-dark);
 }
 
+.field-required-mark {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.field-invalid,
+input.field-invalid,
+select.field-invalid,
+textarea.field-invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+.field-error-note {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.day-block--invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.tour-required-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dc2626;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.84rem;
+}
+
+.tour-required-summary ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.tour-required-summary li {
+  margin-top: 2px;
+}
+
 .driver-status {
   margin-top: 8px;
   min-height: 18px;

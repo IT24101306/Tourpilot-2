@@ -136,6 +136,18 @@ export function isTourFormSavable(form: TourFormState): boolean {
   return form.days.every((day) => day.entries.some((entry) => entry.time && entry.entityId));
 }
 
+/** Human-readable list of required fields still missing, for validation feedback. */
+export function computeMissingRequirements(form: TourFormState): string[] {
+  const missing: string[] = [];
+  if (!form.title.trim()) missing.push("Tour title");
+  form.days.forEach((day) => {
+    if (!day.entries.some((entry) => entry.time && entry.entityId)) {
+      missing.push(`Day ${day.dayNumber}: add at least one entity with a scheduled time`);
+    }
+  });
+  return missing;
+}
+
 export function tourToFormState(tour: AgencyTourDetail): TourFormState {
   const days: DayPlan[] =
     tour.tourDays && tour.tourDays.length > 0
