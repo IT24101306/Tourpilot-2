@@ -35,4 +35,29 @@ export const config = {
   },
   inquiryExpiryDays: Number(process.env.INQUIRY_EXPIRY_DAYS || 14),
   inquiryExpiryIntervalMs: Number(process.env.INQUIRY_EXPIRY_INTERVAL_MS || 60 * 60 * 1000),
+  customDomain: {
+    /** Public IPv4 of the server; agencies point an A record here. */
+    aTarget: process.env.CUSTOM_DOMAIN_A_TARGET?.trim() || "",
+    /** Optional CNAME target (e.g. srilankatourpilot.com) for www / subdomains. */
+    cnameTarget: process.env.CUSTOM_DOMAIN_CNAME_TARGET?.trim() || "",
+    /** Hosts owned by the platform itself (never treated as agency custom domains). */
+    platformDomains: platformDomains(),
+  },
 };
+
+/** Platform-owned hostnames, from PLATFORM_DOMAINS plus the WEB_APP_URL host. */
+function platformDomains(): string[] {
+  const set = new Set<string>();
+  const add = (h: string | undefined | null) => {
+    const host = (h || "").trim().toLowerCase().replace(/^www\./, "");
+    if (host) set.add(host);
+  };
+  for (const d of (process.env.PLATFORM_DOMAINS || "").split(",")) add(d);
+  try {
+    add(new URL(process.env.WEB_APP_URL || "http://localhost:5173").hostname);
+  } catch {
+    /* ignore malformed WEB_APP_URL */
+  }
+  add("localhost");
+  return Array.from(set);
+}

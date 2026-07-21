@@ -1,0 +1,34 @@
+# TourPilot edge proxy with automatic HTTPS.
+#
+# - The platform domain gets a normal managed certificate.
+# - Any other host (an agency's custom domain) gets a certificate issued
+#   On-Demand, but ONLY after Caddy asks the API whether the host is a
+#   verified, active agency domain (the `ask` endpoint). This prevents
+#   unbounded certificate issuance for arbitrary hostnames.
+
+{
+	email {$CADDY_EMAIL}
+	on_demand_tls {
+		ask http://api:4000/api/tls/check
+	}
+}
+
+# Platform primary domain (apex + www) — standard managed TLS.
+{$PLATFORM_DOMAIN}, www.{$PLATFORM_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:80
+}
+
+# Agency custom domains — certificate obtained on demand, gated by the ask endpoint.
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	reverse_proxy web:80
+}
+
+# Redirect plain HTTP to HTTPS for any host.
+http:// {
+	redir https://{host}{uri} permanent
+}

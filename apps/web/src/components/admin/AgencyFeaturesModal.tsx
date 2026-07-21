@@ -43,6 +43,11 @@ const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[]
     label: "Wallet topup",
     hint: "Agency self-service wallet funding",
   },
+  {
+    key: "customDomain",
+    label: "Custom domain",
+    hint: "Agency can connect their own domain (Shopify-style) to their storefront",
+  },
 ];
 
 type Props = {

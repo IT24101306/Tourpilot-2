@@ -9,7 +9,8 @@ export type AgencyFeatureKey =
   | "display"
   | "readyMadeTours"
   | "customInquiries"
-  | "negotiationsBookings";
+  | "negotiationsBookings"
+  | "customDomain";
 
 export type AgencyFeatures = Record<AgencyFeatureKey, boolean>;
 
@@ -22,6 +23,7 @@ type AgencyFeatureSource = {
   featureReadyMadeTours?: boolean;
   featureCustomInquiries?: boolean;
   featureNegotiationsBookings?: boolean;
+  featureCustomDomain?: boolean;
 };
 
 export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | undefined): AgencyFeatures {
@@ -34,6 +36,7 @@ export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | und
     readyMadeTours: agency?.featureReadyMadeTours ?? true,
     customInquiries: agency?.featureCustomInquiries ?? true,
     negotiationsBookings: agency?.featureNegotiationsBookings ?? true,
+    customDomain: agency?.featureCustomDomain ?? false,
   };
 }
 
@@ -47,6 +50,7 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
     featureReadyMadeTours: boolean;
     featureCustomInquiries: boolean;
     featureNegotiationsBookings: boolean;
+    featureCustomDomain: boolean;
   }> = {};
   if (features.driversAndPartners !== undefined) {
     data.featureDriversAndPartners = features.driversAndPartners;
@@ -64,6 +68,9 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
   if (features.negotiationsBookings !== undefined) {
     data.featureNegotiationsBookings = features.negotiationsBookings;
   }
+  if (features.customDomain !== undefined) {
+    data.featureCustomDomain = features.customDomain;
+  }
   return data;
 }
 
@@ -76,6 +83,7 @@ const FEATURE_LABELS: Record<AgencyFeatureKey, string> = {
   readyMadeTours: "Ready-made tours",
   customInquiries: "Custom tour inquiries",
   negotiationsBookings: "Negotiations and bookings",
+  customDomain: "Custom domain",
 };
 
 /** Returns an Express-ready error payload when the agency feature is disabled. */

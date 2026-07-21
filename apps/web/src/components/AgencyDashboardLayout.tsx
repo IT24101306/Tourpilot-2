@@ -13,7 +13,7 @@ const AGENCY_TABS: {
   to: string;
   label: string;
   end?: boolean;
-  feature?: "offers" | "display" | "negotiationsBookings";
+  feature?: "offers" | "display" | "negotiationsBookings" | "customDomain";
 }[] = [
   { to: "/dashboard/agency", label: "Overview", end: true },
   { to: "/dashboard/agency/bookings", label: "Bookings", feature: "negotiationsBookings" },
@@ -22,6 +22,7 @@ const AGENCY_TABS: {
   { to: "/dashboard/agency/travelers", label: "Travelers" },
   { to: "/dashboard/agency/display", label: "Display", feature: "display" },
   { to: "/dashboard/agency/offers", label: "Offers", feature: "offers" },
+  { to: "/dashboard/agency/domain", label: "Domain", feature: "customDomain" },
 ];
 
 const BUILD_STEPS: {
@@ -144,9 +145,15 @@ function AgencyDashboardLayoutInner() {
         if (tab.feature === "offers") return features.offers;
         if (tab.feature === "display") return features.display;
         if (tab.feature === "negotiationsBookings") return features.negotiationsBookings;
+        if (tab.feature === "customDomain") return features.customDomain;
         return true;
       }),
-    [features.offers, features.display, features.negotiationsBookings]
+    [
+      features.offers,
+      features.display,
+      features.negotiationsBookings,
+      features.customDomain,
+    ]
   );
 
   const visibleBuildSteps = useMemo(
@@ -177,7 +184,9 @@ function AgencyDashboardLayoutInner() {
     (!features.readyMadeTours && location.pathname.startsWith("/dashboard/agency/tours")) ||
     (!features.driversAndPartners &&
       (location.pathname.startsWith("/dashboard/agency/drivers") ||
-        location.pathname.startsWith("/dashboard/agency/partners")));
+        location.pathname.startsWith("/dashboard/agency/partners"))) ||
+    (!features.customDomain &&
+      location.pathname.startsWith("/dashboard/agency/domain"));
 
   useEffect(() => {
     if (!stepsMenuOpen && !networkMenuOpen) return;

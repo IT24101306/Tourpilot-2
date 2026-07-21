@@ -293,6 +293,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         readyMadeTours: z.boolean().optional(),
         customInquiries: z.boolean().optional(),
         negotiationsBookings: z.boolean().optional(),
+        customDomain: z.boolean().optional(),
       })
       .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
       .parse(req.body) as Partial<AgencyFeatures>;

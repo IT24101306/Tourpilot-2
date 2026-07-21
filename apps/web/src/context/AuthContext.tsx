@@ -48,6 +48,7 @@ export type AgencyFeatures = {
   readyMadeTours: boolean;
   customInquiries: boolean;
   negotiationsBookings: boolean;
+  customDomain: boolean;
 };
 
 export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
@@ -59,6 +60,7 @@ export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
   readyMadeTours: true,
   customInquiries: true,
   negotiationsBookings: true,
+  customDomain: false,
 };
 
 export function agencyFeaturesOf(user: AuthUser | null | undefined): AgencyFeatures {

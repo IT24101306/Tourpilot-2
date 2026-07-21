@@ -2,6 +2,10 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "
 import { currentPath, loginPath } from "./utils/authRedirect";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CurrencyProvider } from "./context/CurrencyContext";
+import {
+  StorefrontDomainProvider,
+  useStorefrontDomain,
+} from "./context/StorefrontDomainContext";
 import { dashboardPathForRole } from "@tourpilot/shared";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
@@ -27,6 +31,7 @@ import { AgencyGroupsPage } from "./pages/agency/AgencyGroupsPage";
 import { AgencyDisplayPage } from "./pages/agency/AgencyDisplayPage";
 import { AgencyPartnerRequestsPage } from "./pages/agency/AgencyPartnerRequestsPage";
 import { AgencyOffersPage } from "./pages/agency/AgencyOffersPage";
+import { AgencyDomainPage } from "./pages/agency/AgencyDomainPage";
 import { DriverOverviewPage } from "./pages/driver/DriverOverviewPage";
 import { DriverAssignedToursPage } from "./pages/driver/DriverAssignedToursPage";
 import { DriverSchedulePage } from "./pages/driver/DriverSchedulePage";
@@ -80,6 +85,12 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
 
 function HomeRoute() {
   const { user, loading } = useAuth();
+  const storefront = useStorefrontDomain();
+  // On an agency's custom domain, serve their storefront at the root.
+  if (storefront.loading) return <div className="section">Loading…</div>;
+  if (storefront.isCustomDomain && storefront.agencySlug) {
+    return <AgencyDetailPage slugOverride={storefront.agencySlug} />;
+  }
   if (loading) return <div className="section">Loading…</div>;
   if (user?.role === "AGENCY" || user?.role === "INFLUENCER") {
     return <Navigate to={dashboardPathForRole(user.role)} replace />;
@@ -116,6 +127,7 @@ export default function App() {
   return (
     <AuthProvider>
       <CurrencyProvider>
+      <StorefrontDomainProvider>
       <BrowserRouter>
         <div className="app-root">
           <div className="app-root__main">
@@ -187,6 +199,7 @@ export default function App() {
             <Route path="groups" element={<AgencyGroupsPage />} />
             <Route path="offers" element={<AgencyOffersPage />} />
             <Route path="display" element={<AgencyDisplayPage />} />
+            <Route path="domain" element={<AgencyDomainPage />} />
             <Route path="partners" element={<AgencyPartnerRequestsPage />} />
           </Route>
 
@@ -259,6 +272,7 @@ export default function App() {
           <SiteFooter />
         </div>
       </BrowserRouter>
+      </StorefrontDomainProvider>
       </CurrencyProvider>
     </AuthProvider>
   );

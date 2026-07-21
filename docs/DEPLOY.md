@@ -354,6 +354,70 @@ curl -fsS https://dev.srilankatourpilot.com/api/health
 
 ---
 
+## Part 2.7 — Custom domains for agencies (Caddy On-Demand TLS)
+
+Agencies can serve their storefront on their own domain (e.g. `myagency.com`),
+Shopify-style. This uses a **Caddy** edge container that issues HTTPS
+certificates automatically, including for agency domains via On-Demand TLS.
+Caddy asks the API (`GET /api/tls/check?domain=...`) before issuing a
+certificate, so it only ever issues for the platform domain and verified,
+active agency domains.
+
+```text
+Internet :80/:443
+   │
+   ▼
+ Caddy (edge, auto-HTTPS + On-Demand TLS)   ── ask → API /api/tls/check
+   │  reverse_proxy
+   ▼
+ web (nginx SPA)  →  api (:4000)
+```
+
+### 2.7.1 One-time: switch the edge to Caddy
+
+This replaces the host nginx + certbot setup from Part 1.5. Caddy binds 80/443,
+so the web container moves to `HTTP_PORT=8080` (internal proxy target).
+
+```bash
+cd /var/www/tourpilot
+# Set CADDY_EMAIL / CUSTOM_DOMAIN_A_TARGET as needed (see .env.production.example)
+bash scripts/wire-caddy.sh
+```
+
+The script updates `.env` (`PLATFORM_DOMAIN`, `PLATFORM_DOMAINS`, `CADDY_EMAIL`,
+`CUSTOM_DOMAIN_A_TARGET`, `HTTP_PORT=8080`), stops host nginx, and brings the
+stack up with the edge profile:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d
+```
+
+Caddy obtains the platform certificate automatically. Verify:
+
+```bash
+curl -fsS https://srilankatourpilot.com/api/health
+```
+
+### 2.7.2 Enable the feature for an agency
+
+Admin → Users (or Agencies) → the agency's feature toggles → enable
+**Custom domain**. The agency then sees a **Domain** tab in their dashboard.
+
+### 2.7.3 What the agency does
+
+1. In the dashboard **Domain** tab, enter their domain (e.g. `myagency.com`).
+2. At their domain registrar, add the DNS record shown:
+   - `A` record: host `@` → the server IP (`CUSTOM_DOMAIN_A_TARGET`).
+   - Optional `CNAME` record: host `www` → the platform domain.
+3. Click **Verify DNS**. Once it resolves to the server, the status becomes
+   **Live**. On the first HTTPS visit, Caddy issues the certificate
+   automatically (may take a few seconds the first time).
+
+Apex domains cannot use CNAME, so the A record is the primary instruction; `www`
+can use CNAME. DNS propagation can take minutes to hours.
+
+---
+
 ## Part 3 — Day-to-day operations
 
 ### Useful commands

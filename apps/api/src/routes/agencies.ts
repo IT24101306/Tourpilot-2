@@ -42,6 +42,8 @@ import {
 import { applyOfferUpdate } from "../lib/offers.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
+import { config } from "../lib/config.js";
+import { promises as dns } from "node:dns";
 import {
   applyCommissionRequestAction,
   getAgencyCommissionRequests,
@@ -337,6 +339,177 @@ agenciesRouter.patch("/mine", authRequired, requireRoles("AGENCY"), async (req, 
   }
 
 });
+
+type DomainAgency = {
+  customDomain: string | null;
+  customDomainStatus: string;
+  customDomainVerifiedAt: Date | null;
+};
+
+function normalizeDomainInput(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .replace(/\.$/, "")
+    .split(":")[0];
+}
+
+const HOSTNAME_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
+
+function serializeDomain(agency: DomainAgency) {
+  const { aTarget, cnameTarget } = config.customDomain;
+  return {
+    domain: agency.customDomain,
+    status: agency.customDomainStatus,
+    verifiedAt: agency.customDomainVerifiedAt,
+    instructions: {
+      aRecord: aTarget
+        ? { type: "A", host: "@", value: aTarget }
+        : null,
+      cname: cnameTarget
+        ? { type: "CNAME", host: "www", value: cnameTarget }
+        : null,
+    },
+  };
+}
+
+agenciesRouter.get(
+  "/mine/domain",
+  authRequired,
+  requireRoles("AGENCY"),
+  requireAgencyFeature("customDomain"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+      res.json(serializeDomain(agency));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+agenciesRouter.post(
+  "/mine/domain",
+  authRequired,
+  requireRoles("AGENCY"),
+  requireAgencyFeature("customDomain"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+      const body = z.object({ domain: z.string().min(1) }).parse(req.body);
+      const domain = normalizeDomainInput(body.domain);
+
+      if (!HOSTNAME_RE.test(domain)) {
+        return res.status(400).json({ error: "Enter a valid domain, e.g. myagency.com" });
+      }
+      const bare = domain.replace(/^www\./, "");
+      if (config.customDomain.platformDomains.includes(bare)) {
+        return res.status(400).json({ error: "That domain belongs to the platform." });
+      }
+
+      const taken = await prisma.agency.findFirst({
+        where: { customDomain: domain, NOT: { id: agency.id } },
+        select: { id: true },
+      });
+      if (taken) {
+        return res.status(409).json({ error: "That domain is already connected to another agency." });
+      }
+
+      const updated = await prisma.agency.update({
+        where: { id: agency.id },
+        data: {
+          customDomain: domain,
+          customDomainStatus: "PENDING",
+          customDomainVerifiedAt: null,
+        },
+      });
+      res.json(serializeDomain(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+agenciesRouter.post(
+  "/mine/domain/verify",
+  authRequired,
+  requireRoles("AGENCY"),
+  requireAgencyFeature("customDomain"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+      if (!agency.customDomain) {
+        return res.status(400).json({ error: "Add a domain before verifying." });
+      }
+
+      const { aTarget, cnameTarget } = config.customDomain;
+      const host = agency.customDomain;
+
+      const addrs = await dns.resolve4(host).catch(() => [] as string[]);
+      let ok = false;
+      if (aTarget && addrs.includes(aTarget)) {
+        ok = true;
+      } else if (cnameTarget) {
+        const cnames = await dns.resolveCname(host).catch(() => [] as string[]);
+        ok = cnames.some((c) => c.replace(/\.$/, "").toLowerCase() === cnameTarget.toLowerCase());
+      }
+
+      if (!ok) {
+        await prisma.agency.update({
+          where: { id: agency.id },
+          data: { customDomainStatus: "ERROR", customDomainVerifiedAt: null },
+        });
+        const expected = aTarget
+          ? `an A record pointing to ${aTarget}`
+          : cnameTarget
+            ? `a CNAME pointing to ${cnameTarget}`
+            : "the DNS record we provided";
+        return res.status(400).json({
+          error: `DNS is not pointing here yet. Add ${expected}, then verify again. DNS changes can take a while to propagate.`,
+          resolved: addrs,
+        });
+      }
+
+      const updated = await prisma.agency.update({
+        where: { id: agency.id },
+        data: { customDomainStatus: "ACTIVE", customDomainVerifiedAt: new Date() },
+      });
+      res.json(serializeDomain(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+agenciesRouter.delete(
+  "/mine/domain",
+  authRequired,
+  requireRoles("AGENCY"),
+  requireAgencyFeature("customDomain"),
+  async (req, res, next) => {
+    try {
+      const agency = await getAgencyForUser(req.user!.id);
+      if (!agency) return res.status(404).json({ error: "Agency not found" });
+      const updated = await prisma.agency.update({
+        where: { id: agency.id },
+        data: {
+          customDomain: null,
+          customDomainStatus: "NONE",
+          customDomainVerifiedAt: null,
+        },
+      });
+      res.json(serializeDomain(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 
 

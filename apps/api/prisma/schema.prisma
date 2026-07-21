@@ -22,6 +22,13 @@ enum AgencyStatus {
   REJECTED
 }
 
+enum CustomDomainStatus {
+  NONE
+  PENDING
+  ACTIVE
+  ERROR
+}
+
 enum InquiryStatus {
   NEW
   AGENCY_REVIEWING
@@ -268,6 +275,11 @@ model Agency {
   featureReadyMadeTours         Boolean @default(true)
   featureCustomInquiries        Boolean @default(true)
   featureNegotiationsBookings   Boolean @default(true)
+  /** Custom domain (Shopify-style) — off by default, admin enables per agency. */
+  featureCustomDomain           Boolean @default(false)
+  customDomain           String?             @unique @db.VarChar(255)
+  customDomainStatus     CustomDomainStatus  @default(NONE)
+  customDomainVerifiedAt DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   staff           AgencyStaff[]

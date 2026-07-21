@@ -100,9 +100,35 @@ services:
     networks:
       - tourpilot
 
+  # Edge reverse proxy with automatic HTTPS + On-Demand TLS for agency custom
+  # domains. Opt-in: start with `--profile edge`. When enabled, set HTTP_PORT to
+  # a non-80 value (e.g. 8080) so the web container doesn't clash with Caddy.
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    profiles: ["edge"]
+    depends_on:
+      - web
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:-srilankatourpilot.com}
+      CADDY_EMAIL: ${CADDY_EMAIL:-}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - tourpilot_caddy_data:/data
+      - tourpilot_caddy_config:/config
+    networks:
+      - tourpilot
+
 volumes:
   tourpilot_mysql_data:
   tourpilot_uploads:
+  tourpilot_caddy_data:
+  tourpilot_caddy_config:
 
 networks:
   tourpilot:

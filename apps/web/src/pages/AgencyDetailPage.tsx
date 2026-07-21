@@ -232,8 +232,9 @@ function PackageCard({
   return <div className="agency-package-card">{inner}</div>;
 }
 
-export function AgencyDetailPage() {
-  const { slug } = useParams<{ slug: string }>();
+export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {}) {
+  const params = useParams<{ slug: string }>();
+  const slug = slugOverride ?? params.slug;
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

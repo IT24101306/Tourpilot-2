@@ -3155,6 +3155,108 @@ textarea.field-invalid {
   font-size: 1.1rem;
 }
 
+.domain-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 720px;
+}
+
+.domain-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.domain-status-label {
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.domain-status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid var(--line);
+}
+
+.domain-status-pill.ok {
+  background: #e7f7ec;
+  color: #1a7f37;
+  border-color: #b7e4c7;
+}
+
+.domain-status-pill.warn {
+  background: #fff6e5;
+  color: #9a6700;
+  border-color: #ffe1a6;
+}
+
+.domain-status-pill.late {
+  background: #fdeaea;
+  color: #b42318;
+  border-color: #f7c9c4;
+}
+
+.domain-current {
+  font-size: 0.85rem;
+}
+
+.domain-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.domain-form label {
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.domain-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.domain-form-row input {
+  flex: 1;
+}
+
+.domain-hint {
+  font-size: 0.8rem;
+}
+
+.domain-dns h3 {
+  margin: 0 0 4px;
+}
+
+.domain-dns-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.domain-dns-table th,
+.domain-dns-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.86rem;
+}
+
+.domain-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.domain-msg {
+  font-size: 0.88rem;
+  color: var(--green-dark);
+}
+
 .entities-list-tools {
   margin-bottom: 12px;
 }
