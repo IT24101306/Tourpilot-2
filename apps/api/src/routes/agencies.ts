@@ -51,6 +51,18 @@ import {
 
 export const agenciesRouter = Router();
 
+/**
+ * Strip internal-only metadata (e.g. site guide names, contact numbers, and
+ * costs) before exposing an entity on public, traveler-facing responses.
+ */
+function publicEntityMetadata(metadata: unknown): Record<string, unknown> | null {
+  const m = (metadata as Record<string, unknown> | null) ?? null;
+  if (!m) return null;
+  const clone = { ...m };
+  delete clone.siteGuides;
+  return clone;
+}
+
 
 
 const galleryItemSchema = z.object({
@@ -958,7 +970,7 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
           durationMin: entity.durationMin,
           priceHint: entity.priceHint != null ? Number(entity.priceHint) : null,
           media: entity.media,
-          metadata: (entity.metadata as Record<string, unknown> | null) ?? null,
+          metadata: publicEntityMetadata(entity.metadata),
         },
       ])
     );

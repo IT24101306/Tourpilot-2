@@ -264,6 +264,96 @@ Watch: GitHub → **Actions**.
 
 ---
 
+## Part 2.5 — Separate dev environment (dev.srilankatourpilot.com)
+
+Production (`main` → `srilankatourpilot.com`) and dev (`development` →
+`dev.srilankatourpilot.com`) run as **two isolated Docker stacks on the same VPS**.
+Each has its own folder, containers, network, MySQL volume, and uploads — nothing
+is shared.
+
+| | Production | Development |
+|---|---|---|
+| Folder | `/var/www/tourpilot` | `/var/www/tourpilot-dev` |
+| Branch | `main` | `development` |
+| Domain | `srilankatourpilot.com` (+`www`) | `dev.srilankatourpilot.com` |
+| Web port (Docker) | `8080` | `8081` |
+| MySQL host port | `3307` | `3308` |
+| Compose project | `tourpilot` | `tourpilot-dev` |
+| Workflow | `deploy.yml` | `deploy-dev.yml` |
+| Image tags (GHCR) | `latest`, `<sha>` | `dev`, `dev-<sha>` |
+
+### 2.5.1 DNS
+
+Add an A record for the subdomain (in addition to `@` and `www`):
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| A | `dev` | `200.97.168.95` | 300 |
+
+Confirm: `dig +short dev.srilankatourpilot.com` returns the VPS IP.
+
+### 2.5.2 Create the dev folder + env (one-time)
+
+```bash
+sudo mkdir -p /var/www/tourpilot-dev
+sudo chown $USER:$USER /var/www/tourpilot-dev
+git clone -b development https://github.com/IT24101306/Tourpilot-2.git /var/www/tourpilot-dev
+cd /var/www/tourpilot-dev
+cp .env.development.example .env
+nano .env    # set strong DEV passwords + JWT secrets (different from prod)
+```
+
+### 2.5.3 Wire the dev domain + TLS (one-time)
+
+```bash
+cd /var/www/tourpilot-dev
+bash scripts/wire-dev-domain.sh
+```
+
+This creates an **isolated** stack (`COMPOSE_PROJECT_NAME=tourpilot-dev`), a
+`tourpilot-dev` nginx site pointing `dev.srilankatourpilot.com` → `127.0.0.1:8081`,
+and its own Let's Encrypt cert. Your production site is untouched.
+
+> Make sure the **production** nginx site's `server_name` lists only
+> `srilankatourpilot.com www.srilankatourpilot.com` (not `dev.`), so the dev
+> subdomain is served exclusively by the dev site.
+
+### 2.5.4 GitHub secret for dev
+
+Add one secret (the rest are reused from production):
+
+| Secret | Value |
+|--------|--------|
+| `DEV_DEPLOY_PATH` | `/var/www/tourpilot-dev` |
+
+### 2.5.5 Deploy dev
+
+Any push to `development` builds `dev`/`dev-<sha>` images and deploys them to the
+dev stack automatically:
+
+```bash
+git checkout development
+git push origin development
+```
+
+Manual dev deploy / rebuild on the server:
+
+```bash
+cd /var/www/tourpilot-dev
+COMPOSE_PROJECT_NAME=tourpilot-dev docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
+Verify:
+
+```bash
+curl -fsS https://dev.srilankatourpilot.com/api/health
+```
+
+> Always prefix dev compose commands with `COMPOSE_PROJECT_NAME=tourpilot-dev`
+> (or export it) so you never touch production containers/volumes by accident.
+
+---
+
 ## Part 3 — Day-to-day operations
 
 ### Useful commands

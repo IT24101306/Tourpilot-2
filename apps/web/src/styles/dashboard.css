@@ -747,6 +747,10 @@
   font-size: 0.8rem;
 }
 
+.tour-group-filter-hint {
+  font-size: 0.8rem;
+}
+
 .entity-filter-hint {
   font-size: 0.85rem;
   margin: 0 0 12px;
@@ -3149,6 +3153,130 @@ textarea.field-invalid {
   margin: 0;
   font-family: var(--font-heading);
   font-size: 1.1rem;
+}
+
+.entities-list-tools {
+  margin-bottom: 12px;
+}
+
+.entities-list-tools .groups-search {
+  width: 100%;
+}
+
+.entities-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+.entities-sort-btn:hover {
+  color: var(--green);
+}
+
+.entities-no-match {
+  text-align: center;
+  padding: 24px 14px;
+}
+
+.site-guides {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.site-guides-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.site-guides-hint {
+  font-size: 0.78rem;
+}
+
+.site-guides-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.site-guide-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 10px);
+  background: #f9fcfb;
+}
+
+.site-guide-fields {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.8fr;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.site-guide-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.site-guide-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.site-guide-field input {
+  width: 100%;
+}
+
+.site-guide-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.site-guide-available {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.site-guides-add {
+  align-self: flex-start;
+}
+
+.tour-entry-guide {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .site-guide-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 .entities-table-wrap {

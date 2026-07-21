@@ -203,6 +203,8 @@ export type EntityOption = {
   type: string;
   city?: string | null;
   priceHint?: number | null;
+  /** Auto-selected site guide for tours (first available), if any. */
+  guide?: { name: string; cost: number } | null;
 };
 
 export type ItineraryPayload = {

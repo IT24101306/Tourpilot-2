@@ -199,10 +199,12 @@ export function TourFormModal({
     if (patch.entityId !== undefined) {
       if (patch.entityId) {
         const ent = entities.find((e) => e.id === patch.entityId);
+        const base = ent?.priceHint ?? 0;
+        const guideCost = ent?.guide?.cost ?? 0;
         mergedPatch = {
           ...mergedPatch,
-          costLkr: ent?.priceHint ?? 0,
-          sellingPriceLkr: ent?.priceHint ?? 0,
+          costLkr: base + guideCost,
+          sellingPriceLkr: base + guideCost,
         };
       } else {
         mergedPatch = { ...mergedPatch, costLkr: 0, sellingPriceLkr: 0 };
@@ -421,10 +423,10 @@ export function TourFormModal({
               <input
                 type="search"
                 className="groups-search groups-search--filter"
-                placeholder="Search groups…"
+                placeholder="Filter groups list…"
                 value={groupSearch}
                 onChange={(e) => setGroupSearch(e.target.value)}
-                aria-label="Search groups"
+                aria-label="Filter groups list"
               />
               <select
                 className="table-filter"
@@ -439,9 +441,15 @@ export function TourFormModal({
                   </option>
                 ))}
               </select>
-              {groupSearch.trim() && filteredGroups.length === 0 && (
-                <span className="tour-group-filter-empty muted">No groups match</span>
-              )}
+              {groupSearch.trim() &&
+                (filteredGroups.length === 0 ? (
+                  <span className="tour-group-filter-empty muted">No groups match</span>
+                ) : (
+                  <span className="tour-group-filter-hint muted">
+                    {filteredGroups.length} of {groups.length} groups — pick one below to filter
+                    entities
+                  </span>
+                ))}
             </div>
           </div>
 
@@ -854,6 +862,11 @@ function DayRow({
     return selected ? [selected, ...entities] : entities;
   }, [entities, allEntities, entry.entityId]);
 
+  const selectedGuide = useMemo(() => {
+    if (!entry.entityId) return null;
+    return allEntities.find((e) => e.id === entry.entityId)?.guide ?? null;
+  }, [allEntities, entry.entityId]);
+
   return (
     <tr className="tour-itinerary-table__entry">
       <td>
@@ -882,6 +895,12 @@ function DayRow({
             ))}
           </select>
         </div>
+        {selectedGuide && (
+          <span className="tour-entry-guide muted">
+            Guide: {selectedGuide.name}
+            {selectedGuide.cost > 0 ? ` · LKR ${selectedGuide.cost.toLocaleString()}` : ""}
+          </span>
+        )}
       </td>
       <td>
         <LkrInput
