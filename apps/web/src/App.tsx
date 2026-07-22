@@ -12,6 +12,8 @@ import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
 import { PublicLayout } from "./components/Layout";
 import { LandingPage } from "./pages/LandingPage";
+import { MarketingHomePage } from "./pages/MarketingHomePage";
+import { DiscoverPage } from "./pages/DiscoverPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterProPage } from "./pages/RegisterProPage";
@@ -47,6 +49,7 @@ import { InfluencerGuidePage } from "./pages/influencer/InfluencerGuidePage";
 import { InfluencerDisplayPage } from "./pages/influencer/InfluencerDisplayPage";
 import { InfluencerInquiriesPage } from "./pages/influencer/InfluencerInquiriesPage";
 import { InfluencerTripRoomPage } from "./pages/influencer/InfluencerTripRoomPage";
+import { InfluencerDomainPage } from "./pages/influencer/InfluencerDomainPage";
 import { InfluencerDetailPage } from "./pages/InfluencerDetailPage";
 import { AdminOverviewPage } from "./pages/admin/AdminOverviewPage";
 import { AdminAgenciesPage } from "./pages/admin/AdminAgenciesPage";
@@ -58,6 +61,8 @@ import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
 import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
 import { AdminDriversPage } from "./pages/admin/AdminDriversPage";
 import { AdminCmsPage } from "./pages/admin/AdminCmsPage";
+import { AdminPricingPage } from "./pages/admin/AdminPricingPage";
+import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminInfluencersPage } from "./pages/admin/AdminInfluencersPage";
 import { AdminItinerariesPage } from "./pages/admin/AdminItinerariesPage";
 import { AdminTripRoomPage } from "./pages/admin/AdminTripRoomPage";
@@ -65,7 +70,8 @@ import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
 import { AdminOffersPage } from "./pages/admin/AdminOffersPage";
-import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+import { AdminPromoEmailPage } from "./pages/admin/AdminPromoEmailPage";
+import { AdminVouchersPage } from "./pages/admin/AdminVouchersPage";
 import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
 import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
 import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";
@@ -73,6 +79,7 @@ import { TouristTravelHub } from "./components/tourist/TouristTravelHub";
 import { AgencyTasksPage } from "./pages/agency/AgencyTasksPage";
 import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
 import { SiteFooter } from "./components/SiteFooter";
+import { CheckoutPage, CheckoutReturnPage } from "./pages/CheckoutPage";
 
 function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[] }) {
   const { user, loading } = useAuth();
@@ -86,8 +93,11 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
 function HomeRoute() {
   const { user, loading } = useAuth();
   const storefront = useStorefrontDomain();
-  // On an agency's custom domain, serve their storefront at the root.
+  // On a custom domain, serve the matching agency or influencer storefront at the root.
   if (storefront.loading) return <div className="section">Loading…</div>;
+  if (storefront.isCustomDomain && storefront.influencerSlug) {
+    return <InfluencerDetailPage slugOverride={storefront.influencerSlug} />;
+  }
   if (storefront.isCustomDomain && storefront.agencySlug) {
     return <AgencyDetailPage slugOverride={storefront.agencySlug} />;
   }
@@ -95,7 +105,7 @@ function HomeRoute() {
   if (user?.role === "AGENCY" || user?.role === "INFLUENCER") {
     return <Navigate to={dashboardPathForRole(user.role)} replace />;
   }
-  return <LandingPage />;
+  return <MarketingHomePage />;
 }
 
 function InfluencerStorefrontRedirect() {
@@ -129,11 +139,28 @@ export default function App() {
       <CurrencyProvider>
       <StorefrontDomainProvider>
       <BrowserRouter>
-        <div className="app-root">
+        <AppShell />
+      </BrowserRouter>
+      </StorefrontDomainProvider>
+      </CurrencyProvider>
+    </AuthProvider>
+  );
+}
+
+function AppShell() {
+  const { pathname } = useLocation();
+  const storefront = useStorefrontDomain();
+  const onMarketingHome =
+    pathname === "/" && !storefront.loading && !storefront.isCustomDomain;
+
+  return (
+        <div className={`app-root${onMarketingHome ? " app-root--marketing-home" : ""}`}>
           <div className="app-root__main">
             <Routes>
           <Route element={<PublicLayout />}>
             <Route index element={<HomeRoute />} />
+            <Route path="discover" element={<DiscoverPage />} />
+            <Route path="pricing" element={<LandingPage />} />
             <Route path="agencies" element={<AgenciesListingRedirect />} />
             <Route path="offers" element={<OffersPage />} />
             <Route path="offers/:offerId/book" element={<OfferBookPage />} />
@@ -150,6 +177,30 @@ export default function App() {
               element={
                 <Protected roles={["TOURIST"]}>
                   <TouristTravelHub />
+                </Protected>
+              }
+            />
+            <Route
+              path="checkout/:invoiceId"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <CheckoutPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="checkout/:invoiceId/return"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <CheckoutReturnPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="checkout/:invoiceId/cancel"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <CheckoutReturnPage cancelled />
                 </Protected>
               }
             />
@@ -239,6 +290,7 @@ export default function App() {
             <Route path="commissions" element={<InfluencerCommissionsPage />} />
             <Route path="commission-requests" element={<InfluencerCommissionRequestsPage />} />
             <Route path="guide" element={<InfluencerGuidePage />} />
+            <Route path="domain" element={<InfluencerDomainPage />} />
           </Route>
 
           <Route
@@ -258,11 +310,14 @@ export default function App() {
             <Route path="commissions" element={<AdminCommissionsPage />} />
             <Route path="ledger" element={<AdminLedgerPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
+            <Route path="promo-email" element={<AdminPromoEmailPage />} />
+            <Route path="vouchers" element={<AdminVouchersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="drivers" element={<AdminDriversPage />} />
             <Route path="influencers" element={<AdminInfluencersPage />} />
             <Route path="itineraries" element={<AdminItinerariesPage />} />
             <Route path="cms" element={<AdminCmsPage />} />
+            <Route path="pricing" element={<AdminPricingPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
 
@@ -271,9 +326,5 @@ export default function App() {
           </div>
           <SiteFooter />
         </div>
-      </BrowserRouter>
-      </StorefrontDomainProvider>
-      </CurrencyProvider>
-    </AuthProvider>
   );
 }

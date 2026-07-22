@@ -486,7 +486,8 @@
 .hotel-modal {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  /* Above tourist trip drawer (1200) and similar overlays */
+  z-index: 1400;
   display: none;
   align-items: center;
   justify-content: center;
@@ -1269,6 +1270,28 @@ textarea.field-invalid {
 
 .tour-required-summary li {
   margin-top: 2px;
+}
+
+.invoice-voucher-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 16px;
+}
+
+.checkout-page {
+  padding: 32px 16px 64px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.checkout-demo-card {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfdfc;
 }
 
 .driver-status {
@@ -2428,6 +2451,13 @@ textarea.field-invalid {
   line-height: 1.4;
 }
 
+.inquiry-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
 .inquiry-prior-replies h4 {
   margin: 0 0 8px;
   font-size: 0.9rem;
@@ -2611,6 +2641,78 @@ textarea.field-invalid {
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+.inquiry-thread-item--mine {
+  margin-left: 12%;
+}
+
+.inquiry-thread-item--theirs {
+  margin-right: 12%;
+}
+
+.inquiry-thread-ticks {
+  display: block;
+  text-align: right;
+  font-size: 0.75rem;
+  letter-spacing: -0.05em;
+  color: #94a3b8;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.inquiry-thread-ticks--seen {
+  color: #2563eb;
+}
+
+.chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+  min-height: 22px;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.chat-typing__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.chat-typing__dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  display: block;
+  animation: chat-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.chat-typing__dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.chat-typing__dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes chat-typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.chat-typing__label {
+  font-weight: 500;
 }
 
 .inquiry-thread-badge {

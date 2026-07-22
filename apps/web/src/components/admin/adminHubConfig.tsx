@@ -6,7 +6,7 @@ export type HubModule = {
   category: string;
   title: string;
   description: string;
-  icon: "agency" | "users" | "inquiry" | "tour" | "commission" | "ledger" | "offer" | "review" | "driver" | "cms";
+  icon: "agency" | "users" | "inquiry" | "tour" | "commission" | "ledger" | "offer" | "review" | "driver" | "cms" | "settings";
   stat?: (s: AdminStats) => number | string;
 };
 
@@ -102,6 +102,14 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
     title: "Platform & content",
     modules: [
       {
+        id: "settings",
+        to: "/dashboard/admin/settings",
+        category: "Control",
+        title: "Settings",
+        description: "Login fees, expiry, URL, and wallet limits",
+        icon: "settings",
+      },
+      {
         id: "ledger",
         to: "/dashboard/admin/ledger",
         category: "Money",
@@ -119,11 +127,35 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
         stat: (s) => s.offers.active,
       },
       {
+        id: "promo-email",
+        to: "/dashboard/admin/promo-email",
+        category: "Marketing",
+        title: "Promo email",
+        description: "Send posters and offer links to users",
+        icon: "cms",
+      },
+      {
+        id: "vouchers",
+        to: "/dashboard/admin/vouchers",
+        category: "Money",
+        title: "Vouchers",
+        description: "Custom discount codes for invoices",
+        icon: "ledger",
+      },
+      {
         id: "cms",
         to: "/dashboard/admin/cms",
         category: "Content",
         title: "CMS",
         description: "Landing and marketing copy",
+        icon: "cms",
+      },
+      {
+        id: "pricing",
+        to: "/dashboard/admin/pricing",
+        category: "Content",
+        title: "Pricing",
+        description: "Revenue packages, prices, and feature copy",
         icon: "cms",
       },
     ],

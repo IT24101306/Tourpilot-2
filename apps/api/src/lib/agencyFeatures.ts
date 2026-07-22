@@ -10,7 +10,9 @@ export type AgencyFeatureKey =
   | "readyMadeTours"
   | "customInquiries"
   | "negotiationsBookings"
-  | "customDomain";
+  | "customDomain"
+  | "externalStorefront"
+  | "sessionInactivityTimeout";
 
 export type AgencyFeatures = Record<AgencyFeatureKey, boolean>;
 
@@ -24,6 +26,8 @@ type AgencyFeatureSource = {
   featureCustomInquiries?: boolean;
   featureNegotiationsBookings?: boolean;
   featureCustomDomain?: boolean;
+  featureExternalStorefront?: boolean;
+  featureSessionInactivityTimeout?: boolean;
 };
 
 export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | undefined): AgencyFeatures {
@@ -37,6 +41,8 @@ export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | und
     customInquiries: agency?.featureCustomInquiries ?? true,
     negotiationsBookings: agency?.featureNegotiationsBookings ?? true,
     customDomain: agency?.featureCustomDomain ?? false,
+    externalStorefront: agency?.featureExternalStorefront ?? false,
+    sessionInactivityTimeout: agency?.featureSessionInactivityTimeout ?? false,
   };
 }
 
@@ -51,6 +57,8 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
     featureCustomInquiries: boolean;
     featureNegotiationsBookings: boolean;
     featureCustomDomain: boolean;
+    featureExternalStorefront: boolean;
+    featureSessionInactivityTimeout: boolean;
   }> = {};
   if (features.driversAndPartners !== undefined) {
     data.featureDriversAndPartners = features.driversAndPartners;
@@ -71,6 +79,12 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
   if (features.customDomain !== undefined) {
     data.featureCustomDomain = features.customDomain;
   }
+  if (features.externalStorefront !== undefined) {
+    data.featureExternalStorefront = features.externalStorefront;
+  }
+  if (features.sessionInactivityTimeout !== undefined) {
+    data.featureSessionInactivityTimeout = features.sessionInactivityTimeout;
+  }
   return data;
 }
 
@@ -84,6 +98,8 @@ const FEATURE_LABELS: Record<AgencyFeatureKey, string> = {
   customInquiries: "Custom tour inquiries",
   negotiationsBookings: "Negotiations and bookings",
   customDomain: "Custom domain",
+  externalStorefront: "External / headless website",
+  sessionInactivityTimeout: "Session inactivity timeout",
 };
 
 /** Returns an Express-ready error payload when the agency feature is disabled. */

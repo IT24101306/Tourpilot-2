@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
+import { config } from "./lib/config.js";
 import { UPLOAD_DIR, ensureUploadDir } from "./lib/uploadStorage.js";
 import { authRouter } from "./routes/auth.js";
 import { agenciesRouter } from "./routes/agencies.js";
@@ -20,14 +21,35 @@ import { savedTripPlansRouter } from "./routes/savedTripPlans.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { touristRouter } from "./routes/tourist.js";
 import { cmsRouter } from "./routes/cms.js";
+import { supportRouter } from "./routes/support.js";
 import { domainsRouter } from "./routes/domains.js";
+import { invoicesRouter } from "./routes/invoices.js";
 
 export function createApp() {
   const app = express();
 
   ensureUploadDir();
-  app.use(cors());
+
+  const allowlist = config.corsOrigins;
+  const corsConfigured =
+    Boolean(process.env.CORS_ORIGINS?.trim()) ||
+    Boolean(process.env.HEADLESS_CORS_ORIGINS?.trim()) ||
+    process.env.CORS_STRICT === "true";
+  app.use(
+    cors({
+      origin(origin, cb) {
+        // Non-browser / same-origin tools send no Origin header.
+        if (!origin) return cb(null, true);
+        // Open CORS until an allowlist is configured (or CORS_STRICT=true).
+        if (!corsConfigured) return cb(null, true);
+        if (allowlist.includes(origin)) return cb(null, true);
+        return cb(null, false);
+      },
+      credentials: true,
+    })
+  );
   app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ extended: true }));
   app.use(morgan("dev"));
   app.use("/uploads", express.static(UPLOAD_DIR));
 
@@ -59,6 +81,8 @@ export function createApp() {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/tourist", touristRouter);
   app.use("/api/cms", cmsRouter);
+  app.use("/api/support", supportRouter);
+  app.use("/api/invoices", invoicesRouter);
   app.use("/api", domainsRouter);
 
   app.use(

@@ -17,13 +17,17 @@ export type LineItemKind = "REQUIRED" | "OPTIONAL" | "UPGRADE";
 
 export type EntityType = "HOTEL" | "VIEWPOINT" | "ACTIVITY" | "RESTAURANT" | "OTHER";
 
-export const LOGIN_FEE_LKR: Record<UserRole, number> = {
+/** Fallback defaults when platform settings / API are unavailable. */
+export const DEFAULT_LOGIN_FEE_LKR: Record<UserRole, number> = {
   TOURIST: 0,
   AGENCY: 50,
   INFLUENCER: 25,
   DRIVER: 25,
   ADMIN: 0,
 };
+
+/** @deprecated Prefer platform settings / DEFAULT_LOGIN_FEE_LKR */
+export const LOGIN_FEE_LKR = DEFAULT_LOGIN_FEE_LKR;
 
 export function dashboardPathForRole(role: UserRole): string {
   switch (role) {
@@ -129,3 +133,33 @@ export {
   resolveSocialTagHandle,
   type SocialLinkLike,
 } from "./socialTagHandle.js";
+
+export {
+  DEFAULT_PRICING_PAGE,
+  formatPricingLkr,
+  parsePricingPageContent,
+  type PricingAddonFeature,
+  type PricingFilterOption,
+  type PricingIncludedSection,
+  type PricingPackage,
+  type PricingPageContent,
+} from "./pricingPage.js";
+
+export {
+  DEFAULT_SUPPORT_CONTENT,
+  parseSupportContent,
+  type SupportAgent,
+  type SupportContent,
+} from "./supportContent.js";
+
+export {
+  SESSION_INACTIVITY_DEFAULT_MINUTES,
+  SESSION_INACTIVITY_MAX_MINUTES,
+  SESSION_INACTIVITY_MIN_MINUTES,
+  clampSessionInactivityMinutes,
+  formatSessionInactivity,
+  resolveSessionInactivityMinutes,
+  splitSessionInactivityForEdit,
+  toSessionInactivityMinutes,
+  type SessionInactivityUnit,
+} from "./sessionInactivity.js";

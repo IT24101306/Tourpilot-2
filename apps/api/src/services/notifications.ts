@@ -1,6 +1,7 @@
 import { config } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import {
+  agencyApprovedEmail,
   commissionPaidEmail,
   finalizeEmailTemplate,
   inquiryCreatedEmail,
@@ -8,6 +9,9 @@ import {
   inquiryStatusEmail,
   proposalSentEmail,
   sendPlatformEmail,
+  tripMessageEmail,
+  walletReceiptEmail,
+  welcomeEmail,
 } from "./email.js";
 import { getPlatformSettings } from "./platformSettings.js";
 
@@ -140,11 +144,17 @@ export async function notifyInquiryChatMessage(
   if (!inquiry) return;
 
   const preview = body.length > 120 ? `${body.slice(0, 117)}…` : body;
-  const recipients: Array<{ userId: string; email?: string | null; url: string }> = [];
+  const recipients: Array<{
+    userId: string;
+    name: string;
+    email?: string | null;
+    url: string;
+  }> = [];
 
   if (kind !== "TOURIST") {
     recipients.push({
       userId: inquiry.tourist.id,
+      name: inquiry.tourist.name,
       email: inquiry.tourist.email,
       url: await tripUrl(inquiryId, "tourist"),
     });
@@ -152,6 +162,7 @@ export async function notifyInquiryChatMessage(
   if (kind !== "AGENCY") {
     recipients.push({
       userId: inquiry.agency.owner.id,
+      name: inquiry.agency.owner.name,
       email: inquiry.agency.owner.email ?? inquiry.agency.contactEmail,
       url: await tripUrl(inquiryId, "agency"),
     });
@@ -159,6 +170,7 @@ export async function notifyInquiryChatMessage(
   if (inquiry.handlerInfluencer && kind !== "INFLUENCER") {
     recipients.push({
       userId: inquiry.handlerInfluencer.user.id,
+      name: inquiry.handlerInfluencer.user.name,
       email: inquiry.handlerInfluencer.user.email,
       url: await tripUrl(inquiryId, "influencer"),
     });
@@ -166,12 +178,27 @@ export async function notifyInquiryChatMessage(
 
   for (const party of recipients) {
     if (party.userId === authorId) continue;
+    const mail = await finalizeEmailTemplate(
+      "tripMessage",
+      tripMessageEmail({
+        recipientName: party.name,
+        preview,
+        tripUrl: party.url,
+      }),
+      {
+        recipientName: party.name,
+        preview,
+        tripUrl: party.url,
+      }
+    );
     await createNotification({
       userId: party.userId,
       type: "INQUIRY_CHAT",
       title: "New trip message",
       body: preview,
       inquiryId,
+      email: party.email,
+      emailContent: mail,
     });
   }
 }
@@ -417,6 +444,104 @@ export async function notifyCommissionApproved(inquiryId: string) {
         "— TourPilot",
       ].join("\n"),
     },
+  });
+}
+
+export async function notifyWelcome(user: {
+  id: string;
+  name: string;
+  email: string | null;
+  role: string;
+}) {
+  if (!user.email?.trim()) return;
+  const base = await appBaseUrl();
+  const mail = await finalizeEmailTemplate(
+    "welcome",
+    welcomeEmail({ name: user.name, role: user.role, appUrl: base }),
+    {
+      name: user.name,
+      role: user.role,
+      appUrl: base,
+    }
+  );
+  await createNotification({
+    userId: user.id,
+    type: "WELCOME",
+    title: "Welcome to TourPilot",
+    body: "Your account is ready. Explore tours and offers anytime.",
+    email: user.email,
+    emailContent: mail,
+  });
+}
+
+export async function notifyAgencyApproved(agencyId: string) {
+  const agency = await prisma.agency.findUnique({
+    where: { id: agencyId },
+    include: { owner: { select: { id: true, name: true, email: true } } },
+  });
+  if (!agency) return;
+
+  const base = await appBaseUrl();
+  const dashboardUrl = `${base}/dashboard/agency`;
+  const to = agency.contactEmail?.trim() || agency.owner.email?.trim() || "";
+  const mail = await finalizeEmailTemplate(
+    "agencyApproved",
+    agencyApprovedEmail({
+      agencyName: agency.name,
+      ownerName: agency.owner.name,
+      dashboardUrl,
+    }),
+    {
+      agencyName: agency.name,
+      ownerName: agency.owner.name,
+      dashboardUrl,
+    }
+  );
+
+  await createNotification({
+    userId: agency.owner.id,
+    type: "AGENCY_APPROVED",
+    title: "Agency approved",
+    body: `${agency.name} is now live on TourPilot.`,
+    email: to || null,
+    emailContent: mail,
+  });
+}
+
+export async function notifyWalletReceipt(params: {
+  userId: string;
+  name: string;
+  email: string | null | undefined;
+  kind: "LOGIN_FEE" | "TOPUP";
+  amountLkr: number;
+  balanceLkr: number;
+}) {
+  if (!params.email?.trim() || params.amountLkr <= 0) return;
+  const mail = await finalizeEmailTemplate(
+    "walletReceipt",
+    walletReceiptEmail({
+      recipientName: params.name,
+      kind: params.kind,
+      amountLkr: params.amountLkr,
+      balanceLkr: params.balanceLkr,
+    }),
+    {
+      recipientName: params.name,
+      kind: params.kind,
+      amountLkr: String(params.amountLkr),
+      balanceLkr: String(params.balanceLkr),
+    }
+  );
+  await createNotification({
+    userId: params.userId,
+    type: params.kind === "LOGIN_FEE" ? "LOGIN_FEE_RECEIPT" : "WALLET_TOPUP_RECEIPT",
+    title: params.kind === "LOGIN_FEE" ? "Login fee charged" : "Wallet topped up",
+    body:
+      params.kind === "LOGIN_FEE"
+        ? `LKR ${params.amountLkr.toLocaleString()} login fee charged.`
+        : `LKR ${params.amountLkr.toLocaleString()} added to your wallet.`,
+    email: params.email,
+    emailContent: mail,
   });
 }
 

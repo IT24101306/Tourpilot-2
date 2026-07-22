@@ -18,6 +18,7 @@ export function RegisterPage() {
   const { setSession } = useAuth();
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -37,6 +38,12 @@ export function RegisterPage() {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
     const normalizedPhone = toStoredPhone(phoneInput);
     if (!isValidInternationalPhone(normalizedPhone)) {
       setError("Enter a valid phone with country code (e.g. +94771234567).");
@@ -50,7 +57,12 @@ export function RegisterPage() {
         "/auth/register-request",
         {
           method: "POST",
-          body: JSON.stringify({ name, phone: normalizedPhone, role: "TOURIST" }),
+          body: JSON.stringify({
+            name,
+            email: normalizedEmail,
+            phone: normalizedPhone,
+            role: "TOURIST",
+          }),
         }
       );
       setChallengeId(data.challengeId);
@@ -90,7 +102,7 @@ export function RegisterPage() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Enter your name and phone number — we'll send a one-time code to verify you."
+      subtitle="Enter your details — we'll email a one-time code to verify you."
     >
       <AuthSwitch mode="register" returnTo={returnTo} />
 
@@ -108,6 +120,19 @@ export function RegisterPage() {
             minLength={2}
             required
           />
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
+          />
+          <p className="muted" style={{ margin: "-4px 0 0", fontSize: "0.85rem" }}>
+            Used for trip updates and occasional TourPilot offers.
+          </p>
           <PhoneInput value={phoneInput} onChange={setPhoneInput} id="register-phone" />
           <p className="auth-benefit muted">
             Save tours, send inquiries, and keep your trip plans in one place.
@@ -122,7 +147,8 @@ export function RegisterPage() {
       {step === "otp" && (
         <>
           <p className="muted" style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>
-            Code sent to {phone}
+            Code sent to your email{email.trim() ? ` (${email.trim().toLowerCase()})` : ""}. Phone on
+            file: {phone}
           </p>
           <OtpStep
             otp={otp}

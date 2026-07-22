@@ -14,7 +14,7 @@ import { prisma } from "../lib/prisma.js";
 
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 
-import { agencyHasFeature, requireAgencyFeature } from "../lib/agencyFeatures.js";
+import { agencyHasFeature, requireAgencyFeature, serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 
 import { asJson } from "../utils/json.js";
 
@@ -43,7 +43,14 @@ import { applyOfferUpdate } from "../lib/offers.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import { config } from "../lib/config.js";
-import { promises as dns } from "node:dns";
+import {
+  dnsExpectedHint,
+  HOSTNAME_RE,
+  isDomainTaken,
+  normalizeDomainInput,
+  serializeDomain,
+  verifyDomainDns,
+} from "../lib/customDomain.js";
 import {
   applyCommissionRequestAction,
   getAgencyCommissionRequests,
@@ -340,41 +347,6 @@ agenciesRouter.patch("/mine", authRequired, requireRoles("AGENCY"), async (req, 
 
 });
 
-type DomainAgency = {
-  customDomain: string | null;
-  customDomainStatus: string;
-  customDomainVerifiedAt: Date | null;
-};
-
-function normalizeDomainInput(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .replace(/\.$/, "")
-    .split(":")[0];
-}
-
-const HOSTNAME_RE = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
-
-function serializeDomain(agency: DomainAgency) {
-  const { aTarget, cnameTarget } = config.customDomain;
-  return {
-    domain: agency.customDomain,
-    status: agency.customDomainStatus,
-    verifiedAt: agency.customDomainVerifiedAt,
-    instructions: {
-      aRecord: aTarget
-        ? { type: "A", host: "@", value: aTarget }
-        : null,
-      cname: cnameTarget
-        ? { type: "CNAME", host: "www", value: cnameTarget }
-        : null,
-    },
-  };
-}
-
 agenciesRouter.get(
   "/mine/domain",
   authRequired,
@@ -412,12 +384,8 @@ agenciesRouter.post(
         return res.status(400).json({ error: "That domain belongs to the platform." });
       }
 
-      const taken = await prisma.agency.findFirst({
-        where: { customDomain: domain, NOT: { id: agency.id } },
-        select: { id: true },
-      });
-      if (taken) {
-        return res.status(409).json({ error: "That domain is already connected to another agency." });
+      if (await isDomainTaken(domain, { agencyId: agency.id })) {
+        return res.status(409).json({ error: "That domain is already connected to another account." });
       }
 
       const updated = await prisma.agency.update({
@@ -448,31 +416,15 @@ agenciesRouter.post(
         return res.status(400).json({ error: "Add a domain before verifying." });
       }
 
-      const { aTarget, cnameTarget } = config.customDomain;
-      const host = agency.customDomain;
-
-      const addrs = await dns.resolve4(host).catch(() => [] as string[]);
-      let ok = false;
-      if (aTarget && addrs.includes(aTarget)) {
-        ok = true;
-      } else if (cnameTarget) {
-        const cnames = await dns.resolveCname(host).catch(() => [] as string[]);
-        ok = cnames.some((c) => c.replace(/\.$/, "").toLowerCase() === cnameTarget.toLowerCase());
-      }
-
+      const { ok, resolved } = await verifyDomainDns(agency.customDomain);
       if (!ok) {
         await prisma.agency.update({
           where: { id: agency.id },
           data: { customDomainStatus: "ERROR", customDomainVerifiedAt: null },
         });
-        const expected = aTarget
-          ? `an A record pointing to ${aTarget}`
-          : cnameTarget
-            ? `a CNAME pointing to ${cnameTarget}`
-            : "the DNS record we provided";
         return res.status(400).json({
-          error: `DNS is not pointing here yet. Add ${expected}, then verify again. DNS changes can take a while to propagate.`,
-          resolved: addrs,
+          error: `DNS is not pointing here yet. Add ${dnsExpectedHint()}, then verify again. DNS changes can take a while to propagate.`,
+          resolved,
         });
       }
 
@@ -1075,6 +1027,60 @@ agenciesRouter.patch(
     }
   }
 );
+
+agenciesRouter.get("/:slug/headless-config", async (req, res, next) => {
+  try {
+    const agency = await prisma.agency.findFirst({
+      where: { slug: req.params.slug, ...publicAgencyWhere() },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        featureDriversAndPartners: true,
+        featureSupport: true,
+        featureWalletTopup: true,
+        featureOffers: true,
+        featureDisplay: true,
+        featureReadyMadeTours: true,
+        featureCustomInquiries: true,
+        featureNegotiationsBookings: true,
+        featureCustomDomain: true,
+        featureExternalStorefront: true,
+      },
+    });
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const features = serializeAgencyFeatures(agency);
+    const webAppUrl = config.webAppUrl;
+    // Prefer public absolute API base from WEB_APP_URL (same origin /api in prod).
+    const apiBase = `${webAppUrl}/api`;
+
+    res.json({
+      agencyId: agency.id,
+      slug: agency.slug,
+      name: agency.name,
+      apiBase,
+      webAppUrl,
+      features,
+      entitled: features.externalStorefront,
+      tripRoomUrlTemplate: `${webAppUrl}/trips?room={inquiryId}`,
+      endpoints: {
+        agency: `${apiBase}/agencies/${agency.slug}`,
+        headlessConfig: `${apiBase}/agencies/${agency.slug}/headless-config`,
+        tourPublic: `${apiBase}/tours/public/${agency.slug}/:tourSlug`,
+        entitiesPublic: `${apiBase}/entities/public/${agency.slug}`,
+        loginStart: `${apiBase}/auth/login-start`,
+        verifyOtp: `${apiBase}/auth/verify-otp`,
+        registerRequest: `${apiBase}/auth/register-request`,
+        verifyRegistration: `${apiBase}/auth/verify-registration`,
+        me: `${apiBase}/auth/me`,
+        createInquiry: `${apiBase}/inquiries`,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
 agenciesRouter.get("/:slug", async (req, res, next) => {
 
