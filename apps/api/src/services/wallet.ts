@@ -1,8 +1,8 @@
 import type { UserRole, WalletTxnType } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import {
-  getPlatformSettings,
   resolveLoginFeeForUser,
+  resolveWalletTopupBounds,
 } from "./platformSettings.js";
 
 export async function chargeLoginFee(userId: string, _role?: UserRole) {
@@ -20,9 +20,8 @@ export async function chargeLoginFee(userId: string, _role?: UserRole) {
 
   const newBalance = balance - fee;
   const noteSuffix =
-    user.loginFeeLkr != null
-      ? `${user.role}, custom`
-      : user.role;
+    user.loginFeeLkr != null ? `${user.role}, custom` : user.role;
+
   await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
@@ -49,21 +48,14 @@ export async function topUpWallet(userId: string, amount: number) {
     throw err;
   }
 
-  const settings = await getPlatformSettings();
-  if (amount < settings.walletTopupMinLkr) {
-    const err = new Error(
-      `Minimum top-up is LKR ${settings.walletTopupMinLkr.toLocaleString()}`
-    );
+  const { min, max } = await resolveWalletTopupBounds();
+  if (amount < min) {
+    const err = new Error(`Minimum top-up is LKR ${min}`);
     (err as Error & { status: number }).status = 400;
     throw err;
   }
-  if (
-    settings.walletTopupMaxLkr != null &&
-    amount > settings.walletTopupMaxLkr
-  ) {
-    const err = new Error(
-      `Maximum top-up is LKR ${settings.walletTopupMaxLkr.toLocaleString()}`
-    );
+  if (max != null && amount > max) {
+    const err = new Error(`Maximum top-up is LKR ${max}`);
     (err as Error & { status: number }).status = 400;
     throw err;
   }

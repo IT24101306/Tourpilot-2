@@ -67,6 +67,10 @@ services:
       DEMO_OTP_IN_RESPONSE: ${DEMO_OTP_IN_RESPONSE:-false}
       LOG_OTP_TO_CONSOLE: ${LOG_OTP_TO_CONSOLE:-false}
       INQUIRY_EXPIRY_DAYS: ${INQUIRY_EXPIRY_DAYS:-14}
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:-}
+      PLATFORM_DOMAINS: ${PLATFORM_DOMAINS:-}
+      CUSTOM_DOMAIN_A_TARGET: ${CUSTOM_DOMAIN_A_TARGET:-}
+      CUSTOM_DOMAIN_CNAME_TARGET: ${CUSTOM_DOMAIN_CNAME_TARGET:-}
       BUILD_SHA: ${BUILD_SHA:-manual}
       BUILD_TIME: ${BUILD_TIME:-}
     volumes:
@@ -100,9 +104,37 @@ services:
     networks:
       - tourpilot
 
+  # Edge reverse proxy with automatic HTTPS + On-Demand TLS for agency custom
+  # domains. Opt-in: start with `--profile edge`. When enabled, set HTTP_PORT to
+  # a non-80 value (e.g. 8080) so the web container doesn't clash with Caddy.
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    profiles: ["edge"]
+    depends_on:
+      - web
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:-srilankatourpilot.com}
+      CADDY_EMAIL: ${CADDY_EMAIL:-}
+      # Host gateway + DEV HTTP_PORT — used by docker/Caddyfile for Path B
+      DEV_UPSTREAM: ${DEV_UPSTREAM:-172.17.0.1:8081}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - tourpilot_caddy_data:/data
+      - tourpilot_caddy_config:/config
+    networks:
+      - tourpilot
+
 volumes:
   tourpilot_mysql_data:
   tourpilot_uploads:
+  tourpilot_caddy_data:
+  tourpilot_caddy_config:
 
 networks:
   tourpilot:

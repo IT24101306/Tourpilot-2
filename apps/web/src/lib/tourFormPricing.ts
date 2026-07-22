@@ -30,10 +30,9 @@ export type TourFormPricing = {
 
 export function computeTourFormPricing(
   form: TourFormState,
-  entities: EntityOption[],
+  _entities: EntityOption[],
   agencyCommissionPct: number
 ): TourFormPricing {
-  const entityMap = new Map(entities.map((e) => [e.id, e]));
   let entitiesSubtotal = 0;
   let entitiesSellingSubtotal = 0;
   let transportSubtotal = 0;
@@ -49,8 +48,8 @@ export function computeTourFormPricing(
       if (!entry.entityId) continue;
       entitiesCostLkr += entry.costLkr;
       entitiesSellingLkr += entry.sellingPriceLkr;
-      const ent = entityMap.get(entry.entityId);
-      if (entry.costLkr <= 0 && ent?.priceHint == null) {
+      // A row is excluded from the auto totals when it has no selling rate.
+      if (entry.sellingPriceLkr <= 0) {
         dayOnRequest += 1;
       }
     }
@@ -86,7 +85,9 @@ export function computeTourFormPricing(
 
   const catalogSubtotal = entitiesSubtotal + transportSubtotal;
   const sellingTotal = entitiesSellingSubtotal + transportSellingSubtotal;
-  const basePriceLkr = form.priceFromCatalog ? catalogSubtotal : form.basePriceLkr;
+  // Tour base price is the agency's selling total (not internal cost); the
+  // listed tourist price then adds influencer commission on top.
+  const basePriceLkr = form.priceFromCatalog ? sellingTotal : form.basePriceLkr;
   const effectiveCommissionPct = form.influencerCommissionPct ?? agencyCommissionPct;
   const commissionLkr = tourCommissionLkr({
     basePriceLkr,

@@ -8,13 +8,13 @@ import { computeTourFormPricing } from "../../lib/tourFormPricing";
 import { TourOfferLinkSection } from "./TourOfferLinkSection";
 import { TourPackagePricingNotice } from "../itinerary/TourPackagePricingNotice";
 import {
+  computeMissingRequirements,
   createDayPlan,
   createEntry,
   entityDestinationOptions,
   entityOptionLabel,
   filterEntityOptions,
   filterGroupOptions,
-  isTourFormSavable,
   renumberDays,
   type DayPlan,
   type EntityOption,
@@ -68,6 +68,7 @@ export function TourFormModal({
   const [groupFilter, setGroupFilter] = useState("all");
   const [groupSearch, setGroupSearch] = useState("");
   const [entitySearch, setEntitySearch] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const destinationOptions = useMemo(() => entityDestinationOptions(entities), [entities]);
 
@@ -88,6 +89,7 @@ export function TourFormModal({
       setGroupFilter("all");
       setGroupSearch("");
       setEntitySearch("");
+      setSubmitAttempted(false);
     }
   }, [open]);
 
@@ -105,9 +107,13 @@ export function TourFormModal({
     }
   }, [filteredGroups, groupFilter]);
 
+  // Only clear a selected entity if it no longer exists in the full catalog
+  // (e.g. it was deleted). Filters are for browsing and must NOT wipe entities
+  // that were picked from a different group/type/city — otherwise a tour can't
+  // be composed from multiple groups.
   useEffect(() => {
     if (!open) return;
-    const allowed = new Set(filteredEntities.map((e) => e.id));
+    const allowed = new Set(entities.map((e) => e.id));
     const needsClear = form.days.some((d) =>
       d.entries.some((e) => e.entityId && !allowed.has(e.entityId))
     );
@@ -122,7 +128,7 @@ export function TourFormModal({
         ),
       })),
     });
-  }, [typeFilter, cityFilter, groupFilter, entitySearch, filteredEntities, open]);
+  }, [entities, open]);
 
   if (!open) return null;
 
@@ -136,7 +142,17 @@ export function TourFormModal({
       : mode === "duplicate"
         ? `Duplicate ${kindLabel}`
         : `Create ${kindLabel}`;
-  const canSave = isTourFormSavable(form);
+  const missingRequirements = computeMissingRequirements(form);
+  const canSave = missingRequirements.length === 0;
+
+  function handleSubmit(e: FormEvent) {
+    if (!canSave) {
+      e.preventDefault();
+      setSubmitAttempted(true);
+      return;
+    }
+    onSubmit(e);
+  }
 
   function updateDays(days: DayPlan[]) {
     onChange({ ...form, days: renumberDays(days) });
@@ -183,10 +199,12 @@ export function TourFormModal({
     if (patch.entityId !== undefined) {
       if (patch.entityId) {
         const ent = entities.find((e) => e.id === patch.entityId);
+        const base = ent?.priceHint ?? 0;
+        const guideCost = ent?.guide?.cost ?? 0;
         mergedPatch = {
           ...mergedPatch,
-          costLkr: ent?.priceHint ?? 0,
-          sellingPriceLkr: ent?.priceHint ?? 0,
+          costLkr: base + guideCost,
+          sellingPriceLkr: base + guideCost,
         };
       } else {
         mergedPatch = { ...mergedPatch, costLkr: 0, sellingPriceLkr: 0 };
@@ -221,14 +239,14 @@ export function TourFormModal({
           Set tour details, pricing, and a day-by-day plan with timed entities from your catalog.
         </p>
 
-        <form onSubmit={onSubmit}>
-          <FormField label="Tour title" full>
+        <form onSubmit={handleSubmit} noValidate>
+          <FormField label="Tour title" full required>
             <input
               type="text"
               value={form.title}
               onChange={(e) => onChange({ ...form, title: e.target.value })}
               placeholder="Ella 2-Day Highlights"
-              required
+              className={submitAttempted && !form.title.trim() ? "field-invalid" : undefined}
               autoFocus
             />
           </FormField>
@@ -239,7 +257,7 @@ export function TourFormModal({
                 type="number"
                 min={0}
                 step={100}
-                value={form.priceFromCatalog ? pricing.catalogSubtotal || "" : form.basePriceLkr || ""}
+                value={form.priceFromCatalog ? pricing.sellingTotal || "" : form.basePriceLkr || ""}
                 onChange={(e) =>
                   onChange({
                     ...form,
@@ -247,7 +265,7 @@ export function TourFormModal({
                     basePriceLkr: Number(e.target.value) || 0,
                   })
                 }
-                placeholder={String(pricing.catalogSubtotal || 0)}
+                placeholder={String(pricing.sellingTotal || 0)}
                 readOnly={form.priceFromCatalog}
                 aria-readonly={form.priceFromCatalog}
               />
@@ -278,7 +296,7 @@ export function TourFormModal({
                   onChange({
                     ...form,
                     priceFromCatalog: e.target.checked,
-                    basePriceLkr: e.target.checked ? pricing.catalogSubtotal : form.basePriceLkr,
+                    basePriceLkr: e.target.checked ? pricing.sellingTotal : form.basePriceLkr,
                   })
                 }
               />
@@ -288,9 +306,9 @@ export function TourFormModal({
               Final listed price for tourists:{" "}
               <strong>LKR {pricing.listedPriceLkr.toLocaleString()}</strong>
               {pricing.commissionLkr > 0
-                ? ` (catalog LKR ${pricing.basePriceLkr.toLocaleString()} + LKR ${pricing.commissionLkr.toLocaleString()} influencer commission at ${effectiveCommissionPct}%)`
+                ? ` (selling price LKR ${pricing.basePriceLkr.toLocaleString()} + LKR ${pricing.commissionLkr.toLocaleString()} influencer commission at ${effectiveCommissionPct}%)`
                 : pricing.basePriceLkr > 0
-                  ? ` (catalog LKR ${pricing.basePriceLkr.toLocaleString()}, no influencer commission)`
+                  ? ` (selling price LKR ${pricing.basePriceLkr.toLocaleString()}, no influencer commission)`
                   : ""}
               .
             </p>
@@ -405,10 +423,10 @@ export function TourFormModal({
               <input
                 type="search"
                 className="groups-search groups-search--filter"
-                placeholder="Search groups…"
+                placeholder="Filter groups list…"
                 value={groupSearch}
                 onChange={(e) => setGroupSearch(e.target.value)}
-                aria-label="Search groups"
+                aria-label="Filter groups list"
               />
               <select
                 className="table-filter"
@@ -423,9 +441,15 @@ export function TourFormModal({
                   </option>
                 ))}
               </select>
-              {groupSearch.trim() && filteredGroups.length === 0 && (
-                <span className="tour-group-filter-empty muted">No groups match</span>
-              )}
+              {groupSearch.trim() &&
+                (filteredGroups.length === 0 ? (
+                  <span className="tour-group-filter-empty muted">No groups match</span>
+                ) : (
+                  <span className="tour-group-filter-hint muted">
+                    {filteredGroups.length} of {groups.length} groups — pick one below to filter
+                    entities
+                  </span>
+                ))}
             </div>
           </div>
 
@@ -442,8 +466,12 @@ export function TourFormModal({
               key={day.id}
               day={day}
               entities={filteredEntities}
+              allEntities={entities}
               allEntitiesCount={entities.length}
               canRemoveDay={form.days.length > 1}
+              invalid={
+                submitAttempted && !day.entries.some((e) => e.time && e.entityId)
+              }
               dayPricing={pricing.dayBreakdown.find((d) => d.dayNumber === day.dayNumber)}
               onAddEntry={() => addEntry(day.id)}
               onRemoveDay={() => removeDay(day.id)}
@@ -487,7 +515,7 @@ export function TourFormModal({
             </table>
             {pricing.commissionLkr > 0 && (
               <p className="muted tour-pricing-note">
-                Listed tourist price (cost + {effectiveCommissionPct}% influencer commission):{" "}
+                Listed tourist price (selling price + {effectiveCommissionPct}% influencer commission):{" "}
                 <strong>LKR {pricing.listedPriceLkr.toLocaleString()}</strong>
               </p>
             )}
@@ -506,11 +534,26 @@ export function TourFormModal({
             </button>
           </div>
 
+          {submitAttempted && missingRequirements.length > 0 && (
+            <div className="tour-required-summary" role="alert">
+              <strong>Please complete the required fields before saving:</strong>
+              <ul>
+                {missingRequirements.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="dialog-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving || !canSave}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving}
+              aria-disabled={!canSave}
+            >
               {saving
                 ? "Saving…"
                 : mode === "edit"
@@ -554,10 +597,28 @@ function DialogShell({
   );
 }
 
-function FormField({ label, full, children }: { label: string; full?: boolean; children: ReactNode }) {
+function FormField({
+  label,
+  full,
+  required,
+  children,
+}: {
+  label: string;
+  full?: boolean;
+  required?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className={`field ${full ? "full" : ""}`} style={{ marginBottom: 12 }}>
-      <label>{label}</label>
+      <label>
+        {label}
+        {required && (
+          <span className="field-required-mark" aria-hidden="true">
+            {" "}
+            *
+          </span>
+        )}
+      </label>
       {children}
     </div>
   );
@@ -566,8 +627,10 @@ function FormField({ label, full, children }: { label: string; full?: boolean; c
 function DayBlock({
   day,
   entities,
+  allEntities,
   allEntitiesCount,
   canRemoveDay,
+  invalid,
   dayPricing,
   onAddEntry,
   onRemoveDay,
@@ -577,8 +640,10 @@ function DayBlock({
 }: {
   day: DayPlan;
   entities: EntityOption[];
+  allEntities: EntityOption[];
   allEntitiesCount: number;
   canRemoveDay: boolean;
+  invalid?: boolean;
   dayPricing?: {
     costSubtotal: number;
     sellingSubtotal: number;
@@ -604,9 +669,15 @@ function DayBlock({
   ) => void;
 }) {
   return (
-    <div className="day-block">
+    <div className={`day-block${invalid ? " day-block--invalid" : ""}`}>
       <div className="day-head">
-        <h4>Day {day.dayNumber}</h4>
+        <h4>
+          Day {day.dayNumber}
+          <span className="field-required-mark" aria-hidden="true">
+            {" "}
+            *
+          </span>
+        </h4>
         <div style={{ display: "flex", gap: 8 }}>
           <button type="button" className="mini-btn" onClick={onAddEntry}>
             + Add Entity
@@ -618,6 +689,12 @@ function DayBlock({
           )}
         </div>
       </div>
+
+      {invalid && (
+        <p className="field-error-note" role="alert">
+          Add at least one entity with a scheduled time to this day.
+        </p>
+      )}
 
       <div className="tour-itinerary-table-wrap">
         <table className="tour-itinerary-table">
@@ -635,6 +712,7 @@ function DayBlock({
                 key={entry.id}
                 entry={entry}
                 entities={entities}
+                allEntities={allEntities}
                 allEntitiesCount={allEntitiesCount}
                 onPatch={(patch) => onPatchEntry(entry.id, patch)}
                 onRemove={() => onRemoveEntry(entry.id)}
@@ -743,6 +821,7 @@ function LkrInput({
 function DayRow({
   entry,
   entities,
+  allEntities,
   allEntitiesCount,
   onPatch,
   onRemove,
@@ -754,6 +833,7 @@ function DayRow({
     sellingPriceLkr: number;
   };
   entities: EntityOption[];
+  allEntities: EntityOption[];
   allEntitiesCount: number;
   onPatch: (
     patch: Partial<{
@@ -771,6 +851,21 @@ function DayRow({
       : entities.length === 0
         ? "No entities match filters"
         : "Select entity";
+
+  // Keep the currently-selected entity visible even if the active filters would
+  // otherwise exclude it, so switching filters never hides/loses a selection.
+  const options = useMemo(() => {
+    if (!entry.entityId || entities.some((e) => e.id === entry.entityId)) {
+      return entities;
+    }
+    const selected = allEntities.find((e) => e.id === entry.entityId);
+    return selected ? [selected, ...entities] : entities;
+  }, [entities, allEntities, entry.entityId]);
+
+  const selectedGuide = useMemo(() => {
+    if (!entry.entityId) return null;
+    return allEntities.find((e) => e.id === entry.entityId)?.guide ?? null;
+  }, [allEntities, entry.entityId]);
 
   return (
     <tr className="tour-itinerary-table__entry">
@@ -790,7 +885,7 @@ function DayRow({
             aria-label="Entity"
           >
             <option value="">{emptyLabel}</option>
-            {entities.map((ent) => (
+            {options.map((ent) => (
               <option key={ent.id} value={ent.id}>
                 {entityOptionLabel(ent)}
                 {ent.priceHint != null
@@ -800,6 +895,12 @@ function DayRow({
             ))}
           </select>
         </div>
+        {selectedGuide && (
+          <span className="tour-entry-guide muted">
+            Guide: {selectedGuide.name}
+            {selectedGuide.cost > 0 ? ` · LKR ${selectedGuide.cost.toLocaleString()}` : ""}
+          </span>
+        )}
       </td>
       <td>
         <LkrInput

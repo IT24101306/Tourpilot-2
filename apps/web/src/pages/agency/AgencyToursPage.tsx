@@ -34,6 +34,7 @@ import {
   TOUR_BUILDER_RESUME_PARAM,
   tourBuilderAllPath,
 } from "../../lib/tourBuilderDraft";
+import { entityAutoGuide } from "../../components/entity/entityTypes";
 import { AgencyTour } from "./types";
 
 type EntityRow = {
@@ -42,6 +43,7 @@ type EntityRow = {
   type: string;
   city: string | null;
   priceHint: number | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 type GroupRow = {
@@ -133,13 +135,17 @@ export function AgencyToursPage() {
 
   const entityOptions: EntityOption[] = useMemo(
     () =>
-      entities.map((e) => ({
-        id: e.id,
-        name: e.name,
-        type: e.type,
-        city: e.city,
-        priceHint: e.priceHint,
-      })),
+      entities.map((e) => {
+        const g = entityAutoGuide(e.metadata);
+        return {
+          id: e.id,
+          name: e.name,
+          type: e.type,
+          city: e.city,
+          priceHint: e.priceHint,
+          guide: g ? { name: g.name, cost: g.cost ?? 0 } : null,
+        };
+      }),
     [entities]
   );
 

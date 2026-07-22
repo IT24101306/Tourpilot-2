@@ -4,29 +4,49 @@ import { DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 
 const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[] = [
   {
+    key: "readyMadeTours",
+    label: "Ready-made tours",
+    hint: "Agency can publish/edit packages. Travelers still see existing tours; inquire CTA off when disabled",
+  },
+  {
+    key: "customInquiries",
+    label: "Custom tour inquiries",
+    hint: "Travelers can send custom trip requests (form hidden when off)",
+  },
+  {
+    key: "negotiationsBookings",
+    label: "Negotiations → bookings",
+    hint: "Agency bookings tab + travelers can accept proposals (accept hidden when off)",
+  },
+  {
+    key: "offers",
+    label: "Loyalty / promo offers",
+    hint: "Agency can manage offers. Travelers still see existing public offers when disabled",
+  },
+  {
+    key: "display",
+    label: "Display editor",
+    hint: "Agency can edit the storefront. Public page stays visible when disabled",
+  },
+  {
     key: "driversAndPartners",
     label: "Drivers & Partners",
-    hint: "Handshake menu, fleet, and partner requests",
+    hint: "Handshake menu, fleet, and partner requests (agency only)",
   },
   {
     key: "support",
     label: "Support",
-    hint: "Support button in the dashboard top bar",
+    hint: "Support button in the dashboard top bar (agency only)",
   },
   {
     key: "walletTopup",
     label: "Wallet topup",
-    hint: "Self-service wallet funding",
+    hint: "Agency self-service wallet funding",
   },
   {
-    key: "offers",
-    label: "Offers",
-    hint: "Loyalty offers tab and management",
-  },
-  {
-    key: "display",
-    label: "Display",
-    hint: "Storefront editor — hero, packages, gallery, reviews",
+    key: "customDomain",
+    label: "Custom domain",
+    hint: "Agency can connect their own domain (Shopify-style) to their storefront",
   },
 ];
 

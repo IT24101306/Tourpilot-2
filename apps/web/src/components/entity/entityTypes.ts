@@ -1,4 +1,24 @@
+import { newId } from "../../lib/newId";
+
 export type EntityTypeKey = "HOTEL" | "ACTIVITY" | "VIEWPOINT" | "RESTAURANT" | "OTHER";
+
+/** A site guide as edited in the form (cost kept as string for the input). */
+export type SiteGuideForm = {
+  id: string;
+  name: string;
+  contact: string;
+  cost: string;
+  available: boolean;
+};
+
+/** A site guide as persisted in entity metadata. */
+export type StoredSiteGuide = {
+  id: string;
+  name: string;
+  contact?: string;
+  cost?: number;
+  available: boolean;
+};
 
 export const ALLOWED_ENTITY_TYPES: EntityTypeKey[] = [
   "HOTEL",
@@ -28,7 +48,51 @@ export type EntityFormState = {
   cuisineType: string;
   reservationRequired: string;
   dressCode: string;
+  /** Viewpoint-only: optional site guides (name, contact, cost, availability). */
+  siteGuides: SiteGuideForm[];
 };
+
+export function newSiteGuide(): SiteGuideForm {
+  return { id: newId(), name: "", contact: "", cost: "", available: true };
+}
+
+/** Normalize the site guides stored in an entity's metadata. */
+export function parseSiteGuides(
+  metadata?: Record<string, unknown> | null
+): StoredSiteGuide[] {
+  const raw = (metadata as Record<string, unknown> | null | undefined)?.siteGuides;
+  if (!Array.isArray(raw)) return [];
+  const guides: StoredSiteGuide[] = [];
+  for (const item of raw) {
+    const o = (item ?? {}) as Record<string, unknown>;
+    const name = typeof o.name === "string" ? o.name.trim() : "";
+    if (!name) continue;
+    const costNum = Number(o.cost);
+    guides.push({
+      id: typeof o.id === "string" && o.id ? o.id : newId(),
+      name,
+      contact: typeof o.contact === "string" ? o.contact.trim() : "",
+      cost:
+        o.cost != null && o.cost !== "" && Number.isFinite(costNum) ? costNum : undefined,
+      available: o.available !== false,
+    });
+  }
+  return guides;
+}
+
+/** The guide auto-selected for a tour: the first one marked available. */
+export function selectGuideForTour(
+  guides: StoredSiteGuide[]
+): StoredSiteGuide | null {
+  return guides.find((g) => g.available) ?? null;
+}
+
+/** Convenience: the auto-selected guide for an entity's metadata (or null). */
+export function entityAutoGuide(
+  metadata?: Record<string, unknown> | null
+): StoredSiteGuide | null {
+  return selectGuideForTour(parseSiteGuides(metadata));
+}
 
 export const defaultEntityForm = (): EntityFormState => ({
   name: "",
@@ -50,6 +114,7 @@ export const defaultEntityForm = (): EntityFormState => ({
   cuisineType: "",
   reservationRequired: "false",
   dressCode: "",
+  siteGuides: [],
 });
 
 /** Build editable form state from an existing entity (reverse of buildEntityPayload). */
@@ -89,10 +154,17 @@ export function entityToFormState(entity: {
     cuisineType: str(m.cuisineType),
     reservationRequired: m.reservationRequired ? "true" : "false",
     dressCode: str(m.dressCode),
+    siteGuides: parseSiteGuides(entity.metadata).map((g) => ({
+      id: g.id,
+      name: g.name,
+      contact: g.contact ?? "",
+      cost: g.cost != null ? String(g.cost) : "",
+      available: g.available,
+    })),
   };
 }
 
-export type FieldKey = keyof EntityFormState;
+export type FieldKey = keyof Omit<EntityFormState, "siteGuides">;
 
 export type FieldDef = {
   key: FieldKey;
@@ -215,7 +287,7 @@ function boolFromForm(v: string) {
 }
 
 export function buildEntityPayload(form: EntityFormState) {
-  const metadata: Record<string, string | number | boolean> = {};
+  const metadata: Record<string, unknown> = {};
   if (trim(form.location)) metadata.location = trim(form.location);
   if (trim(form.otherInfo)) metadata.otherInfo = trim(form.otherInfo);
   if (trim(form.openHoursDays)) metadata.openHoursDays = trim(form.openHoursDays);
@@ -251,6 +323,21 @@ export function buildEntityPayload(form: EntityFormState) {
     if (trim(form.duration)) metadata.duration = trim(form.duration);
     if (trim(form.bestTimeToVisit)) metadata.bestTimeToVisit = trim(form.bestTimeToVisit);
     if (trim(form.contact)) payload.contact = trim(form.contact);
+
+    const guides = form.siteGuides.filter((g) => trim(g.name));
+    if (guides.length > 0) {
+      metadata.siteGuides = guides.map((g) => {
+        const cost = num(g.cost);
+        const out: Record<string, unknown> = {
+          id: g.id,
+          name: trim(g.name),
+          available: g.available,
+        };
+        if (trim(g.contact)) out.contact = trim(g.contact);
+        if (cost != null) out.cost = cost;
+        return out;
+      });
+    }
   }
 
   if (form.type === "RESTAURANT") {
@@ -311,6 +398,8 @@ export function entityDetailsSummary(entity: {
   if (entity.type === "VIEWPOINT") {
     if (m.duration) parts.push(`~${m.duration}`);
     if (m.bestTimeToVisit) parts.push(String(m.bestTimeToVisit));
+    const guideCount = parseSiteGuides(entity.metadata).length;
+    if (guideCount) parts.push(`${guideCount} guide${guideCount > 1 ? "s" : ""}`);
   }
   if (entity.type === "RESTAURANT") {
     if (m.cuisineType) parts.push(String(m.cuisineType));

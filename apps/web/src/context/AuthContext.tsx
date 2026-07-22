@@ -18,9 +18,9 @@ export type AuthUser = {
   email?: string | null;
   avatarUrl?: string | null;
   walletBalance: number;
-  /** Effective login fee (role default or user override). */
+  /** Effective login fee for this account (role default or custom override). */
   loginFee?: number;
-  loginFeeCustom?: boolean;
+  loginFeeOverride?: number | null;
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: {
     id: string;
@@ -45,6 +45,10 @@ export type AgencyFeatures = {
   walletTopup: boolean;
   offers: boolean;
   display: boolean;
+  readyMadeTours: boolean;
+  customInquiries: boolean;
+  negotiationsBookings: boolean;
+  customDomain: boolean;
 };
 
 export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
@@ -53,6 +57,10 @@ export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
   walletTopup: true,
   offers: true,
   display: true,
+  readyMadeTours: true,
+  customInquiries: true,
+  negotiationsBookings: true,
+  customDomain: false,
 };
 
 export function agencyFeaturesOf(user: AuthUser | null | undefined): AgencyFeatures {

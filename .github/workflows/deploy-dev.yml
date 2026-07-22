@@ -1,12 +1,12 @@
-name: Deploy
+name: Deploy (dev)
 
 on:
   push:
-    branches: [main]
+    branches: [development]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-production
+  group: deploy-development
   cancel-in-progress: false
 
 env:
@@ -16,7 +16,7 @@ env:
 
 jobs:
   build-and-push:
-    name: Build Docker images
+    name: Build Docker images (dev)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,6 +43,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Dev images use dedicated `dev` / `dev-<sha>` tags so they never
+      # overwrite the production `latest`/`<sha>` tags in GHCR.
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
@@ -50,8 +52,8 @@ jobs:
           file: docker/api.Dockerfile
           push: true
           tags: |
-            ${{ steps.meta.outputs.api }}:latest
-            ${{ steps.meta.outputs.api }}:${{ steps.meta.outputs.sha }}
+            ${{ steps.meta.outputs.api }}:dev
+            ${{ steps.meta.outputs.api }}:dev-${{ steps.meta.outputs.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -62,16 +64,16 @@ jobs:
           file: docker/web.Dockerfile
           push: true
           tags: |
-            ${{ steps.meta.outputs.web }}:latest
-            ${{ steps.meta.outputs.web }}:${{ steps.meta.outputs.sha }}
+            ${{ steps.meta.outputs.web }}:dev
+            ${{ steps.meta.outputs.web }}:dev-${{ steps.meta.outputs.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to Ubuntu VPS
+    name: Deploy to dev stack on VPS
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/development'
     steps:
       # Secrets pasted from editors often include trailing whitespace.
       - name: Normalize SSH target
@@ -105,29 +107,26 @@ jobs:
           command_timeout: 15m
           script: |
             set -euo pipefail
-            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
-            if [ -z "$DEPLOY_DIR" ]; then DEPLOY_DIR="/var/www/tourpilot"; fi
+            DEPLOY_DIR="${{ secrets.DEV_DEPLOY_PATH }}"
+            if [ -z "$DEPLOY_DIR" ]; then DEPLOY_DIR="/var/www/tourpilot-dev"; fi
             cd "$DEPLOY_DIR"
             git pull --ff-only || true
 
             OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-            export API_IMAGE="ghcr.io/${OWNER}/tourpilot-api:${{ needs.build-and-push.outputs.sha }}"
-            export WEB_IMAGE="ghcr.io/${OWNER}/tourpilot-web:${{ needs.build-and-push.outputs.sha }}"
-            export BUILD_SHA="${{ needs.build-and-push.outputs.sha }}"
+            export COMPOSE_PROJECT_NAME=tourpilot-dev
+            export API_IMAGE="ghcr.io/${OWNER}/tourpilot-api:dev-${{ needs.build-and-push.outputs.sha }}"
+            export WEB_IMAGE="ghcr.io/${OWNER}/tourpilot-web:dev-${{ needs.build-and-push.outputs.sha }}"
+            export BUILD_SHA="dev-${{ needs.build-and-push.outputs.sha }}"
             export BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
             echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_PULL_USER }}" --password-stdin
 
             docker compose -f docker-compose.prod.yml --env-file .env pull api web
-            # If USE_CADDY_EDGE=true (set by wire-caddy.sh), keep the edge profile
-            # so recreating api/web does not drop the Caddy container on 80/443.
-            if grep -qE '^USE_CADDY_EDGE=true' .env 2>/dev/null; then
-              docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d
-            else
-              docker compose -f docker-compose.prod.yml --env-file .env up -d
-            fi
+            docker compose -f docker-compose.prod.yml --env-file .env up -d
             docker image prune -f
 
             sleep 8
-            curl -fsS http://127.0.0.1/api/health || curl -fsS http://127.0.0.1:8080/api/health
-            echo "Deployed $BUILD_SHA"
+            HTTP_PORT="$(grep -E '^HTTP_PORT=' .env | cut -d= -f2 | tr -d '[:space:]')"
+            if [ -z "$HTTP_PORT" ]; then HTTP_PORT=8081; fi
+            curl -fsS "http://127.0.0.1:${HTTP_PORT}/api/health"
+            echo "Deployed dev-${{ needs.build-and-push.outputs.sha }}"

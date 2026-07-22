@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { DiscoveryPathStrip } from "../components/discovery/DiscoveryPathStrip";
 import {
@@ -8,13 +8,20 @@ import {
 } from "../components/discovery/DiscoveryAgencyCard";
 import { DiscoveryOfferCard, type DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 
-type CmsBlock = Record<string, unknown> & { type?: string };
+type CmsBlock = {
+  type?: string;
+  headline?: string;
+  lead?: string;
+  tags?: string[];
+  badge?: string;
+  title?: string;
+  subtitle?: string;
+};
 
 type CmsPage = {
   slug: string;
   title: string;
-  blocks: CmsBlock[];
-  updatedAt: string;
+  blocks: CmsBlock[] | unknown;
 };
 
 const DEFAULT_HERO = {
@@ -24,6 +31,15 @@ const DEFAULT_HERO = {
   lead:
     "Discover curated tours, compare agencies, and receive transparent itineraries with optional add-ons and prices — built for modern travelers.",
 };
+
+const DEFAULT_FEATURED = {
+  title: "Start with trusted operators",
+  subtitle: "Highly rated teams ready to craft your Sri Lanka journey.",
+};
+
+function asBlocks(raw: unknown): CmsBlock[] {
+  return Array.isArray(raw) ? (raw as CmsBlock[]) : [];
+}
 
 export function LandingPage() {
   const [agencies, setAgencies] = useState<DiscoveryAgency[]>([]);
@@ -38,42 +54,28 @@ export function LandingPage() {
       .catch(() => setCms(null));
   }, []);
 
+  const blocks = asBlocks(cms?.blocks);
+  const heroBlock = blocks.find((b) => b.type === "hero");
+  const featuredBlock = blocks.find((b) => b.type === "featured_agencies");
+
+  const hero = {
+    tags: heroBlock?.tags?.length ? heroBlock.tags : DEFAULT_HERO.tags,
+    badge: heroBlock?.badge?.trim() || DEFAULT_HERO.badge,
+    headline: heroBlock?.headline?.trim() || DEFAULT_HERO.headline,
+    lead: heroBlock?.lead?.trim() || DEFAULT_HERO.lead,
+  };
+  const featuredCopy = {
+    title: featuredBlock?.title?.trim() || DEFAULT_FEATURED.title,
+    subtitle: featuredBlock?.subtitle?.trim() || DEFAULT_FEATURED.subtitle,
+  };
+
   const featured = agencies.slice(0, 3);
-
-  const hero = useMemo(() => {
-    const block = cms?.blocks?.find((b) => b.type === "hero");
-    if (!block) return DEFAULT_HERO;
-    const tags = Array.isArray(block.tags)
-      ? (block.tags as unknown[]).map(String).filter(Boolean)
-      : DEFAULT_HERO.tags;
-    return {
-      tags: tags.length > 0 ? tags : DEFAULT_HERO.tags,
-      badge: typeof block.badge === "string" && block.badge ? block.badge : DEFAULT_HERO.badge,
-      headline:
-        typeof block.headline === "string" && block.headline
-          ? block.headline
-          : DEFAULT_HERO.headline,
-      lead: typeof block.lead === "string" && block.lead ? block.lead : DEFAULT_HERO.lead,
-    };
-  }, [cms]);
-
-  const featuredCopy = useMemo(() => {
-    const block = cms?.blocks?.find((b) => b.type === "featured_agencies");
-    return {
-      title:
-        typeof block?.title === "string" && block.title
-          ? block.title
-          : "Start with trusted operators",
-      subtitle:
-        typeof block?.subtitle === "string" && block.subtitle
-          ? block.subtitle
-          : "Highly rated teams ready to craft your Sri Lanka journey.",
-    };
-  }, [cms]);
 
   return (
     <div className="module-discovery">
-      <section className={`hero-image hero-image--landing${endingSoon.length > 0 ? " hero-image--has-offers" : ""}`}>
+      <section
+        className={`hero-image hero-image--landing${endingSoon.length > 0 ? " hero-image--has-offers" : ""}`}
+      >
         <div className="hero-image-top">
           <div className="hero-tags">
             {hero.tags.map((tag) => (
@@ -129,11 +131,11 @@ export function LandingPage() {
         </div>
 
         {featured.length === 0 ? (
-          <p className="muted">Agencies will appear here once approved.</p>
+          <p className="muted">Loading featured agencies…</p>
         ) : (
           <div className="disc-agency-grid">
-            {featured.map((agency) => (
-              <DiscoveryAgencyCard key={agency.id} agency={agency} />
+            {featured.map((a, i) => (
+              <DiscoveryAgencyCard key={a.id} agency={a} featured={i === 0} />
             ))}
           </div>
         )}

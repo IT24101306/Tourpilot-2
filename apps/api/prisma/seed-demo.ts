@@ -24,7 +24,7 @@ const PHONES = {
   influencer1: "+94774445566",
   influencer2: "+94775556677",
   driver1: "+94776655443",
-  driver2: "+94777766554",
+  driver2: "+947777665",
 } as const;
 
 function daysFromNow(n: number) {
@@ -922,18 +922,8 @@ async function main() {
       slug: "home",
       title: "TourPilot Home",
       blocks: [
-        {
-          type: "hero",
-          headline: "Navigate Sri Lanka with confidence",
-          lead: "Discover curated tours, compare agencies, and receive transparent itineraries.",
-          tags: ["Sri Lanka", "Verified agencies", "Custom itineraries"],
-          badge: "Inspired exploration",
-        },
-        {
-          type: "featured_agencies",
-          title: "Start with trusted operators",
-          subtitle: "Highly rated teams ready to craft your Sri Lanka journey.",
-        },
+        { type: "hero", headline: "Navigate Sri Lanka with confidence" },
+        { type: "featured_agencies" },
         { type: "offers" },
       ],
     },
@@ -955,6 +945,7 @@ async function main() {
     create: {
       slug: "terms",
       title: "Terms & Conditions",
+      isPublished: true,
       blocks: [
         {
           type: "section",
@@ -963,7 +954,12 @@ async function main() {
         },
         {
           type: "section",
-          heading: "2. Contact",
+          heading: "2. Wallet & fees",
+          body: "Some account types may incur platform login fees from the in-app wallet.",
+        },
+        {
+          type: "section",
+          heading: "3. Contact",
           body: "Questions: support@srilankatourpilot.com",
         },
       ],

@@ -241,7 +241,6 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
     }
 
     const loginFee = await resolveLoginFeeForUser(user);
-    const loginFeeCustom = user.loginFeeLkr != null;
 
     if (user.role === "ADMIN") {
       if (!user.passwordHash) {
@@ -253,7 +252,6 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
         role: user.role,
         walletBalance: Number(user.walletBalance),
         loginFee,
-        loginFeeCustom,
         topupChallengeId: topupGate.challengeId,
         redirectTo: dashboardPathForRole(user.role),
       });
@@ -268,7 +266,6 @@ async function handleLoginStart(req: Request, res: Response, next: NextFunction)
       role: user.role,
       walletBalance: Number(user.walletBalance),
       loginFee,
-      loginFeeCustom,
       redirectTo: dashboardPathForRole(user.role),
     });
   } catch (e) {
@@ -416,7 +413,7 @@ async function serializeUser(user: {
   email: string | null;
   avatarUrl: string | null;
   walletBalance: unknown;
-  loginFeeLkr?: { toString(): string } | number | null;
+  loginFeeLkr?: unknown;
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: {
     id: string;
@@ -429,6 +426,9 @@ async function serializeUser(user: {
     featureWalletTopup?: boolean;
     featureOffers?: boolean;
     featureDisplay?: boolean;
+    featureReadyMadeTours?: boolean;
+    featureCustomInquiries?: boolean;
+    featureNegotiationsBookings?: boolean;
   } | null;
   agencyDriver?: {
     id: string;
@@ -437,10 +437,10 @@ async function serializeUser(user: {
     agency: { id: string; name: string; slug: string };
   } | null;
 }) {
-  const loginFee = await resolveLoginFeeForUser({
-    role: user.role,
-    loginFeeLkr: user.loginFeeLkr ?? null,
-  });
+  const loginFee = await resolveLoginFeeForUser(user);
+  const loginFeeOverride =
+    user.loginFeeLkr != null ? Number(user.loginFeeLkr) : null;
+
   return {
     id: user.id,
     phone: user.phone,
@@ -450,7 +450,10 @@ async function serializeUser(user: {
     avatarUrl: user.avatarUrl,
     walletBalance: Number(user.walletBalance),
     loginFee,
-    loginFeeCustom: user.loginFeeLkr != null,
+    loginFeeOverride:
+      loginFeeOverride != null && Number.isFinite(loginFeeOverride)
+        ? Math.round(loginFeeOverride)
+        : null,
     touristProfile: user.touristProfile
       ? {
           loyaltyPoints: user.touristProfile.loyaltyPoints,

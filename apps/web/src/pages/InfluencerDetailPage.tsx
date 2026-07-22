@@ -40,6 +40,12 @@ type StorefrontTour = {
   galleryImages?: HeroSlide[];
   agencyId: string;
   agency: { id: string; name: string; slug: string } | null;
+  features?: {
+    readyMadeTours?: boolean;
+    customInquiries?: boolean;
+    negotiationsBookings?: boolean;
+    offers?: boolean;
+  };
   hideAgencyName?: boolean;
   shareAsMine?: boolean;
   refCode: string | null;
@@ -368,27 +374,33 @@ export function InfluencerDetailPage() {
                 ))}
               </div>
             )}
-            <AgencyInquirySection
-              agencyId={selectedTour.agencyId}
-              agencyName={storefront.name}
-              agencySlug={selectedTour.agency?.slug ?? "partner"}
-              influencerSlug={storefront.slug}
-              refCode={selectedTour.refCode}
-              tour={{
-                id: selectedTour.id,
-                title: selectedTour.title,
-                slug: selectedTour.slug,
-                days: selectedTour.days,
-                basePriceLkr: selectedTour.publicPriceLkr,
-                publicPriceLkr: selectedTour.publicPriceLkr,
-              }}
-              embedded
-              openChatOnSuccess={false}
-              onSuccess={(inquiryId) => {
-                setSelectedTour(null);
-                setChatInquiryId(inquiryId);
-              }}
-            />
+            {selectedTour.features?.readyMadeTours === false ? (
+              <p className="feature-unavailable-note">
+                Online inquiries are not available for this tour&apos;s agency right now.
+              </p>
+            ) : (
+              <AgencyInquirySection
+                agencyId={selectedTour.agencyId}
+                agencyName={storefront.name}
+                agencySlug={selectedTour.agency?.slug ?? "partner"}
+                influencerSlug={storefront.slug}
+                refCode={selectedTour.refCode}
+                tour={{
+                  id: selectedTour.id,
+                  title: selectedTour.title,
+                  slug: selectedTour.slug,
+                  days: selectedTour.days,
+                  basePriceLkr: selectedTour.publicPriceLkr,
+                  publicPriceLkr: selectedTour.publicPriceLkr,
+                }}
+                embedded
+                openChatOnSuccess={false}
+                onSuccess={(inquiryId) => {
+                  setSelectedTour(null);
+                  setChatInquiryId(inquiryId);
+                }}
+              />
+            )}
           </div>
         )}
       </DashboardModal>

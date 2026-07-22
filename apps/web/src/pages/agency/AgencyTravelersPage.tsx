@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
+import { agencyFeaturesOf, useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { OpsMetricStrip } from "../../components/module/OpsMetricStrip";
 import { AgencyInquiry, formatInquiryStatus, inquiryStatusClass } from "./types";
@@ -47,7 +47,8 @@ function TravelerAvatar({ name, avatarUrl }: { name: string; avatarUrl: string |
 }
 
 export function AgencyTravelersPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const features = agencyFeaturesOf(user);
   const [travelers, setTravelers] = useState<TravelerRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -101,9 +102,11 @@ export function AgencyTravelersPage() {
         title="Travelers"
         subtitle="Guests who inquired with your agency — follow up from negotiations or bookings."
       >
-        <Link to="/dashboard/agency/negotiations" className="btn btn-ghost">
-          Negotiations
-        </Link>
+        {features.negotiationsBookings && (
+          <Link to="/dashboard/agency/negotiations" className="btn btn-ghost">
+            Negotiations
+          </Link>
+        )}
       </ModuleHeader>
 
       <OpsMetricStrip

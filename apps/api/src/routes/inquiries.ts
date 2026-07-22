@@ -23,6 +23,11 @@ import { serializeItineraryEntity } from "../lib/entitySerialize.js";
 import { asJson } from "../utils/json.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import {
+  agencyHasFeature,
+  requireAgencyFeature,
+  serializeAgencyFeatures,
+} from "../lib/agencyFeatures.js";
+import {
   buildInquiryThread,
   createInquiryMessage,
   inquiryMessagesInclude,
@@ -93,7 +98,19 @@ const inquiryIncludeForAgency = {
   tourist: {
     select: { id: true, name: true, phone: true, email: true, role: true, avatarUrl: true },
   },
-  agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
+  agency: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      featureReadyMadeTours: true,
+      featureCustomInquiries: true,
+      featureNegotiationsBookings: true,
+      featureOffers: true,
+      featureDisplay: true,
+    },
+  },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
   handlerInfluencer: {
     select: {
@@ -132,7 +149,19 @@ const inquiryIncludeForAgency = {
 };
 
 const inquiryIncludeForTourist = {
-  agency: { select: { id: true, name: true, slug: true, logoUrl: true } },
+  agency: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoUrl: true,
+      featureReadyMadeTours: true,
+      featureCustomInquiries: true,
+      featureNegotiationsBookings: true,
+      featureOffers: true,
+      featureDisplay: true,
+    },
+  },
   tourist: { select: { id: true, name: true, role: true } },
   tour: { select: { id: true, title: true, slug: true, days: true, basePriceLkr: true } },
   handlerInfluencer: {
@@ -190,10 +219,21 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
 
     const agency = await prisma.agency.findFirst({
       where: { id: body.agencyId, ...publicAgencyWhere() },
-      select: { id: true },
     });
     if (!agency) {
       return res.status(404).json({ error: "Agency is not available" });
+    }
+
+    const isCustom = Boolean(body.tripPlan) || body.type === "CUSTOM";
+    if (isCustom && !agencyHasFeature(agency, "customInquiries")) {
+      return res.status(403).json({
+        error: "Custom tour inquiries are disabled for this agency.",
+      });
+    }
+    if (!isCustom && !agencyHasFeature(agency, "readyMadeTours")) {
+      return res.status(403).json({
+        error: "Ready-made tours are disabled for this agency.",
+      });
     }
 
     let referralCodeId: string | undefined;
@@ -383,11 +423,18 @@ inquiriesRouter.get("/share/:token", async (req, res, next) => {
       },
     });
     if (!itinerary) return res.status(404).json({ error: "Not found" });
+    const agency = itinerary.inquiry.agency;
     res.json({
       ...serializeItinerary(itinerary),
       inquiry: {
         id: itinerary.inquiry.id,
-        agency: itinerary.inquiry.agency,
+        agency: {
+          id: agency.id,
+          name: agency.name,
+          slug: agency.slug,
+          logoUrl: agency.logoUrl,
+          features: serializeAgencyFeatures(agency),
+        },
         tourist: itinerary.inquiry.tourist,
       },
     });
@@ -496,7 +543,12 @@ inquiriesRouter.post("/:id/messages", authRequired, async (req, res, next) => {
   }
 });
 
-inquiriesRouter.put("/:id/proposal", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+inquiriesRouter.put(
+  "/:id/proposal",
+  authRequired,
+  requireRoles("AGENCY"),
+  requireAgencyFeature("negotiationsBookings"),
+  async (req, res, next) => {
   try {
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
@@ -823,6 +875,19 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
       return res.status(400).json({ error: "Please describe what you would like changed." });
     }
 
+    if (action === "accept") {
+      const existing = await prisma.inquiry.findFirst({
+        where: { id: req.params.id, touristId: req.user!.id },
+        include: { agency: true },
+      });
+      if (!existing) return res.status(404).json({ error: "Inquiry not found" });
+      if (!agencyHasFeature(existing.agency, "negotiationsBookings")) {
+        return res.status(403).json({
+          error: "Bookings are currently disabled for this agency.",
+        });
+      }
+    }
+
     const statusMap = {
       accept: "ACCEPTED",
       revision: "REVISION_REQUESTED",
@@ -896,7 +961,17 @@ function serializeInquiryForClient(inquiry: {
     role?: string;
     avatarUrl?: string | null;
   };
-  agency?: { id: string; name: string; slug: string; logoUrl?: string | null };
+  agency?: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl?: string | null;
+    featureReadyMadeTours?: boolean;
+    featureCustomInquiries?: boolean;
+    featureNegotiationsBookings?: boolean;
+    featureOffers?: boolean;
+    featureDisplay?: boolean;
+  };
   handlerInfluencer?: {
     id: string;
     slug: string | null;
@@ -941,7 +1016,15 @@ function serializeInquiryForClient(inquiry: {
     createdAt: inquiry.createdAt,
     updatedAt: inquiry.updatedAt,
     tourist: inquiry.tourist,
-    agency: inquiry.agency,
+    agency: inquiry.agency
+      ? {
+          id: inquiry.agency.id,
+          name: inquiry.agency.name,
+          slug: inquiry.agency.slug,
+          logoUrl: inquiry.agency.logoUrl ?? null,
+          features: serializeAgencyFeatures(inquiry.agency),
+        }
+      : undefined,
     handlerInfluencer: inquiry.handlerInfluencer
       ? {
           id: inquiry.handlerInfluencer.id,

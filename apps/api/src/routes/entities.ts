@@ -128,6 +128,14 @@ const entityMediaSchema = z.union([
   }),
 ]);
 
+const siteGuideSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1),
+  contact: z.string().optional(),
+  cost: z.number().optional(),
+  available: z.boolean().optional(),
+});
+
 const entityBodySchema = z.object({
   name: z.string().min(1, "Name is required"),
   type: z.enum(["HOTEL", "VIEWPOINT", "ACTIVITY", "RESTAURANT", "OTHER"]),
@@ -140,7 +148,16 @@ const entityBodySchema = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
   media: entityMediaSchema.optional(),
-  metadata: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
+  metadata: z
+    .record(
+      z.union([
+        z.string(),
+        z.number(),
+        z.boolean(),
+        z.array(siteGuideSchema),
+      ])
+    )
+    .optional(),
 });
 
 entitiesRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {

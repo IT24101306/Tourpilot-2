@@ -13,7 +13,7 @@ import { AgencyLogoPanel } from "../components/account/AgencyLogoPanel";
 import { CurrencyPreferencePanel } from "../components/account/CurrencyPreferencePanel";
 import { WalletHistoryPanel } from "../components/account/WalletHistoryPanel";
 import { lkr, roleLabel } from "../components/account/accountProfileUtils";
-import { useAuth } from "../context/AuthContext";
+import { agencyFeaturesOf, useAuth } from "../context/AuthContext";
 import type { InfluencerDashboardData } from "./influencer/types";
 
 type InquirySummary = {
@@ -223,13 +223,20 @@ export function ProfilePage() {
       } else {
         contextLabel = "Agency account";
       }
-      actions.push(
-        { label: "Manage tours", to: "/dashboard/agency/tours", variant: "teal" },
-        { label: "Bookings", to: "/dashboard/agency/bookings" },
-        { label: "Negotiations", to: "/dashboard/agency/negotiations" }
-      );
-      if (user.agency?.features?.offers !== false) {
-        actions.push({ label: "Offers", to: "/dashboard/agency/offers" });
+      {
+        const features = agencyFeaturesOf(user);
+        if (features.readyMadeTours) {
+          actions.push({ label: "Manage tours", to: "/dashboard/agency/tours", variant: "teal" });
+        }
+        if (features.negotiationsBookings) {
+          actions.push(
+            { label: "Bookings", to: "/dashboard/agency/bookings" },
+            { label: "Negotiations", to: "/dashboard/agency/negotiations" }
+          );
+        }
+        if (features.offers) {
+          actions.push({ label: "Offers", to: "/dashboard/agency/offers" });
+        }
       }
       break;
     }

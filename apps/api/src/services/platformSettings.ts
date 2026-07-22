@@ -1,157 +1,229 @@
 import type { UserRole } from "@prisma/client";
-import { DEFAULT_LOGIN_FEE_LKR } from "@tourpilot/shared";
-import { prisma } from "../lib/prisma.js";
+import { LOGIN_FEE_LKR, type UserRole as SharedRole } from "@tourpilot/shared";
 import { config } from "../lib/config.js";
+import { prisma } from "../lib/prisma.js";
+import { asJson } from "../utils/json.js";
+
+export const PLATFORM_SETTINGS_ID = "default";
+
+export type LoginFeesByRole = Record<UserRole, number>;
+
+export type EmailTemplateOverride = {
+  subject?: string;
+  body?: string;
+};
+
+export type EmailTemplatesMap = Record<string, EmailTemplateOverride>;
 
 export type PlatformSettingsView = {
-  loginFees: Record<UserRole, number>;
+  loginFees: LoginFeesByRole;
   inquiryExpiryDays: number;
   webAppUrl: string;
   emailFrom: string;
   walletTopupMinLkr: number;
   walletTopupMaxLkr: number | null;
+  emailTemplates: EmailTemplatesMap;
   updatedAt: string | null;
 };
 
-const SETTINGS_ID = "default";
+const ROLES: UserRole[] = ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"];
 
-let cache: { at: number; value: PlatformSettingsView } | null = null;
-const CACHE_MS = 15_000;
+export const EMAIL_TEMPLATE_KEYS = [
+  "inquiryCreated",
+  "proposalSent",
+  "inquiryStatus",
+  "inquiryExpired",
+  "commissionPaid",
+  "agencyRejection",
+] as const;
 
-function serialize(row: {
-  loginFeeTourist: { toString(): string } | number;
-  loginFeeAgency: { toString(): string } | number;
-  loginFeeInfluencer: { toString(): string } | number;
-  loginFeeDriver: { toString(): string } | number;
-  loginFeeAdmin: { toString(): string } | number;
+export function defaultLoginFees(): LoginFeesByRole {
+  return {
+    TOURIST: LOGIN_FEE_LKR.TOURIST,
+    AGENCY: LOGIN_FEE_LKR.AGENCY,
+    INFLUENCER: LOGIN_FEE_LKR.INFLUENCER,
+    DRIVER: LOGIN_FEE_LKR.DRIVER,
+    ADMIN: LOGIN_FEE_LKR.ADMIN,
+  };
+}
+
+function normalizeLoginFees(raw: unknown): LoginFeesByRole {
+  const defaults = defaultLoginFees();
+  if (!raw || typeof raw !== "object") return defaults;
+  const obj = raw as Record<string, unknown>;
+  const out = { ...defaults };
+  for (const role of ROLES) {
+    const n = Number(obj[role]);
+    if (Number.isFinite(n) && n >= 0) out[role] = Math.round(n);
+  }
+  return out;
+}
+
+function normalizeEmailTemplates(raw: unknown): EmailTemplatesMap {
+  if (!raw || typeof raw !== "object") return {};
+  const out: EmailTemplatesMap = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!value || typeof value !== "object") continue;
+    const v = value as Record<string, unknown>;
+    const subject = typeof v.subject === "string" ? v.subject : undefined;
+    const body = typeof v.body === "string" ? v.body : undefined;
+    if (subject || body) out[key] = { subject, body };
+  }
+  return out;
+}
+
+function viewFromRow(row: {
+  loginFees: unknown;
   inquiryExpiryDays: number;
   webAppUrl: string | null;
   emailFrom: string | null;
-  walletTopupMinLkr: { toString(): string } | number;
-  walletTopupMaxLkr: { toString(): string } | number | null;
+  walletTopupMinLkr: number;
+  walletTopupMaxLkr: number | null;
+  emailTemplates: unknown;
   updatedAt: Date;
-}): PlatformSettingsView {
+} | null): PlatformSettingsView {
   return {
-    loginFees: {
-      TOURIST: Number(row.loginFeeTourist),
-      AGENCY: Number(row.loginFeeAgency),
-      INFLUENCER: Number(row.loginFeeInfluencer),
-      DRIVER: Number(row.loginFeeDriver),
-      ADMIN: Number(row.loginFeeAdmin),
-    },
-    inquiryExpiryDays: row.inquiryExpiryDays,
-    webAppUrl: (row.webAppUrl?.trim() || config.webAppUrl).replace(/\/$/, ""),
-    emailFrom: row.emailFrom?.trim() || config.email.from,
-    walletTopupMinLkr: Number(row.walletTopupMinLkr),
-    walletTopupMaxLkr:
-      row.walletTopupMaxLkr == null ? null : Number(row.walletTopupMaxLkr),
-    updatedAt: row.updatedAt.toISOString(),
+    loginFees: normalizeLoginFees(row?.loginFees),
+    inquiryExpiryDays: row?.inquiryExpiryDays ?? config.inquiryExpiryDays ?? 14,
+    webAppUrl: row?.webAppUrl?.trim() || config.webAppUrl || "",
+    emailFrom: row?.emailFrom?.trim() || config.email.from || "",
+    walletTopupMinLkr: row?.walletTopupMinLkr ?? 100,
+    walletTopupMaxLkr: row?.walletTopupMaxLkr ?? null,
+    emailTemplates: normalizeEmailTemplates(row?.emailTemplates),
+    updatedAt: row?.updatedAt?.toISOString() ?? null,
   };
 }
 
-function defaultsView(): PlatformSettingsView {
-  return {
-    loginFees: { ...DEFAULT_LOGIN_FEE_LKR },
-    inquiryExpiryDays: config.inquiryExpiryDays,
-    webAppUrl: config.webAppUrl,
-    emailFrom: config.email.from,
-    walletTopupMinLkr: 100,
-    walletTopupMaxLkr: null,
-    updatedAt: null,
-  };
-}
-
-export function invalidatePlatformSettingsCache() {
-  cache = null;
-}
-
-export async function ensurePlatformSettings() {
-  return prisma.platformSettings.upsert({
-    where: { id: SETTINGS_ID },
-    update: {},
-    create: {
-      id: SETTINGS_ID,
-      loginFeeTourist: DEFAULT_LOGIN_FEE_LKR.TOURIST,
-      loginFeeAgency: DEFAULT_LOGIN_FEE_LKR.AGENCY,
-      loginFeeInfluencer: DEFAULT_LOGIN_FEE_LKR.INFLUENCER,
-      loginFeeDriver: DEFAULT_LOGIN_FEE_LKR.DRIVER,
-      loginFeeAdmin: DEFAULT_LOGIN_FEE_LKR.ADMIN,
-      inquiryExpiryDays: config.inquiryExpiryDays,
-      webAppUrl: null,
-      emailFrom: null,
-      walletTopupMinLkr: 100,
-      walletTopupMaxLkr: null,
-    },
+export async function getPlatformSettings(): Promise<PlatformSettingsView> {
+  const row = await prisma.platformSettings.findUnique({
+    where: { id: PLATFORM_SETTINGS_ID },
   });
+  return viewFromRow(row);
 }
 
-export async function getPlatformSettings(opts?: {
-  bypassCache?: boolean;
-}): Promise<PlatformSettingsView> {
-  if (!opts?.bypassCache && cache && Date.now() - cache.at < CACHE_MS) {
-    return cache.value;
-  }
-  try {
-    const row = await ensurePlatformSettings();
-    const value = serialize(row);
-    cache = { at: Date.now(), value };
-    return value;
-  } catch {
-    return defaultsView();
-  }
-}
-
-export type PlatformSettingsPatch = {
-  loginFees?: Partial<Record<UserRole, number>>;
+export async function updatePlatformSettings(input: {
+  loginFees?: Partial<Record<SharedRole, number>>;
   inquiryExpiryDays?: number;
   webAppUrl?: string | null;
   emailFrom?: string | null;
   walletTopupMinLkr?: number;
   walletTopupMaxLkr?: number | null;
-};
-
-export async function updatePlatformSettings(patch: PlatformSettingsPatch) {
-  await ensurePlatformSettings();
-  const data: Record<string, unknown> = {};
-  if (patch.loginFees) {
-    if (patch.loginFees.TOURIST !== undefined) data.loginFeeTourist = patch.loginFees.TOURIST;
-    if (patch.loginFees.AGENCY !== undefined) data.loginFeeAgency = patch.loginFees.AGENCY;
-    if (patch.loginFees.INFLUENCER !== undefined) {
-      data.loginFeeInfluencer = patch.loginFees.INFLUENCER;
+  emailTemplates?: EmailTemplatesMap;
+}): Promise<PlatformSettingsView> {
+  const current = await getPlatformSettings();
+  const loginFees = { ...current.loginFees };
+  if (input.loginFees) {
+    for (const role of ROLES) {
+      const n = input.loginFees[role as SharedRole];
+      if (n === undefined) continue;
+      const value = Number(n);
+      if (!Number.isFinite(value) || value < 0) {
+        const err = new Error(`Invalid login fee for ${role}`);
+        (err as Error & { status: number }).status = 400;
+        throw err;
+      }
+      loginFees[role] = Math.round(value);
     }
-    if (patch.loginFees.DRIVER !== undefined) data.loginFeeDriver = patch.loginFees.DRIVER;
-    if (patch.loginFees.ADMIN !== undefined) data.loginFeeAdmin = patch.loginFees.ADMIN;
-  }
-  if (patch.inquiryExpiryDays !== undefined) {
-    data.inquiryExpiryDays = patch.inquiryExpiryDays;
-  }
-  if (patch.webAppUrl !== undefined) {
-    data.webAppUrl = patch.webAppUrl?.trim() ? patch.webAppUrl.trim().replace(/\/$/, "") : null;
-  }
-  if (patch.emailFrom !== undefined) {
-    data.emailFrom = patch.emailFrom?.trim() || null;
-  }
-  if (patch.walletTopupMinLkr !== undefined) {
-    data.walletTopupMinLkr = patch.walletTopupMinLkr;
-  }
-  if (patch.walletTopupMaxLkr !== undefined) {
-    data.walletTopupMaxLkr = patch.walletTopupMaxLkr;
   }
 
-  const row = await prisma.platformSettings.update({
-    where: { id: SETTINGS_ID },
-    data,
+  const inquiryExpiryDays =
+    input.inquiryExpiryDays !== undefined
+      ? Math.max(1, Math.min(365, Math.round(input.inquiryExpiryDays)))
+      : current.inquiryExpiryDays;
+
+  const walletTopupMinLkr =
+    input.walletTopupMinLkr !== undefined
+      ? Math.max(1, Math.round(input.walletTopupMinLkr))
+      : current.walletTopupMinLkr;
+
+  let walletTopupMaxLkr =
+    input.walletTopupMaxLkr !== undefined
+      ? input.walletTopupMaxLkr == null
+        ? null
+        : Math.max(1, Math.round(input.walletTopupMaxLkr))
+      : current.walletTopupMaxLkr;
+
+  if (walletTopupMaxLkr != null && walletTopupMaxLkr < walletTopupMinLkr) {
+    const err = new Error("Wallet top-up max must be >= min");
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+
+  const emailTemplates =
+    input.emailTemplates !== undefined
+      ? normalizeEmailTemplates(input.emailTemplates)
+      : current.emailTemplates;
+
+  const webAppUrl =
+    input.webAppUrl !== undefined
+      ? input.webAppUrl?.trim() || null
+      : current.webAppUrl || null;
+  const emailFrom =
+    input.emailFrom !== undefined
+      ? input.emailFrom?.trim() || null
+      : current.emailFrom || null;
+
+  const row = await prisma.platformSettings.upsert({
+    where: { id: PLATFORM_SETTINGS_ID },
+    create: {
+      id: PLATFORM_SETTINGS_ID,
+      loginFees: asJson(loginFees),
+      inquiryExpiryDays,
+      webAppUrl,
+      emailFrom,
+      walletTopupMinLkr,
+      walletTopupMaxLkr,
+      emailTemplates: asJson(emailTemplates),
+    },
+    update: {
+      loginFees: asJson(loginFees),
+      inquiryExpiryDays,
+      webAppUrl,
+      emailFrom,
+      walletTopupMinLkr,
+      walletTopupMaxLkr,
+      emailTemplates: asJson(emailTemplates),
+    },
   });
-  invalidatePlatformSettingsCache();
-  return serialize(row);
+
+  return viewFromRow(row);
 }
 
-/** Per-user override wins; otherwise role default from platform settings. */
+/** Effective fee: per-user override → platform role fee → shared defaults. */
 export async function resolveLoginFeeForUser(user: {
   role: UserRole;
-  loginFeeLkr: { toString(): string } | number | null;
+  loginFeeLkr?: unknown;
 }): Promise<number> {
-  if (user.loginFeeLkr != null) return Math.max(0, Number(user.loginFeeLkr));
+  if (user.loginFeeLkr != null) {
+    const custom = Number(user.loginFeeLkr);
+    if (Number.isFinite(custom) && custom >= 0) return Math.round(custom);
+  }
   const settings = await getPlatformSettings();
-  return Math.max(0, settings.loginFees[user.role] ?? DEFAULT_LOGIN_FEE_LKR[user.role] ?? 0);
+  return settings.loginFees[user.role] ?? 0;
+}
+
+export async function resolveWalletTopupBounds(): Promise<{
+  min: number;
+  max: number | null;
+}> {
+  const s = await getPlatformSettings();
+  return { min: s.walletTopupMinLkr, max: s.walletTopupMaxLkr };
+}
+
+/** Apply {{key}} placeholders in admin-edited email templates. */
+export function applyEmailTemplate(
+  templates: EmailTemplatesMap,
+  key: string,
+  defaults: { subject: string; body: string },
+  vars: Record<string, string>
+): { subject: string; body: string } {
+  const override = templates[key];
+  let subject = override?.subject?.trim() || defaults.subject;
+  let body = override?.body?.trim() || defaults.body;
+  for (const [k, v] of Object.entries(vars)) {
+    const token = new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`, "g");
+    subject = subject.replace(token, v);
+    body = body.replace(token, v);
+  }
+  return { subject, body };
 }

@@ -39,7 +39,19 @@ export type InquiryDetail = {
   updatedAt: string;
   proposalEditable?: boolean;
   tourist?: { id: string; name: string; phone: string; email?: string | null };
-  agency?: { id: string; name: string; slug: string; logoUrl?: string | null };
+  agency?: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl?: string | null;
+    features?: {
+      readyMadeTours?: boolean;
+      customInquiries?: boolean;
+      negotiationsBookings?: boolean;
+      offers?: boolean;
+      display?: boolean;
+    };
+  };
   handlerInfluencer?: {
     id: string;
     slug: string | null;

@@ -41,8 +41,10 @@ export type AdminUser = {
   email: string | null;
   role: string;
   walletBalance: number;
-  /** null = use role default from platform settings */
-  loginFeeLkr: number | null;
+  /** Effective fee charged on login. */
+  loginFee: number;
+  /** null = role default from platform settings. */
+  loginFeeOverride: number | null;
   isActive: boolean;
   createdAt: string;
   agency: {

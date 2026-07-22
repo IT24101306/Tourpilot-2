@@ -1,17 +1,20 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-type CmsBlock = Record<string, unknown> & { type?: string };
-
-type CmsPage = {
-  slug: string;
-  title: string;
-  blocks: CmsBlock[];
-  updatedAt: string;
+type TermsSection = {
+  type?: string;
+  heading?: string;
+  body?: string;
 };
 
-const FALLBACK_SECTIONS: { heading: string; body: string }[] = [
+type CmsPage = {
+  title: string;
+  blocks: TermsSection[] | unknown;
+  updatedAt?: string;
+};
+
+const FALLBACK: TermsSection[] = [
   {
     heading: "1. Using TourPilot",
     body: "TourPilot connects travelers with licensed tour operators, influencers, and service providers in Sri Lanka. By creating an account you agree to use the platform lawfully and provide accurate information.",
@@ -46,42 +49,30 @@ const FALLBACK_SECTIONS: { heading: string; body: string }[] = [
   },
 ];
 
-function blocksToSections(blocks: CmsBlock[]): { heading: string; body: string }[] {
-  const sections: { heading: string; body: string }[] = [];
-  for (const block of blocks) {
-    if (block.type === "section") {
-      const heading = typeof block.heading === "string" ? block.heading : "";
-      const body = typeof block.body === "string" ? block.body : "";
-      if (heading || body) sections.push({ heading: heading || "Section", body });
-    } else if (block.type === "text") {
-      const body = typeof block.body === "string" ? block.body : "";
-      if (body) sections.push({ heading: "", body });
-    }
-  }
-  return sections;
+function asSections(raw: unknown): TermsSection[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as TermsSection[]).filter((b) => b.heading || b.body);
 }
 
 export function TermsPage() {
-  const [cms, setCms] = useState<CmsPage | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [title, setTitle] = useState("Terms & Conditions");
+  const [sections, setSections] = useState<TermsSection[]>(FALLBACK);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     api<CmsPage>("/cms/terms")
-      .then(setCms)
-      .catch(() => setCms(null))
-      .finally(() => setLoaded(true));
+      .then((page) => {
+        const next = asSections(page.blocks);
+        if (next.length > 0) {
+          setTitle(page.title || "Terms & Conditions");
+          setSections(next);
+          setUpdatedAt(page.updatedAt ?? null);
+        }
+      })
+      .catch(() => {
+        /* keep fallback */
+      });
   }, []);
-
-  const title = cms?.title?.trim() || "Terms & Conditions";
-  const sections = useMemo(() => {
-    if (!cms?.blocks?.length) return FALLBACK_SECTIONS;
-    const fromCms = blocksToSections(cms.blocks);
-    return fromCms.length > 0 ? fromCms : FALLBACK_SECTIONS;
-  }, [cms]);
-
-  const updatedLabel = cms?.updatedAt
-    ? `Last updated: ${new Date(cms.updatedAt).toLocaleDateString()}`
-    : "Last updated: June 2026";
 
   return (
     <section className="section legal-page">
@@ -90,13 +81,17 @@ export function TermsPage() {
           <Link to="/register">← Back to sign up</Link>
         </p>
         <h1>{title}</h1>
-        <p className="muted legal-page__updated">{loaded ? updatedLabel : "Loading…"}</p>
+        <p className="muted legal-page__updated">
+          {updatedAt
+            ? `Last updated: ${new Date(updatedAt).toLocaleDateString()}`
+            : "Last updated: June 2026"}
+        </p>
 
         <div className="legal-page__body">
           {sections.map((section, i) => (
             <div key={`${section.heading}-${i}`}>
               {section.heading ? <h2>{section.heading}</h2> : null}
-              <p>{section.body}</p>
+              {section.body ? <p>{section.body}</p> : null}
             </div>
           ))}
         </div>

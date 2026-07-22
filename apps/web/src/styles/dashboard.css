@@ -747,6 +747,10 @@
   font-size: 0.8rem;
 }
 
+.tour-group-filter-hint {
+  font-size: 0.8rem;
+}
+
 .entity-filter-hint {
   font-size: 0.85rem;
   margin: 0 0 12px;
@@ -1221,6 +1225,50 @@
   font-size: 0.84rem;
   font-weight: 700;
   color: var(--green-dark);
+}
+
+.field-required-mark {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.field-invalid,
+input.field-invalid,
+select.field-invalid,
+textarea.field-invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+.field-error-note {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.day-block--invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.tour-required-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dc2626;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.84rem;
+}
+
+.tour-required-summary ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.tour-required-summary li {
+  margin-top: 2px;
 }
 
 .driver-status {
@@ -3105,6 +3153,232 @@
   margin: 0;
   font-family: var(--font-heading);
   font-size: 1.1rem;
+}
+
+.domain-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 720px;
+}
+
+.domain-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.domain-status-label {
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.domain-status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid var(--line);
+}
+
+.domain-status-pill.ok {
+  background: #e7f7ec;
+  color: #1a7f37;
+  border-color: #b7e4c7;
+}
+
+.domain-status-pill.warn {
+  background: #fff6e5;
+  color: #9a6700;
+  border-color: #ffe1a6;
+}
+
+.domain-status-pill.late {
+  background: #fdeaea;
+  color: #b42318;
+  border-color: #f7c9c4;
+}
+
+.domain-current {
+  font-size: 0.85rem;
+}
+
+.domain-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.domain-form label {
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.domain-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.domain-form-row input {
+  flex: 1;
+}
+
+.domain-hint {
+  font-size: 0.8rem;
+}
+
+.domain-dns h3 {
+  margin: 0 0 4px;
+}
+
+.domain-dns-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.domain-dns-table th,
+.domain-dns-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.86rem;
+}
+
+.domain-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.domain-msg {
+  font-size: 0.88rem;
+  color: var(--green-dark);
+}
+
+.entities-list-tools {
+  margin-bottom: 12px;
+}
+
+.entities-list-tools .groups-search {
+  width: 100%;
+}
+
+.entities-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+.entities-sort-btn:hover {
+  color: var(--green);
+}
+
+.entities-no-match {
+  text-align: center;
+  padding: 24px 14px;
+}
+
+.site-guides {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.site-guides-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.site-guides-hint {
+  font-size: 0.78rem;
+}
+
+.site-guides-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.site-guide-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 10px);
+  background: #f9fcfb;
+}
+
+.site-guide-fields {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.8fr;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.site-guide-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.site-guide-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.site-guide-field input {
+  width: 100%;
+}
+
+.site-guide-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.site-guide-available {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.site-guides-add {
+  align-self: flex-start;
+}
+
+.tour-entry-guide {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .site-guide-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 .entities-table-wrap {

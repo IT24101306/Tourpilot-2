@@ -144,8 +144,7 @@ export function AdminCmsPage() {
               <code>home</code>:{" "}
               {`[{ "type": "hero", "headline": "...", "lead": "...", "tags": ["..."], "badge": "..." }, { "type": "featured_agencies", "title": "...", "subtitle": "..." }]`}
               <br />
-              <code>terms</code>:{" "}
-              {`[{ "type": "section", "heading": "1. Title", "body": "..." }]`}
+              <code>terms</code>: {`[{ "type": "section", "heading": "1. Title", "body": "..." }]`}
             </p>
             <textarea
               id="cms-blocks"

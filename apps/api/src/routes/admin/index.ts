@@ -5,7 +5,11 @@ import type { AgencyStatus, CommissionStatus, InquiryStatus, Prisma, UserRole } 
 import { prisma } from "../../lib/prisma.js";
 import { authRequired, requireRoles } from "../../middleware/auth.js";
 import { asJson } from "../../utils/json.js";
-import { agencyRejectionEmail, sendPlatformEmail } from "../../services/email.js";
+import {
+  agencyRejectionEmail,
+  finalizeEmailTemplate,
+  sendPlatformEmail,
+} from "../../services/email.js";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
@@ -20,6 +24,7 @@ import {
 } from "../../lib/agencyFeatures.js";
 import {
   getPlatformSettings,
+  resolveLoginFeeForUser,
   updatePlatformSettings,
 } from "../../services/platformSettings.js";
 
@@ -41,7 +46,7 @@ const inquiryStatusSchema = z.enum([
 
 const commissionStatusSchema = z.enum(["PENDING", "APPROVED", "PAID", "CANCELLED"]);
 
-const roleFeeSchema = z.object({
+const loginFeesSchema = z.object({
   TOURIST: z.number().min(0).optional(),
   AGENCY: z.number().min(0).optional(),
   INFLUENCER: z.number().min(0).optional(),
@@ -51,43 +56,34 @@ const roleFeeSchema = z.object({
 
 adminRouter.get("/settings", async (_req, res, next) => {
   try {
-    const settings = await getPlatformSettings({ bypassCache: true });
-    res.json(settings);
+    res.json(await getPlatformSettings());
   } catch (e) {
     next(e);
   }
 });
 
-adminRouter.patch("/settings", async (req, res, next) => {
+adminRouter.put("/settings", async (req, res, next) => {
   try {
     const body = z
       .object({
-        loginFees: roleFeeSchema.optional(),
+        loginFees: loginFeesSchema.optional(),
         inquiryExpiryDays: z.number().int().min(1).max(365).optional(),
-        webAppUrl: z
-          .union([z.string().url(), z.literal(""), z.null()])
-          .optional()
-          .transform((v) => (v === "" ? null : v)),
-        emailFrom: z
-          .union([z.string().min(3).max(255), z.literal(""), z.null()])
-          .optional()
-          .transform((v) => (v === "" ? null : v)),
-        walletTopupMinLkr: z.number().min(0).optional(),
-        walletTopupMaxLkr: z.number().min(0).nullable().optional(),
+        webAppUrl: z.string().max(255).nullable().optional(),
+        emailFrom: z.string().max(255).nullable().optional(),
+        walletTopupMinLkr: z.number().int().min(1).optional(),
+        walletTopupMaxLkr: z.number().int().min(1).nullable().optional(),
+        emailTemplates: z
+          .record(
+            z.string(),
+            z.object({
+              subject: z.string().max(200).optional(),
+              body: z.string().max(8000).optional(),
+            })
+          )
+          .optional(),
       })
-      .refine((v) => Object.keys(v).length > 0, { message: "At least one setting is required" })
       .parse(req.body);
-
-    if (
-      body.walletTopupMinLkr != null &&
-      body.walletTopupMaxLkr != null &&
-      body.walletTopupMaxLkr < body.walletTopupMinLkr
-    ) {
-      return res.status(400).json({ error: "Max top-up must be >= min top-up" });
-    }
-
-    const settings = await updatePlatformSettings(body);
-    res.json(settings);
+    res.json(await updatePlatformSettings(body));
   } catch (e) {
     next(e);
   }
@@ -234,11 +230,19 @@ adminRouter.patch("/agencies/:id/reject", async (req, res, next) => {
     if (body.sendEmail) {
       const to = existing.contactEmail?.trim() || existing.owner.email?.trim() || "";
       if (to) {
-        const template = agencyRejectionEmail({
-          agencyName: existing.name,
-          ownerName: existing.owner.name,
-          reason: body.reason.trim(),
-        });
+        const template = await finalizeEmailTemplate(
+          "agencyRejection",
+          agencyRejectionEmail({
+            agencyName: existing.name,
+            ownerName: existing.owner.name,
+            reason: body.reason.trim(),
+          }),
+          {
+            agencyName: existing.name,
+            ownerName: existing.owner.name,
+            reason: body.reason.trim(),
+          }
+        );
         emailResult = await sendPlatformEmail({ to, ...template });
       } else {
         emailResult = { delivered: false, mode: "log" as const, error: "No email on file" };
@@ -286,6 +290,10 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         walletTopup: z.boolean().optional(),
         offers: z.boolean().optional(),
         display: z.boolean().optional(),
+        readyMadeTours: z.boolean().optional(),
+        customInquiries: z.boolean().optional(),
+        negotiationsBookings: z.boolean().optional(),
+        customDomain: z.boolean().optional(),
       })
       .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
       .parse(req.body) as Partial<AgencyFeatures>;
@@ -303,6 +311,10 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureWalletTopup: true,
         featureOffers: true,
         featureDisplay: true,
+        featureReadyMadeTours: true,
+        featureCustomInquiries: true,
+        featureNegotiationsBookings: true,
+        featureCustomDomain: true,
       },
     });
 
@@ -357,6 +369,10 @@ adminRouter.get("/users", async (req, res, next) => {
             featureWalletTopup: true,
             featureOffers: true,
             featureDisplay: true,
+            featureReadyMadeTours: true,
+            featureCustomInquiries: true,
+            featureNegotiationsBookings: true,
+            featureCustomDomain: true,
           },
         },
         agencyStaff: {
@@ -373,6 +389,10 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureWalletTopup: true,
                 featureOffers: true,
                 featureDisplay: true,
+                featureReadyMadeTours: true,
+                featureCustomInquiries: true,
+                featureNegotiationsBookings: true,
+                featureCustomDomain: true,
               },
             },
           },
@@ -380,9 +400,11 @@ adminRouter.get("/users", async (req, res, next) => {
       },
     });
 
-    res.json(
-      users.map((u) => {
+    const payload = await Promise.all(
+      users.map(async (u) => {
         const agencyRow = u.agency ?? u.agencyStaff[0]?.agency ?? null;
+        const loginFeeOverride =
+          u.loginFeeLkr != null ? Math.round(Number(u.loginFeeLkr)) : null;
         return {
           id: u.id,
           name: u.name,
@@ -390,7 +412,8 @@ adminRouter.get("/users", async (req, res, next) => {
           email: u.email,
           role: u.role,
           walletBalance: Number(u.walletBalance),
-          loginFeeLkr: u.loginFeeLkr == null ? null : Number(u.loginFeeLkr),
+          loginFeeOverride,
+          loginFee: await resolveLoginFeeForUser(u),
           isActive: u.isActive,
           createdAt: u.createdAt,
           agency: agencyRow
@@ -405,6 +428,7 @@ adminRouter.get("/users", async (req, res, next) => {
         };
       })
     );
+    res.json(payload);
   } catch (e) {
     next(e);
   }
@@ -418,14 +442,25 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
         role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]).optional(),
         name: z.string().min(1).optional(),
         email: z.string().email().nullable().optional(),
+        /** null clears override (use role default). */
         loginFeeLkr: z.number().min(0).nullable().optional(),
       })
       .parse(req.body);
 
+    const data: Prisma.UserUpdateInput = {};
+    if (body.isActive !== undefined) data.isActive = body.isActive;
+    if (body.role !== undefined) data.role = body.role;
+    if (body.name !== undefined) data.name = body.name;
+    if (body.email !== undefined) data.email = body.email;
+    if (body.loginFeeLkr !== undefined) {
+      data.loginFeeLkr =
+        body.loginFeeLkr === null ? null : Math.round(body.loginFeeLkr);
+    }
+
     const user = await prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
         where: { id: req.params.id },
-        data: body,
+        data,
         select: {
           id: true,
           name: true,
@@ -456,11 +491,19 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       return updated;
     });
 
+    const loginFeeOverride =
+      user.loginFeeLkr != null ? Math.round(Number(user.loginFeeLkr)) : null;
+
     res.json({
-      ...user,
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
       walletBalance: Number(user.walletBalance),
-      loginFeeLkr: user.loginFeeLkr == null ? null : Number(user.loginFeeLkr),
-      agency: undefined,
+      loginFeeOverride,
+      loginFee: await resolveLoginFeeForUser(user),
     });
   } catch (e) {
     next(e);

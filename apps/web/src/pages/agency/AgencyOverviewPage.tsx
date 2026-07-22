@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
+import { agencyFeaturesOf, useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { OpsMetricStrip } from "../../components/module/OpsMetricStrip";
 import { OperationsQueue } from "../../components/module/OperationsQueue";
@@ -9,7 +9,8 @@ import { groupByQueue, opsMetrics } from "./operationsUtils";
 import { AgencyInquiry, AgencyTour } from "./types";
 
 export function AgencyOverviewPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const features = agencyFeaturesOf(user);
   const [tours, setTours] = useState<AgencyTour[]>([]);
   const [inquiries, setInquiries] = useState<AgencyInquiry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,9 +47,11 @@ export function AgencyOverviewPage() {
         <Link to="/dashboard/agency/tasks" className="btn btn-primary">
           Open tasks
         </Link>
-        <Link to="/dashboard/agency/negotiations" className="btn btn-ghost">
-          Negotiations
-        </Link>
+        {features.negotiationsBookings && (
+          <Link to="/dashboard/agency/negotiations" className="btn btn-ghost">
+            Negotiations
+          </Link>
+        )}
       </ModuleHeader>
 
       <OpsMetricStrip
@@ -81,11 +84,19 @@ export function AgencyOverviewPage() {
       />
 
       <div className="ops-kpi-row">
-        <Link to="/dashboard/agency/tours" className="agency-stat-card clickable">
-          <h3>Active tours</h3>
-          <p className="agency-stat-value">{activeTours}</p>
-          <p className="agency-stat-sub">{tours.length} in catalog</p>
-        </Link>
+        {features.readyMadeTours ? (
+          <Link to="/dashboard/agency/tours" className="agency-stat-card clickable">
+            <h3>Active tours</h3>
+            <p className="agency-stat-value">{activeTours}</p>
+            <p className="agency-stat-sub">{tours.length} in catalog</p>
+          </Link>
+        ) : (
+          <div className="agency-stat-card">
+            <h3>Active tours</h3>
+            <p className="agency-stat-value">{activeTours}</p>
+            <p className="agency-stat-sub">Publishing disabled for this agency</p>
+          </div>
+        )}
         <div className="agency-stat-card">
           <h3>Catalog value</h3>
           <p className="agency-stat-value">LKR {publishedValue.toLocaleString()}</p>
@@ -108,9 +119,11 @@ export function AgencyOverviewPage() {
         ) : inquiries.length === 0 ? (
           <div className="ops-empty-panel">
             <p>No inquiries yet. When travelers request trips, they will appear here.</p>
-            <Link to="/dashboard/agency/tours" className="btn btn-ghost">
-              Manage tours
-            </Link>
+            {features.readyMadeTours && (
+              <Link to="/dashboard/agency/tours" className="btn btn-ghost">
+                Manage tours
+              </Link>
+            )}
           </div>
         ) : (
           <OperationsQueue groups={queues} compact />

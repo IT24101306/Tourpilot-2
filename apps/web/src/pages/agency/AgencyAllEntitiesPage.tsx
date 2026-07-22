@@ -78,6 +78,10 @@ export function AgencyAllEntitiesPage() {
   const [entityFieldErrors, setEntityFieldErrors] = useState<Record<string, string>>({});
   const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
 
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<"name" | "type" | "location">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
   const filterTabs = useMemo(() => {
     const tabs: { value: string; label: string }[] = [
       { value: "all", label: "All" },
@@ -99,6 +103,42 @@ export function AgencyAllEntitiesPage() {
     }
     return { total: entities.length, byType };
   }, [entities]);
+
+  const visibleEntities = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = entities;
+    if (q) {
+      list = list.filter((e) =>
+        `${e.name} ${entityTypeLabel(e.type)} ${entityLocationLabel(e)}`
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+    const sortValue = (e: AgencyEntity) => {
+      if (sortKey === "type") return entityTypeLabel(e.type);
+      if (sortKey === "location") return entityLocationLabel(e);
+      return e.name;
+    };
+    return [...list].sort((a, b) => {
+      const cmp = sortValue(a).localeCompare(sortValue(b), undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [entities, search, sortKey, sortDir]);
+
+  function toggleSort(key: "name" | "type" | "location") {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortIndicator = (key: "name" | "type" | "location") =>
+    sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
   async function refresh(authToken: string) {
     const path = typeFilter === "all" ? "/entities" : `/entities?type=${typeFilter}`;
@@ -338,8 +378,25 @@ export function AgencyAllEntitiesPage() {
         <section className="entities-list-card">
           <div className="entities-list-head">
             <h3>Your entities</h3>
-            <span className="muted">{entities.length} shown</span>
+            <span className="muted">
+              {search.trim()
+                ? `${visibleEntities.length} of ${entities.length} shown`
+                : `${entities.length} shown`}
+            </span>
           </div>
+
+          {entities.length > 0 && (
+            <div className="entities-list-tools" role="search">
+              <input
+                type="search"
+                className="groups-search"
+                placeholder="Search name, type, or location…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Search entities"
+              />
+            </div>
+          )}
 
           {entities.length === 0 ? (
             <div className="entities-empty">
@@ -356,16 +413,35 @@ export function AgencyAllEntitiesPage() {
               <table className="entities-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Location</th>
+                    <th aria-sort={sortKey === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                      <button type="button" className="entities-sort-btn" onClick={() => toggleSort("name")}>
+                        Name{sortIndicator("name")}
+                      </button>
+                    </th>
+                    <th aria-sort={sortKey === "type" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                      <button type="button" className="entities-sort-btn" onClick={() => toggleSort("type")}>
+                        Type{sortIndicator("type")}
+                      </button>
+                    </th>
+                    <th aria-sort={sortKey === "location" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                      <button type="button" className="entities-sort-btn" onClick={() => toggleSort("location")}>
+                        Location{sortIndicator("location")}
+                      </button>
+                    </th>
                     <th>Details</th>
                     <th>Price</th>
                     <th aria-label="Actions"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {entities.map((ent) => (
+                  {visibleEntities.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="muted entities-no-match">
+                        No entities match “{search.trim()}”.
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleEntities.map((ent) => (
                     <tr key={ent.id}>
                       <td>
                         <strong className="entities-row-name">{ent.name}</strong>
@@ -403,7 +479,8 @@ export function AgencyAllEntitiesPage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

@@ -22,6 +22,13 @@ enum AgencyStatus {
   REJECTED
 }
 
+enum CustomDomainStatus {
+  NONE
+  PENDING
+  ACTIVE
+  ERROR
+}
+
 enum InquiryStatus {
   NEW
   AGENCY_REVIEWING
@@ -260,11 +267,19 @@ model Agency {
   rejectionReason String?          @db.Text
   rejectedAt      DateTime?
   /** Product access flags — admin toggles per agency (defaults keep current behavior). */
-  featureDriversAndPartners Boolean @default(true)
-  featureSupport            Boolean @default(true)
-  featureWalletTopup        Boolean @default(true)
-  featureOffers             Boolean @default(true)
-  featureDisplay            Boolean @default(true)
+  featureDriversAndPartners     Boolean @default(true)
+  featureSupport                Boolean @default(true)
+  featureWalletTopup            Boolean @default(true)
+  featureOffers                 Boolean @default(true)
+  featureDisplay                Boolean @default(true)
+  featureReadyMadeTours         Boolean @default(true)
+  featureCustomInquiries        Boolean @default(true)
+  featureNegotiationsBookings   Boolean @default(true)
+  /** Custom domain (Shopify-style) — off by default, admin enables per agency. */
+  featureCustomDomain           Boolean @default(false)
+  customDomain           String?             @unique @db.VarChar(255)
+  customDomainStatus     CustomDomainStatus  @default(NONE)
+  customDomainVerifiedAt DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   staff           AgencyStaff[]
@@ -780,4 +795,18 @@ model RefreshToken {
   tokenHash String   @unique @db.VarChar(64)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+/** Singleton platform config (id = "default"). */
+model PlatformSettings {
+  id                 String   @id @db.VarChar(32)
+  loginFees          Json
+  inquiryExpiryDays  Int      @default(14)
+  webAppUrl          String?  @db.VarChar(255)
+  emailFrom          String?  @db.VarChar(255)
+  walletTopupMinLkr  Int      @default(100)
+  walletTopupMaxLkr  Int?
+  /** Optional subject/body overrides keyed by template id. */
+  emailTemplates     Json?
+  updatedAt          DateTime @updatedAt
 }

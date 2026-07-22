@@ -6,7 +6,11 @@ export type AgencyFeatureKey =
   | "support"
   | "walletTopup"
   | "offers"
-  | "display";
+  | "display"
+  | "readyMadeTours"
+  | "customInquiries"
+  | "negotiationsBookings"
+  | "customDomain";
 
 export type AgencyFeatures = Record<AgencyFeatureKey, boolean>;
 
@@ -16,6 +20,10 @@ type AgencyFeatureSource = {
   featureWalletTopup?: boolean;
   featureOffers?: boolean;
   featureDisplay?: boolean;
+  featureReadyMadeTours?: boolean;
+  featureCustomInquiries?: boolean;
+  featureNegotiationsBookings?: boolean;
+  featureCustomDomain?: boolean;
 };
 
 export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | undefined): AgencyFeatures {
@@ -25,6 +33,10 @@ export function serializeAgencyFeatures(agency: AgencyFeatureSource | null | und
     walletTopup: agency?.featureWalletTopup ?? true,
     offers: agency?.featureOffers ?? true,
     display: agency?.featureDisplay ?? true,
+    readyMadeTours: agency?.featureReadyMadeTours ?? true,
+    customInquiries: agency?.featureCustomInquiries ?? true,
+    negotiationsBookings: agency?.featureNegotiationsBookings ?? true,
+    customDomain: agency?.featureCustomDomain ?? false,
   };
 }
 
@@ -35,6 +47,10 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
     featureWalletTopup: boolean;
     featureOffers: boolean;
     featureDisplay: boolean;
+    featureReadyMadeTours: boolean;
+    featureCustomInquiries: boolean;
+    featureNegotiationsBookings: boolean;
+    featureCustomDomain: boolean;
   }> = {};
   if (features.driversAndPartners !== undefined) {
     data.featureDriversAndPartners = features.driversAndPartners;
@@ -43,6 +59,18 @@ export function agencyFeatureDbFields(features: Partial<AgencyFeatures>) {
   if (features.walletTopup !== undefined) data.featureWalletTopup = features.walletTopup;
   if (features.offers !== undefined) data.featureOffers = features.offers;
   if (features.display !== undefined) data.featureDisplay = features.display;
+  if (features.readyMadeTours !== undefined) {
+    data.featureReadyMadeTours = features.readyMadeTours;
+  }
+  if (features.customInquiries !== undefined) {
+    data.featureCustomInquiries = features.customInquiries;
+  }
+  if (features.negotiationsBookings !== undefined) {
+    data.featureNegotiationsBookings = features.negotiationsBookings;
+  }
+  if (features.customDomain !== undefined) {
+    data.featureCustomDomain = features.customDomain;
+  }
   return data;
 }
 
@@ -52,6 +80,10 @@ const FEATURE_LABELS: Record<AgencyFeatureKey, string> = {
   walletTopup: "Wallet topup",
   offers: "Offers",
   display: "Display",
+  readyMadeTours: "Ready-made tours",
+  customInquiries: "Custom tour inquiries",
+  negotiationsBookings: "Negotiations and bookings",
+  customDomain: "Custom domain",
 };
 
 /** Returns an Express-ready error payload when the agency feature is disabled. */
@@ -82,4 +114,12 @@ export function requireAgencyFeature(feature: AgencyFeatureKey) {
       next(e);
     }
   };
+}
+
+/** Check a feature on an agency row (e.g. public / tourist flows by agencyId). */
+export function agencyHasFeature(
+  agency: AgencyFeatureSource | null | undefined,
+  feature: AgencyFeatureKey
+): boolean {
+  return serializeAgencyFeatures(agency)[feature];
 }

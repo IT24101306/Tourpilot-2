@@ -25,6 +25,10 @@ export function TourDetailPage() {
       seasonTag: string | null;
       coverUrl?: string | null;
       agency: { name: string; slug: string };
+      features?: {
+        readyMadeTours?: boolean;
+        customInquiries?: boolean;
+      };
       tourDays: Array<{
         dayNumber: number;
         title: string | null;
@@ -63,6 +67,7 @@ export function TourDetailPage() {
     );
   }
 
+  const canInquire = tour.features?.readyMadeTours !== false;
   const inquireHref = (() => {
     const params = new URLSearchParams();
     params.set("inquireTour", tour.id);
@@ -107,12 +112,20 @@ export function TourDetailPage() {
           <div className="tour-detail-foot__copy">
             <p className="tour-detail-foot__label">Interested?</p>
             <p className="tour-detail-foot__text">
-              Inquire with {tour.agency.name} — no payment required.
+              {canInquire
+                ? `Inquire with ${tour.agency.name} — no payment required.`
+                : "Online inquiries are not available for this agency right now. Please contact them directly if you have details."}
             </p>
           </div>
-          <Link to={inquireHref} className="btn btn-primary tour-detail-foot__btn">
-            Inquire this tour
-          </Link>
+          {canInquire ? (
+            <Link to={inquireHref} className="btn btn-primary tour-detail-foot__btn">
+              Inquire this tour
+            </Link>
+          ) : (
+            <Link to={`/agencies/${tour.agency.slug}`} className="btn btn-ghost tour-detail-foot__btn">
+              View agency page
+            </Link>
+          )}
         </footer>
       </div>
     </div>

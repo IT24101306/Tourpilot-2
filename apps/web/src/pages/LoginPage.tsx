@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   dashboardPathForRole,
   isValidInternationalPhone,
-  DEFAULT_LOGIN_FEE_LKR,
+  LOGIN_FEE_LKR,
   toStoredPhone,
   type UserRole,
 } from "@tourpilot/shared";
@@ -27,14 +27,12 @@ type LoginStartResponse =
       role?: UserRole;
       walletBalance?: number;
       loginFee?: number;
-      loginFeeCustom?: boolean;
     }
   | {
       authMethod: "password";
       role: "ADMIN";
       walletBalance?: number;
       loginFee?: number;
-      loginFeeCustom?: boolean;
       topupChallengeId?: string;
     };
 
@@ -61,8 +59,8 @@ export function LoginPage() {
   const [challengeId, setChallengeId] = useState("");
   const [topupChallengeId, setTopupChallengeId] = useState("");
   const [loginRole, setLoginRole] = useState<UserRole | null>(null);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [loginFee, setLoginFee] = useState<number | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [demoOtp, setDemoOtp] = useState<string | undefined>();
   const [bypassCode, setBypassCode] = useState<string | undefined>();
   const [error, setError] = useState("");
@@ -78,9 +76,9 @@ export function LoginPage() {
     loginFee ??
     user?.loginFee ??
     (loginRole != null
-      ? DEFAULT_LOGIN_FEE_LKR[loginRole]
+      ? LOGIN_FEE_LKR[loginRole]
       : user?.role != null
-        ? DEFAULT_LOGIN_FEE_LKR[user.role]
+        ? LOGIN_FEE_LKR[user.role]
         : undefined);
 
   useEffect(() => {
@@ -143,8 +141,8 @@ export function LoginPage() {
         setDemoOtp(undefined);
         setBypassCode(undefined);
         setLoginRole(data.role);
+        setLoginFee(data.loginFee ?? null);
         setWalletBalance(data.walletBalance ?? 0);
-        setLoginFee(data.loginFee ?? DEFAULT_LOGIN_FEE_LKR[data.role] ?? 0);
         setTopupChallengeId(data.topupChallengeId ?? "");
         setStep("password");
         return;
@@ -153,11 +151,8 @@ export function LoginPage() {
       setChallengeId(data.challengeId);
       setTopupChallengeId(data.challengeId);
       setLoginRole(data.role ?? null);
+      setLoginFee(data.loginFee ?? null);
       setWalletBalance(data.walletBalance ?? 0);
-      setLoginFee(
-        data.loginFee ??
-          (data.role ? DEFAULT_LOGIN_FEE_LKR[data.role] : null)
-      );
       setDemoOtp(data.otp);
       setBypassCode(data.bypassOtp);
       if (data.bypassOtp) setOtp(data.bypassOtp);
@@ -227,7 +222,6 @@ export function LoginPage() {
     setTopupChallengeId("");
     setLoginRole(null);
     setWalletBalance(null);
-    setLoginFee(null);
     setError("");
   }
 

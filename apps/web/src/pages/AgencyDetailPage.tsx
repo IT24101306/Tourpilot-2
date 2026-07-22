@@ -54,6 +54,14 @@ type Tour = {
   coverUrl: string | null;
 };
 
+type AgencyPublicFeatures = {
+  readyMadeTours?: boolean;
+  customInquiries?: boolean;
+  negotiationsBookings?: boolean;
+  offers?: boolean;
+  display?: boolean;
+};
+
 type Agency = {
   id: string;
   name: string;
@@ -73,6 +81,7 @@ type Agency = {
     content: DisplayContent;
   };
   loyaltyOffers?: DiscoveryOffer[];
+  features?: AgencyPublicFeatures;
 };
 
 function splitGalleryColumns(items: GalleryItem[]) {
@@ -223,8 +232,9 @@ function PackageCard({
   return <div className="agency-package-card">{inner}</div>;
 }
 
-export function AgencyDetailPage() {
-  const { slug } = useParams<{ slug: string }>();
+export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {}) {
+  const params = useParams<{ slug: string }>();
+  const slug = slugOverride ?? params.slug;
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -350,13 +360,21 @@ export function AgencyDetailPage() {
   }
 
   const [col1, col2, col3] = splitGalleryColumns(gallery);
+  const agencyFeatures = agency.features ?? {};
+  /** Content stays visible; only inquiry/booking actions respect sell features. */
+  const readyMadeInquireEnabled = agencyFeatures.readyMadeTours !== false;
+  const customInquiriesEnabled = agencyFeatures.customInquiries !== false;
   const showBranding = sectionEnabled(enabled, "branding");
   const showTours = sectionEnabled(enabled, "tours");
   const showShowcase = sectionEnabled(enabled, "showcase");
   const showReviews = sectionEnabled(enabled, "reviews");
   const showGallery = sectionEnabled(enabled, "gallery");
   const showOffers = sectionEnabled(enabled, "offers");
-  const inquiryEnabled = sectionEnabled(enabled, "inquiry");
+  const displayInquiryOn = sectionEnabled(enabled, "inquiry");
+  const canCustomInquire = displayInquiryOn && customInquiriesEnabled;
+  const canTourInquire =
+    displayInquiryOn && readyMadeInquireEnabled && Boolean(inquireTourId);
+  const inquiryEnabled = canCustomInquire || canTourInquire;
   const showTransport = sectionEnabled(enabled, "transport");
 
   const ratingDisplay = content.ratingScore || String(agency.avgRating.toFixed(1));
@@ -383,7 +401,7 @@ export function AgencyDetailPage() {
   if (showShowcase && showReviews) heroSectionLinks.push({ id: "reviews", label: "Reviews" });
   if (hasGallery) heroSectionLinks.push({ id: "gallery", label: "Gallery" });
   if (showTransport && transportOptions.length > 0) heroSectionLinks.push({ id: "transport", label: "Transport" });
-  if (inquiryEnabled) heroSectionLinks.push({ id: "request-custom-tour", label: "Inquire" });
+  if (canCustomInquire) heroSectionLinks.push({ id: "request-custom-tour", label: "Inquire" });
 
   return (
     <div className="agency-display">
@@ -686,6 +704,18 @@ export function AgencyDetailPage() {
               tour={inquireTour}
               focusOnMount={focusInquiryForm}
             />
+          </div>
+        )}
+
+        {displayInquiryOn && !inquiryEnabled && (
+          <div className="agency-display-band agency-display-band--green">
+            <div className="agency-display-inner">
+              <p className="feature-unavailable-note" id="request-custom-tour">
+                Online inquiries are not available for this agency right now. Packages or custom
+                trip requests may be disabled — please check back later or contact the agency
+                directly if you already have their details.
+              </p>
+            </div>
           </div>
         )}
       </div>

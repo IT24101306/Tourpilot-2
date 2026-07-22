@@ -17,7 +17,7 @@ Internet
    └── mysql (persistent volume)
 ```
 
-Mobile apps (Expo) do **not** run on the server. They call `https://srilankatourpilot.com/api`.
+Mobile apps (Expo) do **not** run on the server. They call `https://your-domain/api`.
 
 ---
 
@@ -97,12 +97,35 @@ docker compose -f docker-compose.prod.yml --env-file .env exec api npx tsx prism
 
 Default admin after `seed.ts`: phone `+94779998888` / password `admin123` (override with `ADMIN_SEED_PASSWORD`).
 
-### 1.5 Point domain + HTTPS (recommended)
+### 1.5 Point domain + HTTPS (srilankatourpilot.com)
+
+**DNS (at your registrar — Hostinger, Cloudflare, etc.)**
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| A | `@` | `200.97.168.95` | 300 |
+| A | `www` | `200.97.168.95` | 300 |
+
+Wait until `dig +short srilankatourpilot.com` returns the VPS IP.
 
 **Option A — Host nginx + Certbot (common on Hostinger VPS)**
 
 ```bash
 sudo apt install -y nginx certbot python3-certbot-nginx
+```
+
+Set Docker web off port 80 so host nginx can terminate TLS. In `/var/www/tourpilot/.env`:
+
+```bash
+WEB_APP_URL=https://srilankatourpilot.com
+HTTP_PORT=8080
+```
+
+Recreate web so it binds 8080:
+
+```bash
+cd /var/www/tourpilot
+docker compose -f docker-compose.prod.yml --env-file .env up -d web
 ```
 
 `/etc/nginx/sites-available/tourpilot`:
@@ -113,7 +136,7 @@ server {
   server_name srilankatourpilot.com www.srilankatourpilot.com;
 
   location / {
-    proxy_pass http://127.0.0.1:80;
+    proxy_pass http://127.0.0.1:8080;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -122,8 +145,6 @@ server {
   }
 }
 ```
-
-If host nginx and Docker both want port 80, set `HTTP_PORT=8080` in `.env` and use `proxy_pass http://127.0.0.1:8080;`.
 
 Keep `client_max_body_size 25m;` — the default (1m) causes upload failures (HTTP 413).
 
@@ -135,15 +156,26 @@ docker compose -f docker-compose.prod.yml --env-file .env exec -u root api \
 ```
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/tourpilot /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/tourpilot /etc/nginx/sites-enabled/
+# remove default site if it conflicts:
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d srilankatourpilot.com -d www.srilankatourpilot.com
 ```
 
-Set `WEB_APP_URL=https://srilankatourpilot.com` in `.env` and recreate api:
+Set `WEB_APP_URL=https://srilankatourpilot.com` in `.env` and recreate api (email/notification links):
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env up -d
+```
+
+In Admin → **Platform settings**, set Public site URL to `https://srilankatourpilot.com` as well (overrides env when set).
+
+Verify:
+
+```bash
+curl -fsS https://srilankatourpilot.com/api/health
+curl -fsS https://www.srilankatourpilot.com/api/health
 ```
 
 ---
@@ -154,8 +186,9 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d
 
 | Workflow | When | What |
 |----------|------|------|
-| `ci.yml` | PR + push to `main` | Install, Prisma generate, build shared/api/web |
-| `deploy.yml` | Push to `main` | Build Docker images → push GHCR → SSH to VPS → `compose pull && up` |
+| `ci.yml` | PR + push to `main` or `development` | Install, Prisma generate, build shared/api/web |
+| `deploy.yml` | Push to `main` | Build Docker images → push GHCR (`latest`/`<sha>`) → SSH → prod compose |
+| `deploy-dev.yml` | Push to `development` | Build Docker images → push GHCR (`dev`/`dev-<sha>`) → SSH → `/var/www/tourpilot-dev` |
 
 ### 2.1 GitHub Container Registry
 
@@ -187,6 +220,7 @@ Repo → **Settings → Secrets and variables → Actions**:
 | `DEPLOY_SSH_KEY` | **Private** SSH key (full PEM) |
 | `DEPLOY_PORT` | `22` (optional; digits only — no trailing newline/space) |
 | `DEPLOY_PATH` | `/var/www/tourpilot` |
+| `DEV_DEPLOY_PATH` | `/var/www/tourpilot-dev` (required for `deploy-dev.yml`) |
 | `GHCR_PULL_USER` | your GitHub username |
 | `GHCR_PULL_TOKEN` | PAT with `read:packages` |
 
@@ -229,6 +263,253 @@ git push origin main
 ```
 
 Watch: GitHub → **Actions**.
+
+---
+
+## Part 2.5 — Separate dev environment (dev.srilankatourpilot.com)
+
+Production (`main` → `srilankatourpilot.com`) and dev (`development` →
+`dev.srilankatourpilot.com`) run as **two isolated Docker stacks on the same VPS**.
+Each has its own folder, containers, network, MySQL volume, and uploads — nothing
+is shared.
+
+| | Production | Development |
+|---|---|---|
+| Folder | `/var/www/tourpilot` | `/var/www/tourpilot-dev` |
+| Branch | `main` | `development` |
+| Domain | `srilankatourpilot.com` (+`www`) | `dev.srilankatourpilot.com` |
+| Web port (Docker) | `8080` | `8081` |
+| MySQL host port | `3307` | `3308` |
+| Compose project | `tourpilot` | `tourpilot-dev` |
+| Workflow | `deploy.yml` | `deploy-dev.yml` |
+| Image tags (GHCR) | `latest`, `<sha>` | `dev`, `dev-<sha>` |
+
+> **Never-touch-prod rule:** always prefix DEV compose with
+> `COMPOSE_PROJECT_NAME=tourpilot-dev`. Never run seed scripts in `/var/www/tourpilot`.
+
+### 2.5.0 Diagnose who owns ports 80/443 (do this first)
+
+SSH to the VPS:
+
+```bash
+cd /var/www/tourpilot   # or wherever the repo is
+bash scripts/diagnose-edge.sh
+```
+
+Or manually:
+
+```bash
+sudo ss -tlnp | grep -E ':80|:443'
+systemctl is-active nginx || true
+docker ps --format 'table {{.Names}}\t{{.Ports}}' | grep -Ei 'caddy|web|api'
+```
+
+| Verdict | Meaning | Wire DEV with |
+|---------|---------|---------------|
+| Host nginx on 80/443 | Path A | `bash scripts/wire-dev-domain.sh` |
+| Caddy container on 80/443 | Path B | `bash scripts/wire-dev-via-caddy.sh` |
+| Both | Conflict — stop one | Fix before continuing |
+
+### 2.5.1 DNS
+
+Add an A record for the subdomain (in addition to `@` and `www`):
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| A | `dev` | `200.97.168.95` | 300 |
+
+Confirm: `dig +short dev.srilankatourpilot.com` returns the VPS IP.
+
+### 2.5.2 Create the DEV stack + separate DB + demo seed (one-time)
+
+**Why the DB is separate:** Compose project name `tourpilot-dev` prefixes Docker
+volumes (`tourpilot-dev_tourpilot_mysql_data`). Production keeps
+`tourpilot_mysql_data` on host port `3307`. DEV uses `3308`. Same internal DB
+name `tourpilot`, different volume — no shared data.
+
+Easiest path (generates secrets, starts stack, seeds demo):
+
+```bash
+# Prefer running the script from a checkout that already has the new scripts
+# (e.g. after git pull on prod, or clone development first).
+bash /var/www/tourpilot/scripts/bootstrap-dev-stack.sh
+# or, after clone:
+# cd /var/www/tourpilot-dev && bash scripts/bootstrap-dev-stack.sh
+```
+
+Manual equivalent:
+
+```bash
+sudo mkdir -p /var/www/tourpilot-dev
+sudo chown $USER:$USER /var/www/tourpilot-dev
+git clone -b development https://github.com/IT24101306/Tourpilot-2.git /var/www/tourpilot-dev
+cd /var/www/tourpilot-dev
+cp .env.development.example .env
+nano .env    # strong DEV passwords + JWT (never copy prod secrets)
+
+export COMPOSE_PROJECT_NAME=tourpilot-dev
+docker compose -f docker-compose.prod.yml --env-file .env up -d
+
+# Seed DEMO data into DEV only
+COMPOSE_PROJECT_NAME=tourpilot-dev docker compose -f docker-compose.prod.yml --env-file .env \
+  exec api npx tsx prisma/seed-demo.ts
+```
+
+Demo agency phone after seed: `+94771234567` (OTP shown in UI/logs on DEV).
+
+### 2.5.3 Wire the DEV domain + TLS (one-time)
+
+**Path A — host Nginx owns 80/443**
+
+```bash
+cd /var/www/tourpilot-dev
+bash scripts/wire-dev-domain.sh
+```
+
+Creates `/etc/nginx/sites-available/tourpilot-dev` → `127.0.0.1:8081` and a
+Certbot cert for `dev.srilankatourpilot.com` only. Confirm production nginx
+`server_name` lists only apex + `www` (not `dev.`).
+
+**Path B — Caddy owns 80/443**
+
+Do **not** run `wire-dev-domain.sh` (it will exit and point you here). Production
+Caddy already has an explicit site block `dev.{$PLATFORM_DOMAIN}` that
+reverse-proxies to `DEV_UPSTREAM` (default `172.17.0.1:8081`).
+
+```bash
+# Ensure prod .env has USE_CADDY_EDGE=true and DEV_UPSTREAM=172.17.0.1:8081
+# (wire-caddy.sh sets these). Then:
+cd /var/www/tourpilot
+git pull   # pick up updated docker/Caddyfile
+bash scripts/wire-dev-via-caddy.sh
+```
+
+Agency custom domains stay on Caddy On-Demand TLS; `dev.` is a fixed platform site.
+
+### 2.5.4 Sync the `development` branch (so the pipeline exists)
+
+GitHub Actions only runs workflow files that exist **on the branch you push**.
+`deploy-dev.yml` must be on `development`:
+
+```bash
+git fetch origin
+git checkout development
+git merge main
+git push origin development
+```
+
+### 2.5.5 GitHub secret for DEV
+
+| Secret | Value |
+|--------|--------|
+| `DEV_DEPLOY_PATH` | `/var/www/tourpilot-dev` |
+
+Other secrets (`DEPLOY_HOST`, SSH key, `GHCR_*`) are shared with production.
+
+### 2.5.6 Deploy DEV (ongoing)
+
+Any push to `development` builds `dev`/`dev-<sha>` images and deploys them:
+
+```bash
+git checkout development
+git push origin development
+```
+
+Manual rebuild on the server:
+
+```bash
+cd /var/www/tourpilot-dev
+COMPOSE_PROJECT_NAME=tourpilot-dev docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
+Verify isolation + health:
+
+```bash
+docker ps --format 'table {{.Names}}\t{{.Ports}}' | grep -E 'tourpilot|8080|8081|3307|3308'
+curl -fsS https://srilankatourpilot.com/api/health
+curl -fsS https://dev.srilankatourpilot.com/api/health
+```
+
+### 2.5.7 Daily workflow
+
+```bash
+# Feature work → test on DEV
+git checkout development
+# ... code ...
+git push origin development          # Actions → Deploy (dev)
+
+# Promote to PROD when ready
+git checkout main
+git merge development
+git push origin main                 # Actions → Deploy (production)
+```
+
+Ignore the stale local branch name `develop` if present — official branch is
+**`development`**.
+
+---
+
+## Part 2.7 — Custom domains for agencies (Caddy On-Demand TLS)
+
+Agencies can serve their storefront on their own domain (e.g. `myagency.com`),
+Shopify-style. This uses a **Caddy** edge container that issues HTTPS
+certificates automatically, including for agency domains via On-Demand TLS.
+Caddy asks the API (`GET /api/tls/check?domain=...`) before issuing a
+certificate, so it only ever issues for the platform domain and verified,
+active agency domains.
+
+```text
+Internet :80/:443
+   │
+   ▼
+ Caddy (edge, auto-HTTPS + On-Demand TLS)   ── ask → API /api/tls/check
+   │  reverse_proxy
+   ▼
+ web (nginx SPA)  →  api (:4000)
+```
+
+### 2.7.1 One-time: switch the edge to Caddy
+
+This replaces the host nginx + certbot setup from Part 1.5. Caddy binds 80/443,
+so the web container moves to `HTTP_PORT=8080` (internal proxy target).
+
+```bash
+cd /var/www/tourpilot
+# Set CADDY_EMAIL / CUSTOM_DOMAIN_A_TARGET as needed (see .env.production.example)
+bash scripts/wire-caddy.sh
+```
+
+The script updates `.env` (`PLATFORM_DOMAIN`, `PLATFORM_DOMAINS`, `CADDY_EMAIL`,
+`CUSTOM_DOMAIN_A_TARGET`, `HTTP_PORT=8080`), stops host nginx, and brings the
+stack up with the edge profile:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d
+```
+
+Caddy obtains the platform certificate automatically. Verify:
+
+```bash
+curl -fsS https://srilankatourpilot.com/api/health
+```
+
+### 2.7.2 Enable the feature for an agency
+
+Admin → Users (or Agencies) → the agency's feature toggles → enable
+**Custom domain**. The agency then sees a **Domain** tab in their dashboard.
+
+### 2.7.3 What the agency does
+
+1. In the dashboard **Domain** tab, enter their domain (e.g. `myagency.com`).
+2. At their domain registrar, add the DNS record shown:
+   - `A` record: host `@` → the server IP (`CUSTOM_DOMAIN_A_TARGET`).
+   - Optional `CNAME` record: host `www` → the platform domain.
+3. Click **Verify DNS**. Once it resolves to the server, the status becomes
+   **Live**. On the first HTTPS visit, Caddy issues the certificate
+   automatically (may take a few seconds the first time).
+
+Apex domains cannot use CNAME, so the A record is the primary instruction; `www`
+can use CNAME. DNS propagation can take minutes to hours.
 
 ---
 
@@ -302,7 +583,7 @@ Schedule with `cron` weekly.
 - [ ] Firewall: only 22, 80, 443 open (`ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable`)
 - [ ] Backups for MySQL + uploads
 - [ ] Real email (`EMAIL_MODE=smtp` or webhook) when you need OTP/notifications off console
-- [ ] Mobile apps point to `https://srilankatourpilot.com/api`
+- [ ] Mobile apps point to `https://your-domain/api`
 
 ---
 

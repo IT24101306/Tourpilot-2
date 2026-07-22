@@ -1,11 +1,13 @@
 import { EntityTypeLineIcon } from "../icons/LineIcons";
 import { FormFieldError } from "../FormFieldError";
+import { SiteGuidesField } from "./SiteGuidesField";
 import {
   ENTITY_TYPE_OPTIONS,
   FIELDS_BY_TYPE,
   type EntityFormState,
   type EntityTypeKey,
   type FieldDef,
+  type SiteGuideForm,
 } from "./entityTypes";
 
 type Props = {
@@ -98,6 +100,13 @@ export function EntityFormFields({
           onChange={(v) => setField(field.key, v)}
         />
       ))}
+
+      {form.type === "VIEWPOINT" && (
+        <SiteGuidesField
+          guides={form.siteGuides}
+          onChange={(siteGuides: SiteGuideForm[]) => onChange({ ...form, siteGuides })}
+        />
+      )}
     </>
   );
 }

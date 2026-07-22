@@ -1,6 +1,9 @@
 import type { Transporter } from "nodemailer";
 import { config } from "../lib/config.js";
-import { getPlatformSettings } from "./platformSettings.js";
+import {
+  applyEmailTemplate,
+  getPlatformSettings,
+} from "./platformSettings.js";
 
 type EmailPayload = {
   to: string;
@@ -38,9 +41,9 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
     return { delivered: false, mode: config.email.mode, error: "No recipient address" };
   }
 
+  const settings = await getPlatformSettings().catch(() => null);
+  const from = settings?.emailFrom?.trim() || config.email.from;
   const mode = config.email.mode;
-  const settings = await getPlatformSettings();
-  const from = settings.emailFrom || config.email.from;
 
   if (mode === "log") {
     console.log("[TourPilot email]");
@@ -103,6 +106,27 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
       error: e instanceof Error ? e.message : "SMTP send failed",
     };
   }
+}
+
+/** Merge admin email template overrides ({{placeholders}}) over built-in defaults. */
+export async function finalizeEmailTemplate(
+  key: string,
+  defaults: { subject: string; text: string; html?: string },
+  vars: Record<string, string>
+): Promise<{ subject: string; text: string; html?: string }> {
+  const settings = await getPlatformSettings().catch(() => null);
+  if (!settings) return defaults;
+  const applied = applyEmailTemplate(
+    settings.emailTemplates,
+    key,
+    { subject: defaults.subject, body: defaults.text },
+    vars
+  );
+  return {
+    subject: applied.subject,
+    text: applied.body,
+    html: applied.body !== defaults.text ? undefined : defaults.html,
+  };
 }
 
 function escapeHtml(s: string) {
