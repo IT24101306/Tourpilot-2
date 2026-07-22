@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 
-const TYPING_TTL_MS = 3500;
+const TYPING_TTL_MS = 4500;
 
 export async function touchTyping(inquiryId: string, userId: string, typing: boolean) {
   const typingUntil = typing ? new Date(Date.now() + TYPING_TTL_MS) : null;
@@ -27,8 +27,8 @@ export async function markInquiryRead(inquiryId: string, userId: string, at = ne
     },
     update: {
       lastReadAt: at,
-      // Opening/reading the thread clears own typing flag.
-      typingUntil: null,
+      // Do not clear typingUntil here — polls call mark-read every few seconds
+      // and would wipe the typing heartbeat before the peer can see it.
     },
   });
 }

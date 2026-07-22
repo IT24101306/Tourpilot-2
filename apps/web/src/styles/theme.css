@@ -3449,6 +3449,13 @@ a.agency-icon-btn {
   align-items: flex-start;
 }
 
+.module-negotiation .neg-inquiry-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .module-negotiation .neg-inquiry-cta {
   margin: 10px 0 0;
   font-size: 0.85rem;

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { ChatRoomPopup } from "../../components/inquiry/ChatRoomPopup";
 import type { NegotiationListItem } from "../../types/negotiation";
 import { formatInquiryStatus, inquiryStatusClass } from "./types";
 
@@ -20,6 +21,7 @@ export function AgencyNegotiationsPage() {
   const [inquiries, setInquiries] = useState<NegotiationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [chatInquiry, setChatInquiry] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -42,7 +44,7 @@ export function AgencyNegotiationsPage() {
       <ModuleHeader
         module="negotiation"
         title="Trip negotiations"
-        subtitle="Every active conversation with travelers — open a trip room to plan together."
+        subtitle="Every active conversation with travelers — chat instantly or open a trip room to plan together."
       >
         <Link to="/dashboard/agency/bookings" className="btn btn-ghost">
           Operations queue
@@ -63,7 +65,7 @@ export function AgencyNegotiationsPage() {
               <ul className="neg-inquiry-list">
                 {active.map((inq) => (
                   <li key={inq.id}>
-                    <Link to={`/dashboard/agency/trip-room/${inq.id}`} className="neg-inquiry-card">
+                    <div className="neg-inquiry-card">
                       <div className="neg-inquiry-card-top">
                         <strong>{inq.tourist?.name ?? "Traveler"}</strong>
                         <span className={`agency-status ${inquiryStatusClass(inq.status)}`}>
@@ -81,8 +83,24 @@ export function AgencyNegotiationsPage() {
                         · {inq.pax} guests ·{" "}
                         {inq.proposal ? `${inq.proposal.items.length} option(s)` : "Awaiting proposal"}
                       </p>
-                      <p className="neg-inquiry-cta">Open trip room →</p>
-                    </Link>
+                      <div className="neg-inquiry-card-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() =>
+                            setChatInquiry({
+                              id: inq.id,
+                              name: inq.tourist?.name ?? "Traveler",
+                            })
+                          }
+                        >
+                          Chat
+                        </button>
+                        <Link to={`/dashboard/agency/trip-room/${inq.id}`} className="btn btn-ghost">
+                          Open trip room
+                        </Link>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -95,12 +113,31 @@ export function AgencyNegotiationsPage() {
               <ul className="neg-inquiry-list">
                 {closed.map((inq) => (
                   <li key={inq.id}>
-                    <Link to={`/dashboard/agency/trip-room/${inq.id}`} className="neg-inquiry-card muted-card">
-                      <strong>{inq.tourist?.name ?? "Traveler"}</strong>
-                      <span className={`agency-status ${inquiryStatusClass(inq.status)}`}>
-                        {formatInquiryStatus(inq.status)}
-                      </span>
-                    </Link>
+                    <div className="neg-inquiry-card muted-card">
+                      <div className="neg-inquiry-card-top">
+                        <strong>{inq.tourist?.name ?? "Traveler"}</strong>
+                        <span className={`agency-status ${inquiryStatusClass(inq.status)}`}>
+                          {formatInquiryStatus(inq.status)}
+                        </span>
+                      </div>
+                      <div className="neg-inquiry-card-actions">
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() =>
+                            setChatInquiry({
+                              id: inq.id,
+                              name: inq.tourist?.name ?? "Traveler",
+                            })
+                          }
+                        >
+                          Chat
+                        </button>
+                        <Link to={`/dashboard/agency/trip-room/${inq.id}`} className="btn btn-ghost">
+                          Trip room
+                        </Link>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -108,6 +145,14 @@ export function AgencyNegotiationsPage() {
           )}
         </>
       )}
+
+      <ChatRoomPopup
+        open={Boolean(chatInquiry)}
+        inquiryId={chatInquiry?.id ?? null}
+        partnerName={chatInquiry?.name}
+        fullRoomTo={chatInquiry ? `/dashboard/agency/trip-room/${chatInquiry.id}` : undefined}
+        onClose={() => setChatInquiry(null)}
+      />
     </div>
   );
 }

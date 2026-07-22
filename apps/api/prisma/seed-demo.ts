@@ -8,7 +8,7 @@
  * Run `npm run db:seed` first if the database is empty (creates core login accounts).
  */
 import { PrismaClient } from "@prisma/client";
-import { LANKA_TOUR_TRAILS_LOGO, LANKA_TOUR_TRAILS_SOCIAL_LINKS, MEDIA, defaultAgencyKyc } from "@tourpilot/shared";
+import { DEFAULT_PRICING_PAGE, LANKA_TOUR_TRAILS_LOGO, LANKA_TOUR_TRAILS_SOCIAL_LINKS, MEDIA, defaultAgencyKyc } from "@tourpilot/shared";
 import { hashPassword } from "../src/services/password.js";
 import { printTableCounts, seedExtendedData } from "./seed-demo-extended.js";
 
@@ -926,6 +926,17 @@ async function main() {
         { type: "featured_agencies" },
         { type: "offers" },
       ],
+    },
+  });
+
+  await prisma.cmsPage.upsert({
+    where: { slug: "pricing" },
+    update: {},
+    create: {
+      slug: "pricing",
+      title: "Pricing",
+      isPublished: true,
+      blocks: [DEFAULT_PRICING_PAGE],
     },
   });
 

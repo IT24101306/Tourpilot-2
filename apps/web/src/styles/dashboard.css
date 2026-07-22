@@ -2451,6 +2451,13 @@ textarea.field-invalid {
   line-height: 1.4;
 }
 
+.inquiry-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
 .inquiry-prior-replies h4 {
   margin: 0 0 8px;
   font-size: 0.9rem;

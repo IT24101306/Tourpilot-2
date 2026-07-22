@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   DEFAULT_PRICING_PAGE,
@@ -22,7 +22,7 @@ function categoryMatch(filter: string, categories: string[]): boolean {
   return true;
 }
 
-export function LandingPage() {
+export function DiscoverPage() {
   const [content, setContent] = useState<PricingPageContent>(DEFAULT_PRICING_PAGE);
   const [filter, setFilter] = useState("All");
   const [selectOpen, setSelectOpen] = useState(false);
@@ -340,3 +340,6 @@ export function LandingPage() {
     </div>
   );
 }
+
+/** Used only to satisfy FormEvent import if tree-shaken — keep Link interactive. */
+void (0 as unknown as FormEvent);

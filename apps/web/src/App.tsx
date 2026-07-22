@@ -12,6 +12,7 @@ import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
 import { PublicLayout } from "./components/Layout";
 import { LandingPage } from "./pages/LandingPage";
+import { DiscoverPage } from "./pages/DiscoverPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterProPage } from "./pages/RegisterProPage";
@@ -59,6 +60,7 @@ import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
 import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
 import { AdminDriversPage } from "./pages/admin/AdminDriversPage";
 import { AdminCmsPage } from "./pages/admin/AdminCmsPage";
+import { AdminPricingPage } from "./pages/admin/AdminPricingPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminInfluencersPage } from "./pages/admin/AdminInfluencersPage";
 import { AdminItinerariesPage } from "./pages/admin/AdminItinerariesPage";
@@ -140,6 +142,8 @@ export default function App() {
             <Routes>
           <Route element={<PublicLayout />}>
             <Route index element={<HomeRoute />} />
+            <Route path="discover" element={<DiscoverPage />} />
+            <Route path="pricing" element={<LandingPage />} />
             <Route path="agencies" element={<AgenciesListingRedirect />} />
             <Route path="offers" element={<OffersPage />} />
             <Route path="offers/:offerId/book" element={<OfferBookPage />} />
@@ -295,6 +299,7 @@ export default function App() {
             <Route path="influencers" element={<AdminInfluencersPage />} />
             <Route path="itineraries" element={<AdminItinerariesPage />} />
             <Route path="cms" element={<AdminCmsPage />} />
+            <Route path="pricing" element={<AdminPricingPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
 

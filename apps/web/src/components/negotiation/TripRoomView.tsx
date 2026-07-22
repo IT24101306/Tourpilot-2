@@ -474,7 +474,7 @@ export function TripRoomView({
           ) : (
             <p className="muted neg-chat-empty">
               {role === "AGENCY"
-                ? "Send a proposal to start the conversation."
+                ? "Message the traveler below to start the conversation — or send a proposal when ready."
                 : role === "ADMIN"
                   ? "No messages yet."
                   : role === "INFLUENCER"

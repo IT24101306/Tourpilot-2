@@ -13,10 +13,21 @@ type Props = {
   open: boolean;
   inquiryId: string | null;
   partnerName?: string | null;
+  /** Override "Open full trip room" link (agency uses trip-room path). */
+  fullRoomTo?: string;
+  /** Empty-state copy when there are no messages yet. */
+  emptyHint?: string;
   onClose: () => void;
 };
 
-export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) {
+export function ChatRoomPopup({
+  open,
+  inquiryId,
+  partnerName,
+  fullRoomTo,
+  emptyHint,
+  onClose,
+}: Props) {
   const { token, user } = useAuth();
   const listRef = useRef<HTMLDivElement>(null);
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
@@ -82,7 +93,7 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
     if (!open || !inquiry?.thread?.length) return;
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [open, inquiry?.thread]);
+  }, [open, inquiry?.thread, typing]);
 
   async function sendMessage(e: FormEvent) {
     e.preventDefault();
@@ -108,12 +119,17 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
 
   if (!open || !inquiryId) return null;
 
+  const isAgencyViewer = user?.role === "AGENCY";
   const partner =
     partnerName?.trim() ||
-    (inquiry?.whiteLabel && inquiry.handlerInfluencer?.name
-      ? inquiry.handlerInfluencer.name
-      : inquiry?.agency?.name) ||
-    "your travel partner";
+    (isAgencyViewer
+      ? inquiry?.tourist?.name
+      : inquiry?.whiteLabel && inquiry.handlerInfluencer?.name
+        ? inquiry.handlerInfluencer.name
+        : inquiry?.agency?.name) ||
+    (isAgencyViewer ? "traveler" : "your travel partner");
+
+  const roomLink = fullRoomTo ?? (isAgencyViewer ? `/dashboard/agency/trip-room/${inquiryId}` : `/trips?room=${inquiryId}`);
 
   return createPortal(
     <div className="chat-room-popup" role="presentation" onClick={onClose}>
@@ -147,9 +163,22 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
           ) : !loading ? (
             <div className="chat-room-popup__empty">
               <p>
-                Your request was sent to <strong>{partner}</strong>.
+                {isAgencyViewer ? (
+                  <>
+                    Chat with <strong>{partner}</strong> about this inquiry.
+                  </>
+                ) : (
+                  <>
+                    Your request was sent to <strong>{partner}</strong>.
+                  </>
+                )}
               </p>
-              <p className="muted">Add a note below — they’ll reply here.</p>
+              <p className="muted">
+                {emptyHint ??
+                  (isAgencyViewer
+                    ? "Reply below — they'll see it in real time."
+                    : "Add a note below — they'll reply here.")}
+              </p>
             </div>
           ) : null}
           <TypingIndicator names={typing.map((t) => t.name)} />
@@ -172,7 +201,7 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
               required
             />
             <div className="chat-room-popup__actions">
-              <Link to={`/trips?room=${inquiryId}`} className="chat-room-popup__full" onClick={onClose}>
+              <Link to={roomLink} className="chat-room-popup__full" onClick={onClose}>
                 Open full trip room
               </Link>
               <button type="submit" className="btn btn-primary" disabled={sending || !draft.trim()}>

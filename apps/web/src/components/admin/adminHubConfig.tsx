@@ -142,6 +142,14 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
         description: "Landing and marketing copy",
         icon: "cms",
       },
+      {
+        id: "pricing",
+        to: "/dashboard/admin/pricing",
+        category: "Content",
+        title: "Pricing",
+        description: "Revenue packages, prices, and feature copy",
+        icon: "cms",
+      },
     ],
   },
 ];

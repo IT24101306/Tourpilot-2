@@ -67,9 +67,17 @@ export function PublicLayout() {
               </NavLink>
             )}
             {!onProfile && (
-              <NavLink to="/offers" className={navLinkClass}>
-                Offers
-              </NavLink>
+              <>
+                <NavLink to="/" end className={navLinkClass}>
+                  Pricing
+                </NavLink>
+                <NavLink to="/offers" className={navLinkClass}>
+                  Offers
+                </NavLink>
+                <NavLink to="/discover" className={navLinkClass}>
+                  Discover
+                </NavLink>
+              </>
             )}
             {user?.role === "TOURIST" && (
               <>

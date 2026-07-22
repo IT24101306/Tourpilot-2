@@ -32,14 +32,16 @@ export function useChatLive({
   inquiryId,
   token,
   enabled = true,
-  intervalMs = 2500,
+  intervalMs = 2000,
   onThread,
 }: Options) {
   const [typing, setTyping] = useState<TypingUser[]>([]);
   const onThreadRef = useRef(onThread);
   onThreadRef.current = onThread;
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSentTyping = useRef(false);
+  const composeActive = useRef(false);
 
   const sync = useCallback(async () => {
     if (!enabled || !token || !inquiryId) return;
@@ -70,10 +72,9 @@ export function useChatLive({
     };
   }, [enabled, sync, intervalMs]);
 
-  const sendTyping = useCallback(
+  const postTyping = useCallback(
     (isTyping: boolean) => {
       if (!enabled || !token || !inquiryId) return;
-      if (lastSentTyping.current === isTyping && isTyping) return;
       lastSentTyping.current = isTyping;
       void api(`/inquiries/${inquiryId}/typing`, {
         method: "POST",
@@ -84,14 +85,46 @@ export function useChatLive({
     [enabled, token, inquiryId]
   );
 
+  const clearHeartbeat = useCallback(() => {
+    if (heartbeatTimer.current) {
+      clearInterval(heartbeatTimer.current);
+      heartbeatTimer.current = null;
+    }
+  }, []);
+
+  const sendTyping = useCallback(
+    (isTyping: boolean) => {
+      if (!enabled || !token || !inquiryId) return;
+      if (isTyping) {
+        // Always refresh so TTL stays ahead of peer polls (even if already "true").
+        postTyping(true);
+        if (!heartbeatTimer.current) {
+          heartbeatTimer.current = setInterval(() => {
+            if (composeActive.current) postTyping(true);
+          }, 2000);
+        }
+        return;
+      }
+      clearHeartbeat();
+      if (!lastSentTyping.current) return;
+      postTyping(false);
+    },
+    [enabled, token, inquiryId, postTyping, clearHeartbeat]
+  );
+
   const onComposeChange = useCallback(
     (value: string) => {
       if (!enabled) return;
       if (typingTimer.current) clearTimeout(typingTimer.current);
       if (value.trim()) {
+        composeActive.current = true;
         sendTyping(true);
-        typingTimer.current = setTimeout(() => sendTyping(false), 2800);
+        typingTimer.current = setTimeout(() => {
+          composeActive.current = false;
+          sendTyping(false);
+        }, 2800);
       } else {
+        composeActive.current = false;
         sendTyping(false);
       }
     },
@@ -100,12 +133,15 @@ export function useChatLive({
 
   const stopTyping = useCallback(() => {
     if (typingTimer.current) clearTimeout(typingTimer.current);
+    composeActive.current = false;
+    clearHeartbeat();
     sendTyping(false);
-  }, [sendTyping]);
+  }, [sendTyping, clearHeartbeat]);
 
   useEffect(() => {
     return () => {
       if (typingTimer.current) clearTimeout(typingTimer.current);
+      clearHeartbeat();
       if (lastSentTyping.current) {
         lastSentTyping.current = false;
         void api(`/inquiries/${inquiryId}/typing`, {
@@ -115,7 +151,7 @@ export function useChatLive({
         }).catch(() => undefined);
       }
     };
-  }, [inquiryId, token]);
+  }, [inquiryId, token, clearHeartbeat]);
 
   return { typing, sync, onComposeChange, stopTyping };
 }

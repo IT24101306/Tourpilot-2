@@ -25,6 +25,7 @@ import { DriverCalendarModal } from "../components/driver/DriverCalendarModal";
 import { GroupFormModal } from "../components/group/GroupFormModal";
 import { DisplayTabPanel } from "../components/display/DisplayTabPanel";
 import { InquiryReplyModal } from "../components/inquiry/InquiryReplyModal";
+import { ChatRoomPopup } from "../components/inquiry/ChatRoomPopup";
 import { InquiryThread, type ThreadMessage } from "../components/inquiry/InquiryThread";
 import {
   defaultTourForm,
@@ -72,6 +73,7 @@ export function AgencyDashboard() {
   const [entityStatus, setEntityStatus] = useState("");
   const [entitySaving, setEntitySaving] = useState(false);
   const [replyInquiryId, setReplyInquiryId] = useState<string | null>(null);
+  const [chatInquiry, setChatInquiry] = useState<{ id: string; name: string } | null>(null);
   const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState("all");
   const [tourModalOpen, setTourModalOpen] = useState(false);
@@ -530,17 +532,31 @@ export function AgencyDashboard() {
                               )}
                             </td>
                             <td>
-                              <button
-                                type="button"
-                                className={`btn ${hasRevision ? "btn-primary" : "btn-primary"}`}
-                                onClick={() => setReplyInquiryId(inq.id)}
-                              >
-                                {hasRevision
-                                  ? "Edit & resend"
-                                  : inq.proposal
-                                    ? "Edit proposal"
-                                    : "Reply"}
-                              </button>
+                              <div className="inquiry-row-actions">
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  onClick={() =>
+                                    setChatInquiry({
+                                      id: inq.id,
+                                      name: inq.tourist?.name || "Traveler",
+                                    })
+                                  }
+                                >
+                                  Chat
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn ${hasRevision ? "btn-primary" : "btn-primary"}`}
+                                  onClick={() => setReplyInquiryId(inq.id)}
+                                >
+                                  {hasRevision
+                                    ? "Edit & resend"
+                                    : inq.proposal
+                                      ? "Edit proposal"
+                                      : "Reply"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           {expanded && (
@@ -550,7 +566,7 @@ export function AgencyDashboard() {
                                   <InquiryThread messages={inq.thread} compact />
                                 ) : (
                                   <p className="muted" style={{ margin: 0 }}>
-                                    No messages yet. Send a proposal to start the conversation.
+                                    No messages yet. Use Chat to message the traveler, or Reply to send a proposal.
                                   </p>
                                 )}
                               </td>
@@ -1048,6 +1064,17 @@ export function AgencyDashboard() {
           onSent={() => token && refresh(token)}
         />
       )}
+
+      <ChatRoomPopup
+        open={Boolean(chatInquiry)}
+        inquiryId={chatInquiry?.id ?? null}
+        partnerName={chatInquiry?.name}
+        fullRoomTo={chatInquiry ? `/dashboard/agency/trip-room/${chatInquiry.id}` : undefined}
+        onClose={() => {
+          setChatInquiry(null);
+          if (token) void refresh(token);
+        }}
+      />
 
       {token && calendarDriver && (
         <DriverCalendarModal
