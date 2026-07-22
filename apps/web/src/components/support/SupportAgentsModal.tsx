@@ -45,7 +45,10 @@ export function SupportAgentsModal({ open, onClose }: Props) {
                 <strong className="support-agent-card__name">{agent.name}</strong>
                 <span className="support-agent-card__role muted">{agent.role}</span>
               </div>
-              <span className="support-agent-card__price">{agent.priceLabel}</span>
+              <span className="support-agent-card__price">
+                {agent.priceLabel?.trim() ||
+                  (Number.isFinite(agent.priceUsd) ? `$${Math.round(agent.priceUsd)} USD` : "")}
+              </span>
             </div>
             <p className="support-agent-card__service">{agent.service}</p>
             <p className="support-agent-card__desc muted">{agent.description}</p>

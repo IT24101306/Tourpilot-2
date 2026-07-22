@@ -101,10 +101,19 @@ function blankAgent(): SupportAgent {
     service: "",
     description: "",
     priceUsd: 0,
-    priceLabel: "",
+    priceLabel: "$0 USD",
     phone: "",
     phoneDisplay: "",
   };
+}
+
+/** Keep the visible price label in sync when the USD amount changes. */
+function priceLabelFromUsd(priceUsd: number, previousLabel: string): string {
+  const rounded = Math.round(Number.isFinite(priceUsd) ? priceUsd : 0);
+  if (/\/\s*hour/i.test(previousLabel)) {
+    return `$${rounded} USD / hour`;
+  }
+  return `$${rounded} USD`;
 }
 
 export function AdminSettingsPage() {
@@ -233,18 +242,23 @@ export function AdminSettingsPage() {
       title: support.title.trim() || DEFAULT_SUPPORT_CONTENT.title,
       subtitle: support.subtitle.trim() || DEFAULT_SUPPORT_CONTENT.subtitle,
       footer: support.footer.trim() || DEFAULT_SUPPORT_CONTENT.footer,
-      agents: support.agents.map((a, i) => ({
-        ...a,
-        id: a.id.trim() || `agent-${i + 1}`,
-        name: a.name.trim(),
-        role: a.role.trim(),
-        service: a.service.trim(),
-        description: a.description.trim(),
-        priceUsd: Number.isFinite(Number(a.priceUsd)) ? Number(a.priceUsd) : 0,
-        priceLabel: a.priceLabel.trim(),
-        phone: a.phone.trim(),
-        phoneDisplay: a.phoneDisplay.trim() || a.phone.trim(),
-      })),
+      agents: support.agents.map((a, i) => {
+        const priceUsd = Number.isFinite(Number(a.priceUsd)) ? Number(a.priceUsd) : 0;
+        const trimmedLabel = a.priceLabel.trim();
+        return {
+          ...a,
+          id: a.id.trim() || `agent-${i + 1}`,
+          name: a.name.trim(),
+          role: a.role.trim(),
+          service: a.service.trim(),
+          description: a.description.trim(),
+          priceUsd,
+          // Always persist a visible label; prefer explicit label, else derive from USD.
+          priceLabel: trimmedLabel || priceLabelFromUsd(priceUsd, ""),
+          phone: a.phone.trim(),
+          phoneDisplay: a.phoneDisplay.trim() || a.phone.trim(),
+        };
+      }),
     };
 
     if (!supportContent.agents.length) {
@@ -289,6 +303,13 @@ export function AdminSettingsPage() {
             }),
           });
           setSettings(data);
+          setFees({
+            TOURIST: String(data.loginFees.TOURIST),
+            AGENCY: String(data.loginFees.AGENCY),
+            INFLUENCER: String(data.loginFees.INFLUENCER),
+            DRIVER: String(data.loginFees.DRIVER),
+            ADMIN: String(data.loginFees.ADMIN),
+          });
           setSupport(data.supportContent);
           const idle = splitSessionInactivityForEdit(data.sessionInactivityMinutes);
           setIdleAmount(String(idle.amount));
@@ -504,23 +525,27 @@ export function AdminSettingsPage() {
                     />
                   </label>
                   <label>
-                    Price label (shown)
-                    <input
-                      value={agent.priceLabel}
-                      onChange={(e) => updateAgent(index, { priceLabel: e.target.value })}
-                      placeholder="$29 USD"
-                    />
-                  </label>
-                  <label>
                     Price USD (number)
                     <input
                       type="number"
                       min={0}
                       step={1}
                       value={agent.priceUsd}
-                      onChange={(e) =>
-                        updateAgent(index, { priceUsd: Number(e.target.value) || 0 })
-                      }
+                      onChange={(e) => {
+                        const priceUsd = Number(e.target.value) || 0;
+                        updateAgent(index, {
+                          priceUsd,
+                          priceLabel: priceLabelFromUsd(priceUsd, agent.priceLabel),
+                        });
+                      }}
+                    />
+                  </label>
+                  <label>
+                    Price label (shown in Support modal)
+                    <input
+                      value={agent.priceLabel}
+                      onChange={(e) => updateAgent(index, { priceLabel: e.target.value })}
+                      placeholder="$29 USD"
                     />
                   </label>
                   <label>
