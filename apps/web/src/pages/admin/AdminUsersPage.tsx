@@ -29,7 +29,7 @@ export function AdminUsersPage() {
   const [adjustUser, setAdjustUser] = useState<AdminUser | null>(null);
   const [featuresUser, setFeaturesUser] = useState<AdminUser | null>(null);
   const [feeUser, setFeeUser] = useState<AdminUser | null>(null);
-  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
+  const [formMode, setFormMode] = useState<"create" | "edit" | "duplicate" | null>(null);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -209,8 +209,11 @@ export function AdminUsersPage() {
     setSaving(true);
     try {
       const email = values.email.trim() ? values.email.trim() : null;
-      if (formMode === "create") {
+      if (formMode === "create" || formMode === "duplicate") {
         const wallet = Number(values.walletBalance ?? 0);
+        const feeRaw = values.loginFeeLkr?.trim() ?? "";
+        const loginFeeLkr =
+          feeRaw === "" ? undefined : Math.max(0, Math.round(Number(feeRaw)));
         await api(`/admin/users`, {
           method: "POST",
           token,
@@ -221,9 +224,16 @@ export function AdminUsersPage() {
             role: values.role,
             isActive: values.isActive,
             walletBalance: Number.isFinite(wallet) ? Math.max(0, Math.round(wallet)) : 0,
+            ...(loginFeeLkr !== undefined && Number.isFinite(loginFeeLkr)
+              ? { loginFeeLkr }
+              : {}),
           }),
         });
-        setMsg(`Created ${values.name}.`);
+        setMsg(
+          formMode === "duplicate"
+            ? `Duplicated as ${values.name} (${values.phone}).`
+            : `Created ${values.name}.`
+        );
       } else if (editUser) {
         await api(`/admin/users/${editUser.id}`, {
           method: "PATCH",
@@ -242,7 +252,16 @@ export function AdminUsersPage() {
       setEditUser(null);
       await load();
     } catch (e) {
-      setMsg(errMessage(e, formMode === "create" ? "Could not create user." : "Could not update user."));
+      setMsg(
+        errMessage(
+          e,
+          formMode === "edit"
+            ? "Could not update user."
+            : formMode === "duplicate"
+              ? "Could not duplicate user."
+              : "Could not create user."
+        )
+      );
     } finally {
       setSaving(false);
     }
@@ -421,6 +440,18 @@ export function AdminUsersPage() {
                     >
                       Edit
                     </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-nav"
+                      disabled={saving}
+                      title="Copy this account; you must enter a new phone number"
+                      onClick={() => {
+                        setEditUser(u);
+                        setFormMode("duplicate");
+                      }}
+                    >
+                      Duplicate
+                    </button>
                     {(u.agency || u.role === "AGENCY") && (
                       <button
                         type="button"
@@ -511,6 +542,11 @@ export function AdminUsersPage() {
         open={formMode != null}
         mode={formMode ?? "create"}
         loading={saving}
+        sourceLabel={
+          formMode === "duplicate" && editUser
+            ? `${editUser.name} · ${editUser.phone}`
+            : null
+        }
         initial={
           formMode === "edit" && editUser
             ? {
@@ -520,7 +556,20 @@ export function AdminUsersPage() {
                 role: editUser.role as UserFormValues["role"],
                 isActive: editUser.isActive,
               }
-            : null
+            : formMode === "duplicate" && editUser
+              ? {
+                  name: editUser.name,
+                  phone: "",
+                  email: editUser.email ?? "",
+                  role: editUser.role as UserFormValues["role"],
+                  isActive: editUser.isActive,
+                  walletBalance: String(Math.round(editUser.walletBalance) || 0),
+                  loginFeeLkr:
+                    editUser.loginFeeOverride != null
+                      ? String(editUser.loginFeeOverride)
+                      : "",
+                }
+              : null
         }
         onClose={() => {
           setFormMode(null);

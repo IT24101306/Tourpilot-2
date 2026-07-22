@@ -9,13 +9,17 @@ export type UserFormValues = {
   role: (typeof ROLES)[number];
   isActive: boolean;
   walletBalance?: string;
+  /** Custom login fee override; empty string = role default. */
+  loginFeeLkr?: string;
 };
 
 type Props = {
   open: boolean;
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "duplicate";
   loading: boolean;
   initial?: Partial<UserFormValues> | null;
+  /** Shown when duplicating so admin knows which account is the source. */
+  sourceLabel?: string | null;
   onClose: () => void;
   onSave: (values: UserFormValues) => void;
 };
@@ -27,9 +31,18 @@ const EMPTY: UserFormValues = {
   role: "TOURIST",
   isActive: true,
   walletBalance: "0",
+  loginFeeLkr: "",
 };
 
-export function UserFormModal({ open, mode, loading, initial, onClose, onSave }: Props) {
+export function UserFormModal({
+  open,
+  mode,
+  loading,
+  initial,
+  sourceLabel,
+  onClose,
+  onSave,
+}: Props) {
   const [form, setForm] = useState<UserFormValues>(EMPTY);
 
   useEffect(() => {
@@ -38,11 +51,13 @@ export function UserFormModal({ open, mode, loading, initial, onClose, onSave }:
       ...EMPTY,
       ...initial,
       email: initial?.email ?? "",
+      phone: mode === "duplicate" ? "" : (initial?.phone ?? ""),
       walletBalance: initial?.walletBalance ?? "0",
+      loginFeeLkr: initial?.loginFeeLkr ?? "",
       isActive: initial?.isActive ?? true,
       role: (initial?.role as UserFormValues["role"]) || "TOURIST",
     });
-  }, [open, initial]);
+  }, [open, initial, mode]);
 
   if (!open) return null;
 
@@ -57,6 +72,16 @@ export function UserFormModal({ open, mode, loading, initial, onClose, onSave }:
     });
   }
 
+  const title =
+    mode === "edit" ? "Edit user" : mode === "duplicate" ? "Duplicate user" : "Create user";
+
+  const hint =
+    mode === "edit"
+      ? "Update profile fields. Changing phone updates login identity."
+      : mode === "duplicate"
+        ? "Copies role and settings from the source account. Enter a new phone number — it must be unique."
+        : "Creates an account immediately (no OTP). Phone must include country code.";
+
   return (
     <div className="gov-modal-backdrop" role="presentation" onClick={onClose}>
       <div
@@ -65,12 +90,13 @@ export function UserFormModal({ open, mode, loading, initial, onClose, onSave }:
         aria-labelledby="user-form-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 id="user-form-title">{mode === "create" ? "Create user" : "Edit user"}</h3>
-        <p className="muted">
-          {mode === "create"
-            ? "Creates an account immediately (no OTP). Phone must include country code."
-            : "Update profile fields. Changing phone updates login identity."}
-        </p>
+        <h3 id="user-form-title">{title}</h3>
+        <p className="muted">{hint}</p>
+        {mode === "duplicate" && sourceLabel ? (
+          <p className="muted">
+            Duplicating: <strong>{sourceLabel}</strong>
+          </p>
+        ) : null}
         <form onSubmit={handleSubmit}>
           <label htmlFor="user-name">Name</label>
           <input
@@ -81,13 +107,16 @@ export function UserFormModal({ open, mode, loading, initial, onClose, onSave }:
             maxLength={120}
           />
 
-          <label htmlFor="user-phone">Phone (E.164)</label>
+          <label htmlFor="user-phone">
+            Phone (E.164){mode === "duplicate" ? " — required, new number" : ""}
+          </label>
           <input
             id="user-phone"
             value={form.phone}
             onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
             placeholder="+94771234567"
             required
+            autoFocus={mode === "duplicate"}
           />
 
           <label htmlFor="user-email">Email (optional)</label>
@@ -115,7 +144,7 @@ export function UserFormModal({ open, mode, loading, initial, onClose, onSave }:
             ))}
           </select>
 
-          {mode === "create" && (
+          {(mode === "create" || mode === "duplicate") && (
             <>
               <label htmlFor="user-wallet">Opening wallet (LKR)</label>
               <input
@@ -125,6 +154,16 @@ export function UserFormModal({ open, mode, loading, initial, onClose, onSave }:
                 step={1}
                 value={form.walletBalance}
                 onChange={(e) => setForm((p) => ({ ...p, walletBalance: e.target.value }))}
+              />
+              <label htmlFor="user-login-fee">Custom login fee (LKR, blank = role default)</label>
+              <input
+                id="user-login-fee"
+                type="number"
+                min={0}
+                step={1}
+                value={form.loginFeeLkr}
+                onChange={(e) => setForm((p) => ({ ...p, loginFeeLkr: e.target.value }))}
+                placeholder="Role default"
               />
             </>
           )}
@@ -143,7 +182,13 @@ export function UserFormModal({ open, mode, loading, initial, onClose, onSave }:
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? "Saving…" : mode === "create" ? "Create user" : "Save changes"}
+              {loading
+                ? "Saving…"
+                : mode === "edit"
+                  ? "Save changes"
+                  : mode === "duplicate"
+                    ? "Create duplicate"
+                    : "Create user"}
             </button>
           </div>
         </form>
