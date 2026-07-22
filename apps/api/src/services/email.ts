@@ -114,6 +114,15 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
     return { delivered: false, mode: "smtp", error: "SMTP_HOST not configured" };
   }
 
+  const { user, pass } = config.email.smtp;
+  if (user && !pass) {
+    return {
+      delivered: false,
+      mode: "smtp",
+      error: "SMTP_PASS is empty — set the mailbox password in apps/api/.env and restart the API",
+    };
+  }
+
   try {
     await transport.sendMail({
       from,

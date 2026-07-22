@@ -71,9 +71,12 @@ export function AdminPromoEmailPage() {
     setSending(true);
     setStatus("");
     try {
-      const result = await api<{ sent: number; failed: number; errors?: string[] }>(
-        "/admin/promo-email",
-        {
+      const result = await api<{
+        sent: number;
+        failed: number;
+        deliveryMode?: string;
+        errors?: string[];
+      }>("/admin/promo-email", {
           method: "POST",
           token,
           body: JSON.stringify({
@@ -86,11 +89,16 @@ export function AdminPromoEmailPage() {
           }),
         }
       );
-      setStatus(
-        result.sent
-          ? `Test email sent to ${testTo.trim()}.`
-          : `Test failed: ${result.errors?.[0] || "unknown error"}`
-      );
+      if (result.sent && result.deliveryMode === "smtp") {
+        setStatus(`Test email sent to ${testTo.trim()} via SMTP.`);
+      } else if (result.sent && result.deliveryMode === "log") {
+        setStatus(
+          result.errors?.[0] ||
+            "Logged to API console only (EMAIL_MODE=log). Configure SMTP to send real mail."
+        );
+      } else {
+        setStatus(`Test failed: ${result.errors?.[0] || "unknown error"}`);
+      }
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Test send failed");
     } finally {
@@ -126,6 +134,7 @@ export function AdminPromoEmailPage() {
             audience: number;
             sent: number;
             failed: number;
+            deliveryMode?: string;
             errors?: string[];
           }>("/admin/promo-email", {
             method: "POST",
@@ -140,6 +149,7 @@ export function AdminPromoEmailPage() {
           });
           setStatus(
             `Sent ${result.sent} of ${result.audience}` +
+              (result.deliveryMode ? ` via ${result.deliveryMode}` : "") +
               (result.failed ? ` (${result.failed} failed)` : "") +
               (result.errors?.length ? `. ${result.errors[0]}` : "")
           );

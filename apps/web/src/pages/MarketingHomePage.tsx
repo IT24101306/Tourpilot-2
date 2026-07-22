@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
 
 /**
  * Serves the marketing home from /marketing-home.html (copy of repo-root index.html).
@@ -22,14 +21,6 @@ export function MarketingHomePage() {
         title="TourPilot"
         src="/marketing-home.html"
       />
-      <div className="marketing-home__auth">
-        <Link to="/login" className="marketing-home__auth-link">
-          Log in
-        </Link>
-        <Link to="/register" className="marketing-home__auth-link marketing-home__auth-link--primary">
-          Sign up
-        </Link>
-      </div>
     </div>
   );
 }

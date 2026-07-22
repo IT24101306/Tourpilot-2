@@ -3,6 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { AgencyStatus, CommissionStatus, InquiryStatus, Prisma, UserRole } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { config } from "../../lib/config.js";
 import { authRequired, requireRoles } from "../../middleware/auth.js";
 import { asJson } from "../../utils/json.js";
 import {
@@ -188,9 +189,16 @@ adminRouter.post("/promo-email", async (req, res, next) => {
       const result = await sendPlatformEmail({ to: body.testTo.trim(), ...content });
       return res.json({
         mode: "test",
+        deliveryMode: result.mode,
         sent: result.delivered ? 1 : 0,
         failed: result.delivered ? 0 : 1,
-        errors: result.error ? [result.error] : [],
+        errors: result.error
+          ? [result.error]
+          : result.mode === "log"
+            ? [
+                "EMAIL_MODE=log — message was only printed in the API console, not emailed. Set EMAIL_MODE=smtp and SMTP_* in apps/api/.env, then restart the API.",
+              ]
+            : [],
       });
     }
 
@@ -237,6 +245,7 @@ adminRouter.post("/promo-email", async (req, res, next) => {
 
     res.json({
       mode: "broadcast",
+      deliveryMode: config.email.mode,
       audience: recipients.length,
       sent,
       failed,

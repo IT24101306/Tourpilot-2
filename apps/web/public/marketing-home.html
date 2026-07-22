@@ -967,17 +967,31 @@
           <li><a href="#contact" class="nav-link hover:text-white">Contact</a></li>
         </ul>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
           <a
             href="#contact"
-            class="btn-primary hidden rounded-full bg-lime px-5 py-2 text-sm font-semibold text-white md:inline-flex"
+            class="btn-primary hidden h-9 items-center justify-center rounded-full bg-lime px-4 text-sm font-semibold text-white sm:px-5 md:inline-flex"
           >
             Get Started
+          </a>
+          <a
+            href="/login"
+            target="_top"
+            class="hidden h-9 items-center justify-center rounded-full border border-white/35 px-3.5 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10 sm:px-4 md:inline-flex"
+          >
+            Log in
+          </a>
+          <a
+            href="/register"
+            target="_top"
+            class="btn-primary hidden h-9 items-center justify-center rounded-full bg-lime px-3.5 text-sm font-semibold text-white sm:px-4 md:inline-flex"
+          >
+            Sign up
           </a>
           <button
             id="menu-toggle"
             type="button"
-            class="inline-flex h-10 w-10 items-center justify-center rounded-full text-white md:hidden"
+            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white md:hidden"
             aria-label="Toggle menu"
             aria-expanded="false"
           >
@@ -996,12 +1010,26 @@
           <li><a href="/pricing" target="_top" class="block min-h-[44px] py-3">Pricing</a></li>
           <li><a href="#services" class="block min-h-[44px] py-3">Services</a></li>
           <li><a href="#contact" class="block min-h-[44px] py-3">Contact</a></li>
-          <li class="pt-2">
+          <li class="pt-2 flex flex-col gap-2">
             <a
               href="#contact"
               class="btn-primary inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-lime px-5 py-3 text-sm font-semibold text-white"
             >
               Get Started
+            </a>
+            <a
+              href="/login"
+              target="_top"
+              class="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-white/35 px-5 py-3 text-sm font-semibold text-white"
+            >
+              Log in
+            </a>
+            <a
+              href="/register"
+              target="_top"
+              class="btn-primary inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-lime px-5 py-3 text-sm font-semibold text-white"
+            >
+              Sign up
             </a>
           </li>
         </ul>
