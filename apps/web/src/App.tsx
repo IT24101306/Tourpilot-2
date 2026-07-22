@@ -66,7 +66,6 @@ import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
 import { AdminOffersPage } from "./pages/admin/AdminOffersPage";
-import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
 import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
 import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
 import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";

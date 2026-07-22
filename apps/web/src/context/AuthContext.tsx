@@ -49,6 +49,7 @@ export type AgencyFeatures = {
   customInquiries: boolean;
   negotiationsBookings: boolean;
   customDomain: boolean;
+  externalStorefront: boolean;
 };
 
 export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
@@ -61,6 +62,7 @@ export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
   customInquiries: true,
   negotiationsBookings: true,
   customDomain: false,
+  externalStorefront: false,
 };
 
 export function agencyFeaturesOf(user: AuthUser | null | undefined): AgencyFeatures {

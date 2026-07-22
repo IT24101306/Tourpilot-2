@@ -295,6 +295,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         customInquiries: z.boolean().optional(),
         negotiationsBookings: z.boolean().optional(),
         customDomain: z.boolean().optional(),
+        externalStorefront: z.boolean().optional(),
       })
       .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
       .parse(req.body) as Partial<AgencyFeatures>;
@@ -316,6 +317,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureCustomInquiries: true,
         featureNegotiationsBookings: true,
         featureCustomDomain: true,
+        featureExternalStorefront: true,
       },
     });
 
@@ -374,6 +376,7 @@ adminRouter.get("/users", async (req, res, next) => {
             featureCustomInquiries: true,
             featureNegotiationsBookings: true,
             featureCustomDomain: true,
+            featureExternalStorefront: true,
           },
         },
         agencyStaff: {
@@ -394,6 +397,7 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureCustomInquiries: true,
                 featureNegotiationsBookings: true,
                 featureCustomDomain: true,
+                featureExternalStorefront: true,
               },
             },
           },

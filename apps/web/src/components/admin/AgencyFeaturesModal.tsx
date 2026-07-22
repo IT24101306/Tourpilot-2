@@ -48,6 +48,11 @@ const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[]
     label: "Custom domain",
     hint: "Agency can connect their own domain (Shopify-style) to their storefront",
   },
+  {
+    key: "externalStorefront",
+    label: "External / headless website",
+    hint: "Agency may run a separately coded website that uses TourPilot APIs (tours, OTP, inquiries)",
+  },
 ];
 
 type Props = {

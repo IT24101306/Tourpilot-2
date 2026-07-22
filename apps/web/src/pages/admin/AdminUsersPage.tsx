@@ -273,6 +273,7 @@ export function AdminUsersPage() {
         { label: "Support", value: features.support ? "On" : "Off" },
         { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
         { label: "Custom domain", value: features.customDomain ? "On" : "Off" },
+        { label: "External website", value: features.externalStorefront ? "On" : "Off" },
       ],
       onConfirm: async () => {
         setSaving(true);

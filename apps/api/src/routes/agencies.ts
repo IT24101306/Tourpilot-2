@@ -14,7 +14,7 @@ import { prisma } from "../lib/prisma.js";
 
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 
-import { agencyHasFeature, requireAgencyFeature } from "../lib/agencyFeatures.js";
+import { agencyHasFeature, requireAgencyFeature, serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 
 import { asJson } from "../utils/json.js";
 
@@ -1075,6 +1075,60 @@ agenciesRouter.patch(
     }
   }
 );
+
+agenciesRouter.get("/:slug/headless-config", async (req, res, next) => {
+  try {
+    const agency = await prisma.agency.findFirst({
+      where: { slug: req.params.slug, ...publicAgencyWhere() },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        featureDriversAndPartners: true,
+        featureSupport: true,
+        featureWalletTopup: true,
+        featureOffers: true,
+        featureDisplay: true,
+        featureReadyMadeTours: true,
+        featureCustomInquiries: true,
+        featureNegotiationsBookings: true,
+        featureCustomDomain: true,
+        featureExternalStorefront: true,
+      },
+    });
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const features = serializeAgencyFeatures(agency);
+    const webAppUrl = config.webAppUrl;
+    // Prefer public absolute API base from WEB_APP_URL (same origin /api in prod).
+    const apiBase = `${webAppUrl}/api`;
+
+    res.json({
+      agencyId: agency.id,
+      slug: agency.slug,
+      name: agency.name,
+      apiBase,
+      webAppUrl,
+      features,
+      entitled: features.externalStorefront,
+      tripRoomUrlTemplate: `${webAppUrl}/trips?room={inquiryId}`,
+      endpoints: {
+        agency: `${apiBase}/agencies/${agency.slug}`,
+        headlessConfig: `${apiBase}/agencies/${agency.slug}/headless-config`,
+        tourPublic: `${apiBase}/tours/public/${agency.slug}/:tourSlug`,
+        entitiesPublic: `${apiBase}/entities/public/${agency.slug}`,
+        loginStart: `${apiBase}/auth/login-start`,
+        verifyOtp: `${apiBase}/auth/verify-otp`,
+        registerRequest: `${apiBase}/auth/register-request`,
+        verifyRegistration: `${apiBase}/auth/verify-registration`,
+        me: `${apiBase}/auth/me`,
+        createInquiry: `${apiBase}/inquiries`,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 
 agenciesRouter.get("/:slug", async (req, res, next) => {
 
