@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TourPilot — Service Packages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F3F5F3;
+    --card: #FFFFFF;
+    --card-border: #E7ECE8;
+    --text-primary: #1B241E;
+    --text-muted: #6B776F;
+    --green: #22A559;
+    --green-dark: #178A47;
+    --green-soft-bg: #E3F6EA;
+    --green-soft-text: #17924C;
+    --divider: #EDF1EE;
+    --footer-bg: #0E2A1C;
+    --footer-text: #BFD8CA;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+
+  /* Top nav, mirroring TourPilot's app header */
+  .topnav{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 40px;
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .brand{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .brand .mark{
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brand .mark svg{ width: 100%; height: 100%; }
+
+  .nav-links{
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #3D473F;
+  }
+
+  .nav-links .active{
+    color: var(--green-dark);
+    background: var(--green-soft-bg);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .nav-right{
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .nav-divider{
+    width: 1px;
+    height: 22px;
+    background: var(--card-border);
+  }
+
+  .nav-icon{
+    color: #3D473F;
+    display: flex;
+    align-items: center;
+  }
+
+  .nav-right .nav-links{
+    gap: 22px;
+  }
+
+  .page{
+    padding: 48px 28px 80px;
+  }
+
+  .page-header{
+    max-width: 1200px;
+    margin: 0 auto 12px;
+    text-align: center;
+  }
+
+  .eyebrow{
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--green-soft-text);
+    font-weight: 700;
+    background: var(--green-soft-bg);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+
+  h1{
+    font-family: 'Lora', serif;
+    font-size: clamp(30px, 4vw, 42px);
+    font-weight: 600;
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+
+  .subhead{
+    color: var(--text-muted);
+    font-size: 15.5px;
+    max-width: 560px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+
+  .package-type{
+    max-width: 1200px;
+    margin: 0 auto 28px;
+    text-align: center;
+  }
+
+  .package-type-label{
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .package-type-label span{ color: var(--green); }
+
+  .select-wrap{
+    position: relative;
+    max-width: 460px;
+    margin: 0 auto;
+    text-align: left;
+  }
+
+  .custom-select{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #FFFFFF;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text-primary);
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(20,30,24,0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .custom-select:hover{
+    border-color: var(--green);
+  }
+
+  .select-wrap.open .custom-select{
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(34,165,89,0.15);
+  }
+
+  .select-chevron{
+    color: var(--text-primary);
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+  }
+
+  .select-wrap.open .select-chevron{
+    transform: rotate(180deg);
+  }
+
+  .custom-options{
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 6px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #FFFFFF;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(20,30,24,0.08);
+    z-index: 20;
+    display: none;
+  }
+
+  .select-wrap.open .custom-options{
+    display: block;
+  }
+
+  .custom-options li{
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 15px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+
+  .custom-options li:hover{
+    background: var(--green-soft-bg);
+    color: var(--green-dark);
+  }
+
+  .custom-options li.selected{
+    background: var(--green);
+    color: #FFFFFF;
+    font-weight: 600;
+  }
+
+  .cards{
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+
+  .card{
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 22px 18px 22px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 2px rgba(20,30,24,0.04), 0 8px 24px rgba(20,30,24,0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    min-width: 0;
+  }
+
+  .card:hover{
+    transform: translateY(-4px);
+    box-shadow: 0 4px 10px rgba(20,30,24,0.06), 0 14px 30px rgba(20,30,24,0.06);
+  }
+
+  .card.featured{
+    border-color: var(--green);
+    box-shadow: 0 0 0 1px rgba(34,165,89,0.25), 0 10px 26px rgba(34,165,89,0.08);
+  }
+
+  .card-tag{
+    display: inline-block;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--green-soft-text);
+    background: var(--green-soft-bg);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+
+  .card-name{
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+
+  .card-tagline{
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin: 0 0 10px;
+    line-height: 1.5;
+    min-height: 42px;
+  }
+
+  .price-block{
+    padding: 8px 0;
+    border-top: 1px solid var(--divider);
+    border-bottom: 1px solid var(--divider);
+    margin-bottom: 12px;
+  }
+
+  .price{
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--green-dark);
+  }
+
+  .price-sub{
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  ul.features{
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    flex-grow: 1;
+  }
+
+  ul.features li{
+    font-size: 13.5px;
+    line-height: 1.5;
+    padding: 7px 0 7px 22px;
+    position: relative;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--divider);
+  }
+
+  ul.features li:last-child{ border-bottom: none; }
+
+  ul.features li::before{
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    color: var(--green);
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .toggle-btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #FFFFFF;
+    border: 1px solid var(--card-border);
+    color: var(--green-dark);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    margin-bottom: 18px;
+    align-self: center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .toggle-btn:hover{
+    border-color: var(--green);
+    background: var(--green-soft-bg);
+  }
+
+  .toggle-btn .arrow{
+    display: inline-block;
+    transition: transform 0.15s ease;
+    font-size: 10px;
+  }
+
+  .toggle-btn.open .arrow{
+    transform: rotate(180deg);
+  }
+
+  .feature-pricing{
+    display: none;
+    background: #FAFBFA;
+    border: 1px solid var(--divider);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+  }
+
+  .feature-pricing.open{
+    display: block;
+  }
+
+  .feature-pricing-title{
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--green-soft-text);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .feature-row{
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 3px 0;
+    color: var(--text-muted);
+  }
+
+  details.feature-row{
+    display: block;
+    font-size: 13px;
+    padding: 3px 0;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--divider);
+  }
+
+  details.feature-row:last-of-type{
+    border-bottom: none;
+  }
+
+  details.feature-row summary{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    list-style: none;
+    padding: 6px 0;
+  }
+
+  details.feature-row summary > span:first-child{
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.4;
+  }
+
+  details.feature-row summary > span:last-child{
+    flex: 0 0 auto;
+    text-align: right;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  details.feature-row summary::-webkit-details-marker{ display:none; }
+
+  details.feature-row summary::after{
+    content: "▾";
+    font-size: 12px;
+    color: var(--text-muted);
+    flex: 0 0 auto;
+    width: 14px;
+    text-align: center;
+    transition: transform 0.15s ease;
+  }
+
+  details.feature-row[open] summary::after{
+    content: "▾";
+    transform: rotate(180deg);
+  }
+
+  details.feature-row .detail-list{
+    list-style: none;
+    margin: 2px 0 10px;
+    padding: 0 0 0 4px;
+  }
+
+  details.feature-row .detail-list li{
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    padding: 4px 0 4px 16px;
+    position: relative;
+  }
+
+  details.feature-row .detail-list li::before{
+    content: "–";
+    position: absolute;
+    left: 0;
+    color: var(--green);
+  }
+
+  .feature-row span:last-child{
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .feature-row.all-row{
+    border-top: 1px dashed var(--card-border);
+    margin-top: 6px;
+    padding-top: 9px;
+  }
+
+  .feature-row.all-row span:first-child{
+    color: var(--green-dark);
+    font-weight: 700;
+  }
+
+  .feature-row.all-row span:last-child{
+    color: var(--green-dark);
+  }
+
+  .cta{
+    display: block;
+    text-align: center;
+    background: var(--green);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 0;
+    border-radius: 999px;
+    text-decoration: none;
+    margin-top: 4px;
+    margin-bottom: 20px;
+    transition: background 0.15s ease;
+  }
+
+  .cta:hover{
+    background: var(--green-dark);
+  }
+
+  .feature-picker{
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+  }
+
+  .feature-picker li{
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .feature-picker li:last-child{ border-bottom: none; }
+
+  .feature-picker label{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+
+  .feature-picker input[type="checkbox"]{
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: 1.5px solid var(--card-border);
+    border-radius: 3px;
+    background: #FFFFFF;
+    position: relative;
+    margin: 0;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+
+  .feature-picker input[type="checkbox"]:checked{
+    background: var(--green);
+    border-color: var(--green);
+  }
+
+  .feature-picker input[type="checkbox"]:checked::after{
+    content: "";
+    position: absolute;
+    left: 3.5px;
+    top: 1px;
+    width: 4px;
+    height: 7px;
+    border: solid #FFFFFF;
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+  }
+
+  .feature-picker .feat-name{
+    flex: 1;
+    line-height: 1.3;
+    min-width: 0;
+  }
+
+  .feature-picker .feat-price{
+    font-weight: 600;
+    font-size: 11.5px;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .monthly-total{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--green-soft-bg);
+    border: 1px solid rgba(34,165,89,0.25);
+    border-radius: 8px;
+    margin-bottom: 0;
+  }
+
+  .monthly-total-label{
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--green-dark);
+    line-height: 1.2;
+  }
+
+  .monthly-total-value{
+    font-family: 'Lora', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-dark);
+    white-space: nowrap;
+  }
+
+  .modal-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 30, 22, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 24px;
+  }
+
+  .modal-overlay.open{
+    display: flex;
+  }
+
+  .modal{
+    background: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 16px 48px rgba(20,30,24,0.18);
+    width: 100%;
+    max-width: 520px;
+    max-height: min(80vh, 640px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .modal-title{
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  .modal-subtitle{
+    font-size: 12px;
+    color: var(--green-soft-text);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .modal-close{
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    background: #FFFFFF;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .modal-close:hover{
+    border-color: var(--green);
+    color: var(--green-dark);
+    background: var(--green-soft-bg);
+  }
+
+  .modal-body{
+    padding: 8px 20px 20px;
+    overflow-y: auto;
+  }
+
+  .modal-body .feature-pricing{
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
+
+  .modal-footer{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--divider);
+    background: #FAFBFA;
+  }
+
+  .modal-footer .monthly-total{
+    flex: 1;
+    margin: 0;
+  }
+
+  .modal-ok{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--green);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 14px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+
+  .modal-ok:hover{
+    background: var(--green-dark);
+  }
+
+  .modal-body .feature-picker{
+    margin: 0;
+  }
+
+  .modal-body .feature-picker label{
+    font-size: 13.5px;
+    padding: 8px 0;
+    gap: 10px;
+  }
+
+  .modal-body .feature-picker input[type="checkbox"]{
+    width: 16px;
+    height: 16px;
+  }
+
+  .modal-body .feature-picker input[type="checkbox"]:checked::after{
+    left: 4px;
+    top: 1.5px;
+    width: 4.5px;
+    height: 8px;
+  }
+
+  .modal-body .feature-picker .feat-price{
+    font-size: 13px;
+  }
+
+  .terms{
+    max-width: 1200px;
+    margin: 40px auto 0;
+    padding: 18px 24px;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    background: #FFFFFF;
+  }
+
+  .terms-title{
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--green-soft-text);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .terms p{
+    font-size: 13.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Footer, mirroring TourPilot's dark green footer */
+  .footer{
+    background: var(--footer-bg);
+    color: var(--footer-text);
+    padding: 32px 40px;
+    margin-top: 56px;
+  }
+
+  .footer-top{
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-brand{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .footer-brand .mark{
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green);
+    font-size: 16px;
+  }
+
+  .footer-brand-name{
+    font-family: 'Lora', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: #FFFFFF;
+  }
+
+  .footer-brand-name .pilot{ color: var(--green); }
+
+  .footer-tagline{
+    font-size: 12.5px;
+    color: var(--footer-text);
+    margin-top: 2px;
+  }
+
+  .footer-links{
+    display: flex;
+    gap: 22px;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .footer-links a{
+    color: var(--footer-text);
+    text-decoration: none;
+  }
+
+  .footer-bottom{
+    max-width: 1200px;
+    margin: 20px auto 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 12px;
+    color: rgba(191,216,202,0.7);
+  }
+
+  .footer-bottom b{ color: #FFFFFF; }
+
+  @media (max-width: 1200px){
+    .cards{ grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 900px){
+    .cards{ grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 620px){
+    .cards{ grid-template-columns: 1fr; }
+    .topnav{ padding: 16px 20px; }
+    .page{ padding: 36px 20px 60px; }
+    .nav-links{ display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topnav">
+    <div class="brand">
+      <span class="mark">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 2C13 6 10 9 10 14c0 3 1.5 5 1.5 5s-3 1-3 5c0 3 2.5 5 6 5 2 0 3-1 3-1s1 1 3 1c3.5 0 6-2 6-5 0-4-3-5-3-5s1.5-2 1.5-5c0-5-3-8-6-12z" stroke="#22A559" stroke-width="1.6" stroke-linejoin="round"/>
+          <circle cx="14" cy="16" r="1.1" fill="#22A559"/>
+          <circle cx="18" cy="19" r="1.1" fill="#22A559"/>
+          <circle cx="15" cy="21" r="1.1" fill="#22A559"/>
+        </svg>
+      </span>
+      <span>TourPilot</span>
+    </div>
+    <div class="nav-right">
+      <div class="nav-links">
+        <span>Inquiries</span>
+        <span>Offers</span>
+        <span class="active">Pricing</span>
+        <span>Saved</span>
+      </div>
+      <div class="nav-divider"></div>
+      <span class="nav-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </span>
+      <span class="nav-links"><span>Profile</span></span>
+      <span class="nav-links"><span>Log out</span></span>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <div class="page-header">
+      <h1>Choose the way you grow online</h1>
+    </div>
+
+    <div class="package-type">
+      <label class="package-type-label" for="packageType">Package <span>type</span></label>
+      <div class="select-wrap" id="packageSelect">
+        <button type="button" class="custom-select" aria-haspopup="listbox" aria-expanded="false" onclick="toggleSelect(this)">
+          <span class="custom-select-value">All</span>
+          <svg class="select-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <ul class="custom-options" role="listbox">
+          <li role="option" class="selected" data-value="All" onclick="selectOption(this)">All</li>
+          <li role="option" data-value="Website" onclick="selectOption(this)">Website</li>
+          <li role="option" data-value="Website + Full System" onclick="selectOption(this)">Website + Full System</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cards">
+
+      <!-- Package 1 -->
+      <div class="card featured" data-category="website">
+        <h2 class="card-name">Signature Website</h2>
+        <p class="card-tagline">A one-of-a-kind website, backed by the full management system.</p>
+
+        <div class="price-block">
+          <div class="price">LKR 20,000</div>
+          <div class="price-sub">one-time payment</div>
+        </div>
+
+        <a class="cta" href="#">Get Started</a>
+
+        <ul class="features">
+          <li>Custom, Unique website</li>
+          <li>Full ERP — free Month 1</li>
+          <li>Free hosting</li>
+          <li>Free subdomain</li>
+          <li>Free admin panel - 1 Month</li>
+          <li>Unlimited pages</li>
+          <li>Free SEO optimisation</li>
+          <li>Free maintenance - 1 month</li>
+        </ul>
+      </div>
+
+      <!-- Package 2 -->
+      <div class="card" data-category="system">
+        <h2 class="card-name">Starter</h2>
+        <p class="card-tagline">Build your own website, with full system access from day one.</p>
+
+        <div class="price-block">
+          <div class="price">LKR 5,000</div>
+          <div class="price-sub">per month — all features included</div>
+        </div>
+
+        <a class="cta" href="#">Get Started</a>
+
+        <ul class="features">
+          <li>7 day Free trial</li>
+          <li>Build your website</li>
+          <li>Free hosting</li>
+          <li>Free subdomain</li>
+          <li>Shareable website link</li>
+          <li>Unlimited usage time</li>
+          <li>Full ERP</li>
+          <li>All features included</li>
+        </ul>
+      </div>
+
+      <!-- Package Build Yourself -->
+      <div class="card" data-category="website,system">
+        <h2 class="card-name">Build Yourself</h2>
+        <p class="card-tagline">Pick only the features you need. You pick your plan, you choose your price.</p>
+
+        <div class="price-block">
+          <div class="price">Pay-per-use</div>
+          <div class="price-sub">choose features · billed monthly</div>
+        </div>
+
+        <a class="cta" href="#">Get Started</a>
+
+        <ul class="features">
+          <li>7 day Free trial</li>
+          <li>Free hosting</li>
+          <li>Free subdomain</li>
+          <li>Unlimited pages</li>
+        </ul>
+
+        <ul class="feature-picker" id="buildYourselfFeatures">
+          <li>
+            <label>
+              <input type="checkbox" data-feature="website-builder" data-price="1000" checked onchange="syncFeature(this)">
+              <span class="feat-name">Website builder</span>
+              <span class="feat-price">LKR 1,000</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="custom-subdomain" data-price="800" checked onchange="syncFeature(this)">
+              <span class="feat-name">Custom subdomain</span>
+              <span class="feat-price">LKR 800</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="booking" data-price="100" checked onchange="syncFeature(this)">
+              <span class="feat-name">Booking Management</span>
+              <span class="feat-price">LKR 100</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="negotiations" data-price="500" checked onchange="syncFeature(this)">
+              <span class="feat-name">Negotiations</span>
+              <span class="feat-price">LKR 500</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="admin-panel" data-price="500" checked onchange="syncFeature(this)">
+              <span class="feat-name">Admin Panel</span>
+              <span class="feat-price">LKR 500</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="driver-handling" data-price="300" onchange="syncFeature(this)">
+              <span class="feat-name">Driver handling</span>
+              <span class="feat-price">LKR 300</span>
+            </label>
+          </li>
+        </ul>
+
+        <button class="toggle-btn" onclick="openMoreFeaturesModal()">
+          <span class="label">View more features</span>
+        </button>
+
+        <div class="monthly-total">
+          <span class="monthly-total-label">Monthly total</span>
+          <span class="monthly-total-value" id="buildYourselfTotal">LKR 0</span>
+        </div>
+      </div>
+
+      <!-- Package 3 -->
+      <div class="card" data-category="system">
+        <h2 class="card-name">Pay-As-You-Go Lite</h2>
+        <p class="card-tagline">Build your own website + Full ERP platform, no cost to start.</p>
+
+        <div class="price-block">
+          <div class="price">Free to start</div>
+          <div class="price-sub">no monthly fee, no setup cost</div>
+        </div>
+
+        <a class="cta" href="#">Get Started</a>
+
+        <ul class="features">
+          <li>7 day Free trial</li>
+          <li>Build your website</li>
+          <li>Full ERP</li>
+          <li>All features free</li>
+          <li>LKR 250 per login</li>
+          <li>5% transaction fee</li>
+          <li>Earnings &amp; income view</li>
+          <li>Easy wallet top-ups</li>
+          <li>Free tourist/admin login</li>
+        </ul>
+
+        <button class="toggle-btn" onclick="openFeaturesModal('Pay-As-You-Go Lite')">
+          <span class="label">View included features</span>
+        </button>
+      </div>
+
+      <!-- Package 4 -->
+      <div class="card" data-category="system">
+        <h2 class="card-name">Pay-As-You-Go Plus</h2>
+        <p class="card-tagline">Build your own website + Full ERP platform, with a lower login cost.</p>
+
+        <div class="price-block">
+          <div class="price">Free to start</div>
+          <div class="price-sub">no monthly fee, no setup cost</div>
+        </div>
+
+        <a class="cta" href="#">Get Started</a>
+
+        <ul class="features">
+          <li>7 day Free trial</li>
+          <li>Build your website</li>
+          <li>Full ERP</li>
+          <li>All features free</li>
+          <li>LKR 150 per login</li>
+          <li>10% transaction fee</li>
+          <li>Earnings &amp; income view</li>
+          <li>Easy wallet top-ups</li>
+          <li>Free tourist/admin login</li>
+        </ul>
+
+        <button class="toggle-btn" onclick="openFeaturesModal('Pay-As-You-Go Plus')">
+          <span class="label">View included features</span>
+        </button>
+      </div>
+
+    </div>
+
+    <div class="terms">
+      <div class="terms-title">Terms &amp; Conditions</div>
+      <p>SriLankaTourPilot has the right to change the packages when needed, with 6 months' notice.</p>
+    </div>
+
+  </div>
+
+  <div class="modal-overlay" id="featuresModal" onclick="backdropClose(event)">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="featuresModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="featuresModalTitle">All Features Included</h3>
+          <div class="modal-subtitle" id="featuresModalPackage"></div>
+        </div>
+        <button type="button" class="modal-close" aria-label="Close" onclick="closeFeaturesModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="feature-pricing">
+          <details class="feature-row">
+            <summary><span>Influencer Connections</span><span>✓</span></summary>
+            <ul class="detail-list">
+              <li>Referral codes &amp; share links — promote agency tours, earn commission on referred bookings</li>
+              <li>Commission on tours — % of tour base price (default agency rate or negotiated rate)</li>
+              <li>Commission negotiation — request/agree commission % with agencies (partners tab)</li>
+              <li>Influencer login fee — LKR 25 per login (wallet debit)</li>
+            </ul>
+          </details>
+
+          <details class="feature-row">
+            <summary><span>Booking (Direct Package Booking)</span><span>✓</span></summary>
+            <ul class="detail-list">
+              <li>Ready-made tour packages — priced tours published on the storefront (USD shown to travelers)</li>
+              <li>Traveler purchase flow — inquiry → proposal → accept (no in-app card payment yet)</li>
+              <li>Offer registrations — travelers join promo campaigns (screenshot/terms flow, not a paid checkout)</li>
+            </ul>
+          </details>
+
+          <details class="feature-row">
+            <summary><span>Negotiations</span><span>✓</span></summary>
+            <ul class="detail-list">
+              <li>Custom tour proposals — agency builds itineraries with priced stops and sends quotes to travelers</li>
+              <li>Negotiated bookings — traveler accepts a proposal → becomes a confirmed booking (payment off-platform today)</li>
+              <li>Commission negotiation — also a back-and-forth agree-on-a-number flow between agency and influencer</li>
+            </ul>
+          </details>
+
+          <details class="feature-row">
+            <summary><span>Display Tab (Customise Display Page)</span><span>✓</span></summary>
+            <ul class="detail-list">
+              <li>Storefront sales funnel — public agency page: hero, packages, transport, gallery, reviews</li>
+              <li>Influencer storefront — influencer's own page to sell/promote tours ("share as mine" style)</li>
+              <li>Loyalty / promo offers — discounted price or free-tour style campaigns on the storefront</li>
+              <li>Admin platform offers — site-wide promotional campaigns (acquisition-focused, not direct checkout)</li>
+            </ul>
+          </details>
+
+          <details class="feature-row">
+            <summary><span>Driver handling</span><span>✓</span></summary>
+            <ul class="detail-list">
+              <li>Trip assignments — driver assigned to agency bookings</li>
+              <li>Earnings view — wallet balance + estimated weekly trip income</li>
+              <li>Driver login fee — LKR 25 per login (wallet debit)</li>
+            </ul>
+          </details>
+
+          <details class="feature-row">
+            <summary><span>Wallet &amp; logins</span><span>✓</span></summary>
+            <ul class="detail-list">
+              <li>Wallet top-ups — users add funds to platform wallet</li>
+              <li>Tourist &amp; Admin login — free, no fee</li>
+            </ul>
+          </details>
+
+          <details class="feature-row">
+            <summary><span>Marketing strategies</span><span>✓</span></summary>
+            <ul class="detail-list">
+              <li>Proven marketing strategies specialised for the tourism industry</li>
+              <li>Individual branding attention</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="moreFeaturesModal" onclick="backdropCloseMore(event)">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="moreFeaturesTitle">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="moreFeaturesTitle">More features</h3>
+          <div class="modal-subtitle">Select extras for your Build Yourself plan</div>
+        </div>
+        <button type="button" class="modal-close" aria-label="Close" onclick="closeMoreFeaturesModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <ul class="feature-picker" id="buildYourselfMoreFeatures">
+          <li>
+            <label>
+              <input type="checkbox" data-feature="website-builder" data-price="1000" checked onchange="syncFeature(this)">
+              <span class="feat-name">Website builder</span>
+              <span class="feat-price">LKR 1,000</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="custom-subdomain" data-price="800" checked onchange="syncFeature(this)">
+              <span class="feat-name">Custom subdomain</span>
+              <span class="feat-price">LKR 800</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="booking" data-price="100" checked onchange="syncFeature(this)">
+              <span class="feat-name">Booking Management</span>
+              <span class="feat-price">LKR 100</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="negotiations" data-price="500" checked onchange="syncFeature(this)">
+              <span class="feat-name">Negotiations</span>
+              <span class="feat-price">LKR 500</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="admin-panel" data-price="500" checked onchange="syncFeature(this)">
+              <span class="feat-name">Admin Panel</span>
+              <span class="feat-price">LKR 500</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="driver-handling" data-price="300" onchange="syncFeature(this)">
+              <span class="feat-name">Driver handling</span>
+              <span class="feat-price">LKR 300</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="influencer" data-price="2000" onchange="syncFeature(this)">
+              <span class="feat-name">Influencer Connections</span>
+              <span class="feat-price">LKR 2,000</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="display-tab" data-price="500" onchange="syncFeature(this)">
+              <span class="feat-name">Display Tab (Customise Display Page)</span>
+              <span class="feat-price">LKR 500</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="wallet" data-price="250" onchange="syncFeature(this)">
+              <span class="feat-name">Wallet top-ups &amp; earnings view</span>
+              <span class="feat-price">LKR 250</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="analytics" data-price="750" onchange="syncFeature(this)">
+              <span class="feat-name">Analytics dashboard</span>
+              <span class="feat-price">LKR 750</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="custom-domain" data-price="400" onchange="syncFeature(this)">
+              <span class="feat-name">Custom domain support</span>
+              <span class="feat-price">LKR 400</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="seo" data-price="350" onchange="syncFeature(this)">
+              <span class="feat-name">SEO tools</span>
+              <span class="feat-price">LKR 350</span>
+            </label>
+          </li>
+          <li>
+            <label>
+              <input type="checkbox" data-feature="priority-support" data-price="600" onchange="syncFeature(this)">
+              <span class="feat-name">Priority support</span>
+              <span class="feat-price">LKR 600</span>
+            </label>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <div class="monthly-total">
+          <span class="monthly-total-label">Monthly total</span>
+          <span class="monthly-total-value" id="buildYourselfModalTotal">LKR 0</span>
+        </div>
+        <button type="button" class="modal-ok" onclick="closeMoreFeaturesModal()">Select</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <span class="mark">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+            <path d="M16 2C13 6 10 9 10 14c0 3 1.5 5 1.5 5s-3 1-3 5c0 3 2.5 5 6 5 2 0 3-1 3-1s1 1 3 1c3.5 0 6-2 6-5 0-4-3-5-3-5s1.5-2 1.5-5c0-5-3-8-6-12z" stroke="#22A559" stroke-width="1.6" stroke-linejoin="round"/>
+            <circle cx="14" cy="16" r="1.1" fill="#22A559"/>
+            <circle cx="18" cy="19" r="1.1" fill="#22A559"/>
+            <circle cx="15" cy="21" r="1.1" fill="#22A559"/>
+          </svg>
+        </span>
+        <div>
+          <div class="footer-brand-name">Tour<span class="pilot">Pilot</span></div>
+          <div class="footer-tagline">Sri Lanka travel, made clear</div>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="#">Offers</a>
+        <a href="#">Login</a>
+        <a href="#">IYYO</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2026 TourPilot &nbsp;·&nbsp; Built by <b>IYYO Solutions</b>
+    </div>
+  </div>
+
+  <script>
+    function openFeaturesModal(packageName){
+      const modal = document.getElementById('featuresModal');
+      document.getElementById('featuresModalPackage').textContent = packageName;
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeFeaturesModal(){
+      const modal = document.getElementById('featuresModal');
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+      modal.querySelectorAll('details').forEach(function(d){ d.open = false; });
+    }
+
+    function backdropClose(e){
+      if(e.target === e.currentTarget) closeFeaturesModal();
+    }
+
+    function openMoreFeaturesModal(){
+      updateBuildTotal();
+      document.getElementById('moreFeaturesModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMoreFeaturesModal(){
+      document.getElementById('moreFeaturesModal').classList.remove('open');
+      document.body.style.overflow = '';
+      updateBuildTotal();
+    }
+
+    function backdropCloseMore(e){
+      if(e.target === e.currentTarget) closeMoreFeaturesModal();
+    }
+
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape'){
+        closeFeaturesModal();
+        closeMoreFeaturesModal();
+      }
+    });
+
+    function toggleBreakdown(id, btn){
+      const panel = document.getElementById(id);
+      const isOpen = panel.classList.toggle('open');
+      btn.classList.toggle('open', isOpen);
+      const word = btn.dataset.label || 'feature pricing';
+      btn.querySelector('.label').textContent = (isOpen ? 'Hide ' : 'View ') + word;
+    }
+
+    function toggleSelect(btn){
+      const wrap = btn.closest('.select-wrap');
+      const isOpen = wrap.classList.toggle('open');
+      btn.setAttribute('aria-expanded', isOpen);
+    }
+
+    function selectOption(li){
+      const wrap = li.closest('.select-wrap');
+      wrap.querySelectorAll('.custom-options li').forEach(function(opt){
+        opt.classList.remove('selected');
+      });
+      li.classList.add('selected');
+      wrap.querySelector('.custom-select-value').textContent = li.textContent;
+      wrap.classList.remove('open');
+      wrap.querySelector('.custom-select').setAttribute('aria-expanded', 'false');
+      filterPackages(li.dataset.value);
+    }
+
+    document.addEventListener('click', function(e){
+      const wrap = document.getElementById('packageSelect');
+      if(wrap && !wrap.contains(e.target)){
+        wrap.classList.remove('open');
+        wrap.querySelector('.custom-select').setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    function filterPackages(value){
+      const cards = document.querySelectorAll('.cards .card');
+      cards.forEach(function(card){
+        const categories = (card.dataset.category || '').split(',');
+        let show = true;
+        if(value === 'Website'){
+          show = categories.includes('website');
+        } else if(value === 'Website + Full System'){
+          show = categories.includes('system');
+        }
+        card.style.display = show ? '' : 'none';
+      });
+    }
+
+    function syncFeature(source){
+      const key = source.dataset.feature;
+      if(key){
+        document.querySelectorAll('input[data-feature="' + key + '"]').forEach(function(box){
+          box.checked = source.checked;
+        });
+      }
+      updateBuildTotal();
+    }
+
+    function updateBuildTotal(){
+      const seen = {};
+      let total = 0;
+      document.querySelectorAll('#buildYourselfFeatures input[type="checkbox"], #buildYourselfMoreFeatures input[type="checkbox"]').forEach(function(box){
+        const key = box.dataset.feature || box.dataset.price + box.nextElementSibling?.textContent;
+        if(seen[key]) return;
+        seen[key] = true;
+        if(box.checked) total += Number(box.dataset.price) || 0;
+      });
+      const formatted = 'LKR ' + total.toLocaleString('en-LK');
+      document.getElementById('buildYourselfTotal').textContent = formatted;
+      const modalTotal = document.getElementById('buildYourselfModalTotal');
+      if(modalTotal) modalTotal.textContent = formatted;
+    }
+
+    updateBuildTotal();
+  </script>
+
+</body>
+</html>

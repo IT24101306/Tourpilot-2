@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  DEFAULT_SUPPORT_CONTENT,
+  type SupportContent,
+} from "@tourpilot/shared";
 import { DashboardModal } from "../DashboardModal";
-import { SUPPORT_AGENTS } from "../../lib/supportAgents";
+import { api } from "../../api/client";
 
 type Props = {
   open: boolean;
@@ -8,16 +12,33 @@ type Props = {
 };
 
 export function SupportAgentsModal({ open, onClose }: Props) {
+  const [content, setContent] = useState<SupportContent>(DEFAULT_SUPPORT_CONTENT);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    api<SupportContent>("/support")
+      .then((data) => {
+        if (!cancelled) setContent(data);
+      })
+      .catch(() => {
+        if (!cancelled) setContent(DEFAULT_SUPPORT_CONTENT);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   return (
     <DashboardModal
       open={open}
-      title="TourPilot support"
-      subtitle="Choose an agent for simple help, hourly consulting, or full dashboard training. Prices in USD."
+      title={content.title}
+      subtitle={content.subtitle}
       onClose={onClose}
       dialogClassName="support-agents-dialog"
     >
       <ul className="support-agents-list">
-        {SUPPORT_AGENTS.map((agent) => (
+        {content.agents.map((agent) => (
           <li key={agent.id} className="support-agent-card">
             <div className="support-agent-card__head">
               <div>
@@ -34,9 +55,7 @@ export function SupportAgentsModal({ open, onClose }: Props) {
           </li>
         ))}
       </ul>
-      <p className="support-agents-foot muted">
-        Available weekdays 9:00–18:00 (SLST). Mention your agency or partner account when you call.
-      </p>
+      <p className="support-agents-foot muted">{content.footer}</p>
     </DashboardModal>
   );
 }

@@ -85,6 +85,25 @@ enum CommissionStatus {
   CANCELLED
 }
 
+enum VoucherDiscountType {
+  FIXED_LKR
+  PERCENT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 enum InfluencerCommissionRequestStatus {
   PENDING
   NEGOTIATING
@@ -131,6 +150,8 @@ model User {
   loginFeeLkr          Decimal?              @db.Decimal(12, 2)
   passwordHash         String?               @db.VarChar(64)
   isActive             Boolean               @default(true)
+  /** Last authenticated API activity — used for optional inactivity session timeout. */
+  lastActiveAt         DateTime?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   agency               Agency?
@@ -147,6 +168,7 @@ model User {
   referralAttributions ReferralAttribution[]
   agencyDriver              AgencyDriver?
   inquiryMessages           InquiryMessage[]
+  inquiryChatPresence       InquiryChatPresence[]
   authoredInquiryResponses  InquiryResponse[] @relation("InquiryResponseAuthor")
   notifications             Notification[]
 }
@@ -224,6 +246,10 @@ model InfluencerProfile {
   bio                String?                       @db.Text
   socialLinks        Json?
   display            Json?
+  /** Custom domain — available to influencers by default (no feature flag). */
+  customDomain           String?             @unique @db.VarChar(255)
+  customDomainStatus     CustomDomainStatus  @default(NONE)
+  customDomainVerifiedAt DateTime?
   codes              ReferralCode[]
   commissions        Commission[]
   commissionRequests InfluencerCommissionRequest[]
@@ -277,6 +303,17 @@ model Agency {
   featureNegotiationsBookings   Boolean @default(true)
   /** Custom domain (Shopify-style) — off by default, admin enables per agency. */
   featureCustomDomain           Boolean @default(false)
+  /** External/headless custom website against TourPilot APIs — off by default. */
+  featureExternalStorefront     Boolean @default(false)
+  /**
+   * When on, agency owner/staff sessions expire after inactivity (platform default
+   * or sessionInactivityMinutes). Re-login charges the login fee again.
+   */
+  featureSessionInactivityTimeout Boolean @default(false)
+  /** @deprecated Prefer sessionInactivityMinutes. Kept for older rows (value = hours). */
+  sessionInactivityHours        Int?
+  /** Minutes of inactivity before forced re-login. Null = use platform default. */
+  sessionInactivityMinutes      Int?
   customDomain           String?             @unique @db.VarChar(255)
   customDomainStatus     CustomDomainStatus  @default(NONE)
   customDomainVerifiedAt DateTime?
@@ -485,9 +522,11 @@ model Inquiry {
   responses           InquiryResponse[]
   proposal            InquiryProposal?
   messages            InquiryMessage[]
+  chatPresence        InquiryChatPresence[]
   statusHistory       InquiryStatusLog[]
   commission          Commission?
   driverAssignments   DriverAssignment[]
+  invoice             Invoice?
 
   @@index([handlerInfluencerId])
 }
@@ -504,6 +543,21 @@ model InquiryMessage {
   createdAt DateTime           @default(now())
 
   @@index([inquiryId, createdAt])
+}
+
+/** Per-user read cursor + typing heartbeat for WhatsApp-style chat. */
+model InquiryChatPresence {
+  id          String    @id @default(cuid()) @db.VarChar(25)
+  inquiryId   String    @db.VarChar(25)
+  inquiry     Inquiry   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  userId      String    @db.VarChar(25)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt  DateTime  @default(now())
+  typingUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([inquiryId, userId])
+  @@index([inquiryId])
 }
 
 model InquiryProposal {
@@ -790,7 +844,107 @@ model PlatformSettings {
   emailFrom          String?  @db.VarChar(255)
   walletTopupMinLkr  Int      @default(100)
   walletTopupMaxLkr  Int?
+  /** @deprecated Prefer sessionInactivityMinutes. Older installs stored hours here. */
+  sessionInactivityHours Int  @default(3)
+  /** Minutes of inactivity before forced re-login (preferred). Null = derive from hours. */
+  sessionInactivityMinutes Int?
   /** Optional subject/body overrides keyed by template id. */
   emailTemplates     Json?
+  /** Support agents modal copy (title, subtitle, footer, agents[]). */
+  supportContent     Json?
   updatedAt          DateTime @updatedAt
+}
+
+/** Admin-created discount codes redeemable on tourist invoices. */
+model Voucher {
+  id              String              @id @default(cuid()) @db.VarChar(25)
+  code            String              @unique @db.VarChar(64)
+  description     String?             @db.Text
+  discountType    VoucherDiscountType
+  discountValue   Decimal             @db.Decimal(12, 2)
+  maxUses         Int?
+  usedCount       Int                 @default(0)
+  minInvoiceLkr   Decimal?            @db.Decimal(12, 2)
+  maxDiscountLkr  Decimal?            @db.Decimal(12, 2)
+  validFrom       DateTime?
+  validUntil      DateTime?
+  isActive        Boolean             @default(true)
+  createdById     String?             @db.VarChar(25)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  redemptions     VoucherRedemption[]
+  invoices        Invoice[]
+}
+
+model Invoice {
+  id                  String            @id @default(cuid()) @db.VarChar(25)
+  inquiryId           String            @unique @db.VarChar(25)
+  inquiry             Inquiry           @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  invoiceNumber       String            @unique @db.VarChar(40)
+  status              InvoiceStatus     @default(DRAFT)
+  subtotalLkr         Decimal           @db.Decimal(12, 2)
+  voucherId           String?           @db.VarChar(25)
+  voucher             Voucher?          @relation(fields: [voucherId], references: [id], onDelete: SetNull)
+  voucherCode         String?           @db.VarChar(64)
+  voucherDiscountLkr  Decimal           @default(0) @db.Decimal(12, 2)
+  totalLkr            Decimal           @db.Decimal(12, 2)
+  currency            String            @default("LKR") @db.VarChar(8)
+  notes               String?           @db.Text
+  sentAt              DateTime?
+  paidAt              DateTime?
+  createdById         String            @db.VarChar(25)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  lineItems           InvoiceLineItem[]
+  redemptions         VoucherRedemption[]
+  payments            Payment[]
+
+  @@index([status, createdAt])
+}
+
+model InvoiceLineItem {
+  id            String  @id @default(cuid()) @db.VarChar(25)
+  invoiceId     String  @db.VarChar(25)
+  invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  label         String  @db.VarChar(255)
+  quantity      Int     @default(1)
+  unitPriceLkr  Decimal @db.Decimal(12, 2)
+  amountLkr     Decimal @db.Decimal(12, 2)
+  sortOrder     Int     @default(0)
+
+  @@index([invoiceId])
+}
+
+model VoucherRedemption {
+  id           String   @id @default(cuid()) @db.VarChar(25)
+  voucherId    String   @db.VarChar(25)
+  voucher      Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  invoiceId    String   @db.VarChar(25)
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  touristId    String   @db.VarChar(25)
+  discountLkr  Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+
+  @@unique([invoiceId])
+  @@index([voucherId])
+  @@index([touristId])
+}
+
+model Payment {
+  id            String        @id @default(cuid()) @db.VarChar(25)
+  invoiceId     String        @db.VarChar(25)
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amountLkr     Decimal       @db.Decimal(12, 2)
+  currency      String        @default("LKR") @db.VarChar(8)
+  status        PaymentStatus @default(PENDING)
+  provider      String        @default("payhere") @db.VarChar(32)
+  providerRef   String?       @db.VarChar(128)
+  checkoutUrl   String?       @db.Text
+  metadata      Json?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([invoiceId, createdAt])
+  @@index([providerRef])
 }

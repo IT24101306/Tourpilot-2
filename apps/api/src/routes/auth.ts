@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { UserRole } from "@prisma/client";
 import { dashboardPathForRole } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
-import { authRequired, signAccessToken } from "../middleware/auth.js";
+import { authRequired, signAccessToken, touchUserActivity } from "../middleware/auth.js";
 import { assertLoginTopupChallenge, createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
 import { topUpWallet } from "../services/wallet.js";
 import { verifyPassword } from "../services/password.js";
@@ -17,6 +17,7 @@ import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
 import { serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 import { buildAgencyKycRecord, parseAgencyKyc } from "../lib/agencyKyc.js";
 import { asJson } from "../utils/json.js";
+import { notifyWelcome } from "../services/notifications.js";
 
 export const authRouter = Router();
 
@@ -27,12 +28,15 @@ authRouter.post("/register-request", async (req, res, next) => {
     const body = z
       .object({
         name: z.string().min(2),
+        email: z.string().email("Enter a valid email address"),
         phone: z.string(),
         role: roleSchema,
         agencyName: z.string().optional(),
         agencyKyc: z.record(z.unknown()).optional(),
       })
       .parse(req.body);
+
+    const email = body.email.trim().toLowerCase();
 
     if (body.role === "AGENCY") {
       if (!body.agencyName?.trim()) {
@@ -69,6 +73,7 @@ authRouter.post("/register-request", async (req, res, next) => {
 
     const result = await createOtpChallenge(phone, "register", {
       name: body.name,
+      email,
       role: body.role,
       agencyName: body.agencyName,
       agencyKyc: body.role === "AGENCY" ? parseAgencyKyc(body.agencyKyc) : undefined,
@@ -99,13 +104,21 @@ authRouter.post("/verify-registration", async (req, res, next) => {
     const payload = await verifyOtpChallenge(body.challengeId, phone, body.otp, "register");
 
     const name = String(payload.name || "User");
+    const emailRaw = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
+    const email = emailRaw.includes("@") ? emailRaw : null;
     const role = payload.role as UserRole;
     const agencyName = String(payload.agencyName || `${name} Tours`);
     const agencyKycRaw = payload.agencyKyc;
 
+    if (!email) {
+      return res.status(400).json({
+        error: "Email is required. Please register again and include your email.",
+      });
+    }
+
     const user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
-        data: { phone, name, role },
+        data: { phone, name, role, email },
       });
 
       if (role === "AGENCY") {
@@ -208,7 +221,15 @@ authRouter.post("/verify-registration", async (req, res, next) => {
       return created;
     });
 
+    void notifyWelcome({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    }).catch((err) => console.error("[welcome email]", err));
+
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
+    await touchUserActivity(user.id);
 
     res.status(201).json({
       token,
@@ -329,6 +350,7 @@ authRouter.post("/login-password", async (req, res, next) => {
     }
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
+    await touchUserActivity(user.id);
 
     res.json({
       token,
@@ -367,6 +389,7 @@ authRouter.post("/verify-otp", async (req, res, next) => {
     const feeResult = await chargeLoginFee(user.id, user.role);
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
+    await touchUserActivity(user.id);
     const refreshed = await prisma.user.findUniqueOrThrow({
       where: { id: user.id },
       include: {

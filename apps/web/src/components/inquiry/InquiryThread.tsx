@@ -5,45 +5,86 @@ export type ThreadMessage = {
   action: string | null;
   createdAt: string;
   author: { id: string; name: string; role: string };
+  /** For own messages: false = delivered, true = seen. null = not applicable. */
+  seen?: boolean | null;
 };
 
 type Props = {
   messages: ThreadMessage[];
   compact?: boolean;
   hideTitle?: boolean;
+  /** Current user id — used to align own bubbles and show ticks. */
+  currentUserId?: string | null;
 };
 
-export function InquiryThread({ messages, compact, hideTitle }: Props) {
+export function InquiryThread({ messages, compact, hideTitle, currentUserId }: Props) {
   if (!messages.length) return null;
 
   return (
     <div className={`inquiry-thread${compact ? " inquiry-thread-compact" : ""}`}>
       {!hideTitle && <h4 className="inquiry-thread-title">Conversation</h4>}
       <ul className="inquiry-thread-list">
-        {messages.map((msg) => (
-          <li
-            key={msg.id}
-            className={`inquiry-thread-item inquiry-thread-item--${msg.kind.toLowerCase()}`}
-          >
-            <div className="inquiry-thread-item-head">
-              <strong>{displayAuthor(msg)}</strong>
-              {msg.kind === "ADMIN" && (
-                <span className="inquiry-thread-role-badge">Platform</span>
-              )}
-              {msg.kind === "INFLUENCER" && (
-                <span className="inquiry-thread-role-badge">Partner</span>
-              )}
-              <span className="muted">{formatWhen(msg.createdAt)}</span>
-              {msg.action && (
-                <span className={`inquiry-thread-badge inquiry-thread-badge--${badgeClass(msg.action)}`}>
-                  {actionLabel(msg.action)}
+        {messages.map((msg) => {
+          const mine = Boolean(currentUserId && msg.author.id === currentUserId);
+          return (
+            <li
+              key={msg.id}
+              className={[
+                "inquiry-thread-item",
+                `inquiry-thread-item--${msg.kind.toLowerCase()}`,
+                mine ? "inquiry-thread-item--mine" : "inquiry-thread-item--theirs",
+              ].join(" ")}
+            >
+              <div className="inquiry-thread-item-head">
+                <strong>{displayAuthor(msg)}</strong>
+                {msg.kind === "ADMIN" && (
+                  <span className="inquiry-thread-role-badge">Platform</span>
+                )}
+                {msg.kind === "INFLUENCER" && (
+                  <span className="inquiry-thread-role-badge">Partner</span>
+                )}
+                <span className="muted">{formatWhen(msg.createdAt)}</span>
+                {msg.action && msg.action !== "CHAT_MESSAGE" && (
+                  <span className={`inquiry-thread-badge inquiry-thread-badge--${badgeClass(msg.action)}`}>
+                    {actionLabel(msg.action)}
+                  </span>
+                )}
+              </div>
+              <p className="inquiry-thread-body">{msg.body}</p>
+              {mine && msg.seen != null && (
+                <span
+                  className={`inquiry-thread-ticks${msg.seen ? " inquiry-thread-ticks--seen" : ""}`}
+                  aria-label={msg.seen ? "Seen" : "Delivered"}
+                  title={msg.seen ? "Seen" : "Delivered"}
+                >
+                  {msg.seen ? "✓✓" : "✓"}
                 </span>
               )}
-            </div>
-            <p className="inquiry-thread-body">{msg.body}</p>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
+    </div>
+  );
+}
+
+export function TypingIndicator({ names }: { names: string[] }) {
+  if (!names.length) return null;
+  const label =
+    names.length === 1
+      ? `${names[0]} is typing`
+      : names.length === 2
+        ? `${names[0]} and ${names[1]} are typing`
+        : "Several people are typing";
+
+  return (
+    <div className="chat-typing" aria-live="polite">
+      <span className="chat-typing__dots" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="chat-typing__label">{label}</span>
     </div>
   );
 }
@@ -62,6 +103,7 @@ function actionLabel(action: string) {
   if (action === "PROPOSAL_UPDATED") return "Proposal updated";
   if (action === "ACCEPTED") return "Accepted";
   if (action === "DECLINED") return "Declined";
+  if (action === "INVOICE_SENT") return "Invoice sent";
   return action.replace(/_/g, " ").toLowerCase();
 }
 

@@ -25,13 +25,16 @@ export function DashboardModal({
     lockBodyScroll();
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape") return;
+      // Capture phase so the trip-room drawer (also listening on window) does not close first.
+      event.stopImmediatePropagation();
+      onClose();
     }
 
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
     return () => {
       unlockBodyScroll();
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, true);
     };
   }, [open, onClose]);
 

@@ -49,6 +49,9 @@ export type AgencyFeatures = {
   customInquiries: boolean;
   negotiationsBookings: boolean;
   customDomain: boolean;
+  externalStorefront: boolean;
+  /** Monetized package: idle session expires and re-login fee applies. */
+  sessionInactivityTimeout: boolean;
 };
 
 export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
@@ -61,6 +64,8 @@ export const DEFAULT_AGENCY_FEATURES: AgencyFeatures = {
   customInquiries: true,
   negotiationsBookings: true,
   customDomain: false,
+  externalStorefront: false,
+  sessionInactivityTimeout: false,
 };
 
 export function agencyFeaturesOf(user: AuthUser | null | undefined): AgencyFeatures {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { formatSessionInactivity } from "@tourpilot/shared";
 import { api } from "../../api/client";
 import { useAuth, type AgencyFeatures, DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
@@ -91,8 +92,12 @@ export function AdminAgenciesPage() {
     }
   }
 
-  function saveFeatures(features: AgencyFeatures) {
+  function saveFeatures(payload: {
+    features: AgencyFeatures;
+    sessionInactivityMinutes: number | null;
+  }) {
     if (!token || !featuresAgency) return;
+    const { features, sessionInactivityMinutes } = payload;
     requestConfirm({
       title: "Update agency features?",
       description: "The agency dashboard will show or hide these modules.",
@@ -111,6 +116,17 @@ export function AdminAgenciesPage() {
         { label: "Support", value: features.support ? "On" : "Off" },
         { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
         { label: "Custom domain", value: features.customDomain ? "On" : "Off" },
+        { label: "External website", value: features.externalStorefront ? "On" : "Off" },
+        {
+          label: "Session inactivity",
+          value: features.sessionInactivityTimeout
+            ? `On (${
+                sessionInactivityMinutes != null
+                  ? formatSessionInactivity(sessionInactivityMinutes)
+                  : "platform default"
+              })`
+            : "Off",
+        },
       ],
       onConfirm: async () => {
         setSavingFeatures(true);
@@ -118,7 +134,7 @@ export function AdminAgenciesPage() {
           await api(`/admin/agencies/${featuresAgency.id}/features`, {
             method: "PATCH",
             token,
-            body: JSON.stringify(features),
+            body: JSON.stringify({ ...features, sessionInactivityMinutes }),
           });
           setMsg(`Features updated for ${featuresAgency.name}.`);
           setFeaturesAgency(null);
@@ -285,6 +301,12 @@ export function AdminAgenciesPage() {
           ...DEFAULT_AGENCY_FEATURES,
           ...(featuresAgency?.features ?? {}),
         }}
+        initialSessionInactivityMinutes={
+          featuresAgency?.sessionInactivityMinutes ??
+          (featuresAgency?.sessionInactivityHours != null
+            ? featuresAgency.sessionInactivityHours * 60
+            : null)
+        }
         onClose={() => setFeaturesAgency(null)}
         onSave={saveFeatures}
       />

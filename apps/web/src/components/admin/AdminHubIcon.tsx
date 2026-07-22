@@ -10,7 +10,8 @@ type IconId =
   | "offer"
   | "review"
   | "driver"
-  | "cms";
+  | "cms"
+  | "settings";
 
 export function AdminHubIcon({ icon }: { icon: IconId }) {
   const paths: Record<IconId, ReactNode> = {
@@ -105,6 +106,15 @@ export function AdminHubIcon({ icon }: { icon: IconId }) {
     cms: (
       <path
         d="M6 5h12v14H6zM9 9h6M9 13h4"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        fill="none"
+        strokeLinecap="round"
+      />
+    ),
+    settings: (
+      <path
+        d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM4.5 12h2M17.5 12h2M12 4.5v2M12 17.5v2M6.6 6.6l1.4 1.4M16 16l1.4 1.4M6.6 17.4L8 16M16 8l1.4-1.4"
         stroke="currentColor"
         strokeWidth="1.75"
         fill="none"

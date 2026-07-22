@@ -43,7 +43,41 @@ export const config = {
     /** Hosts owned by the platform itself (never treated as agency custom domains). */
     platformDomains: platformDomains(),
   },
+  /**
+   * Browser origins allowed to call the API (CORS).
+   * Empty list = reflect any origin (dev-friendly default).
+   * In production set CORS_ORIGINS and/or HEADLESS_CORS_ORIGINS.
+   */
+  corsOrigins: corsOrigins(),
+  payhere: {
+    merchantId: process.env.PAYHERE_MERCHANT_ID?.trim() || "",
+    merchantSecret: process.env.PAYHERE_MERCHANT_SECRET?.trim() || "",
+    /** Sandbox checkout unless PAYHERE_SANDBOX=false */
+    sandbox: process.env.PAYHERE_SANDBOX !== "false",
+  },
 };
+
+function corsOrigins(): string[] {
+  const set = new Set<string>();
+  const add = (raw: string | undefined | null) => {
+    for (const part of (raw || "").split(",")) {
+      const o = part.trim().replace(/\/$/, "");
+      if (o) set.add(o);
+    }
+  };
+  add(process.env.CORS_ORIGINS);
+  add(process.env.HEADLESS_CORS_ORIGINS);
+  try {
+    const web = (process.env.WEB_APP_URL || "").trim().replace(/\/$/, "");
+    if (web) set.add(web);
+  } catch {
+    /* ignore */
+  }
+  // Local Vite defaults
+  set.add("http://localhost:5173");
+  set.add("http://127.0.0.1:5173");
+  return Array.from(set);
+}
 
 /** Platform-owned hostnames, from PLATFORM_DOMAINS plus the WEB_APP_URL host. */
 function platformDomains(): string[] {

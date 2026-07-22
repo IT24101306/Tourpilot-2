@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TourPilot headless starter</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <p class="badge">TourPilot headless starter</p>
+      <h1 id="agency-name">Loading…</h1>
+      <p id="agency-tagline" class="muted"></p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Tours</h2>
+        <div id="tours" class="tours muted">Loading tours…</div>
+      </section>
+
+      <section class="card">
+        <h2>Traveler login (OTP)</h2>
+        <p class="muted">
+          Uses TourPilot <code>/auth/login-start</code> and <code>/auth/verify-otp</code>.
+          On DEV, OTP may appear in the API response.
+        </p>
+        <label>
+          Phone (E.164)
+          <input id="phone" placeholder="+94771234567" autocomplete="tel" />
+        </label>
+        <div class="row">
+          <button type="button" id="btn-otp">Send OTP</button>
+        </div>
+        <label>
+          OTP
+          <input id="otp" placeholder="6-digit code" maxlength="6" />
+        </label>
+        <div class="row">
+          <button type="button" id="btn-verify">Verify &amp; store token</button>
+          <button type="button" class="secondary" id="btn-logout">Clear token</button>
+        </div>
+        <p id="auth-state" class="muted">Not signed in</p>
+      </section>
+
+      <section class="card">
+        <h2>Inquire about a tour</h2>
+        <label>
+          Tour
+          <select id="tour-select"></select>
+        </label>
+        <label>
+          Email (required)
+          <input id="email" type="email" placeholder="you@example.com" />
+        </label>
+        <label>
+          Guests (pax)
+          <input id="pax" type="number" min="1" value="2" />
+        </label>
+        <label>
+          Message
+          <textarea id="message" placeholder="Dates, preferences…"></textarea>
+        </label>
+        <div class="row">
+          <button type="button" id="btn-inquire">Send inquiry</button>
+        </div>
+        <p id="inquiry-result" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>Status</h2>
+        <pre id="status" class="muted"></pre>
+      </section>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

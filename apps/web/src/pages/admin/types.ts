@@ -31,7 +31,17 @@ export type AdminAgency = {
     walletTopup: boolean;
     offers: boolean;
     display: boolean;
+    readyMadeTours?: boolean;
+    customInquiries?: boolean;
+    negotiationsBookings?: boolean;
+    customDomain?: boolean;
+    externalStorefront?: boolean;
+    sessionInactivityTimeout?: boolean;
   };
+  /** Agency override; null = platform default. Preferred: minutes. */
+  sessionInactivityMinutes?: number | null;
+  /** @deprecated Prefer sessionInactivityMinutes. */
+  sessionInactivityHours?: number | null;
 };
 
 export type AdminUser = {
@@ -58,7 +68,15 @@ export type AdminUser = {
       walletTopup: boolean;
       offers: boolean;
       display: boolean;
+      readyMadeTours?: boolean;
+      customInquiries?: boolean;
+      negotiationsBookings?: boolean;
+      customDomain?: boolean;
+      externalStorefront?: boolean;
+      sessionInactivityTimeout?: boolean;
     };
+    sessionInactivityMinutes?: number | null;
+    sessionInactivityHours?: number | null;
   } | null;
 };
 

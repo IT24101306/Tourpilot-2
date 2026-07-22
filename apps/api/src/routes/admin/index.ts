@@ -3,17 +3,21 @@ import { Router } from "express";
 import { z } from "zod";
 import type { AgencyStatus, CommissionStatus, InquiryStatus, Prisma, UserRole } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
+import { config } from "../../lib/config.js";
 import { authRequired, requireRoles } from "../../middleware/auth.js";
 import { asJson } from "../../utils/json.js";
 import {
+  absolutePublicUrl,
   agencyRejectionEmail,
   finalizeEmailTemplate,
+  promotionalEmail,
   sendPlatformEmail,
 } from "../../services/email.js";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
   notifyAdminInquiryMessage,
+  notifyAgencyApproved,
   notifyCommissionPaid,
 } from "../../services/notifications.js";
 import { creditCommissionPayout } from "../../services/wallet.js";
@@ -27,6 +31,8 @@ import {
   resolveLoginFeeForUser,
   updatePlatformSettings,
 } from "../../services/platformSettings.js";
+import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
+import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
 
 export const adminRouter = Router();
 
@@ -72,6 +78,8 @@ adminRouter.put("/settings", async (req, res, next) => {
         emailFrom: z.string().max(255).nullable().optional(),
         walletTopupMinLkr: z.number().int().min(1).optional(),
         walletTopupMaxLkr: z.number().int().min(1).nullable().optional(),
+        sessionInactivityHours: z.number().int().min(1).max(168).optional(),
+        sessionInactivityMinutes: z.number().int().min(1).max(10080).optional(),
         emailTemplates: z
           .record(
             z.string(),
@@ -81,9 +89,170 @@ adminRouter.put("/settings", async (req, res, next) => {
             })
           )
           .optional(),
+        supportContent: z
+          .object({
+            title: z.string().max(120),
+            subtitle: z.string().max(500),
+            footer: z.string().max(500),
+            agents: z
+              .array(
+                z.object({
+                  id: z.string().min(1).max(64),
+                  name: z.string().max(120),
+                  role: z.string().max(120),
+                  service: z.string().max(120),
+                  description: z.string().max(2000),
+                  priceUsd: z.number().min(0),
+                  priceLabel: z.string().max(80),
+                  phone: z.string().max(40),
+                  phoneDisplay: z.string().max(40),
+                })
+              )
+              .max(20),
+          })
+          .optional(),
       })
       .parse(req.body);
     res.json(await updatePlatformSettings(body));
+  } catch (e) {
+    next(e);
+  }
+});
+
+const promoAudienceRoles = z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"]);
+
+adminRouter.get("/promo-email/audience", async (req, res, next) => {
+  try {
+    const rolesRaw = typeof req.query.roles === "string" ? req.query.roles : "";
+    const roles = rolesRaw
+      .split(",")
+      .map((r) => r.trim().toUpperCase())
+      .filter((r): r is z.infer<typeof promoAudienceRoles> =>
+        ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"].includes(r)
+      );
+    const where = {
+      isActive: true,
+      AND: [{ email: { not: null } }, { NOT: { email: "" } }],
+      role: {
+        in: (roles.length
+          ? roles
+          : (["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"] as UserRole[])),
+      },
+    };
+    const count = await prisma.user.count({ where });
+    res.json({ count, roles: roles.length ? roles : ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"] });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/promo-email", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        subject: z.string().min(3).max(200),
+        body: z.string().min(3).max(8000),
+        posterUrl: z.string().max(2000).optional().nullable(),
+        offerId: z.string().optional().nullable(),
+        roles: z.array(promoAudienceRoles).min(1).default(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"]),
+        testTo: z.string().email().optional().nullable(),
+      })
+      .parse(req.body);
+
+    const settings = await getPlatformSettings();
+    const base = (settings.webAppUrl || "").replace(/\/$/, "") || "https://srilankatourpilot.com";
+
+    let offerTitle: string | undefined;
+    let offerUrl: string | undefined;
+    if (body.offerId) {
+      const offer = await prisma.offer.findUnique({ where: { id: body.offerId } });
+      if (!offer) {
+        return res.status(404).json({ error: "Offer not found" });
+      }
+      offerTitle = offer.title;
+      offerUrl = `${base}/offers?offer=${encodeURIComponent(offer.id)}`;
+    }
+
+    const posterUrl = body.posterUrl?.trim()
+      ? absolutePublicUrl(body.posterUrl.trim(), base)
+      : undefined;
+
+    if (body.testTo?.trim()) {
+      const content = promotionalEmail({
+        recipientName: "there",
+        subject: body.subject.trim(),
+        body: body.body.trim(),
+        posterUrl,
+        offerTitle,
+        offerUrl,
+      });
+      const result = await sendPlatformEmail({ to: body.testTo.trim(), ...content });
+      return res.json({
+        mode: "test",
+        deliveryMode: result.mode,
+        sent: result.delivered ? 1 : 0,
+        failed: result.delivered ? 0 : 1,
+        errors: result.error
+          ? [result.error]
+          : result.mode === "log"
+            ? [
+                "EMAIL_MODE=log — message was only printed in the API console, not emailed. Set EMAIL_MODE=smtp and SMTP_* in apps/api/.env, then restart the API.",
+              ]
+            : [],
+      });
+    }
+
+    const recipients = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        role: { in: body.roles },
+        AND: [{ email: { not: null } }, { NOT: { email: "" } }],
+      },
+      select: { id: true, name: true, email: true },
+    });
+
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    const chunkSize = 15;
+
+    for (let i = 0; i < recipients.length; i += chunkSize) {
+      const chunk = recipients.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map(async (user) => {
+          const to = user.email!.trim();
+          if (!to) return { ok: false, error: "empty email" };
+          const content = promotionalEmail({
+            recipientName: user.name || "there",
+            subject: body.subject.trim(),
+            body: body.body.trim(),
+            posterUrl,
+            offerTitle,
+            offerUrl,
+          });
+          const result = await sendPlatformEmail({ to, ...content });
+          return { ok: result.delivered, error: result.error };
+        })
+      );
+      for (const r of results) {
+        if (r.ok) sent += 1;
+        else {
+          failed += 1;
+          if (r.error && errors.length < 10) errors.push(r.error);
+        }
+      }
+    }
+
+    res.json({
+      mode: "broadcast",
+      deliveryMode: config.email.mode,
+      audience: recipients.length,
+      sent,
+      failed,
+      errors,
+      offerTitle: offerTitle || null,
+      offerUrl: offerUrl || null,
+    });
   } catch (e) {
     next(e);
   }
@@ -168,6 +337,8 @@ adminRouter.get("/agencies", async (req, res, next) => {
         kycSubmittedAt: a.kycSubmittedAt,
         createdAt: a.createdAt,
         features: serializeAgencyFeatures(a),
+        sessionInactivityHours: a.sessionInactivityHours,
+        sessionInactivityMinutes: a.sessionInactivityMinutes,
       }))
     );
   } catch (e) {
@@ -189,6 +360,12 @@ adminRouter.get("/agencies/pending", async (_req, res, next) => {
 
 adminRouter.patch("/agencies/:id/approve", async (req, res, next) => {
   try {
+    const body = z
+      .object({
+        sendEmail: z.boolean().optional().default(true),
+      })
+      .parse(req.body ?? {});
+
     const agency = await prisma.agency.update({
       where: { id: req.params.id },
       data: {
@@ -197,6 +374,13 @@ adminRouter.patch("/agencies/:id/approve", async (req, res, next) => {
         rejectedAt: null,
       },
     });
+
+    if (body.sendEmail) {
+      void notifyAgencyApproved(agency.id).catch((err) =>
+        console.error("[agency approved email]", err)
+      );
+    }
+
     res.json(agency);
   } catch (e) {
     next(e);
@@ -294,13 +478,49 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         customInquiries: z.boolean().optional(),
         negotiationsBookings: z.boolean().optional(),
         customDomain: z.boolean().optional(),
+        externalStorefront: z.boolean().optional(),
+        sessionInactivityTimeout: z.boolean().optional(),
+        /** null clears override (use platform default). Preferred unit: minutes. */
+        sessionInactivityMinutes: z.number().int().min(1).max(10080).nullable().optional(),
+        /** Legacy hours override — converted to minutes when minutes omitted. */
+        sessionInactivityHours: z.number().int().min(1).max(168).nullable().optional(),
       })
-      .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
-      .parse(req.body) as Partial<AgencyFeatures>;
+      .refine(
+        (v) =>
+          Object.keys(v).some(
+            (k) => k !== "sessionInactivityHours" && k !== "sessionInactivityMinutes"
+          ) ||
+          v.sessionInactivityHours !== undefined ||
+          v.sessionInactivityMinutes !== undefined,
+        { message: "At least one feature flag is required" }
+      )
+      .parse(req.body);
+
+    const { sessionInactivityHours, sessionInactivityMinutes, ...featureFlags } = body;
+    let minutesUpdate: { sessionInactivityMinutes: number | null; sessionInactivityHours: number | null } | undefined;
+    if (sessionInactivityMinutes !== undefined) {
+      minutesUpdate = {
+        sessionInactivityMinutes,
+        sessionInactivityHours:
+          sessionInactivityMinutes == null
+            ? null
+            : Math.max(1, Math.ceil(sessionInactivityMinutes / 60)),
+      };
+    } else if (sessionInactivityHours !== undefined) {
+      minutesUpdate = {
+        sessionInactivityHours,
+        sessionInactivityMinutes:
+          sessionInactivityHours == null ? null : sessionInactivityHours * 60,
+      };
+    }
+    const data = {
+      ...agencyFeatureDbFields(featureFlags as Partial<AgencyFeatures>),
+      ...(minutesUpdate ?? {}),
+    };
 
     const agency = await prisma.agency.update({
       where: { id: req.params.id },
-      data: agencyFeatureDbFields(body),
+      data,
       select: {
         id: true,
         name: true,
@@ -315,6 +535,10 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureCustomInquiries: true,
         featureNegotiationsBookings: true,
         featureCustomDomain: true,
+        featureExternalStorefront: true,
+        featureSessionInactivityTimeout: true,
+        sessionInactivityHours: true,
+        sessionInactivityMinutes: true,
       },
     });
 
@@ -324,6 +548,8 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
       slug: agency.slug,
       status: agency.status,
       features: serializeAgencyFeatures(agency),
+      sessionInactivityHours: agency.sessionInactivityHours,
+      sessionInactivityMinutes: agency.sessionInactivityMinutes,
     });
   } catch (e) {
     next(e);
@@ -373,6 +599,10 @@ adminRouter.get("/users", async (req, res, next) => {
             featureCustomInquiries: true,
             featureNegotiationsBookings: true,
             featureCustomDomain: true,
+            featureExternalStorefront: true,
+            featureSessionInactivityTimeout: true,
+            sessionInactivityHours: true,
+            sessionInactivityMinutes: true,
           },
         },
         agencyStaff: {
@@ -393,6 +623,10 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureCustomInquiries: true,
                 featureNegotiationsBookings: true,
                 featureCustomDomain: true,
+                featureExternalStorefront: true,
+                featureSessionInactivityTimeout: true,
+                sessionInactivityHours: true,
+                sessionInactivityMinutes: true,
               },
             },
           },
@@ -423,6 +657,8 @@ adminRouter.get("/users", async (req, res, next) => {
                 slug: agencyRow.slug,
                 status: agencyRow.status,
                 features: serializeAgencyFeatures(agencyRow),
+                sessionInactivityHours: agencyRow.sessionInactivityHours,
+                sessionInactivityMinutes: agencyRow.sessionInactivityMinutes,
               }
             : null,
         };
@@ -440,7 +676,8 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       .object({
         isActive: z.boolean().optional(),
         role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]).optional(),
-        name: z.string().min(1).optional(),
+        name: z.string().min(1).max(120).optional(),
+        phone: z.string().min(8).optional(),
         email: z.string().email().nullable().optional(),
         /** null clears override (use role default). */
         loginFeeLkr: z.number().min(0).nullable().optional(),
@@ -450,11 +687,27 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
     const data: Prisma.UserUpdateInput = {};
     if (body.isActive !== undefined) data.isActive = body.isActive;
     if (body.role !== undefined) data.role = body.role;
-    if (body.name !== undefined) data.name = body.name;
+    if (body.name !== undefined) data.name = body.name.trim();
     if (body.email !== undefined) data.email = body.email;
     if (body.loginFeeLkr !== undefined) {
       data.loginFeeLkr =
         body.loginFeeLkr === null ? null : Math.round(body.loginFeeLkr);
+    }
+    if (body.phone !== undefined) {
+      const phone = toStoredPhone(body.phone);
+      if (!isValidInternationalPhone(phone)) {
+        return res.status(400).json({
+          error: "Invalid phone number. Include country code (e.g. +94771234567).",
+        });
+      }
+      const clash = await prisma.user.findFirst({
+        where: { phone, NOT: { id: req.params.id } },
+        select: { id: true },
+      });
+      if (clash) {
+        return res.status(409).json({ error: "Another account already uses that phone" });
+      }
+      data.phone = phone;
     }
 
     const user = await prisma.$transaction(async (tx) => {
@@ -504,6 +757,202 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       walletBalance: Number(user.walletBalance),
       loginFeeOverride,
       loginFee: await resolveLoginFeeForUser(user),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/users", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        name: z.string().min(1).max(120),
+        phone: z.string().min(8),
+        email: z.string().email().nullable().optional(),
+        role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]),
+        isActive: z.boolean().optional(),
+        walletBalance: z.number().min(0).optional(),
+        loginFeeLkr: z.number().min(0).nullable().optional(),
+      })
+      .parse(req.body);
+
+    const phone = toStoredPhone(body.phone);
+    if (!isValidInternationalPhone(phone)) {
+      return res.status(400).json({
+        error: "Invalid phone number. Include country code (e.g. +94771234567).",
+      });
+    }
+
+    const exists = await prisma.user.findUnique({ where: { phone } });
+    if (exists) {
+      return res.status(409).json({ error: "Account already exists for this phone" });
+    }
+
+    const wallet = Math.round(body.walletBalance ?? 0);
+    const user = await prisma.user.create({
+      data: {
+        name: body.name.trim(),
+        phone,
+        email: body.email ?? null,
+        role: body.role,
+        isActive: body.isActive ?? true,
+        walletBalance: wallet,
+        loginFeeLkr:
+          body.loginFeeLkr === undefined
+            ? undefined
+            : body.loginFeeLkr === null
+              ? null
+              : Math.round(body.loginFeeLkr),
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        role: true,
+        isActive: true,
+        walletBalance: true,
+        loginFeeLkr: true,
+      },
+    });
+
+    if (wallet > 0) {
+      await prisma.walletLedger.create({
+        data: {
+          userId: user.id,
+          type: "ADJUSTMENT",
+          amountLkr: wallet,
+          balanceAfter: wallet,
+          note: "Admin: opening balance",
+        },
+      });
+    }
+
+    const loginFeeOverride =
+      user.loginFeeLkr != null ? Math.round(Number(user.loginFeeLkr)) : null;
+
+    res.status(201).json({
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      walletBalance: Number(user.walletBalance),
+      loginFeeOverride,
+      loginFee: await resolveLoginFeeForUser(user),
+      agency: null,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * Duplicate a user. Admin must supply a new unique phone.
+ * When the source owns an agency, clones agency profile, display settings,
+ * entities, entity groups, and tours (with itinerary days/items).
+ */
+adminRouter.post("/users/:id/duplicate", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        name: z.string().min(1).max(120),
+        phone: z.string().min(8),
+        email: z.string().email().nullable().optional(),
+        role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]),
+        isActive: z.boolean().optional(),
+        walletBalance: z.number().min(0).optional(),
+        loginFeeLkr: z.number().min(0).nullable().optional(),
+        agencyName: z.string().min(1).max(160).optional(),
+      })
+      .parse(req.body);
+
+    const duplicated = await duplicateAdminUser(req.params.id, body);
+    res.status(201).json({
+      ...duplicated,
+      loginFee: await resolveLoginFeeForUser({
+        role: duplicated.role as UserRole,
+        loginFeeLkr: duplicated.loginFeeOverride,
+      }),
+    });
+  } catch (e) {
+    const err = e as Error & { status?: number };
+    if (err.status === 400 || err.status === 404 || err.status === 409) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    next(e);
+  }
+});
+
+/**
+ * Hard-delete a user. Cleans Inquiry/Commission rows that lack onDelete: Cascade
+ * so agency owners and tourists with trip history can be removed.
+ */
+adminRouter.delete("/users/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (id === req.user!.id) {
+      return res.status(400).json({ error: "You cannot delete your own admin account" });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        agency: { select: { id: true, name: true } },
+        influencerProfile: { select: { id: true } },
+      },
+    });
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    if (target.role === "ADMIN") {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: "Cannot delete the last admin account" });
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const inquiryIds: string[] = [];
+
+      if (target.agency) {
+        const agencyInquiries = await tx.inquiry.findMany({
+          where: { agencyId: target.agency.id },
+          select: { id: true },
+        });
+        inquiryIds.push(...agencyInquiries.map((i) => i.id));
+      }
+
+      const touristInquiries = await tx.inquiry.findMany({
+        where: { touristId: id },
+        select: { id: true },
+      });
+      inquiryIds.push(...touristInquiries.map((i) => i.id));
+
+      const uniqueInquiryIds = Array.from(new Set(inquiryIds));
+      if (uniqueInquiryIds.length) {
+        await tx.commission.deleteMany({ where: { inquiryId: { in: uniqueInquiryIds } } });
+        await tx.inquiry.deleteMany({ where: { id: { in: uniqueInquiryIds } } });
+      }
+
+      if (target.influencerProfile) {
+        await tx.commission.deleteMany({
+          where: { influencerId: target.influencerProfile.id },
+        });
+      }
+
+      await tx.user.delete({ where: { id } });
+    });
+
+    res.json({
+      ok: true,
+      deletedId: id,
+      name: target.name,
+      agencyDeleted: Boolean(target.agency),
     });
   } catch (e) {
     next(e);
@@ -1004,6 +1453,129 @@ adminRouter.get("/offers/:id/registrations", async (req, res, next) => {
       orderBy: { createdAt: "desc" },
     });
     res.json(regs);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const voucherDiscountTypeSchema = z.enum(["FIXED_LKR", "PERCENT"]);
+
+const voucherBodySchema = z.object({
+  code: z.string().trim().min(3).max(64),
+  description: z.string().trim().max(2000).optional().nullable(),
+  discountType: voucherDiscountTypeSchema,
+  discountValue: z.number().positive(),
+  maxUses: z.number().int().positive().optional().nullable(),
+  minInvoiceLkr: z.number().min(0).optional().nullable(),
+  maxDiscountLkr: z.number().min(0).optional().nullable(),
+  validFrom: z.string().datetime().optional().nullable(),
+  validUntil: z.string().datetime().optional().nullable(),
+  isActive: z.boolean().optional().default(true),
+});
+
+adminRouter.get("/vouchers", async (_req, res, next) => {
+  try {
+    const { serializeVoucher } = await import("../../services/vouchers.js");
+    const list = await prisma.voucher.findMany({ orderBy: { createdAt: "desc" } });
+    res.json(list.map(serializeVoucher));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/vouchers", async (req, res, next) => {
+  try {
+    const { normalizeVoucherCode, serializeVoucher } = await import("../../services/vouchers.js");
+    const body = voucherBodySchema.parse(req.body);
+    const code = normalizeVoucherCode(body.code);
+    const existing = await prisma.voucher.findUnique({ where: { code } });
+    if (existing) return res.status(409).json({ error: "A voucher with this code already exists" });
+
+    if (body.discountType === "PERCENT" && body.discountValue > 100) {
+      return res.status(400).json({ error: "Percentage discount cannot exceed 100" });
+    }
+
+    const voucher = await prisma.voucher.create({
+      data: {
+        code,
+        description: body.description?.trim() || null,
+        discountType: body.discountType,
+        discountValue: body.discountValue,
+        maxUses: body.maxUses ?? null,
+        minInvoiceLkr: body.minInvoiceLkr ?? null,
+        maxDiscountLkr: body.maxDiscountLkr ?? null,
+        validFrom: body.validFrom ? new Date(body.validFrom) : null,
+        validUntil: body.validUntil ? new Date(body.validUntil) : null,
+        isActive: body.isActive ?? true,
+        createdById: req.user!.id,
+      },
+    });
+    res.status(201).json(serializeVoucher(voucher));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch("/vouchers/:id", async (req, res, next) => {
+  try {
+    const { normalizeVoucherCode, serializeVoucher } = await import("../../services/vouchers.js");
+    const body = voucherBodySchema.partial().parse(req.body);
+    const existing = await prisma.voucher.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Voucher not found" });
+
+    if (body.discountType === "PERCENT" && body.discountValue != null && body.discountValue > 100) {
+      return res.status(400).json({ error: "Percentage discount cannot exceed 100" });
+    }
+
+    let code = existing.code;
+    if (body.code != null) {
+      code = normalizeVoucherCode(body.code);
+      if (code !== existing.code) {
+        const clash = await prisma.voucher.findUnique({ where: { code } });
+        if (clash) return res.status(409).json({ error: "A voucher with this code already exists" });
+      }
+    }
+
+    const voucher = await prisma.voucher.update({
+      where: { id: existing.id },
+      data: {
+        code,
+        description: body.description === undefined ? undefined : body.description?.trim() || null,
+        discountType: body.discountType,
+        discountValue: body.discountValue,
+        maxUses: body.maxUses === undefined ? undefined : body.maxUses,
+        minInvoiceLkr: body.minInvoiceLkr === undefined ? undefined : body.minInvoiceLkr,
+        maxDiscountLkr: body.maxDiscountLkr === undefined ? undefined : body.maxDiscountLkr,
+        validFrom:
+          body.validFrom === undefined
+            ? undefined
+            : body.validFrom
+              ? new Date(body.validFrom)
+              : null,
+        validUntil:
+          body.validUntil === undefined
+            ? undefined
+            : body.validUntil
+              ? new Date(body.validUntil)
+              : null,
+        isActive: body.isActive,
+      },
+    });
+    res.json(serializeVoucher(voucher));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.delete("/vouchers/:id", async (req, res, next) => {
+  try {
+    const existing = await prisma.voucher.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Voucher not found" });
+    await prisma.voucher.update({
+      where: { id: existing.id },
+      data: { isActive: false },
+    });
+    res.status(204).end();
   } catch (e) {
     next(e);
   }

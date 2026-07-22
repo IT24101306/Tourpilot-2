@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import {
   CEYLON_TRAILS_HERO_IMAGES,
+  DEFAULT_PRICING_PAGE,
   LANKA_TOUR_TRAILS_LOGO,
   LANKA_TOUR_TRAILS_SOCIAL_LINKS,
   MEDIA,
@@ -492,6 +493,17 @@ async function main() {
           subtitle: "Highly rated teams ready to craft your Sri Lanka journey.",
         },
       ],
+    },
+  });
+
+  await prisma.cmsPage.upsert({
+    where: { slug: "pricing" },
+    update: {},
+    create: {
+      slug: "pricing",
+      title: "Pricing",
+      isPublished: true,
+      blocks: [DEFAULT_PRICING_PAGE],
     },
   });
 

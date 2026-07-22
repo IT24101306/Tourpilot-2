@@ -513,6 +513,34 @@ can use CNAME. DNS propagation can take minutes to hours.
 
 ---
 
+## Part 2.8 — Fully custom (headless) websites
+
+Some revenue packages include a **separately coded website** that still uses
+TourPilot as the backend (tours, OTP login, inquiries). That is different from
+Part 2.7 Custom Domain (which serves the TourPilot SPA on the client hostname).
+
+| Product | DNS points to | Frontend |
+|---------|---------------|----------|
+| Custom domain (2.7) | TourPilot Caddy / VPS | TourPilot SPA |
+| Headless custom site (2.8) | Client site host (Vercel, etc.) | Your coded site |
+
+**Do not** enable both for the same hostname.
+
+Full API contract, CORS, OTP, inquire, and delivery checklist:
+[docs/HEADLESS.md](HEADLESS.md).
+
+Starter: [examples/headless-agency-site](../examples/headless-agency-site).
+
+Ops summary:
+
+1. Admin → Features → enable **External / headless website** for the agency.
+2. Build/adapt the starter with `API_BASE` + `AGENCY_SLUG`.
+3. Point the client domain at the **custom site** host.
+4. If using a CORS allowlist, add the site origin to `HEADLESS_CORS_ORIGINS` and recreate API.
+5. Smoke-test: list tours → OTP → create inquiry → agency sees it in the dashboard.
+
+---
+
 ## Part 3 — Day-to-day operations
 
 ### Useful commands

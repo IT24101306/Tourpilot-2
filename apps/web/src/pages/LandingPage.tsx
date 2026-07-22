@@ -1,145 +1,342 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { api } from "../api/client";
-import { DiscoveryPathStrip } from "../components/discovery/DiscoveryPathStrip";
 import {
-  DiscoveryAgencyCard,
-  type DiscoveryAgency,
-} from "../components/discovery/DiscoveryAgencyCard";
-import { DiscoveryOfferCard, type DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
-
-type CmsBlock = {
-  type?: string;
-  headline?: string;
-  lead?: string;
-  tags?: string[];
-  badge?: string;
-  title?: string;
-  subtitle?: string;
-};
+  DEFAULT_PRICING_PAGE,
+  formatPricingLkr,
+  parsePricingPageContent,
+  type PricingPageContent,
+} from "@tourpilot/shared";
+import { api } from "../api/client";
+import "../styles/pricing-page.css";
 
 type CmsPage = {
   slug: string;
   title: string;
-  blocks: CmsBlock[] | unknown;
+  blocks: unknown;
 };
 
-const DEFAULT_HERO = {
-  tags: ["Sri Lanka", "Verified agencies", "Custom itineraries"],
-  badge: "Inspired exploration",
-  headline: "Navigate the island with confidence",
-  lead:
-    "Discover curated tours, compare agencies, and receive transparent itineraries with optional add-ons and prices — built for modern travelers.",
-};
-
-const DEFAULT_FEATURED = {
-  title: "Start with trusted operators",
-  subtitle: "Highly rated teams ready to craft your Sri Lanka journey.",
-};
-
-function asBlocks(raw: unknown): CmsBlock[] {
-  return Array.isArray(raw) ? (raw as CmsBlock[]) : [];
+function categoryMatch(filter: string, categories: string[]): boolean {
+  if (filter === "All") return true;
+  if (filter === "Website") return categories.includes("website");
+  if (filter === "Website + Full System") return categories.includes("system");
+  return true;
 }
 
 export function LandingPage() {
-  const [agencies, setAgencies] = useState<DiscoveryAgency[]>([]);
-  const [endingSoon, setEndingSoon] = useState<DiscoveryOffer[]>([]);
-  const [cms, setCms] = useState<CmsPage | null>(null);
+  const [content, setContent] = useState<PricingPageContent>(DEFAULT_PRICING_PAGE);
+  const [filter, setFilter] = useState("All");
+  const [selectOpen, setSelectOpen] = useState(false);
+  const [featuresModalPkg, setFeaturesModalPkg] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const selectRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api<DiscoveryAgency[]>("/agencies").then(setAgencies).catch(console.error);
-    api<DiscoveryOffer[]>("/offers/ending-soon?limit=3").then(setEndingSoon).catch(console.error);
-    api<CmsPage>("/cms/home")
-      .then(setCms)
-      .catch(() => setCms(null));
+    api<CmsPage>("/cms/pricing")
+      .then((page) => setContent(parsePricingPageContent(page.blocks)))
+      .catch(() => setContent(DEFAULT_PRICING_PAGE));
   }, []);
 
-  const blocks = asBlocks(cms?.blocks);
-  const heroBlock = blocks.find((b) => b.type === "hero");
-  const featuredBlock = blocks.find((b) => b.type === "featured_agencies");
+  useEffect(() => {
+    const next: Record<string, boolean> = {};
+    for (const f of content.buildYourselfFeatures) {
+      next[f.id] = Boolean(f.defaultChecked);
+    }
+    setSelected(next);
+  }, [content.buildYourselfFeatures]);
 
-  const hero = {
-    tags: heroBlock?.tags?.length ? heroBlock.tags : DEFAULT_HERO.tags,
-    badge: heroBlock?.badge?.trim() || DEFAULT_HERO.badge,
-    headline: heroBlock?.headline?.trim() || DEFAULT_HERO.headline,
-    lead: heroBlock?.lead?.trim() || DEFAULT_HERO.lead,
-  };
-  const featuredCopy = {
-    title: featuredBlock?.title?.trim() || DEFAULT_FEATURED.title,
-    subtitle: featuredBlock?.subtitle?.trim() || DEFAULT_FEATURED.subtitle,
-  };
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!selectRef.current?.contains(e.target as Node)) setSelectOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setFeaturesModalPkg(null);
+        setMoreOpen(false);
+        setSelectOpen(false);
+      }
+    }
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
-  const featured = agencies.slice(0, 3);
+  useEffect(() => {
+    document.body.style.overflow = featuresModalPkg || moreOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [featuresModalPkg, moreOpen]);
+
+  const monthlyTotal = useMemo(() => {
+    return content.buildYourselfFeatures.reduce((sum, f) => {
+      return selected[f.id] ? sum + (Number(f.priceLkr) || 0) : sum;
+    }, 0);
+  }, [content.buildYourselfFeatures, selected]);
+
+  const monthlyLabel = formatPricingLkr(monthlyTotal);
+  const primaryFeatures = content.buildYourselfFeatures.filter((f) => f.primary);
+  const filterLabel =
+    content.filterOptions.find((o) => o.value === filter)?.label ?? filter;
+
+  function toggleFeature(id: string, checked: boolean) {
+    setSelected((prev) => ({ ...prev, [id]: checked }));
+  }
+
+  function Cta({ href, label }: { href: string; label: string }) {
+    if (href.startsWith("http")) {
+      return (
+        <a className="cta" href={href} target="_blank" rel="noopener noreferrer">
+          {label}
+        </a>
+      );
+    }
+    return (
+      <Link className="cta" to={href || "/register-pro"}>
+        {label}
+      </Link>
+    );
+  }
 
   return (
-    <div className="module-discovery">
-      <section
-        className={`hero-image hero-image--landing${endingSoon.length > 0 ? " hero-image--has-offers" : ""}`}
-      >
-        <div className="hero-image-top">
-          <div className="hero-tags">
-            {hero.tags.map((tag) => (
-              <span key={tag} className="tag">
-                {tag}
-              </span>
-            ))}
-          </div>
-          <span className="disc-hero-badge">{hero.badge}</span>
-          <h1>{hero.headline}</h1>
-          <p className="hero-image-lead">{hero.lead}</p>
+    <div className="pricing-page">
+      <div className="page">
+        <div className="page-header">
+          <h1>{content.headline}</h1>
         </div>
 
-        {endingSoon.length > 0 && (
-          <div className="hero-offers disc-hero-offers">
-            <div className="hero-offers-head">
-              <span className="hero-offers-label">Ending soon</span>
-              <Link to="/offers" className="hero-offers-link">
-                View all offers
-              </Link>
+        <div className="package-type">
+          <label className="package-type-label" htmlFor="packageType">
+            {content.packageTypeLabel} <span>{content.packageTypeAccent}</span>
+          </label>
+          <div
+            className={`select-wrap${selectOpen ? " open" : ""}`}
+            id="packageSelect"
+            ref={selectRef}
+          >
+            <button
+              type="button"
+              id="packageType"
+              className="custom-select"
+              aria-haspopup="listbox"
+              aria-expanded={selectOpen}
+              onClick={() => setSelectOpen((o) => !o)}
+            >
+              <span className="custom-select-value">{filterLabel}</span>
+              <svg
+                className="select-chevron"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <ul className="custom-options" role="listbox">
+              {content.filterOptions.map((opt) => (
+                <li
+                  key={opt.value}
+                  role="option"
+                  aria-selected={filter === opt.value}
+                  className={filter === opt.value ? "selected" : undefined}
+                  data-value={opt.value}
+                  onClick={() => {
+                    setFilter(opt.value);
+                    setSelectOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="cards">
+          {content.packages.map((pkg) => {
+            if (!categoryMatch(filter, pkg.categories)) return null;
+            return (
+              <div
+                key={pkg.id}
+                className={`card${pkg.featured ? " featured" : ""}`}
+                data-category={pkg.categories.join(",")}
+              >
+                <h2 className="card-name">{pkg.name}</h2>
+                <p className="card-tagline">{pkg.tagline}</p>
+
+                <div className="price-block">
+                  <div className="price">{pkg.price}</div>
+                  <div className="price-sub">{pkg.priceSub}</div>
+                </div>
+
+                <Cta href={pkg.ctaHref} label={pkg.ctaLabel} />
+
+                <ul className="features">
+                  {pkg.features.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+
+                {pkg.buildYourself ? (
+                  <>
+                    <ul className="feature-picker" id="buildYourselfFeatures">
+                      {primaryFeatures.map((f) => (
+                        <li key={f.id}>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(selected[f.id])}
+                              onChange={(e) => toggleFeature(f.id, e.target.checked)}
+                            />
+                            <span className="feat-name">{f.name}</span>
+                            <span className="feat-price">{formatPricingLkr(f.priceLkr)}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      type="button"
+                      className="toggle-btn"
+                      onClick={() => setMoreOpen(true)}
+                    >
+                      <span className="label">View more features</span>
+                    </button>
+
+                    <div className="monthly-total">
+                      <span className="monthly-total-label">{content.monthlyTotalLabel}</span>
+                      <span className="monthly-total-value">{monthlyLabel}</span>
+                    </div>
+                  </>
+                ) : null}
+
+                {pkg.showIncludedFeatures ? (
+                  <button
+                    type="button"
+                    className="toggle-btn"
+                    onClick={() => setFeaturesModalPkg(pkg.name)}
+                  >
+                    <span className="label">
+                      {pkg.includedFeaturesLabel || "View included features"}
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="terms">
+          <div className="terms-title">{content.termsTitle}</div>
+          <p>{content.termsBody}</p>
+        </div>
+      </div>
+
+      <div
+        className={`modal-overlay${featuresModalPkg ? " open" : ""}`}
+        id="featuresModal"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setFeaturesModalPkg(null);
+        }}
+      >
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="featuresModalTitle">
+          <div className="modal-header">
+            <div>
+              <h3 className="modal-title" id="featuresModalTitle">
+                {content.includedFeaturesTitle}
+              </h3>
+              <div className="modal-subtitle">{featuresModalPkg}</div>
             </div>
-            <div className="disc-offer-grid disc-offer-grid--hero">
-              {endingSoon.map((o) => (
-                <Link key={o.id} to="/offers" className="disc-offer-card-link">
-                  <DiscoveryOfferCard offer={o} compact hero />
-                </Link>
+            <button
+              type="button"
+              className="modal-close"
+              aria-label="Close"
+              onClick={() => setFeaturesModalPkg(null)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="modal-body">
+            <div className="feature-pricing">
+              {content.includedFeaturesSections.map((section) => (
+                <details key={section.title} className="feature-row">
+                  <summary>
+                    <span>{section.title}</span>
+                    <span>✓</span>
+                  </summary>
+                  <ul className="detail-list">
+                    {section.details.map((d) => (
+                      <li key={d}>{d}</li>
+                    ))}
+                  </ul>
+                </details>
               ))}
             </div>
           </div>
-        )}
-
-        <div className="hero-actions">
-          <Link to="/offers" className="btn btn-teal">
-            View offers
-          </Link>
-          <Link to="/register" className="btn btn-ghost">
-            Sign up free
-          </Link>
         </div>
-      </section>
+      </div>
 
-      <section className="section disc-path-section">
-        <DiscoveryPathStrip />
-      </section>
-
-      <section className="section module-shell">
-        <div className="disc-section-head">
-          <div>
-            <span className="module-badge module-badge--discovery">Featured agencies</span>
-            <h2 className="section-title">{featuredCopy.title}</h2>
-            <p className="muted">{featuredCopy.subtitle}</p>
+      <div
+        className={`modal-overlay${moreOpen ? " open" : ""}`}
+        id="moreFeaturesModal"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setMoreOpen(false);
+        }}
+      >
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="moreFeaturesTitle">
+          <div className="modal-header">
+            <div>
+              <h3 className="modal-title" id="moreFeaturesTitle">
+                {content.moreFeaturesTitle}
+              </h3>
+              <div className="modal-subtitle">{content.moreFeaturesSubtitle}</div>
+            </div>
+            <button
+              type="button"
+              className="modal-close"
+              aria-label="Close"
+              onClick={() => setMoreOpen(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="modal-body">
+            <ul className="feature-picker" id="buildYourselfMoreFeatures">
+              {content.buildYourselfFeatures.map((f) => (
+                <li key={f.id}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(selected[f.id])}
+                      onChange={(e) => toggleFeature(f.id, e.target.checked)}
+                    />
+                    <span className="feat-name">{f.name}</span>
+                    <span className="feat-price">{formatPricingLkr(f.priceLkr)}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="modal-footer">
+            <div className="monthly-total">
+              <span className="monthly-total-label">{content.monthlyTotalLabel}</span>
+              <span className="monthly-total-value">{monthlyLabel}</span>
+            </div>
+            <button type="button" className="modal-ok" onClick={() => setMoreOpen(false)}>
+              Select
+            </button>
           </div>
         </div>
-
-        {featured.length === 0 ? (
-          <p className="muted">Loading featured agencies…</p>
-        ) : (
-          <div className="disc-agency-grid">
-            {featured.map((a, i) => (
-              <DiscoveryAgencyCard key={a.id} agency={a} featured={i === 0} />
-            ))}
-          </div>
-        )}
-      </section>
+      </div>
     </div>
   );
 }

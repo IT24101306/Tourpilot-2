@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useStorefrontDomain } from "../context/StorefrontDomainContext";
 import { NotificationBell } from "./NotificationBell";
 import { ClientBrand } from "./ClientBrand";
 import { TourPilotBrand } from "./TourPilotBrand";
@@ -48,15 +49,18 @@ export function PublicLayout() {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
+  const storefront = useStorefrontDomain();
   const onProfile = pathname === "/profile";
   const onTravel = pathname === "/trips";
   const travelTab = searchParams.get("tab");
   const onInquiries = onTravel && (!travelTab || travelTab === "inquiries");
   const onBookings = onTravel && travelTab === "bookings";
   const onSaved = onTravel && travelTab === "saved";
+  const onMarketingHome =
+    pathname === "/" && !storefront.loading && !storefront.isCustomDomain;
 
   return (
-    <div className="shell">
+    <div className={`shell${onMarketingHome ? " shell--marketing-home" : ""}`}>
       <header className="topbar topbar--site">
         {onProfile ? <ProfileTopBrand /> : <TourPilotBrand />}
         <nav className="nav" aria-label="Primary">
@@ -67,9 +71,17 @@ export function PublicLayout() {
               </NavLink>
             )}
             {!onProfile && (
-              <NavLink to="/offers" className={navLinkClass}>
-                Offers
-              </NavLink>
+              <>
+                <NavLink to="/pricing" className={navLinkClass}>
+                  Pricing
+                </NavLink>
+                <NavLink to="/offers" className={navLinkClass}>
+                  Offers
+                </NavLink>
+                <NavLink to="/discover" className={navLinkClass}>
+                  Discover
+                </NavLink>
+              </>
             )}
             {user?.role === "TOURIST" && (
               <>
