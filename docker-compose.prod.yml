@@ -121,8 +121,13 @@ services:
     environment:
       PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:-srilankatourpilot.com}
       CADDY_EMAIL: ${CADDY_EMAIL:-}
-      # Host gateway + DEV HTTP_PORT — used by docker/Caddyfile for Path B
-      DEV_UPSTREAM: ${DEV_UPSTREAM:-172.17.0.1:8081}
+      # Explicit DEV hostname (must match DNS). Listed in Caddyfile too.
+      DEV_DOMAIN: ${DEV_DOMAIN:-dev.srilankatourpilot.com}
+      # Host gateway + DEV HTTP_PORT — Path B reverse_proxy target.
+      DEV_UPSTREAM: ${DEV_UPSTREAM:-host.docker.internal:8081}
+    extra_hosts:
+      # So Caddy can reach the DEV stack published on the VPS host (:8081).
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
       - tourpilot_caddy_data:/data
