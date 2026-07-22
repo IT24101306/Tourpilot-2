@@ -58,6 +58,15 @@ function platformDomains(): string[] {
   } catch {
     /* ignore malformed WEB_APP_URL */
   }
+  add(process.env.PLATFORM_DOMAIN);
   add("localhost");
+  // Staging subdomain on the same VPS (dev.example.com) is platform-owned,
+  // never an agency custom domain — required so Caddy On-Demand TLS ask
+  // succeeds if traffic briefly hits the catch-all site block.
+  for (const d of Array.from(set)) {
+    if (d && !d.startsWith("dev.") && d !== "localhost") {
+      set.add(`dev.${d}`);
+    }
+  }
   return Array.from(set);
 }
