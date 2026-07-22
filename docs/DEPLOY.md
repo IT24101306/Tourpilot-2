@@ -186,8 +186,9 @@ curl -fsS https://www.srilankatourpilot.com/api/health
 
 | Workflow | When | What |
 |----------|------|------|
-| `ci.yml` | PR + push to `main` | Install, Prisma generate, build shared/api/web |
-| `deploy.yml` | Push to `main` | Build Docker images → push GHCR → SSH to VPS → `compose pull && up` |
+| `ci.yml` | PR + push to `main` or `development` | Install, Prisma generate, build shared/api/web |
+| `deploy.yml` | Push to `main` | Build Docker images → push GHCR (`latest`/`<sha>`) → SSH → prod compose |
+| `deploy-dev.yml` | Push to `development` | Build Docker images → push GHCR (`dev`/`dev-<sha>`) → SSH → `/var/www/tourpilot-dev` |
 
 ### 2.1 GitHub Container Registry
 
@@ -219,6 +220,7 @@ Repo → **Settings → Secrets and variables → Actions**:
 | `DEPLOY_SSH_KEY` | **Private** SSH key (full PEM) |
 | `DEPLOY_PORT` | `22` (optional; digits only — no trailing newline/space) |
 | `DEPLOY_PATH` | `/var/www/tourpilot` |
+| `DEV_DEPLOY_PATH` | `/var/www/tourpilot-dev` (required for `deploy-dev.yml`) |
 | `GHCR_PULL_USER` | your GitHub username |
 | `GHCR_PULL_TOKEN` | PAT with `read:packages` |
 
@@ -282,6 +284,32 @@ is shared.
 | Workflow | `deploy.yml` | `deploy-dev.yml` |
 | Image tags (GHCR) | `latest`, `<sha>` | `dev`, `dev-<sha>` |
 
+> **Never-touch-prod rule:** always prefix DEV compose with
+> `COMPOSE_PROJECT_NAME=tourpilot-dev`. Never run seed scripts in `/var/www/tourpilot`.
+
+### 2.5.0 Diagnose who owns ports 80/443 (do this first)
+
+SSH to the VPS:
+
+```bash
+cd /var/www/tourpilot   # or wherever the repo is
+bash scripts/diagnose-edge.sh
+```
+
+Or manually:
+
+```bash
+sudo ss -tlnp | grep -E ':80|:443'
+systemctl is-active nginx || true
+docker ps --format 'table {{.Names}}\t{{.Ports}}' | grep -Ei 'caddy|web|api'
+```
+
+| Verdict | Meaning | Wire DEV with |
+|---------|---------|---------------|
+| Host nginx on 80/443 | Path A | `bash scripts/wire-dev-domain.sh` |
+| Caddy container on 80/443 | Path B | `bash scripts/wire-dev-via-caddy.sh` |
+| Both | Conflict — stop one | Fix before continuing |
+
 ### 2.5.1 DNS
 
 Add an A record for the subdomain (in addition to `@` and `www`):
@@ -292,7 +320,24 @@ Add an A record for the subdomain (in addition to `@` and `www`):
 
 Confirm: `dig +short dev.srilankatourpilot.com` returns the VPS IP.
 
-### 2.5.2 Create the dev folder + env (one-time)
+### 2.5.2 Create the DEV stack + separate DB + demo seed (one-time)
+
+**Why the DB is separate:** Compose project name `tourpilot-dev` prefixes Docker
+volumes (`tourpilot-dev_tourpilot_mysql_data`). Production keeps
+`tourpilot_mysql_data` on host port `3307`. DEV uses `3308`. Same internal DB
+name `tourpilot`, different volume — no shared data.
+
+Easiest path (generates secrets, starts stack, seeds demo):
+
+```bash
+# Prefer running the script from a checkout that already has the new scripts
+# (e.g. after git pull on prod, or clone development first).
+bash /var/www/tourpilot/scripts/bootstrap-dev-stack.sh
+# or, after clone:
+# cd /var/www/tourpilot-dev && bash scripts/bootstrap-dev-stack.sh
+```
+
+Manual equivalent:
 
 ```bash
 sudo mkdir -p /var/www/tourpilot-dev
@@ -300,57 +345,107 @@ sudo chown $USER:$USER /var/www/tourpilot-dev
 git clone -b development https://github.com/IT24101306/Tourpilot-2.git /var/www/tourpilot-dev
 cd /var/www/tourpilot-dev
 cp .env.development.example .env
-nano .env    # set strong DEV passwords + JWT secrets (different from prod)
+nano .env    # strong DEV passwords + JWT (never copy prod secrets)
+
+export COMPOSE_PROJECT_NAME=tourpilot-dev
+docker compose -f docker-compose.prod.yml --env-file .env up -d
+
+# Seed DEMO data into DEV only
+COMPOSE_PROJECT_NAME=tourpilot-dev docker compose -f docker-compose.prod.yml --env-file .env \
+  exec api npx tsx prisma/seed-demo.ts
 ```
 
-### 2.5.3 Wire the dev domain + TLS (one-time)
+Demo agency phone after seed: `+94771234567` (OTP shown in UI/logs on DEV).
+
+### 2.5.3 Wire the DEV domain + TLS (one-time)
+
+**Path A — host Nginx owns 80/443**
 
 ```bash
 cd /var/www/tourpilot-dev
 bash scripts/wire-dev-domain.sh
 ```
 
-This creates an **isolated** stack (`COMPOSE_PROJECT_NAME=tourpilot-dev`), a
-`tourpilot-dev` nginx site pointing `dev.srilankatourpilot.com` → `127.0.0.1:8081`,
-and its own Let's Encrypt cert. Your production site is untouched.
+Creates `/etc/nginx/sites-available/tourpilot-dev` → `127.0.0.1:8081` and a
+Certbot cert for `dev.srilankatourpilot.com` only. Confirm production nginx
+`server_name` lists only apex + `www` (not `dev.`).
 
-> Make sure the **production** nginx site's `server_name` lists only
-> `srilankatourpilot.com www.srilankatourpilot.com` (not `dev.`), so the dev
-> subdomain is served exclusively by the dev site.
+**Path B — Caddy owns 80/443**
 
-### 2.5.4 GitHub secret for dev
+Do **not** run `wire-dev-domain.sh` (it will exit and point you here). Production
+Caddy already has an explicit site block `dev.{$PLATFORM_DOMAIN}` that
+reverse-proxies to `DEV_UPSTREAM` (default `172.17.0.1:8081`).
 
-Add one secret (the rest are reused from production):
+```bash
+# Ensure prod .env has USE_CADDY_EDGE=true and DEV_UPSTREAM=172.17.0.1:8081
+# (wire-caddy.sh sets these). Then:
+cd /var/www/tourpilot
+git pull   # pick up updated docker/Caddyfile
+bash scripts/wire-dev-via-caddy.sh
+```
+
+Agency custom domains stay on Caddy On-Demand TLS; `dev.` is a fixed platform site.
+
+### 2.5.4 Sync the `development` branch (so the pipeline exists)
+
+GitHub Actions only runs workflow files that exist **on the branch you push**.
+`deploy-dev.yml` must be on `development`:
+
+```bash
+git fetch origin
+git checkout development
+git merge main
+git push origin development
+```
+
+### 2.5.5 GitHub secret for DEV
 
 | Secret | Value |
 |--------|--------|
 | `DEV_DEPLOY_PATH` | `/var/www/tourpilot-dev` |
 
-### 2.5.5 Deploy dev
+Other secrets (`DEPLOY_HOST`, SSH key, `GHCR_*`) are shared with production.
 
-Any push to `development` builds `dev`/`dev-<sha>` images and deploys them to the
-dev stack automatically:
+### 2.5.6 Deploy DEV (ongoing)
+
+Any push to `development` builds `dev`/`dev-<sha>` images and deploys them:
 
 ```bash
 git checkout development
 git push origin development
 ```
 
-Manual dev deploy / rebuild on the server:
+Manual rebuild on the server:
 
 ```bash
 cd /var/www/tourpilot-dev
 COMPOSE_PROJECT_NAME=tourpilot-dev docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```
 
-Verify:
+Verify isolation + health:
 
 ```bash
+docker ps --format 'table {{.Names}}\t{{.Ports}}' | grep -E 'tourpilot|8080|8081|3307|3308'
+curl -fsS https://srilankatourpilot.com/api/health
 curl -fsS https://dev.srilankatourpilot.com/api/health
 ```
 
-> Always prefix dev compose commands with `COMPOSE_PROJECT_NAME=tourpilot-dev`
-> (or export it) so you never touch production containers/volumes by accident.
+### 2.5.7 Daily workflow
+
+```bash
+# Feature work → test on DEV
+git checkout development
+# ... code ...
+git push origin development          # Actions → Deploy (dev)
+
+# Promote to PROD when ready
+git checkout main
+git merge development
+git push origin main                 # Actions → Deploy (production)
+```
+
+Ignore the stale local branch name `develop` if present — official branch is
+**`development`**.
 
 ---
 

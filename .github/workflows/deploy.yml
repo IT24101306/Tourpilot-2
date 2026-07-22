@@ -119,7 +119,13 @@ jobs:
             echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_PULL_USER }}" --password-stdin
 
             docker compose -f docker-compose.prod.yml --env-file .env pull api web
-            docker compose -f docker-compose.prod.yml --env-file .env up -d
+            # If USE_CADDY_EDGE=true (set by wire-caddy.sh), keep the edge profile
+            # so recreating api/web does not drop the Caddy container on 80/443.
+            if grep -qE '^USE_CADDY_EDGE=true' .env 2>/dev/null; then
+              docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d
+            else
+              docker compose -f docker-compose.prod.yml --env-file .env up -d
+            fi
             docker image prune -f
 
             sleep 8

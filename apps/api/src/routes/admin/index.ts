@@ -314,6 +314,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureReadyMadeTours: true,
         featureCustomInquiries: true,
         featureNegotiationsBookings: true,
+        featureCustomDomain: true,
       },
     });
 
@@ -371,6 +372,7 @@ adminRouter.get("/users", async (req, res, next) => {
             featureReadyMadeTours: true,
             featureCustomInquiries: true,
             featureNegotiationsBookings: true,
+            featureCustomDomain: true,
           },
         },
         agencyStaff: {
@@ -390,6 +392,7 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureReadyMadeTours: true,
                 featureCustomInquiries: true,
                 featureNegotiationsBookings: true,
+                featureCustomDomain: true,
               },
             },
           },

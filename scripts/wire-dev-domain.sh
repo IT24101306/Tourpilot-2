@@ -15,8 +15,17 @@ echo "==> Deploy dir: ${DEPLOY_DIR}"
 echo "==> Docker web port: ${DOCKER_PORT}"
 echo "==> Compose project: ${PROJECT_NAME}"
 
+# Path A requires host nginx on 80/443. If Caddy owns the edge, use Path B instead.
+if docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qi caddy; then
+  echo "Caddy appears to own the edge (container publishing 80/443)." >&2
+  echo "Do NOT use this nginx script — run Path B instead:" >&2
+  echo "  bash scripts/wire-dev-via-caddy.sh" >&2
+  echo "Or diagnose first: bash scripts/diagnose-edge.sh" >&2
+  exit 1
+fi
+
 if [ ! -f "${DEPLOY_DIR}/.env" ]; then
-  echo "Missing ${DEPLOY_DIR}/.env — clone the 'development' branch there and copy .env.development.example first." >&2
+  echo "Missing ${DEPLOY_DIR}/.env — run: bash scripts/bootstrap-dev-stack.sh" >&2
   exit 1
 fi
 

@@ -110,6 +110,7 @@ export function AdminAgenciesPage() {
         { label: "Drivers & Partners", value: features.driversAndPartners ? "On" : "Off" },
         { label: "Support", value: features.support ? "On" : "Off" },
         { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
+        { label: "Custom domain", value: features.customDomain ? "On" : "Off" },
       ],
       onConfirm: async () => {
         setSavingFeatures(true);
