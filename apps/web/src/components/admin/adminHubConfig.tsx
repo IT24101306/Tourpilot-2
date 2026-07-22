@@ -127,6 +127,14 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
         stat: (s) => s.offers.active,
       },
       {
+        id: "promo-email",
+        to: "/dashboard/admin/promo-email",
+        category: "Marketing",
+        title: "Promo email",
+        description: "Send posters and offer links to users",
+        icon: "cms",
+      },
+      {
         id: "vouchers",
         to: "/dashboard/admin/vouchers",
         category: "Money",

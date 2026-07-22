@@ -17,6 +17,7 @@ import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
 import { serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 import { buildAgencyKycRecord, parseAgencyKyc } from "../lib/agencyKyc.js";
 import { asJson } from "../utils/json.js";
+import { notifyWelcome } from "../services/notifications.js";
 
 export const authRouter = Router();
 
@@ -219,6 +220,13 @@ authRouter.post("/verify-registration", async (req, res, next) => {
 
       return created;
     });
+
+    void notifyWelcome({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    }).catch((err) => console.error("[welcome email]", err));
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
     await touchUserActivity(user.id);

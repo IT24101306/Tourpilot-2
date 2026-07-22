@@ -12,6 +12,7 @@ import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
 import { PublicLayout } from "./components/Layout";
 import { LandingPage } from "./pages/LandingPage";
+import { MarketingHomePage } from "./pages/MarketingHomePage";
 import { DiscoverPage } from "./pages/DiscoverPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
@@ -69,6 +70,7 @@ import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
 import { AdminOffersPage } from "./pages/admin/AdminOffersPage";
+import { AdminPromoEmailPage } from "./pages/admin/AdminPromoEmailPage";
 import { AdminVouchersPage } from "./pages/admin/AdminVouchersPage";
 import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
 import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
@@ -103,7 +105,7 @@ function HomeRoute() {
   if (user?.role === "AGENCY" || user?.role === "INFLUENCER") {
     return <Navigate to={dashboardPathForRole(user.role)} replace />;
   }
-  return <LandingPage />;
+  return <MarketingHomePage />;
 }
 
 function InfluencerStorefrontRedirect() {
@@ -137,7 +139,22 @@ export default function App() {
       <CurrencyProvider>
       <StorefrontDomainProvider>
       <BrowserRouter>
-        <div className="app-root">
+        <AppShell />
+      </BrowserRouter>
+      </StorefrontDomainProvider>
+      </CurrencyProvider>
+    </AuthProvider>
+  );
+}
+
+function AppShell() {
+  const { pathname } = useLocation();
+  const storefront = useStorefrontDomain();
+  const onMarketingHome =
+    pathname === "/" && !storefront.loading && !storefront.isCustomDomain;
+
+  return (
+        <div className={`app-root${onMarketingHome ? " app-root--marketing-home" : ""}`}>
           <div className="app-root__main">
             <Routes>
           <Route element={<PublicLayout />}>
@@ -293,6 +310,7 @@ export default function App() {
             <Route path="commissions" element={<AdminCommissionsPage />} />
             <Route path="ledger" element={<AdminLedgerPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
+            <Route path="promo-email" element={<AdminPromoEmailPage />} />
             <Route path="vouchers" element={<AdminVouchersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="drivers" element={<AdminDriversPage />} />
@@ -308,9 +326,5 @@ export default function App() {
           </div>
           <SiteFooter />
         </div>
-      </BrowserRouter>
-      </StorefrontDomainProvider>
-      </CurrencyProvider>
-    </AuthProvider>
   );
 }

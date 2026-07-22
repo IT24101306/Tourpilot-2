@@ -239,7 +239,7 @@ export function RegisterProPage() {
       {step === "otp" && (
         <>
           <p className="muted" style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>
-            Code sent to {phone}
+            Code sent to your email on file (phone {phone})
             {role === "AGENCY" && (
               <>
                 <br />

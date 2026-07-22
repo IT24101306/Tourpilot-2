@@ -59,6 +59,77 @@ a {
   flex: 1 0 auto;
 }
 
+html.marketing-home-active,
+html.marketing-home-active body,
+body.marketing-home-active {
+  height: 100%;
+  overflow: hidden;
+}
+
+.marketing-home {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #eaefea;
+}
+
+.marketing-home__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.marketing-home__auth {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.marketing-home__auth-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-family: Poppins, system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(13, 43, 29, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.marketing-home__auth-link:hover {
+  background: rgba(13, 43, 29, 0.75);
+  color: #fff;
+}
+
+.marketing-home__auth-link--primary {
+  background: #00b200;
+  border-color: transparent;
+  color: #fff;
+}
+
+.marketing-home__auth-link--primary:hover {
+  background: #009400;
+}
+
+.shell--marketing-home .topbar--site {
+  display: none;
+}
+
+.app-root--marketing-home .site-footer {
+  display: none;
+}
+
 .site-footer {
   flex-shrink: 0;
   position: relative;

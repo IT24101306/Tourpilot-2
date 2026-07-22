@@ -3,10 +3,51 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma.js";
 import { config } from "../lib/config.js";
 import { asJson } from "../utils/json.js";
+import { finalizeEmailTemplate, otpEmail, sendPlatformEmail } from "./email.js";
 
 function generateOtp(): string {
   if (config.devBypassOtp) return config.devBypassOtpCode;
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function deliverOtpByEmail(
+  phone: string,
+  otp: string,
+  purpose: string,
+  payload?: Record<string, unknown>
+) {
+  let email =
+    typeof payload?.email === "string" ? payload.email.trim().toLowerCase() : "";
+  let name = typeof payload?.name === "string" ? payload.name.trim() : "";
+
+  if (!email) {
+    const user = await prisma.user.findUnique({
+      where: { phone },
+      select: { email: true, name: true },
+    });
+    email = user?.email?.trim().toLowerCase() || "";
+    if (!name) name = user?.name?.trim() || "";
+  }
+
+  if (!email) return;
+
+  try {
+    const content = await finalizeEmailTemplate(
+      "otp",
+      otpEmail({ recipientName: name || undefined, otp, purpose }),
+      {
+        recipientName: name || "there",
+        otp,
+        purpose,
+      }
+    );
+    const result = await sendPlatformEmail({ to: email, ...content });
+    if (!result.delivered) {
+      console.error("[otp email]", result.error || "not delivered");
+    }
+  } catch (err) {
+    console.error("[otp email]", err);
+  }
 }
 
 export async function createOtpChallenge(
@@ -48,6 +89,8 @@ export async function createOtpChallenge(
         .join("\n")
     );
   }
+
+  void deliverOtpByEmail(phone, otp, purpose, payload);
 
   return {
     challengeId: challenge.id,

@@ -43,12 +43,17 @@ export type PlatformSettingsView = {
 const ROLES: UserRole[] = ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"];
 
 export const EMAIL_TEMPLATE_KEYS = [
+  "otp",
+  "welcome",
+  "tripMessage",
+  "agencyApproved",
+  "agencyRejection",
+  "walletReceipt",
   "inquiryCreated",
   "proposalSent",
   "inquiryStatus",
   "inquiryExpired",
   "commissionPaid",
-  "agencyRejection",
 ] as const;
 
 export function defaultLoginFees(): LoginFeesByRole {

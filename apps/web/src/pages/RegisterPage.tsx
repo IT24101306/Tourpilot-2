@@ -102,7 +102,7 @@ export function RegisterPage() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Enter your details — we'll send a one-time code to your phone to verify you."
+      subtitle="Enter your details — we'll email a one-time code to verify you."
     >
       <AuthSwitch mode="register" returnTo={returnTo} />
 
@@ -147,7 +147,8 @@ export function RegisterPage() {
       {step === "otp" && (
         <>
           <p className="muted" style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>
-            Code sent to {phone}
+            Code sent to your email{email.trim() ? ` (${email.trim().toLowerCase()})` : ""}. Phone on
+            file: {phone}
           </p>
           <OtpStep
             otp={otp}

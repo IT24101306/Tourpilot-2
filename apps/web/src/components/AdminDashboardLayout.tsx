@@ -13,6 +13,7 @@ const ADMIN_TABS: { to: string; label: string; end?: boolean }[] = [
   { to: "/dashboard/admin/itineraries", label: "Itineraries" },
   { to: "/dashboard/admin/ledger", label: "Ledger" },
   { to: "/dashboard/admin/offers", label: "Offers" },
+  { to: "/dashboard/admin/promo-email", label: "Promo email" },
   { to: "/dashboard/admin/vouchers", label: "Vouchers" },
   { to: "/dashboard/admin/reviews", label: "Reviews" },
   { to: "/dashboard/admin/drivers", label: "Drivers" },

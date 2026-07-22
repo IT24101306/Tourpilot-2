@@ -5,11 +5,20 @@ import {
   getPlatformSettings,
 } from "./platformSettings.js";
 
+export type EmailAttachment = {
+  filename: string;
+  path?: string;
+  content?: Buffer | string;
+  contentType?: string;
+  cid?: string;
+};
+
 type EmailPayload = {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  attachments?: EmailAttachment[];
 };
 
 export type EmailResult = {
@@ -36,7 +45,7 @@ async function getSmtpTransport() {
 
 /** Platform email — log in dev; webhook or SMTP when configured. */
 export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailResult> {
-  const { to, subject, text, html } = payload;
+  const { to, subject, text, html, attachments } = payload;
   if (!to?.trim()) {
     return { delivered: false, mode: config.email.mode, error: "No recipient address" };
   }
@@ -51,6 +60,9 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
     console.log(`  To: ${to}`);
     console.log(`  Subject: ${subject}`);
     console.log(`  Body:\n${text}`);
+    if (attachments?.length) {
+      console.log(`  Attachments: ${attachments.map((a) => a.filename).join(", ")}`);
+    }
     return { delivered: true, mode: "log" };
   }
 
@@ -69,6 +81,18 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
           subject,
           text,
           html: html ?? text,
+          attachments: attachments?.map((a) => ({
+            filename: a.filename,
+            contentType: a.contentType,
+            cid: a.cid,
+            path: a.path,
+            content:
+              typeof a.content === "string"
+                ? a.content
+                : a.content
+                  ? a.content.toString("base64")
+                  : undefined,
+          })),
         }),
       });
       if (!res.ok) {
@@ -97,7 +121,18 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
       subject,
       text,
       html: html ?? text,
-    });
+      ...(attachments?.length
+        ? {
+            attachments: attachments.map((a) => ({
+              filename: a.filename,
+              path: a.path,
+              content: a.content,
+              contentType: a.contentType,
+              cid: a.cid,
+            })),
+          }
+        : {}),
+    } as Parameters<Transporter["sendMail"]>[0]);
     return { delivered: true, mode: "smtp" };
   } catch (e) {
     return {
@@ -129,12 +164,128 @@ export async function finalizeEmailTemplate(
   };
 }
 
-function escapeHtml(s: string) {
+export function escapeHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+export function absolutePublicUrl(pathOrUrl: string, baseUrl: string) {
+  const raw = pathOrUrl.trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const base = baseUrl.replace(/\/$/, "");
+  const path = raw.startsWith("/") ? raw : `/${raw}`;
+  return `${base}${path}`;
+}
+
+export function otpEmail(params: {
+  recipientName?: string;
+  otp: string;
+  purpose: string;
+}) {
+  const action =
+    params.purpose === "register"
+      ? "complete registration"
+      : params.purpose.startsWith("login")
+        ? "sign in"
+        : "verify your request";
+  const greeting = params.recipientName ? `Hello ${params.recipientName},` : "Hello,";
+  const subject = `Your TourPilot code: ${params.otp}`;
+  const text = [
+    greeting,
+    "",
+    `Your one-time code to ${action} is: ${params.otp}`,
+    "",
+    "This code expires in 5 minutes. If you did not request it, you can ignore this email.",
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>${escapeHtml(greeting)}</p>
+<p>Your one-time code to ${escapeHtml(action)} is:</p>
+<p style="font-size:28px;letter-spacing:4px;font-weight:700">${escapeHtml(params.otp)}</p>
+<p>This code expires in 5 minutes. If you did not request it, you can ignore this email.</p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
+export function welcomeEmail(params: {
+  name: string;
+  role: string;
+  appUrl: string;
+}) {
+  const subject = "Welcome to TourPilot";
+  const text = [
+    `Hello ${params.name},`,
+    "",
+    "Welcome to TourPilot — we're glad you're here.",
+    "",
+    `Your account (${params.role.toLowerCase()}) is ready. Explore tours, offers, and trip planning anytime:`,
+    params.appUrl,
+    "",
+    "We'll also email you important trip updates and occasional offers.",
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.name)},</p>
+<p>Welcome to TourPilot — we're glad you're here.</p>
+<p>Your <strong>${escapeHtml(params.role.toLowerCase())}</strong> account is ready.</p>
+<p><a href="${escapeHtml(params.appUrl)}">Open TourPilot</a></p>
+<p>We'll also email you important trip updates and occasional offers.</p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
+export function tripMessageEmail(params: {
+  recipientName: string;
+  preview: string;
+  tripUrl: string;
+}) {
+  const subject = "New message in your TourPilot trip room";
+  const text = [
+    `Hello ${params.recipientName},`,
+    "",
+    "You have a new message in your trip room:",
+    "",
+    params.preview,
+    "",
+    `Open trip room: ${params.tripUrl}`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
+<p>You have a new message in your trip room:</p>
+<blockquote>${escapeHtml(params.preview)}</blockquote>
+<p><a href="${escapeHtml(params.tripUrl)}">Open trip room</a></p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
+export function agencyApprovedEmail(params: {
+  agencyName: string;
+  ownerName: string;
+  dashboardUrl: string;
+}) {
+  const subject = `TourPilot — ${params.agencyName} is approved`;
+  const text = [
+    `Hello ${params.ownerName},`,
+    "",
+    `Great news — ${params.agencyName} has been approved on TourPilot.`,
+    "",
+    "You can now publish tours, manage inquiries, and appear in discovery.",
+    "",
+    `Open your dashboard: ${params.dashboardUrl}`,
+    "",
+    "— TourPilot Platform Team",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.ownerName)},</p>
+<p>Great news — <strong>${escapeHtml(params.agencyName)}</strong> has been approved on TourPilot.</p>
+<p>You can now publish tours, manage inquiries, and appear in discovery.</p>
+<p><a href="${escapeHtml(params.dashboardUrl)}">Open your dashboard</a></p>
+<p>— TourPilot Platform Team</p>`;
+  return { subject, text, html };
 }
 
 export function agencyRejectionEmail(params: {
@@ -165,6 +316,34 @@ export function agencyRejectionEmail(params: {
 <p>You may update your application and contact support if you have questions.</p>
 <p>— TourPilot Platform Team</p>`;
 
+  return { subject, text, html };
+}
+
+export function walletReceiptEmail(params: {
+  recipientName: string;
+  kind: "LOGIN_FEE" | "TOPUP";
+  amountLkr: number;
+  balanceLkr: number;
+}) {
+  const isFee = params.kind === "LOGIN_FEE";
+  const subject = isFee
+    ? `Login fee receipt — LKR ${params.amountLkr.toLocaleString()}`
+    : `Wallet top-up receipt — LKR ${params.amountLkr.toLocaleString()}`;
+  const action = isFee
+    ? `A login fee of LKR ${params.amountLkr.toLocaleString()} was charged.`
+    : `LKR ${params.amountLkr.toLocaleString()} was added to your wallet.`;
+  const text = [
+    `Hello ${params.recipientName},`,
+    "",
+    action,
+    `Wallet balance: LKR ${params.balanceLkr.toLocaleString()}.`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
+<p>${escapeHtml(action)}</p>
+<p>Wallet balance: <strong>LKR ${params.balanceLkr.toLocaleString()}</strong>.</p>
+<p>— TourPilot</p>`;
   return { subject, text, html };
 }
 
@@ -278,4 +457,43 @@ export function commissionPaidEmail(params: {
 <p>New balance: <strong>LKR ${params.walletBalance.toLocaleString()}</strong>.</p>
 <p>— TourPilot</p>`;
   return { subject, text, html };
+}
+
+export function promotionalEmail(params: {
+  recipientName: string;
+  subject: string;
+  body: string;
+  posterUrl?: string;
+  offerTitle?: string;
+  offerUrl?: string;
+}) {
+  const lines = [`Hello ${params.recipientName},`, "", params.body];
+  if (params.offerTitle && params.offerUrl) {
+    lines.push("", `Featured offer: ${params.offerTitle}`, params.offerUrl);
+  }
+  if (params.posterUrl) {
+    lines.push("", `Poster: ${params.posterUrl}`);
+  }
+  lines.push("", "— TourPilot");
+  const text = lines.join("\n");
+
+  const posterHtml = params.posterUrl
+    ? `<p><img src="${escapeHtml(params.posterUrl)}" alt="TourPilot offer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
+    : "";
+  const offerHtml =
+    params.offerTitle && params.offerUrl
+      ? `<p><a href="${escapeHtml(params.offerUrl)}" style="display:inline-block;padding:10px 18px;background:#0f766e;color:#fff;text-decoration:none;border-radius:6px">View ${escapeHtml(params.offerTitle)}</a></p>`
+      : "";
+
+  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
+${params.body
+  .split(/\n+/)
+  .filter(Boolean)
+  .map((p) => `<p>${escapeHtml(p)}</p>`)
+  .join("\n")}
+${posterHtml}
+${offerHtml}
+<p>— TourPilot</p>`;
+
+  return { subject: params.subject, text, html };
 }

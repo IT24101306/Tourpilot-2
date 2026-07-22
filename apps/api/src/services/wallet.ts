@@ -4,6 +4,7 @@ import {
   resolveLoginFeeForUser,
   resolveWalletTopupBounds,
 } from "./platformSettings.js";
+import { notifyWalletReceipt } from "./notifications.js";
 
 export async function chargeLoginFee(userId: string, _role?: UserRole) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
@@ -37,6 +38,15 @@ export async function chargeLoginFee(userId: string, _role?: UserRole) {
       },
     }),
   ]);
+
+  void notifyWalletReceipt({
+    userId,
+    name: user.name,
+    email: user.email,
+    kind: "LOGIN_FEE",
+    amountLkr: fee,
+    balanceLkr: newBalance,
+  }).catch((err) => console.error("[login fee receipt]", err));
 
   return { charged: fee, balance: newBalance };
 }
@@ -78,6 +88,15 @@ export async function topUpWallet(userId: string, amount: number) {
       },
     }),
   ]);
+
+  void notifyWalletReceipt({
+    userId,
+    name: user.name,
+    email: user.email,
+    kind: "TOPUP",
+    amountLkr: amount,
+    balanceLkr: newBalance,
+  }).catch((err) => console.error("[top-up receipt]", err));
 
   return { balance: newBalance };
 }

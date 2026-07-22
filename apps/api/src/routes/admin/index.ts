@@ -6,14 +6,17 @@ import { prisma } from "../../lib/prisma.js";
 import { authRequired, requireRoles } from "../../middleware/auth.js";
 import { asJson } from "../../utils/json.js";
 import {
+  absolutePublicUrl,
   agencyRejectionEmail,
   finalizeEmailTemplate,
+  promotionalEmail,
   sendPlatformEmail,
 } from "../../services/email.js";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
   notifyAdminInquiryMessage,
+  notifyAgencyApproved,
   notifyCommissionPaid,
 } from "../../services/notifications.js";
 import { creditCommissionPayout } from "../../services/wallet.js";
@@ -110,6 +113,137 @@ adminRouter.put("/settings", async (req, res, next) => {
       })
       .parse(req.body);
     res.json(await updatePlatformSettings(body));
+  } catch (e) {
+    next(e);
+  }
+});
+
+const promoAudienceRoles = z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"]);
+
+adminRouter.get("/promo-email/audience", async (req, res, next) => {
+  try {
+    const rolesRaw = typeof req.query.roles === "string" ? req.query.roles : "";
+    const roles = rolesRaw
+      .split(",")
+      .map((r) => r.trim().toUpperCase())
+      .filter((r): r is z.infer<typeof promoAudienceRoles> =>
+        ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"].includes(r)
+      );
+    const where = {
+      isActive: true,
+      AND: [{ email: { not: null } }, { NOT: { email: "" } }],
+      role: {
+        in: (roles.length
+          ? roles
+          : (["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"] as UserRole[])),
+      },
+    };
+    const count = await prisma.user.count({ where });
+    res.json({ count, roles: roles.length ? roles : ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"] });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/promo-email", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        subject: z.string().min(3).max(200),
+        body: z.string().min(3).max(8000),
+        posterUrl: z.string().max(2000).optional().nullable(),
+        offerId: z.string().optional().nullable(),
+        roles: z.array(promoAudienceRoles).min(1).default(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"]),
+        testTo: z.string().email().optional().nullable(),
+      })
+      .parse(req.body);
+
+    const settings = await getPlatformSettings();
+    const base = (settings.webAppUrl || "").replace(/\/$/, "") || "https://srilankatourpilot.com";
+
+    let offerTitle: string | undefined;
+    let offerUrl: string | undefined;
+    if (body.offerId) {
+      const offer = await prisma.offer.findUnique({ where: { id: body.offerId } });
+      if (!offer) {
+        return res.status(404).json({ error: "Offer not found" });
+      }
+      offerTitle = offer.title;
+      offerUrl = `${base}/offers?offer=${encodeURIComponent(offer.id)}`;
+    }
+
+    const posterUrl = body.posterUrl?.trim()
+      ? absolutePublicUrl(body.posterUrl.trim(), base)
+      : undefined;
+
+    if (body.testTo?.trim()) {
+      const content = promotionalEmail({
+        recipientName: "there",
+        subject: body.subject.trim(),
+        body: body.body.trim(),
+        posterUrl,
+        offerTitle,
+        offerUrl,
+      });
+      const result = await sendPlatformEmail({ to: body.testTo.trim(), ...content });
+      return res.json({
+        mode: "test",
+        sent: result.delivered ? 1 : 0,
+        failed: result.delivered ? 0 : 1,
+        errors: result.error ? [result.error] : [],
+      });
+    }
+
+    const recipients = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        role: { in: body.roles },
+        AND: [{ email: { not: null } }, { NOT: { email: "" } }],
+      },
+      select: { id: true, name: true, email: true },
+    });
+
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    const chunkSize = 15;
+
+    for (let i = 0; i < recipients.length; i += chunkSize) {
+      const chunk = recipients.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map(async (user) => {
+          const to = user.email!.trim();
+          if (!to) return { ok: false, error: "empty email" };
+          const content = promotionalEmail({
+            recipientName: user.name || "there",
+            subject: body.subject.trim(),
+            body: body.body.trim(),
+            posterUrl,
+            offerTitle,
+            offerUrl,
+          });
+          const result = await sendPlatformEmail({ to, ...content });
+          return { ok: result.delivered, error: result.error };
+        })
+      );
+      for (const r of results) {
+        if (r.ok) sent += 1;
+        else {
+          failed += 1;
+          if (r.error && errors.length < 10) errors.push(r.error);
+        }
+      }
+    }
+
+    res.json({
+      mode: "broadcast",
+      audience: recipients.length,
+      sent,
+      failed,
+      errors,
+      offerTitle: offerTitle || null,
+      offerUrl: offerUrl || null,
+    });
   } catch (e) {
     next(e);
   }
@@ -217,6 +351,12 @@ adminRouter.get("/agencies/pending", async (_req, res, next) => {
 
 adminRouter.patch("/agencies/:id/approve", async (req, res, next) => {
   try {
+    const body = z
+      .object({
+        sendEmail: z.boolean().optional().default(true),
+      })
+      .parse(req.body ?? {});
+
     const agency = await prisma.agency.update({
       where: { id: req.params.id },
       data: {
@@ -225,6 +365,13 @@ adminRouter.patch("/agencies/:id/approve", async (req, res, next) => {
         rejectedAt: null,
       },
     });
+
+    if (body.sendEmail) {
+      void notifyAgencyApproved(agency.id).catch((err) =>
+        console.error("[agency approved email]", err)
+      );
+    }
+
     res.json(agency);
   } catch (e) {
     next(e);

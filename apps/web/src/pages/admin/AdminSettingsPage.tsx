@@ -37,6 +37,36 @@ const FEE_ROLES: UserRole[] = ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADM
 
 const TEMPLATE_META: { key: string; label: string; vars: string }[] = [
   {
+    key: "otp",
+    label: "Login / register OTP",
+    vars: "{{recipientName}} {{otp}} {{purpose}}",
+  },
+  {
+    key: "welcome",
+    label: "Welcome after signup",
+    vars: "{{name}} {{role}} {{appUrl}}",
+  },
+  {
+    key: "tripMessage",
+    label: "New trip-room message",
+    vars: "{{recipientName}} {{preview}} {{tripUrl}}",
+  },
+  {
+    key: "agencyApproved",
+    label: "Agency approved",
+    vars: "{{agencyName}} {{ownerName}} {{dashboardUrl}}",
+  },
+  {
+    key: "agencyRejection",
+    label: "Agency rejection",
+    vars: "{{agencyName}} {{ownerName}} {{reason}}",
+  },
+  {
+    key: "walletReceipt",
+    label: "Wallet / login-fee receipt",
+    vars: "{{recipientName}} {{kind}} {{amountLkr}} {{balanceLkr}}",
+  },
+  {
     key: "inquiryCreated",
     label: "Inquiry created (to agency)",
     vars: "{{agencyName}} {{touristName}} {{tripUrl}}",
@@ -60,11 +90,6 @@ const TEMPLATE_META: { key: string; label: string; vars: string }[] = [
     key: "commissionPaid",
     label: "Commission paid",
     vars: "{{influencerName}} {{amountLkr}} {{walletBalance}}",
-  },
-  {
-    key: "agencyRejection",
-    label: "Agency rejection",
-    vars: "{{agencyName}} {{ownerName}} {{reason}}",
   },
 ];
 
