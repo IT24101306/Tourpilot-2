@@ -33,10 +33,26 @@ async function findActiveAgencyByHost(host: string) {
   });
 }
 
+async function findActiveInfluencerByHost(host: string) {
+  if (!host) return null;
+  return prisma.influencerProfile.findFirst({
+    where: {
+      customDomain: { in: hostVariants(host) },
+      customDomainStatus: "ACTIVE",
+      slug: { not: null },
+      user: { isActive: true },
+    },
+    select: {
+      slug: true,
+      user: { select: { name: true } },
+    },
+  });
+}
+
 /**
  * Caddy On-Demand TLS "ask" endpoint. Caddy calls this before issuing a
  * certificate for a host; we only allow platform domains and verified,
- * active agency custom domains so cert issuance can't be abused.
+ * active agency/influencer custom domains so cert issuance can't be abused.
  */
 domainsRouter.get("/tls/check", async (req, res, next) => {
   try {
@@ -45,6 +61,8 @@ domainsRouter.get("/tls/check", async (req, res, next) => {
     if (isPlatformHost(host)) return res.status(200).json({ ok: true });
     const agency = await findActiveAgencyByHost(host);
     if (agency) return res.status(200).json({ ok: true });
+    const influencer = await findActiveInfluencerByHost(host);
+    if (influencer) return res.status(200).json({ ok: true });
     return res.status(404).json({ error: "unknown host" });
   } catch (e) {
     next(e);
@@ -52,7 +70,7 @@ domainsRouter.get("/tls/check", async (req, res, next) => {
 });
 
 /**
- * Resolve an incoming Host to the agency storefront it should render. The SPA
+ * Resolve an incoming Host to the storefront it should render. The SPA
  * calls this on load when it detects it is not running on a platform domain.
  */
 domainsRouter.get("/public-site", async (req, res, next) => {
@@ -62,8 +80,18 @@ domainsRouter.get("/public-site", async (req, res, next) => {
       return res.status(404).json({ error: "not a custom domain" });
     }
     const agency = await findActiveAgencyByHost(host);
-    if (!agency) return res.status(404).json({ error: "not found" });
-    return res.json({ slug: agency.slug, name: agency.name });
+    if (agency) {
+      return res.json({ type: "agency", slug: agency.slug, name: agency.name });
+    }
+    const influencer = await findActiveInfluencerByHost(host);
+    if (influencer?.slug) {
+      return res.json({
+        type: "influencer",
+        slug: influencer.slug,
+        name: influencer.user.name,
+      });
+    }
+    return res.status(404).json({ error: "not found" });
   } catch (e) {
     next(e);
   }

@@ -19,6 +19,15 @@ import {
 import { attachTourPricing } from "../lib/tourPricing.js";
 import { buildReferralSharePath, buildReferralShareUrl } from "../lib/referralShare.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
+import { config } from "../lib/config.js";
+import {
+  dnsExpectedHint,
+  HOSTNAME_RE,
+  isDomainTaken,
+  normalizeDomainInput,
+  serializeDomain,
+  verifyDomainDns,
+} from "../lib/customDomain.js";
 
 export const influencerRouter = Router();
 
@@ -278,6 +287,103 @@ async function getInfluencerProfileForUser(userId: string) {
   }
   return profile;
 }
+
+influencerRouter.get("/mine/domain", authRequired, requireRoles("INFLUENCER"), async (req, res, next) => {
+  try {
+    const profile = await getInfluencerProfileForUser(req.user!.id);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+    res.json(serializeDomain(profile));
+  } catch (e) {
+    next(e);
+  }
+});
+
+influencerRouter.post("/mine/domain", authRequired, requireRoles("INFLUENCER"), async (req, res, next) => {
+  try {
+    const profile = await getInfluencerProfileForUser(req.user!.id);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+
+    const body = z.object({ domain: z.string().min(1) }).parse(req.body);
+    const domain = normalizeDomainInput(body.domain);
+
+    if (!HOSTNAME_RE.test(domain)) {
+      return res.status(400).json({ error: "Enter a valid domain, e.g. mybrand.com" });
+    }
+    const bare = domain.replace(/^www\./, "");
+    if (config.customDomain.platformDomains.includes(bare)) {
+      return res.status(400).json({ error: "That domain belongs to the platform." });
+    }
+
+    if (await isDomainTaken(domain, { influencerId: profile.id })) {
+      return res.status(409).json({ error: "That domain is already connected to another account." });
+    }
+
+    const updated = await prisma.influencerProfile.update({
+      where: { id: profile.id },
+      data: {
+        customDomain: domain,
+        customDomainStatus: "PENDING",
+        customDomainVerifiedAt: null,
+      },
+    });
+    res.json(serializeDomain(updated));
+  } catch (e) {
+    next(e);
+  }
+});
+
+influencerRouter.post(
+  "/mine/domain/verify",
+  authRequired,
+  requireRoles("INFLUENCER"),
+  async (req, res, next) => {
+    try {
+      const profile = await getInfluencerProfileForUser(req.user!.id);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      if (!profile.customDomain) {
+        return res.status(400).json({ error: "Add a domain before verifying." });
+      }
+
+      const { ok, resolved } = await verifyDomainDns(profile.customDomain);
+      if (!ok) {
+        await prisma.influencerProfile.update({
+          where: { id: profile.id },
+          data: { customDomainStatus: "ERROR", customDomainVerifiedAt: null },
+        });
+        return res.status(400).json({
+          error: `DNS is not pointing here yet. Add ${dnsExpectedHint()}, then verify again. DNS changes can take a while to propagate.`,
+          resolved,
+        });
+      }
+
+      const updated = await prisma.influencerProfile.update({
+        where: { id: profile.id },
+        data: { customDomainStatus: "ACTIVE", customDomainVerifiedAt: new Date() },
+      });
+      res.json(serializeDomain(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+influencerRouter.delete("/mine/domain", authRequired, requireRoles("INFLUENCER"), async (req, res, next) => {
+  try {
+    const profile = await getInfluencerProfileForUser(req.user!.id);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+    const updated = await prisma.influencerProfile.update({
+      where: { id: profile.id },
+      data: {
+        customDomain: null,
+        customDomainStatus: "NONE",
+        customDomainVerifiedAt: null,
+      },
+    });
+    res.json(serializeDomain(updated));
+  } catch (e) {
+    next(e);
+  }
+});
 
 influencerRouter.get("/mine/display", authRequired, requireRoles("INFLUENCER"), async (req, res, next) => {
   try {

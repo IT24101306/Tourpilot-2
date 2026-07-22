@@ -4,12 +4,13 @@ import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ModuleHeader } from "../module/ModuleHeader";
-import { InquiryThread } from "../inquiry/InquiryThread";
+import { InquiryThread, TypingIndicator } from "../inquiry/InquiryThread";
 import { InquiryTourChip } from "../inquiry/InquiryTourChip";
 import { InquiryReplyModal } from "../inquiry/InquiryReplyModal";
 import type { EntityOption, GroupOption } from "../tour/tourFormTypes";
 import type { AgencyEntity, AgencyGroup } from "../../pages/agency/types";
 import type { InquiryDetail } from "../../types/negotiation";
+import type { ThreadMessage } from "../inquiry/InquiryThread";
 import { NegotiationStepper } from "./NegotiationStepper";
 import { GuidedStepper } from "../guided/GuidedStepper";
 import { GuidedNextBanner } from "../guided/GuidedNextBanner";
@@ -17,6 +18,7 @@ import { ProposalCards } from "./ProposalCards";
 import { formatInquiryStatus, inquiryStatusClass } from "../../pages/agency/types";
 import { AgencyInvoiceModal } from "../billing/AgencyInvoiceModal";
 import { TouristInvoiceModal } from "../billing/TouristInvoiceModal";
+import { useChatLive } from "../../lib/useChatLive";
 
 const RESPONDABLE = new Set(["SENT_TO_TOURIST", "TOURIST_VIEWED"]);
 
@@ -61,22 +63,38 @@ export function TripRoomView({
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const autoOpenedInvoiceRef = useRef<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const detail = await api<InquiryDetail>(`/inquiries/${inquiryId}`, { token });
-      setInquiry(detail);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to load trip room");
-    } finally {
-      setLoading(false);
-    }
-  }, [inquiryId, token]);
+  const load = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      if (!opts?.quiet) {
+        setLoading(true);
+        setError("");
+      }
+      try {
+        const detail = await api<InquiryDetail>(`/inquiries/${inquiryId}`, { token });
+        setInquiry(detail);
+      } catch (err) {
+        if (!opts?.quiet) {
+          setError(err instanceof ApiError ? err.message : "Failed to load trip room");
+        }
+      } finally {
+        if (!opts?.quiet) setLoading(false);
+      }
+    },
+    [inquiryId, token]
+  );
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const { typing, onComposeChange, stopTyping } = useChatLive({
+    inquiryId,
+    token,
+    enabled: Boolean(inquiryId && token && !loading && inquiry),
+    onThread: (thread: ThreadMessage[]) => {
+      setInquiry((prev) => (prev ? { ...prev, thread } : prev));
+    },
+  });
 
   // When an invoice is newly sent, open it for the tourist automatically (once).
   useEffect(() => {
@@ -190,6 +208,7 @@ export function TripRoomView({
     void (async () => {
       setChatSending(true);
       setActionStatus("");
+      stopTyping();
       try {
         await api(`/inquiries/${inquiryId}/messages`, {
           method: "POST",
@@ -197,7 +216,7 @@ export function TripRoomView({
           body: JSON.stringify({ message: text }),
         });
         setChatMessage("");
-        await load();
+        await load({ quiet: true });
       } catch (err) {
         setActionStatus(err instanceof ApiError ? err.message : "Failed to send message");
       } finally {
@@ -451,7 +470,7 @@ export function TripRoomView({
           )}
 
           {inquiry.thread && inquiry.thread.length > 0 ? (
-            <InquiryThread messages={inquiry.thread} hideTitle />
+            <InquiryThread messages={inquiry.thread} hideTitle currentUserId={user?.id} />
           ) : (
             <p className="muted neg-chat-empty">
               {role === "AGENCY"
@@ -466,6 +485,8 @@ export function TripRoomView({
             </p>
           )}
 
+          <TypingIndicator names={typing.map((t) => t.name)} />
+
           {canChat && (
             <form className="neg-admin-compose" onSubmit={sendChatMessage}>
               <label htmlFor="tripChatMessage">
@@ -475,7 +496,10 @@ export function TripRoomView({
                 id="tripChatMessage"
                 rows={3}
                 value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
+                onChange={(e) => {
+                  setChatMessage(e.target.value);
+                  onComposeChange(e.target.value);
+                }}
                 placeholder={
                   role === "INFLUENCER"
                     ? "Answer questions, share details, or suggest next steps…"

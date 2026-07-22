@@ -67,6 +67,7 @@ export type InquiryDetail = {
     items: ProposalItem[];
   } | null;
   thread?: ThreadMessage[];
+  typing?: Array<{ userId: string; name: string; role: string; until: string }>;
   invoice?: {
     id: string;
     invoiceNumber: string;

@@ -5,7 +5,9 @@ import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { lockBodyScroll, unlockBodyScroll } from "../../lib/scrollLock";
 import type { InquiryDetail } from "../../types/negotiation";
-import { InquiryThread } from "./InquiryThread";
+import { InquiryThread, TypingIndicator } from "./InquiryThread";
+import { useChatLive } from "../../lib/useChatLive";
+import type { ThreadMessage } from "./InquiryThread";
 
 type Props = {
   open: boolean;
@@ -15,7 +17,7 @@ type Props = {
 };
 
 export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const listRef = useRef<HTMLDivElement>(null);
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,19 +25,26 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!token || !inquiryId) return;
-    setLoading(true);
-    setError("");
-    try {
-      const detail = await api<InquiryDetail>(`/inquiries/${inquiryId}`, { token });
-      setInquiry(detail);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load chat room");
-    } finally {
-      setLoading(false);
-    }
-  }, [token, inquiryId]);
+  const load = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      if (!token || !inquiryId) return;
+      if (!opts?.quiet) {
+        setLoading(true);
+        setError("");
+      }
+      try {
+        const detail = await api<InquiryDetail>(`/inquiries/${inquiryId}`, { token });
+        setInquiry(detail);
+      } catch (err) {
+        if (!opts?.quiet) {
+          setError(err instanceof ApiError ? err.message : "Could not load chat room");
+        }
+      } finally {
+        if (!opts?.quiet) setLoading(false);
+      }
+    },
+    [token, inquiryId]
+  );
 
   useEffect(() => {
     if (!open || !inquiryId) {
@@ -46,6 +55,15 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
     }
     void load();
   }, [open, inquiryId, load]);
+
+  const { typing, onComposeChange, stopTyping } = useChatLive({
+    inquiryId: inquiryId ?? "",
+    token: token ?? "",
+    enabled: Boolean(open && inquiryId && token && inquiry),
+    onThread: (thread: ThreadMessage[]) => {
+      setInquiry((prev) => (prev ? { ...prev, thread } : prev));
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +90,7 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
     if (!text || !token || !inquiryId) return;
     setSending(true);
     setError("");
+    stopTyping();
     try {
       await api(`/inquiries/${inquiryId}/messages`, {
         method: "POST",
@@ -79,7 +98,7 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
         body: JSON.stringify({ message: text }),
       });
       setDraft("");
-      await load();
+      await load({ quiet: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to send message");
     } finally {
@@ -124,7 +143,7 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
           {loading && !inquiry ? <p className="muted">Loading conversation…</p> : null}
           {error ? <p className="form-error">{error}</p> : null}
           {inquiry?.thread && inquiry.thread.length > 0 ? (
-            <InquiryThread messages={inquiry.thread} hideTitle compact />
+            <InquiryThread messages={inquiry.thread} hideTitle compact currentUserId={user?.id} />
           ) : !loading ? (
             <div className="chat-room-popup__empty">
               <p>
@@ -133,6 +152,7 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
               <p className="muted">Add a note below — they’ll reply here.</p>
             </div>
           ) : null}
+          <TypingIndicator names={typing.map((t) => t.name)} />
         </div>
 
         <footer className="chat-room-popup__foot">
@@ -144,7 +164,10 @@ export function ChatRoomPopup({ open, inquiryId, partnerName, onClose }: Props) 
               id="chat-room-draft"
               rows={3}
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                onComposeChange(e.target.value);
+              }}
               placeholder="Write a message…"
               required
             />

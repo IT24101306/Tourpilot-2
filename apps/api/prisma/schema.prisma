@@ -168,6 +168,7 @@ model User {
   referralAttributions ReferralAttribution[]
   agencyDriver              AgencyDriver?
   inquiryMessages           InquiryMessage[]
+  inquiryChatPresence       InquiryChatPresence[]
   authoredInquiryResponses  InquiryResponse[] @relation("InquiryResponseAuthor")
   notifications             Notification[]
 }
@@ -245,6 +246,10 @@ model InfluencerProfile {
   bio                String?                       @db.Text
   socialLinks        Json?
   display            Json?
+  /** Custom domain — available to influencers by default (no feature flag). */
+  customDomain           String?             @unique @db.VarChar(255)
+  customDomainStatus     CustomDomainStatus  @default(NONE)
+  customDomainVerifiedAt DateTime?
   codes              ReferralCode[]
   commissions        Commission[]
   commissionRequests InfluencerCommissionRequest[]
@@ -515,6 +520,7 @@ model Inquiry {
   responses           InquiryResponse[]
   proposal            InquiryProposal?
   messages            InquiryMessage[]
+  chatPresence        InquiryChatPresence[]
   statusHistory       InquiryStatusLog[]
   commission          Commission?
   driverAssignments   DriverAssignment[]
@@ -535,6 +541,21 @@ model InquiryMessage {
   createdAt DateTime           @default(now())
 
   @@index([inquiryId, createdAt])
+}
+
+/** Per-user read cursor + typing heartbeat for WhatsApp-style chat. */
+model InquiryChatPresence {
+  id          String    @id @default(cuid()) @db.VarChar(25)
+  inquiryId   String    @db.VarChar(25)
+  inquiry     Inquiry   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  userId      String    @db.VarChar(25)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt  DateTime  @default(now())
+  typingUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([inquiryId, userId])
+  @@index([inquiryId])
 }
 
 model InquiryProposal {

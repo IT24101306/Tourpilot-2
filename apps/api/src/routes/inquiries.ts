@@ -34,6 +34,11 @@ import {
   serializeInquiryMessage,
 } from "../services/inquiryMessages.js";
 import {
+  getChatPresence,
+  markInquiryRead,
+  touchTyping,
+} from "../services/chatPresence.js";
+import {
   notifyCommissionApproved,
   notifyInquiryChatMessage,
   notifyInquiryCreated,
@@ -403,7 +408,7 @@ inquiriesRouter.get("/mine", authRequired, async (req, res, next) => {
         include: inquiryIncludeForTourist,
         orderBy: { createdAt: "desc" },
       });
-      return res.json(list.map(serializeInquiryForClient));
+      return res.json(list.map((row) => serializeInquiryForClient(row)));
     }
 
     if (req.user!.role === "AGENCY") {
@@ -415,7 +420,7 @@ inquiriesRouter.get("/mine", authRequired, async (req, res, next) => {
         include: inquiryIncludeForAgency,
         orderBy: { createdAt: "desc" },
       });
-      return res.json(list.map(serializeInquiryForClient));
+      return res.json(list.map((row) => serializeInquiryForClient(row)));
     }
 
     if (req.user!.role === "INFLUENCER") {
@@ -430,7 +435,7 @@ inquiriesRouter.get("/mine", authRequired, async (req, res, next) => {
         include: inquiryIncludeForTourist,
         orderBy: { createdAt: "desc" },
       });
-      return res.json(list.map(serializeInquiryForClient));
+      return res.json(list.map((row) => serializeInquiryForClient(row)));
     }
 
     res.status(403).json({ error: "Forbidden" });
@@ -507,7 +512,82 @@ inquiriesRouter.get("/:id", authRequired, async (req, res, next) => {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    res.json(serializeInquiryForClient(inquiry));
+    const presence = await getChatPresence(inquiry.id, req.user!.id);
+    // Mark read when opening the trip room (quietly).
+    void markInquiryRead(inquiry.id, req.user!.id).catch(console.error);
+
+    res.json(
+      serializeInquiryForClient(inquiry, {
+        viewerId: req.user!.id,
+        counterpartyLastReadAt: presence.counterpartyLastReadAt,
+        typing: presence.typing,
+      })
+    );
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Lightweight chat sync for polling (thread + typing + seen). */
+inquiriesRouter.get("/:id/chat", authRequired, async (req, res, next) => {
+  try {
+    const inquiryId = String(req.params.id);
+    const access = await assertChatAccess(inquiryId, req.user!.id, req.user!.role);
+    if (!access.ok) return res.status(access.status).json({ error: access.error });
+
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: inquiryId },
+      include: {
+        tourist: { select: { id: true, name: true, role: true } },
+        agency: { select: { id: true, name: true } },
+        tour: { select: { id: true, title: true } },
+        messages: inquiryMessagesInclude,
+        responses: {
+          orderBy: { createdAt: "asc" },
+          include: { author: { select: { id: true, name: true, role: true } } },
+        },
+      },
+    });
+    if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
+
+    const presence = await getChatPresence(inquiry.id, req.user!.id);
+    void markInquiryRead(inquiry.id, req.user!.id).catch(console.error);
+
+    res.json({
+      thread: buildInquiryThread(inquiry, {
+        viewerId: req.user!.id,
+        counterpartyLastReadAt: presence.counterpartyLastReadAt,
+      }),
+      typing: presence.typing,
+      counterpartyLastReadAt: presence.counterpartyLastReadAt,
+      updatedAt: inquiry.updatedAt.toISOString(),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+inquiriesRouter.post("/:id/read", authRequired, async (req, res, next) => {
+  try {
+    const inquiryId = String(req.params.id);
+    const access = await assertChatAccess(inquiryId, req.user!.id, req.user!.role);
+    if (!access.ok) return res.status(access.status).json({ error: access.error });
+    await markInquiryRead(inquiryId, req.user!.id);
+    const presence = await getChatPresence(inquiryId, req.user!.id);
+    res.json({ ok: true, counterpartyLastReadAt: presence.counterpartyLastReadAt });
+  } catch (e) {
+    next(e);
+  }
+});
+
+inquiriesRouter.post("/:id/typing", authRequired, async (req, res, next) => {
+  try {
+    const body = z.object({ typing: z.boolean() }).parse(req.body);
+    const inquiryId = String(req.params.id);
+    const access = await assertChatAccess(inquiryId, req.user!.id, req.user!.role);
+    if (!access.ok) return res.status(access.status).json({ error: access.error });
+    await touchTyping(inquiryId, req.user!.id, body.typing);
+    res.json({ ok: true });
   } catch (e) {
     next(e);
   }
@@ -561,9 +641,16 @@ inquiriesRouter.post("/:id/messages", authRequired, async (req, res, next) => {
       "CHAT_MESSAGE"
     );
 
+    void touchTyping(inquiry.id, req.user!.id, false).catch(console.error);
     void notifyInquiryChatMessage(inquiry.id, req.user!.id, body.message, kind).catch(console.error);
 
-    res.status(201).json(serializeInquiryMessage(message));
+    const presence = await getChatPresence(inquiry.id, req.user!.id);
+    res.status(201).json(
+      serializeInquiryMessage(message, {
+        viewerId: req.user!.id,
+        counterpartyLastReadAt: presence.counterpartyLastReadAt,
+      })
+    );
   } catch (e) {
     next(e);
   }
@@ -968,7 +1055,8 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
   }
 });
 
-function serializeInquiryForClient(inquiry: {
+function serializeInquiryForClient(
+  inquiry: {
   id: string;
   status: string;
   type: string;
@@ -1040,7 +1128,13 @@ function serializeInquiryForClient(inquiry: {
     sentAt: Date | null;
     paidAt: Date | null;
   } | null;
-}) {
+},
+  chat?: {
+    viewerId: string;
+    counterpartyLastReadAt: string | null;
+    typing: Array<{ userId: string; name: string; role: string; until: string }>;
+  }
+) {
   return {
     id: inquiry.id,
     status: inquiry.status,
@@ -1081,7 +1175,16 @@ function serializeInquiryForClient(inquiry: {
     responses: inquiry.responses?.map(serializeResponse) ?? [],
     proposal: inquiry.proposal ? serializeProposal(inquiry.proposal) : null,
     proposalEditable: isProposalEditable(inquiry.status),
-    thread: buildInquiryThread(inquiry),
+    thread: buildInquiryThread(
+      inquiry,
+      chat
+        ? {
+            viewerId: chat.viewerId,
+            counterpartyLastReadAt: chat.counterpartyLastReadAt,
+          }
+        : undefined
+    ),
+    typing: chat?.typing ?? [],
     invoice: inquiry.invoice
       ? {
           id: inquiry.invoice.id,
@@ -1096,6 +1199,47 @@ function serializeInquiryForClient(inquiry: {
         }
       : null,
   };
+}
+
+async function assertChatAccess(inquiryId: string, userId: string, role: string) {
+  const inquiry = await prisma.inquiry.findUnique({
+    where: { id: inquiryId },
+    select: {
+      id: true,
+      touristId: true,
+      agencyId: true,
+      handlerInfluencerId: true,
+    },
+  });
+  if (!inquiry) return { ok: false as const, status: 404 as const, error: "Inquiry not found" };
+
+  if (role === "TOURIST") {
+    if (inquiry.touristId !== userId) {
+      return { ok: false as const, status: 403 as const, error: "Forbidden" };
+    }
+    return { ok: true as const, inquiry };
+  }
+  if (role === "AGENCY") {
+    const agency = await getAgencyForUser(userId);
+    if (!agency || inquiry.agencyId !== agency.id) {
+      return { ok: false as const, status: 403 as const, error: "Forbidden" };
+    }
+    return { ok: true as const, inquiry };
+  }
+  if (role === "INFLUENCER") {
+    const profile = await prisma.influencerProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!profile || inquiry.handlerInfluencerId !== profile.id) {
+      return { ok: false as const, status: 403 as const, error: "Forbidden" };
+    }
+    return { ok: true as const, inquiry };
+  }
+  if (role === "ADMIN") {
+    return { ok: true as const, inquiry };
+  }
+  return { ok: false as const, status: 403 as const, error: "Forbidden" };
 }
 
 function serializeResponse(response: {

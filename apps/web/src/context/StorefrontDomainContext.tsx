@@ -7,19 +7,25 @@ import {
 } from "react";
 import { api } from "../api/client";
 
+type StorefrontKind = "agency" | "influencer";
+
 type StorefrontDomainValue = {
-  /** True while we resolve whether this host is an agency custom domain. */
+  /** True while we resolve whether this host is a custom domain. */
   loading: boolean;
   isCustomDomain: boolean;
+  kind: StorefrontKind | null;
   agencySlug: string | null;
-  agencyName: string | null;
+  influencerSlug: string | null;
+  name: string | null;
 };
 
 const StorefrontDomainContext = createContext<StorefrontDomainValue>({
   loading: false,
   isCustomDomain: false,
+  kind: null,
   agencySlug: null,
-  agencyName: null,
+  influencerSlug: null,
+  name: null,
 });
 
 function platformHosts(): string[] {
@@ -52,23 +58,28 @@ export function StorefrontDomainProvider({ children }: { children: ReactNode }) 
   const [state, setState] = useState<StorefrontDomainValue>({
     loading: !platform,
     isCustomDomain: false,
+    kind: null,
     agencySlug: null,
-    agencyName: null,
+    influencerSlug: null,
+    name: null,
   });
 
   useEffect(() => {
     if (platform) return;
     let cancelled = false;
-    api<{ slug: string; name: string }>(
+    api<{ type?: StorefrontKind; slug: string; name: string }>(
       `/public-site?host=${encodeURIComponent(host)}`
     )
       .then((r) => {
         if (cancelled) return;
+        const kind: StorefrontKind = r.type === "influencer" ? "influencer" : "agency";
         setState({
           loading: false,
           isCustomDomain: true,
-          agencySlug: r.slug,
-          agencyName: r.name,
+          kind,
+          agencySlug: kind === "agency" ? r.slug : null,
+          influencerSlug: kind === "influencer" ? r.slug : null,
+          name: r.name,
         });
       })
       .catch(() => {
@@ -76,8 +87,10 @@ export function StorefrontDomainProvider({ children }: { children: ReactNode }) 
         setState({
           loading: false,
           isCustomDomain: false,
+          kind: null,
           agencySlug: null,
-          agencyName: null,
+          influencerSlug: null,
+          name: null,
         });
       });
     return () => {

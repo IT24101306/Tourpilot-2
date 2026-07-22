@@ -47,6 +47,7 @@ import { InfluencerGuidePage } from "./pages/influencer/InfluencerGuidePage";
 import { InfluencerDisplayPage } from "./pages/influencer/InfluencerDisplayPage";
 import { InfluencerInquiriesPage } from "./pages/influencer/InfluencerInquiriesPage";
 import { InfluencerTripRoomPage } from "./pages/influencer/InfluencerTripRoomPage";
+import { InfluencerDomainPage } from "./pages/influencer/InfluencerDomainPage";
 import { InfluencerDetailPage } from "./pages/InfluencerDetailPage";
 import { AdminOverviewPage } from "./pages/admin/AdminOverviewPage";
 import { AdminAgenciesPage } from "./pages/admin/AdminAgenciesPage";
@@ -88,8 +89,11 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
 function HomeRoute() {
   const { user, loading } = useAuth();
   const storefront = useStorefrontDomain();
-  // On an agency's custom domain, serve their storefront at the root.
+  // On a custom domain, serve the matching agency or influencer storefront at the root.
   if (storefront.loading) return <div className="section">Loading…</div>;
+  if (storefront.isCustomDomain && storefront.influencerSlug) {
+    return <InfluencerDetailPage slugOverride={storefront.influencerSlug} />;
+  }
   if (storefront.isCustomDomain && storefront.agencySlug) {
     return <AgencyDetailPage slugOverride={storefront.agencySlug} />;
   }
@@ -265,6 +269,7 @@ export default function App() {
             <Route path="commissions" element={<InfluencerCommissionsPage />} />
             <Route path="commission-requests" element={<InfluencerCommissionRequestsPage />} />
             <Route path="guide" element={<InfluencerGuidePage />} />
+            <Route path="domain" element={<InfluencerDomainPage />} />
           </Route>
 
           <Route

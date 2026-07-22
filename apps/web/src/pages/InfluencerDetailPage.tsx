@@ -129,8 +129,9 @@ function InfluencerPackageCard({
   );
 }
 
-export function InfluencerDetailPage() {
-  const { slug } = useParams<{ slug: string }>();
+export function InfluencerDetailPage({ slugOverride }: { slugOverride?: string } = {}) {
+  const params = useParams<{ slug: string }>();
+  const slug = slugOverride ?? params.slug;
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const returnPath = slug ? `/i/${slug}` : "/";
