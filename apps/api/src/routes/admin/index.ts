@@ -1189,3 +1189,126 @@ adminRouter.get("/offers/:id/registrations", async (req, res, next) => {
     next(e);
   }
 });
+
+const voucherDiscountTypeSchema = z.enum(["FIXED_LKR", "PERCENT"]);
+
+const voucherBodySchema = z.object({
+  code: z.string().trim().min(3).max(64),
+  description: z.string().trim().max(2000).optional().nullable(),
+  discountType: voucherDiscountTypeSchema,
+  discountValue: z.number().positive(),
+  maxUses: z.number().int().positive().optional().nullable(),
+  minInvoiceLkr: z.number().min(0).optional().nullable(),
+  maxDiscountLkr: z.number().min(0).optional().nullable(),
+  validFrom: z.string().datetime().optional().nullable(),
+  validUntil: z.string().datetime().optional().nullable(),
+  isActive: z.boolean().optional().default(true),
+});
+
+adminRouter.get("/vouchers", async (_req, res, next) => {
+  try {
+    const { serializeVoucher } = await import("../../services/vouchers.js");
+    const list = await prisma.voucher.findMany({ orderBy: { createdAt: "desc" } });
+    res.json(list.map(serializeVoucher));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/vouchers", async (req, res, next) => {
+  try {
+    const { normalizeVoucherCode, serializeVoucher } = await import("../../services/vouchers.js");
+    const body = voucherBodySchema.parse(req.body);
+    const code = normalizeVoucherCode(body.code);
+    const existing = await prisma.voucher.findUnique({ where: { code } });
+    if (existing) return res.status(409).json({ error: "A voucher with this code already exists" });
+
+    if (body.discountType === "PERCENT" && body.discountValue > 100) {
+      return res.status(400).json({ error: "Percentage discount cannot exceed 100" });
+    }
+
+    const voucher = await prisma.voucher.create({
+      data: {
+        code,
+        description: body.description?.trim() || null,
+        discountType: body.discountType,
+        discountValue: body.discountValue,
+        maxUses: body.maxUses ?? null,
+        minInvoiceLkr: body.minInvoiceLkr ?? null,
+        maxDiscountLkr: body.maxDiscountLkr ?? null,
+        validFrom: body.validFrom ? new Date(body.validFrom) : null,
+        validUntil: body.validUntil ? new Date(body.validUntil) : null,
+        isActive: body.isActive ?? true,
+        createdById: req.user!.id,
+      },
+    });
+    res.status(201).json(serializeVoucher(voucher));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch("/vouchers/:id", async (req, res, next) => {
+  try {
+    const { normalizeVoucherCode, serializeVoucher } = await import("../../services/vouchers.js");
+    const body = voucherBodySchema.partial().parse(req.body);
+    const existing = await prisma.voucher.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Voucher not found" });
+
+    if (body.discountType === "PERCENT" && body.discountValue != null && body.discountValue > 100) {
+      return res.status(400).json({ error: "Percentage discount cannot exceed 100" });
+    }
+
+    let code = existing.code;
+    if (body.code != null) {
+      code = normalizeVoucherCode(body.code);
+      if (code !== existing.code) {
+        const clash = await prisma.voucher.findUnique({ where: { code } });
+        if (clash) return res.status(409).json({ error: "A voucher with this code already exists" });
+      }
+    }
+
+    const voucher = await prisma.voucher.update({
+      where: { id: existing.id },
+      data: {
+        code,
+        description: body.description === undefined ? undefined : body.description?.trim() || null,
+        discountType: body.discountType,
+        discountValue: body.discountValue,
+        maxUses: body.maxUses === undefined ? undefined : body.maxUses,
+        minInvoiceLkr: body.minInvoiceLkr === undefined ? undefined : body.minInvoiceLkr,
+        maxDiscountLkr: body.maxDiscountLkr === undefined ? undefined : body.maxDiscountLkr,
+        validFrom:
+          body.validFrom === undefined
+            ? undefined
+            : body.validFrom
+              ? new Date(body.validFrom)
+              : null,
+        validUntil:
+          body.validUntil === undefined
+            ? undefined
+            : body.validUntil
+              ? new Date(body.validUntil)
+              : null,
+        isActive: body.isActive,
+      },
+    });
+    res.json(serializeVoucher(voucher));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.delete("/vouchers/:id", async (req, res, next) => {
+  try {
+    const existing = await prisma.voucher.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Voucher not found" });
+    await prisma.voucher.update({
+      where: { id: existing.id },
+      data: { isActive: false },
+    });
+    res.status(204).end();
+  } catch (e) {
+    next(e);
+  }
+});

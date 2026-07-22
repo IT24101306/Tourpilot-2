@@ -146,6 +146,19 @@ const inquiryIncludeForAgency = {
   statusHistory: { orderBy: { createdAt: "desc" as const }, take: 10 },
   proposal: { include: proposalInclude },
   messages: inquiryMessagesInclude,
+  invoice: {
+    select: {
+      id: true,
+      invoiceNumber: true,
+      status: true,
+      subtotalLkr: true,
+      voucherCode: true,
+      voucherDiscountLkr: true,
+      totalLkr: true,
+      sentAt: true,
+      paidAt: true,
+    },
+  },
 };
 
 const inquiryIncludeForTourist = {
@@ -188,6 +201,19 @@ const inquiryIncludeForTourist = {
   },
   proposal: { include: proposalInclude },
   messages: inquiryMessagesInclude,
+  invoice: {
+    select: {
+      id: true,
+      invoiceNumber: true,
+      status: true,
+      subtotalLkr: true,
+      voucherCode: true,
+      voucherDiscountLkr: true,
+      totalLkr: true,
+      sentAt: true,
+      paidAt: true,
+    },
+  },
 };
 
 inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res, next) => {
@@ -1003,6 +1029,17 @@ function serializeInquiryForClient(inquiry: {
   }>;
   proposal?: Parameters<typeof serializeProposal>[0] | null;
   messages?: Array<Parameters<typeof serializeInquiryMessage>[0]>;
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+    subtotalLkr: unknown;
+    voucherCode: string | null;
+    voucherDiscountLkr: unknown;
+    totalLkr: unknown;
+    sentAt: Date | null;
+    paidAt: Date | null;
+  } | null;
 }) {
   return {
     id: inquiry.id,
@@ -1045,6 +1082,19 @@ function serializeInquiryForClient(inquiry: {
     proposal: inquiry.proposal ? serializeProposal(inquiry.proposal) : null,
     proposalEditable: isProposalEditable(inquiry.status),
     thread: buildInquiryThread(inquiry),
+    invoice: inquiry.invoice
+      ? {
+          id: inquiry.invoice.id,
+          invoiceNumber: inquiry.invoice.invoiceNumber,
+          status: inquiry.invoice.status,
+          subtotalLkr: Number(inquiry.invoice.subtotalLkr),
+          voucherCode: inquiry.invoice.voucherCode,
+          voucherDiscountLkr: Number(inquiry.invoice.voucherDiscountLkr),
+          totalLkr: Number(inquiry.invoice.totalLkr),
+          sentAt: inquiry.invoice.sentAt?.toISOString() ?? null,
+          paidAt: inquiry.invoice.paidAt?.toISOString() ?? null,
+        }
+      : null,
   };
 }
 

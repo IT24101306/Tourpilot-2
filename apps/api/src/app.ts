@@ -22,6 +22,7 @@ import { notificationsRouter } from "./routes/notifications.js";
 import { touristRouter } from "./routes/tourist.js";
 import { cmsRouter } from "./routes/cms.js";
 import { domainsRouter } from "./routes/domains.js";
+import { invoicesRouter } from "./routes/invoices.js";
 
 export function createApp() {
   const app = express();
@@ -47,6 +48,7 @@ export function createApp() {
     })
   );
   app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ extended: true }));
   app.use(morgan("dev"));
   app.use("/uploads", express.static(UPLOAD_DIR));
 
@@ -78,6 +80,7 @@ export function createApp() {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/tourist", touristRouter);
   app.use("/api/cms", cmsRouter);
+  app.use("/api/invoices", invoicesRouter);
   app.use("/api", domainsRouter);
 
   app.use(

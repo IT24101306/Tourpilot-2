@@ -67,6 +67,17 @@ export type InquiryDetail = {
     items: ProposalItem[];
   } | null;
   thread?: ThreadMessage[];
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+    subtotalLkr: number;
+    voucherCode: string | null;
+    voucherDiscountLkr: number;
+    totalLkr: number;
+    sentAt: string | null;
+    paidAt: string | null;
+  } | null;
 };
 
 export type NegotiationListItem = {

@@ -1271,6 +1271,28 @@ textarea.field-invalid {
   margin-top: 2px;
 }
 
+.invoice-voucher-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 16px;
+}
+
+.checkout-page {
+  padding: 32px 16px 64px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.checkout-demo-card {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfdfc;
+}
+
 .driver-status {
   margin-top: 8px;
   min-height: 18px;

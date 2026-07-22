@@ -32,18 +32,31 @@ export async function nextInvoiceNumber(now = new Date()): Promise<string> {
   return `${prefix}${String(seq).padStart(3, "0")}`;
 }
 
+function tourListedPrice(tour: {
+  basePriceLkr: unknown;
+  influencerCommissionLkr?: unknown;
+}): number {
+  const base = Number(tour.basePriceLkr) || 0;
+  const commission = Number(tour.influencerCommissionLkr) || 0;
+  return Math.max(0, base + commission);
+}
+
 /** Build default line items from an accepted inquiry's proposal/itinerary. */
 export async function buildDefaultInvoiceLines(inquiryId: string): Promise<InvoiceLineInput[]> {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id: inquiryId },
     include: {
-      tour: { select: { title: true, basePriceLkr: true, publicPriceLkr: true } },
+      tour: {
+        select: { title: true, basePriceLkr: true, influencerCommissionLkr: true },
+      },
       proposal: {
         include: {
           items: {
             orderBy: { sortOrder: "asc" },
             include: {
-              tour: { select: { title: true, basePriceLkr: true, publicPriceLkr: true } },
+              tour: {
+                select: { title: true, basePriceLkr: true, influencerCommissionLkr: true },
+              },
               itinerary: {
                 select: {
                   title: true,
@@ -69,7 +82,8 @@ export async function buildDefaultInvoiceLines(inquiryId: string): Promise<Invoi
     for (const item of inquiry.proposal.items) {
       if (item.itinerary) {
         const priced = item.itinerary.lineItems.filter(
-          (li) => !li.priceOnRequest && li.priceLkr != null && Number(li.priceLkr) > 0
+          (li: { priceOnRequest: boolean; priceLkr: unknown }) =>
+            !li.priceOnRequest && li.priceLkr != null && Number(li.priceLkr) > 0
         );
         if (priced.length > 0) {
           for (const li of priced) {
@@ -88,28 +102,20 @@ export async function buildDefaultInvoiceLines(inquiryId: string): Promise<Invoi
           });
         }
       } else if (item.tour) {
-        const price =
-          item.tour.publicPriceLkr != null
-            ? Number(item.tour.publicPriceLkr)
-            : Number(item.tour.basePriceLkr) || 0;
         lines.push({
           label: item.tour.title,
           quantity: Math.max(1, inquiry.pax),
-          unitPriceLkr: price,
+          unitPriceLkr: tourListedPrice(item.tour),
         });
       }
     }
   }
 
   if (lines.length === 0 && inquiry.tour) {
-    const price =
-      inquiry.tour.publicPriceLkr != null
-        ? Number(inquiry.tour.publicPriceLkr)
-        : Number(inquiry.tour.basePriceLkr) || 0;
     lines.push({
       label: inquiry.tour.title,
       quantity: Math.max(1, inquiry.pax),
-      unitPriceLkr: price,
+      unitPriceLkr: tourListedPrice(inquiry.tour),
     });
   }
 

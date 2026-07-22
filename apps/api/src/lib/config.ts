@@ -49,6 +49,12 @@ export const config = {
    * In production set CORS_ORIGINS and/or HEADLESS_CORS_ORIGINS.
    */
   corsOrigins: corsOrigins(),
+  payhere: {
+    merchantId: process.env.PAYHERE_MERCHANT_ID?.trim() || "",
+    merchantSecret: process.env.PAYHERE_MERCHANT_SECRET?.trim() || "",
+    /** Sandbox checkout unless PAYHERE_SANDBOX=false */
+    sandbox: process.env.PAYHERE_SANDBOX !== "false",
+  },
 };
 
 function corsOrigins(): string[] {

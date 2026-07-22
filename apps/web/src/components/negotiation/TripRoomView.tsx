@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
@@ -15,6 +15,8 @@ import { GuidedStepper } from "../guided/GuidedStepper";
 import { GuidedNextBanner } from "../guided/GuidedNextBanner";
 import { ProposalCards } from "./ProposalCards";
 import { formatInquiryStatus, inquiryStatusClass } from "../../pages/agency/types";
+import { AgencyInvoiceModal } from "../billing/AgencyInvoiceModal";
+import { TouristInvoiceModal } from "../billing/TouristInvoiceModal";
 
 const RESPONDABLE = new Set(["SENT_TO_TOURIST", "TOURIST_VIEWED"]);
 
@@ -56,6 +58,8 @@ export function TripRoomView({
   const [adminSending, setAdminSending] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const autoOpenedInvoiceRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,6 +77,16 @@ export function TripRoomView({
   useEffect(() => {
     load();
   }, [load]);
+
+  // When an invoice is newly sent, open it for the tourist automatically (once).
+  useEffect(() => {
+    if (role !== "TOURIST") return;
+    const inv = inquiry?.invoice;
+    if (inv?.status === "SENT" && autoOpenedInvoiceRef.current !== inv.id) {
+      autoOpenedInvoiceRef.current = inv.id;
+      setInvoiceModalOpen(true);
+    }
+  }, [role, inquiry?.invoice?.id, inquiry?.invoice?.status]);
 
   useEffect(() => {
     if (role !== "AGENCY" || !token) return;
@@ -315,6 +329,18 @@ export function TripRoomView({
               {inquiry.proposal ? "Update proposal" : "Send proposal"}
             </button>
           )}
+          {role === "AGENCY" && inquiry.status === "ACCEPTED" && (
+            <button type="button" className="btn btn-teal" onClick={() => setInvoiceModalOpen(true)}>
+              {inquiry.invoice ? "Edit / send invoice" : "Generate invoice"}
+            </button>
+          )}
+          {role === "TOURIST" &&
+            inquiry.invoice &&
+            (inquiry.invoice.status === "SENT" || inquiry.invoice.status === "PAID") && (
+              <button type="button" className="btn btn-primary" onClick={() => setInvoiceModalOpen(true)}>
+                {inquiry.invoice.status === "PAID" ? "View paid invoice" : "View invoice & pay"}
+              </button>
+            )}
         </ModuleHeader>
       )}
 
@@ -322,6 +348,22 @@ export function TripRoomView({
         <div className="trip-room-embedded__actions">
           <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
             {inquiry.proposal ? "Update proposal" : "Send proposal"}
+          </button>
+          {inquiry.status === "ACCEPTED" && (
+            <button type="button" className="btn btn-teal" onClick={() => setInvoiceModalOpen(true)}>
+              {inquiry.invoice ? "Edit / send invoice" : "Generate invoice"}
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {embedded &&
+      role === "TOURIST" &&
+      inquiry.invoice &&
+      (inquiry.invoice.status === "SENT" || inquiry.invoice.status === "PAID") ? (
+        <div className="trip-room-embedded__actions">
+          <button type="button" className="btn btn-primary" onClick={() => setInvoiceModalOpen(true)}>
+            {inquiry.invoice.status === "PAID" ? "View paid invoice" : "View invoice & pay"}
           </button>
         </div>
       ) : null}
@@ -567,6 +609,29 @@ export function TripRoomView({
             setReplyOpen(false);
             load();
           }}
+        />
+      )}
+
+      {role === "AGENCY" && (
+        <AgencyInvoiceModal
+          open={invoiceModalOpen}
+          inquiryId={inquiryId}
+          token={token}
+          onClose={() => setInvoiceModalOpen(false)}
+          onSaved={() => {
+            setInvoiceModalOpen(false);
+            load();
+          }}
+        />
+      )}
+
+      {role === "TOURIST" && (
+        <TouristInvoiceModal
+          open={invoiceModalOpen}
+          inquiryId={inquiryId}
+          token={token}
+          onClose={() => setInvoiceModalOpen(false)}
+          onUpdated={() => load()}
         />
       )}
     </section>

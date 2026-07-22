@@ -66,6 +66,7 @@ import { ItinerarySharePage } from "./pages/ItinerarySharePage";
 import type { ReactNode } from "react";
 import type { UserRole } from "@tourpilot/shared";
 import { AdminOffersPage } from "./pages/admin/AdminOffersPage";
+import { AdminVouchersPage } from "./pages/admin/AdminVouchersPage";
 import { AdminDashboardLayout } from "./components/AdminDashboardLayout";
 import { AgencyNegotiationsPage } from "./pages/agency/AgencyNegotiationsPage";
 import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";
@@ -73,6 +74,7 @@ import { TouristTravelHub } from "./components/tourist/TouristTravelHub";
 import { AgencyTasksPage } from "./pages/agency/AgencyTasksPage";
 import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
 import { SiteFooter } from "./components/SiteFooter";
+import { CheckoutPage, CheckoutReturnPage } from "./pages/CheckoutPage";
 
 function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[] }) {
   const { user, loading } = useAuth();
@@ -150,6 +152,30 @@ export default function App() {
               element={
                 <Protected roles={["TOURIST"]}>
                   <TouristTravelHub />
+                </Protected>
+              }
+            />
+            <Route
+              path="checkout/:invoiceId"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <CheckoutPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="checkout/:invoiceId/return"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <CheckoutReturnPage />
+                </Protected>
+              }
+            />
+            <Route
+              path="checkout/:invoiceId/cancel"
+              element={
+                <Protected roles={["TOURIST"]}>
+                  <CheckoutReturnPage cancelled />
                 </Protected>
               }
             />
@@ -258,6 +284,7 @@ export default function App() {
             <Route path="commissions" element={<AdminCommissionsPage />} />
             <Route path="ledger" element={<AdminLedgerPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
+            <Route path="vouchers" element={<AdminVouchersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="drivers" element={<AdminDriversPage />} />
             <Route path="influencers" element={<AdminInfluencersPage />} />

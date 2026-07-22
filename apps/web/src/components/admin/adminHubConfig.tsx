@@ -127,6 +127,14 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
         stat: (s) => s.offers.active,
       },
       {
+        id: "vouchers",
+        to: "/dashboard/admin/vouchers",
+        category: "Money",
+        title: "Vouchers",
+        description: "Custom discount codes for invoices",
+        icon: "ledger",
+      },
+      {
         id: "cms",
         to: "/dashboard/admin/cms",
         category: "Content",
