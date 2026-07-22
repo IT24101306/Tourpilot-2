@@ -34,7 +34,7 @@ echo "==> Update .env"
 set_env WEB_APP_URL "https://${DOMAIN}"
 set_env HTTP_PORT "${DOCKER_PORT}"
 set_env PLATFORM_DOMAIN "${DOMAIN}"
-set_env PLATFORM_DOMAINS "${DOMAIN}"
+set_env PLATFORM_DOMAINS "${DOMAIN},dev.${DOMAIN}"
 set_env CADDY_EMAIL "${CADDY_EMAIL}"
 set_env CUSTOM_DOMAIN_A_TARGET "${VPS_IP}"
 # So CI/CD recreate keeps the Caddy edge profile:

@@ -30,12 +30,20 @@ function platformHosts(): string[] {
     .filter(Boolean);
   return list.length
     ? list
-    : ["srilankatourpilot.com", "localhost", "127.0.0.1"];
+    : [
+        "srilankatourpilot.com",
+        "dev.srilankatourpilot.com",
+        "localhost",
+        "127.0.0.1",
+      ];
 }
 
 function isPlatformHost(host: string): boolean {
   const bare = host.toLowerCase().replace(/^www\./, "");
-  return platformHosts().some((p) => p.replace(/^www\./, "") === bare);
+  const hosts = platformHosts().map((p) => p.replace(/^www\./, ""));
+  if (hosts.includes(bare)) return true;
+  // Staging subdomain of any listed apex (dev.example.com).
+  return hosts.some((apex) => apex && !apex.startsWith("dev.") && bare === `dev.${apex}`);
 }
 
 export function StorefrontDomainProvider({ children }: { children: ReactNode }) {
