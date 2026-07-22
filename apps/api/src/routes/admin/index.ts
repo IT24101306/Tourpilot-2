@@ -27,6 +27,7 @@ import {
   resolveLoginFeeForUser,
   updatePlatformSettings,
 } from "../../services/platformSettings.js";
+import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
 
 export const adminRouter = Router();
 
@@ -440,7 +441,8 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       .object({
         isActive: z.boolean().optional(),
         role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]).optional(),
-        name: z.string().min(1).optional(),
+        name: z.string().min(1).max(120).optional(),
+        phone: z.string().min(8).optional(),
         email: z.string().email().nullable().optional(),
         /** null clears override (use role default). */
         loginFeeLkr: z.number().min(0).nullable().optional(),
@@ -450,11 +452,27 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
     const data: Prisma.UserUpdateInput = {};
     if (body.isActive !== undefined) data.isActive = body.isActive;
     if (body.role !== undefined) data.role = body.role;
-    if (body.name !== undefined) data.name = body.name;
+    if (body.name !== undefined) data.name = body.name.trim();
     if (body.email !== undefined) data.email = body.email;
     if (body.loginFeeLkr !== undefined) {
       data.loginFeeLkr =
         body.loginFeeLkr === null ? null : Math.round(body.loginFeeLkr);
+    }
+    if (body.phone !== undefined) {
+      const phone = toStoredPhone(body.phone);
+      if (!isValidInternationalPhone(phone)) {
+        return res.status(400).json({
+          error: "Invalid phone number. Include country code (e.g. +94771234567).",
+        });
+      }
+      const clash = await prisma.user.findFirst({
+        where: { phone, NOT: { id: req.params.id } },
+        select: { id: true },
+      });
+      if (clash) {
+        return res.status(409).json({ error: "Another account already uses that phone" });
+      }
+      data.phone = phone;
     }
 
     const user = await prisma.$transaction(async (tx) => {
@@ -504,6 +522,165 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
       walletBalance: Number(user.walletBalance),
       loginFeeOverride,
       loginFee: await resolveLoginFeeForUser(user),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/users", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        name: z.string().min(1).max(120),
+        phone: z.string().min(8),
+        email: z.string().email().nullable().optional(),
+        role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]),
+        isActive: z.boolean().optional(),
+        walletBalance: z.number().min(0).optional(),
+        loginFeeLkr: z.number().min(0).nullable().optional(),
+      })
+      .parse(req.body);
+
+    const phone = toStoredPhone(body.phone);
+    if (!isValidInternationalPhone(phone)) {
+      return res.status(400).json({
+        error: "Invalid phone number. Include country code (e.g. +94771234567).",
+      });
+    }
+
+    const exists = await prisma.user.findUnique({ where: { phone } });
+    if (exists) {
+      return res.status(409).json({ error: "Account already exists for this phone" });
+    }
+
+    const wallet = Math.round(body.walletBalance ?? 0);
+    const user = await prisma.user.create({
+      data: {
+        name: body.name.trim(),
+        phone,
+        email: body.email ?? null,
+        role: body.role,
+        isActive: body.isActive ?? true,
+        walletBalance: wallet,
+        loginFeeLkr:
+          body.loginFeeLkr === undefined
+            ? undefined
+            : body.loginFeeLkr === null
+              ? null
+              : Math.round(body.loginFeeLkr),
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        role: true,
+        isActive: true,
+        walletBalance: true,
+        loginFeeLkr: true,
+      },
+    });
+
+    if (wallet > 0) {
+      await prisma.walletLedger.create({
+        data: {
+          userId: user.id,
+          type: "ADJUSTMENT",
+          amountLkr: wallet,
+          balanceAfter: wallet,
+          note: "Admin: opening balance",
+        },
+      });
+    }
+
+    const loginFeeOverride =
+      user.loginFeeLkr != null ? Math.round(Number(user.loginFeeLkr)) : null;
+
+    res.status(201).json({
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      walletBalance: Number(user.walletBalance),
+      loginFeeOverride,
+      loginFee: await resolveLoginFeeForUser(user),
+      agency: null,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * Hard-delete a user. Cleans Inquiry/Commission rows that lack onDelete: Cascade
+ * so agency owners and tourists with trip history can be removed.
+ */
+adminRouter.delete("/users/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (id === req.user!.id) {
+      return res.status(400).json({ error: "You cannot delete your own admin account" });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        agency: { select: { id: true, name: true } },
+        influencerProfile: { select: { id: true } },
+      },
+    });
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    if (target.role === "ADMIN") {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: "Cannot delete the last admin account" });
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const inquiryIds: string[] = [];
+
+      if (target.agency) {
+        const agencyInquiries = await tx.inquiry.findMany({
+          where: { agencyId: target.agency.id },
+          select: { id: true },
+        });
+        inquiryIds.push(...agencyInquiries.map((i) => i.id));
+      }
+
+      const touristInquiries = await tx.inquiry.findMany({
+        where: { touristId: id },
+        select: { id: true },
+      });
+      inquiryIds.push(...touristInquiries.map((i) => i.id));
+
+      const uniqueInquiryIds = Array.from(new Set(inquiryIds));
+      if (uniqueInquiryIds.length) {
+        await tx.commission.deleteMany({ where: { inquiryId: { in: uniqueInquiryIds } } });
+        await tx.inquiry.deleteMany({ where: { id: { in: uniqueInquiryIds } } });
+      }
+
+      if (target.influencerProfile) {
+        await tx.commission.deleteMany({
+          where: { influencerId: target.influencerProfile.id },
+        });
+      }
+
+      await tx.user.delete({ where: { id } });
+    });
+
+    res.json({
+      ok: true,
+      deletedId: id,
+      name: target.name,
+      agencyDeleted: Boolean(target.agency),
     });
   } catch (e) {
     next(e);
