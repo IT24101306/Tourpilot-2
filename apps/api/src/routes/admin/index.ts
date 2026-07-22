@@ -73,6 +73,7 @@ adminRouter.put("/settings", async (req, res, next) => {
         emailFrom: z.string().max(255).nullable().optional(),
         walletTopupMinLkr: z.number().int().min(1).optional(),
         walletTopupMaxLkr: z.number().int().min(1).nullable().optional(),
+        sessionInactivityHours: z.number().int().min(1).max(168).optional(),
         emailTemplates: z
           .record(
             z.string(),
@@ -169,6 +170,7 @@ adminRouter.get("/agencies", async (req, res, next) => {
         kycSubmittedAt: a.kycSubmittedAt,
         createdAt: a.createdAt,
         features: serializeAgencyFeatures(a),
+        sessionInactivityHours: a.sessionInactivityHours,
       }))
     );
   } catch (e) {
@@ -296,13 +298,29 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         negotiationsBookings: z.boolean().optional(),
         customDomain: z.boolean().optional(),
         externalStorefront: z.boolean().optional(),
+        sessionInactivityTimeout: z.boolean().optional(),
+        /** null clears override (use platform default hours). */
+        sessionInactivityHours: z.number().int().min(1).max(168).nullable().optional(),
       })
-      .refine((v) => Object.keys(v).length > 0, { message: "At least one feature flag is required" })
-      .parse(req.body) as Partial<AgencyFeatures>;
+      .refine(
+        (v) =>
+          Object.keys(v).some((k) => k !== "sessionInactivityHours") ||
+          v.sessionInactivityHours !== undefined,
+        { message: "At least one feature flag is required" }
+      )
+      .parse(req.body);
+
+    const { sessionInactivityHours, ...featureFlags } = body;
+    const data = {
+      ...agencyFeatureDbFields(featureFlags as Partial<AgencyFeatures>),
+      ...(sessionInactivityHours !== undefined
+        ? { sessionInactivityHours }
+        : {}),
+    };
 
     const agency = await prisma.agency.update({
       where: { id: req.params.id },
-      data: agencyFeatureDbFields(body),
+      data,
       select: {
         id: true,
         name: true,
@@ -318,6 +336,8 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureNegotiationsBookings: true,
         featureCustomDomain: true,
         featureExternalStorefront: true,
+        featureSessionInactivityTimeout: true,
+        sessionInactivityHours: true,
       },
     });
 
@@ -327,6 +347,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
       slug: agency.slug,
       status: agency.status,
       features: serializeAgencyFeatures(agency),
+      sessionInactivityHours: agency.sessionInactivityHours,
     });
   } catch (e) {
     next(e);
@@ -377,6 +398,8 @@ adminRouter.get("/users", async (req, res, next) => {
             featureNegotiationsBookings: true,
             featureCustomDomain: true,
             featureExternalStorefront: true,
+            featureSessionInactivityTimeout: true,
+            sessionInactivityHours: true,
           },
         },
         agencyStaff: {
@@ -398,6 +421,8 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureNegotiationsBookings: true,
                 featureCustomDomain: true,
                 featureExternalStorefront: true,
+                featureSessionInactivityTimeout: true,
+                sessionInactivityHours: true,
               },
             },
           },
@@ -428,6 +453,7 @@ adminRouter.get("/users", async (req, res, next) => {
                 slug: agencyRow.slug,
                 status: agencyRow.status,
                 features: serializeAgencyFeatures(agencyRow),
+                sessionInactivityHours: agencyRow.sessionInactivityHours,
               }
             : null,
         };

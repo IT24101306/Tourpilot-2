@@ -14,6 +14,7 @@ type PlatformSettings = {
   emailFrom: string;
   walletTopupMinLkr: number;
   walletTopupMaxLkr: number | null;
+  sessionInactivityHours: number;
   emailTemplates: Record<string, EmailTemplate>;
   updatedAt: string | null;
 };
@@ -69,6 +70,7 @@ export function AdminSettingsPage() {
   const [emailFrom, setEmailFrom] = useState("");
   const [topupMin, setTopupMin] = useState("100");
   const [topupMax, setTopupMax] = useState("");
+  const [sessionInactivityHours, setSessionInactivityHours] = useState("3");
   const [templates, setTemplates] = useState<Record<string, EmailTemplate>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -92,6 +94,7 @@ export function AdminSettingsPage() {
         setEmailFrom(data.emailFrom || "");
         setTopupMin(String(data.walletTopupMinLkr));
         setTopupMax(data.walletTopupMaxLkr != null ? String(data.walletTopupMaxLkr) : "");
+        setSessionInactivityHours(String(data.sessionInactivityHours ?? 3));
         setTemplates(data.emailTemplates || {});
       })
       .catch(console.error)
@@ -129,6 +132,12 @@ export function AdminSettingsPage() {
       return;
     }
 
+    const idleHours = Number(sessionInactivityHours);
+    if (!Number.isFinite(idleHours) || idleHours < 1 || idleHours > 168) {
+      setMsg("Session inactivity hours must be between 1 and 168.");
+      return;
+    }
+
     const emailTemplates: Record<string, EmailTemplate> = {};
     for (const meta of TEMPLATE_META) {
       const t = templates[meta.key];
@@ -140,7 +149,7 @@ export function AdminSettingsPage() {
 
     requestConfirm({
       title: "Save platform settings?",
-      description: "Login fees, wallet limits, enquiry expiry, and email overrides apply immediately.",
+      description: "Login fees, wallet limits, enquiry expiry, session timeout, and email overrides apply immediately.",
       confirmLabel: "Save settings",
       summary: [
         { label: "Inquiry expiry", value: `${Math.round(expiry)} days` },
@@ -148,6 +157,10 @@ export function AdminSettingsPage() {
         {
           label: "Top-up max",
           value: max == null ? "No max" : `LKR ${Math.round(max).toLocaleString()}`,
+        },
+        {
+          label: "Session inactivity default",
+          value: `${Math.round(idleHours)} hours`,
         },
       ],
       onConfirm: async () => {
@@ -163,6 +176,7 @@ export function AdminSettingsPage() {
               emailFrom: emailFrom.trim() || null,
               walletTopupMinLkr: Math.round(min),
               walletTopupMaxLkr: max == null ? null : Math.round(max),
+              sessionInactivityHours: Math.round(idleHours),
               emailTemplates,
             }),
           });
@@ -262,7 +276,21 @@ export function AdminSettingsPage() {
                   placeholder="Optional"
                 />
               </label>
+              <label>
+                Session inactivity default (hours)
+                <input
+                  type="number"
+                  min={1}
+                  max={168}
+                  value={sessionInactivityHours}
+                  onChange={(e) => setSessionInactivityHours(e.target.value)}
+                />
+              </label>
             </div>
+            <p className="muted" style={{ marginTop: 8 }}>
+              Used when an agency has the session inactivity package enabled and no per-agency override.
+              Re-login after timeout charges the login fee again.
+            </p>
           </section>
 
           <section className="gov-form-card">

@@ -22,6 +22,8 @@ export type PlatformSettingsView = {
   emailFrom: string;
   walletTopupMinLkr: number;
   walletTopupMaxLkr: number | null;
+  /** Default idle hours for agencies with session inactivity package. */
+  sessionInactivityHours: number;
   emailTemplates: EmailTemplatesMap;
   updatedAt: string | null;
 };
@@ -79,6 +81,7 @@ function viewFromRow(row: {
   emailFrom: string | null;
   walletTopupMinLkr: number;
   walletTopupMaxLkr: number | null;
+  sessionInactivityHours?: number;
   emailTemplates: unknown;
   updatedAt: Date;
 } | null): PlatformSettingsView {
@@ -89,6 +92,7 @@ function viewFromRow(row: {
     emailFrom: row?.emailFrom?.trim() || config.email.from || "",
     walletTopupMinLkr: row?.walletTopupMinLkr ?? 100,
     walletTopupMaxLkr: row?.walletTopupMaxLkr ?? null,
+    sessionInactivityHours: Math.max(1, Math.min(168, row?.sessionInactivityHours ?? 3)),
     emailTemplates: normalizeEmailTemplates(row?.emailTemplates),
     updatedAt: row?.updatedAt?.toISOString() ?? null,
   };
@@ -108,6 +112,7 @@ export async function updatePlatformSettings(input: {
   emailFrom?: string | null;
   walletTopupMinLkr?: number;
   walletTopupMaxLkr?: number | null;
+  sessionInactivityHours?: number;
   emailTemplates?: EmailTemplatesMap;
 }): Promise<PlatformSettingsView> {
   const current = await getPlatformSettings();
@@ -149,6 +154,11 @@ export async function updatePlatformSettings(input: {
     throw err;
   }
 
+  const sessionInactivityHours =
+    input.sessionInactivityHours !== undefined
+      ? Math.max(1, Math.min(168, Math.round(input.sessionInactivityHours)))
+      : current.sessionInactivityHours;
+
   const emailTemplates =
     input.emailTemplates !== undefined
       ? normalizeEmailTemplates(input.emailTemplates)
@@ -173,6 +183,7 @@ export async function updatePlatformSettings(input: {
       emailFrom,
       walletTopupMinLkr,
       walletTopupMaxLkr,
+      sessionInactivityHours,
       emailTemplates: asJson(emailTemplates),
     },
     update: {
@@ -182,6 +193,7 @@ export async function updatePlatformSettings(input: {
       emailFrom,
       walletTopupMinLkr,
       walletTopupMaxLkr,
+      sessionInactivityHours,
       emailTemplates: asJson(emailTemplates),
     },
   });

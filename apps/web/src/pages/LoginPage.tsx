@@ -40,6 +40,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get(AUTH_RETURN_PARAM);
+  const sessionInactive = searchParams.get("reason") === "session_inactive";
   const { user, token, refreshUser, setSession } = useAuth();
 
   function afterLogin(authUser: AuthUser, apiRedirect?: string) {
@@ -236,6 +237,12 @@ export function LoginPage() {
       }
     >
       <AuthSwitch mode="login" returnTo={returnTo} />
+
+      {sessionInactive && (
+        <p className="form-error" role="status">
+          Your session expired due to inactivity. Log in again — the login fee applies.
+        </p>
+      )}
 
       {showWalletPanel && (
         <WalletTopupPanel

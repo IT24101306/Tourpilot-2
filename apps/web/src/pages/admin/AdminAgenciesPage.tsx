@@ -91,8 +91,12 @@ export function AdminAgenciesPage() {
     }
   }
 
-  function saveFeatures(features: AgencyFeatures) {
+  function saveFeatures(payload: {
+    features: AgencyFeatures;
+    sessionInactivityHours: number | null;
+  }) {
     if (!token || !featuresAgency) return;
+    const { features, sessionInactivityHours } = payload;
     requestConfirm({
       title: "Update agency features?",
       description: "The agency dashboard will show or hide these modules.",
@@ -112,6 +116,12 @@ export function AdminAgenciesPage() {
         { label: "Wallet topup", value: features.walletTopup ? "On" : "Off" },
         { label: "Custom domain", value: features.customDomain ? "On" : "Off" },
         { label: "External website", value: features.externalStorefront ? "On" : "Off" },
+        {
+          label: "Session inactivity",
+          value: features.sessionInactivityTimeout
+            ? `On (${sessionInactivityHours != null ? `${sessionInactivityHours}h` : "platform default"})`
+            : "Off",
+        },
       ],
       onConfirm: async () => {
         setSavingFeatures(true);
@@ -119,7 +129,7 @@ export function AdminAgenciesPage() {
           await api(`/admin/agencies/${featuresAgency.id}/features`, {
             method: "PATCH",
             token,
-            body: JSON.stringify(features),
+            body: JSON.stringify({ ...features, sessionInactivityHours }),
           });
           setMsg(`Features updated for ${featuresAgency.name}.`);
           setFeaturesAgency(null);
@@ -286,6 +296,7 @@ export function AdminAgenciesPage() {
           ...DEFAULT_AGENCY_FEATURES,
           ...(featuresAgency?.features ?? {}),
         }}
+        initialSessionInactivityHours={featuresAgency?.sessionInactivityHours ?? null}
         onClose={() => setFeaturesAgency(null)}
         onSave={saveFeatures}
       />

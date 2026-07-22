@@ -6533,6 +6533,25 @@ a.agency-icon-btn {
   font-size: 0.78rem;
 }
 
+.gov-features-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.gov-features-hours input {
+  max-width: 140px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
 .gov-features-modal .gov-form-actions {
   margin-top: 16px;
   padding-top: 14px;

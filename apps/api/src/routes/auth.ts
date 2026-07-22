@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { UserRole } from "@prisma/client";
 import { dashboardPathForRole } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
-import { authRequired, signAccessToken } from "../middleware/auth.js";
+import { authRequired, signAccessToken, touchUserActivity } from "../middleware/auth.js";
 import { assertLoginTopupChallenge, createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
 import { topUpWallet } from "../services/wallet.js";
 import { verifyPassword } from "../services/password.js";
@@ -209,6 +209,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
     });
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
+    await touchUserActivity(user.id);
 
     res.status(201).json({
       token,
@@ -329,6 +330,7 @@ authRouter.post("/login-password", async (req, res, next) => {
     }
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
+    await touchUserActivity(user.id);
 
     res.json({
       token,
@@ -367,6 +369,7 @@ authRouter.post("/verify-otp", async (req, res, next) => {
     const feeResult = await chargeLoginFee(user.id, user.role);
 
     const token = signAccessToken({ id: user.id, phone: user.phone, role: user.role });
+    await touchUserActivity(user.id);
     const refreshed = await prisma.user.findUniqueOrThrow({
       where: { id: user.id },
       include: {

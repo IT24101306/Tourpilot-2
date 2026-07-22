@@ -1,10 +1,13 @@
 const API_BASE = "/api";
+const TOKEN_KEY = "tourpilotAuthToken";
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -22,11 +25,19 @@ export async function api<T>(
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
 
   if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new ApiError(
-      (errBody as { error?: string }).error || res.statusText,
-      res.status
-    );
+    const errBody = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      code?: string;
+    };
+    if (res.status === 401 && errBody.code === "SESSION_INACTIVE") {
+      localStorage.removeItem(TOKEN_KEY);
+      const onLogin = window.location.pathname.startsWith("/login");
+      if (!onLogin) {
+        const params = new URLSearchParams({ reason: "session_inactive" });
+        window.location.assign(`/login?${params.toString()}`);
+      }
+    }
+    throw new ApiError(errBody.error || res.statusText, res.status, errBody.code);
   }
 
   if (res.status === 204) {

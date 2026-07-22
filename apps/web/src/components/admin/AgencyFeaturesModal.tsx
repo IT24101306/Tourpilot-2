@@ -53,15 +53,28 @@ const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[]
     label: "External / headless website",
     hint: "Agency may run a separately coded website that uses TourPilot APIs (tours, OTP, inquiries)",
   },
+  {
+    key: "sessionInactivityTimeout",
+    label: "Session inactivity timeout",
+    hint: "If idle too long, session ends and they must log in again (login fee applies). Off = normal JWT session",
+  },
 ];
+
+export type AgencyFeaturesSavePayload = {
+  features: AgencyFeatures;
+  /** null = use platform default hours. */
+  sessionInactivityHours: number | null;
+};
 
 type Props = {
   agencyName: string;
   open: boolean;
   loading: boolean;
   initial: AgencyFeatures;
+  /** Agency override; null/undefined = platform default. */
+  initialSessionInactivityHours?: number | null;
   onClose: () => void;
-  onSave: (features: AgencyFeatures) => void;
+  onSave: (payload: AgencyFeaturesSavePayload) => void;
 };
 
 export function AgencyFeaturesModal({
@@ -69,6 +82,7 @@ export function AgencyFeaturesModal({
   open,
   loading,
   initial,
+  initialSessionInactivityHours = null,
   onClose,
   onSave,
 }: Props) {
@@ -76,16 +90,43 @@ export function AgencyFeaturesModal({
     ...DEFAULT_AGENCY_FEATURES,
     ...initial,
   });
+  const [hoursInput, setHoursInput] = useState(
+    initialSessionInactivityHours != null ? String(initialSessionInactivityHours) : ""
+  );
 
   useEffect(() => {
-    if (open) setFeatures({ ...DEFAULT_AGENCY_FEATURES, ...initial });
-  }, [open, initial]);
+    if (open) {
+      setFeatures({ ...DEFAULT_AGENCY_FEATURES, ...initial });
+      setHoursInput(
+        initialSessionInactivityHours != null ? String(initialSessionInactivityHours) : ""
+      );
+    }
+  }, [open, initial, initialSessionInactivityHours]);
 
   if (!open) return null;
 
   function toggle(key: keyof AgencyFeatures) {
     setFeatures((prev) => ({ ...prev, [key]: !prev[key] }));
   }
+
+  function handleSave() {
+    const raw = hoursInput.trim();
+    let sessionInactivityHours: number | null = null;
+    if (raw !== "") {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 1 || n > 168) {
+        return;
+      }
+      sessionInactivityHours = Math.round(n);
+    }
+    onSave({ features, sessionInactivityHours });
+  }
+
+  const hoursInvalid =
+    hoursInput.trim() !== "" &&
+    (!Number.isFinite(Number(hoursInput)) ||
+      Number(hoursInput) < 1 ||
+      Number(hoursInput) > 168);
 
   return (
     <div className="gov-modal-backdrop" role="presentation" onClick={onClose}>
@@ -128,6 +169,27 @@ export function AgencyFeaturesModal({
           })}
         </div>
 
+        {features.sessionInactivityTimeout ? (
+          <label className="gov-features-hours">
+            Idle timeout (hours)
+            <input
+              type="number"
+              min={1}
+              max={168}
+              placeholder="Platform default"
+              value={hoursInput}
+              disabled={loading}
+              onChange={(e) => setHoursInput(e.target.value)}
+            />
+            <span className="muted">
+              Leave blank to use the platform default from Settings. Range 1–168.
+            </span>
+            {hoursInvalid ? (
+              <span className="form-error">Enter a whole number between 1 and 168.</span>
+            ) : null}
+          </label>
+        ) : null}
+
         <p className="gov-features-modal__note muted">
           Changes apply after the agency refreshes or signs in again.
         </p>
@@ -139,8 +201,8 @@ export function AgencyFeaturesModal({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={loading}
-            onClick={() => onSave(features)}
+            disabled={loading || hoursInvalid}
+            onClick={handleSave}
           >
             {loading ? "Saving…" : "Save"}
           </button>

@@ -150,6 +150,8 @@ model User {
   loginFeeLkr          Decimal?              @db.Decimal(12, 2)
   passwordHash         String?               @db.VarChar(64)
   isActive             Boolean               @default(true)
+  /** Last authenticated API activity — used for optional inactivity session timeout. */
+  lastActiveAt         DateTime?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   agency               Agency?
@@ -298,6 +300,13 @@ model Agency {
   featureCustomDomain           Boolean @default(false)
   /** External/headless custom website against TourPilot APIs — off by default. */
   featureExternalStorefront     Boolean @default(false)
+  /**
+   * When on, agency owner/staff sessions expire after inactivity (platform default
+   * or sessionInactivityHours). Re-login charges the login fee again.
+   */
+  featureSessionInactivityTimeout Boolean @default(false)
+  /** Hours of inactivity before forced re-login. Null = use platform default. */
+  sessionInactivityHours        Int?
   customDomain           String?             @unique @db.VarChar(255)
   customDomainStatus     CustomDomainStatus  @default(NONE)
   customDomainVerifiedAt DateTime?
@@ -812,6 +821,8 @@ model PlatformSettings {
   emailFrom          String?  @db.VarChar(255)
   walletTopupMinLkr  Int      @default(100)
   walletTopupMaxLkr  Int?
+  /** Default idle hours before agencies with the inactivity package must re-login. */
+  sessionInactivityHours Int  @default(3)
   /** Optional subject/body overrides keyed by template id. */
   emailTemplates     Json?
   updatedAt          DateTime @updatedAt
