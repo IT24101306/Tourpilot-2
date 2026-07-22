@@ -21,6 +21,7 @@ import { savedTripPlansRouter } from "./routes/savedTripPlans.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { touristRouter } from "./routes/tourist.js";
 import { cmsRouter } from "./routes/cms.js";
+import { supportRouter } from "./routes/support.js";
 import { domainsRouter } from "./routes/domains.js";
 import { invoicesRouter } from "./routes/invoices.js";
 
@@ -80,6 +81,7 @@ export function createApp() {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/tourist", touristRouter);
   app.use("/api/cms", cmsRouter);
+  app.use("/api/support", supportRouter);
   app.use("/api/invoices", invoicesRouter);
   app.use("/api", domainsRouter);
 

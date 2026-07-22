@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { formatSessionInactivity } from "@tourpilot/shared";
 import { api } from "../../api/client";
 import { useAuth, type AgencyFeatures, DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
@@ -93,10 +94,10 @@ export function AdminAgenciesPage() {
 
   function saveFeatures(payload: {
     features: AgencyFeatures;
-    sessionInactivityHours: number | null;
+    sessionInactivityMinutes: number | null;
   }) {
     if (!token || !featuresAgency) return;
-    const { features, sessionInactivityHours } = payload;
+    const { features, sessionInactivityMinutes } = payload;
     requestConfirm({
       title: "Update agency features?",
       description: "The agency dashboard will show or hide these modules.",
@@ -119,7 +120,11 @@ export function AdminAgenciesPage() {
         {
           label: "Session inactivity",
           value: features.sessionInactivityTimeout
-            ? `On (${sessionInactivityHours != null ? `${sessionInactivityHours}h` : "platform default"})`
+            ? `On (${
+                sessionInactivityMinutes != null
+                  ? formatSessionInactivity(sessionInactivityMinutes)
+                  : "platform default"
+              })`
             : "Off",
         },
       ],
@@ -129,7 +134,7 @@ export function AdminAgenciesPage() {
           await api(`/admin/agencies/${featuresAgency.id}/features`, {
             method: "PATCH",
             token,
-            body: JSON.stringify({ ...features, sessionInactivityHours }),
+            body: JSON.stringify({ ...features, sessionInactivityMinutes }),
           });
           setMsg(`Features updated for ${featuresAgency.name}.`);
           setFeaturesAgency(null);
@@ -296,7 +301,12 @@ export function AdminAgenciesPage() {
           ...DEFAULT_AGENCY_FEATURES,
           ...(featuresAgency?.features ?? {}),
         }}
-        initialSessionInactivityHours={featuresAgency?.sessionInactivityHours ?? null}
+        initialSessionInactivityMinutes={
+          featuresAgency?.sessionInactivityMinutes ??
+          (featuresAgency?.sessionInactivityHours != null
+            ? featuresAgency.sessionInactivityHours * 60
+            : null)
+        }
         onClose={() => setFeaturesAgency(null)}
         onSave={saveFeatures}
       />

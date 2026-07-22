@@ -144,3 +144,22 @@ export {
   type PricingPackage,
   type PricingPageContent,
 } from "./pricingPage.js";
+
+export {
+  DEFAULT_SUPPORT_CONTENT,
+  parseSupportContent,
+  type SupportAgent,
+  type SupportContent,
+} from "./supportContent.js";
+
+export {
+  SESSION_INACTIVITY_DEFAULT_MINUTES,
+  SESSION_INACTIVITY_MAX_MINUTES,
+  SESSION_INACTIVITY_MIN_MINUTES,
+  clampSessionInactivityMinutes,
+  formatSessionInactivity,
+  resolveSessionInactivityMinutes,
+  splitSessionInactivityForEdit,
+  toSessionInactivityMinutes,
+  type SessionInactivityUnit,
+} from "./sessionInactivity.js";

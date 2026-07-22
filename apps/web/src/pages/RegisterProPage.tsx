@@ -23,6 +23,7 @@ export function RegisterProPage() {
   const { setSession } = useAuth();
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<UserRole>("AGENCY");
@@ -50,6 +51,12 @@ export function RegisterProPage() {
 
     if (!termsAccepted) {
       setError("You must agree to the Terms & Conditions to register.");
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Enter a valid email address.");
       return;
     }
 
@@ -104,6 +111,7 @@ export function RegisterProPage() {
           method: "POST",
           body: JSON.stringify({
             name,
+            email: email.trim().toLowerCase(),
             phone: normalizedPhone,
             role,
             agencyName: role === "AGENCY" ? agencyName : undefined,
@@ -162,6 +170,19 @@ export function RegisterProPage() {
         <form className="form-grid" onSubmit={handleDetailsSubmit}>
           <label htmlFor="name">Full name</label>
           <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
+          />
+          <p className="muted" style={{ margin: "-4px 0 0", fontSize: "0.85rem" }}>
+            Used for account notices and occasional TourPilot offers.
+          </p>
           <PhoneInput value={phoneInput} onChange={setPhoneInput} id="pro-phone" />
           <label htmlFor="role">I am a</label>
           <select id="role" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>

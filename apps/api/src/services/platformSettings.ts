@@ -1,5 +1,14 @@
 import type { UserRole } from "@prisma/client";
-import { LOGIN_FEE_LKR, type UserRole as SharedRole } from "@tourpilot/shared";
+import {
+  DEFAULT_SUPPORT_CONTENT,
+  LOGIN_FEE_LKR,
+  SESSION_INACTIVITY_DEFAULT_MINUTES,
+  clampSessionInactivityMinutes,
+  parseSupportContent,
+  resolveSessionInactivityMinutes,
+  type SupportContent,
+  type UserRole as SharedRole,
+} from "@tourpilot/shared";
 import { config } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import { asJson } from "../utils/json.js";
@@ -22,9 +31,12 @@ export type PlatformSettingsView = {
   emailFrom: string;
   walletTopupMinLkr: number;
   walletTopupMaxLkr: number | null;
-  /** Default idle hours for agencies with session inactivity package. */
+  /** Resolved idle timeout in minutes (preferred). */
+  sessionInactivityMinutes: number;
+  /** Legacy hours view (rounded up) for older clients. */
   sessionInactivityHours: number;
   emailTemplates: EmailTemplatesMap;
+  supportContent: SupportContent;
   updatedAt: string | null;
 };
 
@@ -81,10 +93,16 @@ function viewFromRow(row: {
   emailFrom: string | null;
   walletTopupMinLkr: number;
   walletTopupMaxLkr: number | null;
-  sessionInactivityHours?: number;
+  sessionInactivityHours?: number | null;
+  sessionInactivityMinutes?: number | null;
   emailTemplates: unknown;
+  supportContent?: unknown;
   updatedAt: Date;
 } | null): PlatformSettingsView {
+  const sessionInactivityMinutes = resolveSessionInactivityMinutes({
+    platformMinutes: row?.sessionInactivityMinutes,
+    platformHours: row?.sessionInactivityHours,
+  });
   return {
     loginFees: normalizeLoginFees(row?.loginFees),
     inquiryExpiryDays: row?.inquiryExpiryDays ?? config.inquiryExpiryDays ?? 14,
@@ -92,8 +110,10 @@ function viewFromRow(row: {
     emailFrom: row?.emailFrom?.trim() || config.email.from || "",
     walletTopupMinLkr: row?.walletTopupMinLkr ?? 100,
     walletTopupMaxLkr: row?.walletTopupMaxLkr ?? null,
-    sessionInactivityHours: Math.max(1, Math.min(168, row?.sessionInactivityHours ?? 3)),
+    sessionInactivityMinutes,
+    sessionInactivityHours: Math.max(1, Math.ceil(sessionInactivityMinutes / 60)),
     emailTemplates: normalizeEmailTemplates(row?.emailTemplates),
+    supportContent: parseSupportContent(row?.supportContent ?? DEFAULT_SUPPORT_CONTENT),
     updatedAt: row?.updatedAt?.toISOString() ?? null,
   };
 }
@@ -105,6 +125,11 @@ export async function getPlatformSettings(): Promise<PlatformSettingsView> {
   return viewFromRow(row);
 }
 
+export async function getSupportContent(): Promise<SupportContent> {
+  const settings = await getPlatformSettings();
+  return settings.supportContent;
+}
+
 export async function updatePlatformSettings(input: {
   loginFees?: Partial<Record<SharedRole, number>>;
   inquiryExpiryDays?: number;
@@ -112,8 +137,12 @@ export async function updatePlatformSettings(input: {
   emailFrom?: string | null;
   walletTopupMinLkr?: number;
   walletTopupMaxLkr?: number | null;
+  /** Preferred: idle timeout in minutes (1 … 10080). */
+  sessionInactivityMinutes?: number;
+  /** Legacy: still accepted and converted to minutes. */
   sessionInactivityHours?: number;
   emailTemplates?: EmailTemplatesMap;
+  supportContent?: SupportContent;
 }): Promise<PlatformSettingsView> {
   const current = await getPlatformSettings();
   const loginFees = { ...current.loginFees };
@@ -154,15 +183,25 @@ export async function updatePlatformSettings(input: {
     throw err;
   }
 
-  const sessionInactivityHours =
-    input.sessionInactivityHours !== undefined
-      ? Math.max(1, Math.min(168, Math.round(input.sessionInactivityHours)))
-      : current.sessionInactivityHours;
+  let sessionInactivityMinutes = current.sessionInactivityMinutes;
+  if (input.sessionInactivityMinutes !== undefined) {
+    sessionInactivityMinutes = clampSessionInactivityMinutes(input.sessionInactivityMinutes);
+  } else if (input.sessionInactivityHours !== undefined) {
+    sessionInactivityMinutes = clampSessionInactivityMinutes(
+      input.sessionInactivityHours * 60
+    );
+  }
+  const sessionInactivityHours = Math.max(1, Math.ceil(sessionInactivityMinutes / 60));
 
   const emailTemplates =
     input.emailTemplates !== undefined
       ? normalizeEmailTemplates(input.emailTemplates)
       : current.emailTemplates;
+
+  const supportContent =
+    input.supportContent !== undefined
+      ? parseSupportContent(input.supportContent)
+      : current.supportContent;
 
   const webAppUrl =
     input.webAppUrl !== undefined
@@ -184,7 +223,10 @@ export async function updatePlatformSettings(input: {
       walletTopupMinLkr,
       walletTopupMaxLkr,
       sessionInactivityHours,
+      sessionInactivityMinutes:
+        sessionInactivityMinutes || SESSION_INACTIVITY_DEFAULT_MINUTES,
       emailTemplates: asJson(emailTemplates),
+      supportContent: asJson(supportContent),
     },
     update: {
       loginFees: asJson(loginFees),
@@ -194,7 +236,9 @@ export async function updatePlatformSettings(input: {
       walletTopupMinLkr,
       walletTopupMaxLkr,
       sessionInactivityHours,
+      sessionInactivityMinutes,
       emailTemplates: asJson(emailTemplates),
+      supportContent: asJson(supportContent),
     },
   });
 

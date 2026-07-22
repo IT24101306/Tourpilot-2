@@ -38,7 +38,9 @@ export type AdminAgency = {
     externalStorefront?: boolean;
     sessionInactivityTimeout?: boolean;
   };
-  /** Agency override; null = platform default. */
+  /** Agency override; null = platform default. Preferred: minutes. */
+  sessionInactivityMinutes?: number | null;
+  /** @deprecated Prefer sessionInactivityMinutes. */
   sessionInactivityHours?: number | null;
 };
 
@@ -73,6 +75,7 @@ export type AdminUser = {
       externalStorefront?: boolean;
       sessionInactivityTimeout?: boolean;
     };
+    sessionInactivityMinutes?: number | null;
     sessionInactivityHours?: number | null;
   } | null;
 };

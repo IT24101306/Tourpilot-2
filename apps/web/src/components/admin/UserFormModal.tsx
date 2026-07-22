@@ -11,6 +11,8 @@ export type UserFormValues = {
   walletBalance?: string;
   /** Custom login fee override; empty string = role default. */
   loginFeeLkr?: string;
+  /** Optional agency display name when duplicating an agency owner. */
+  agencyName?: string;
 };
 
 type Props = {
@@ -20,6 +22,8 @@ type Props = {
   initial?: Partial<UserFormValues> | null;
   /** Shown when duplicating so admin knows which account is the source. */
   sourceLabel?: string | null;
+  /** When duplicating an agency owner, show agency name field. */
+  showAgencyName?: boolean;
   onClose: () => void;
   onSave: (values: UserFormValues) => void;
 };
@@ -32,6 +36,7 @@ const EMPTY: UserFormValues = {
   isActive: true,
   walletBalance: "0",
   loginFeeLkr: "",
+  agencyName: "",
 };
 
 export function UserFormModal({
@@ -40,6 +45,7 @@ export function UserFormModal({
   loading,
   initial,
   sourceLabel,
+  showAgencyName = false,
   onClose,
   onSave,
 }: Props) {
@@ -54,6 +60,7 @@ export function UserFormModal({
       phone: mode === "duplicate" ? "" : (initial?.phone ?? ""),
       walletBalance: initial?.walletBalance ?? "0",
       loginFeeLkr: initial?.loginFeeLkr ?? "",
+      agencyName: initial?.agencyName ?? "",
       isActive: initial?.isActive ?? true,
       role: (initial?.role as UserFormValues["role"]) || "TOURIST",
     });
@@ -79,7 +86,7 @@ export function UserFormModal({
     mode === "edit"
       ? "Update profile fields. Changing phone updates login identity."
       : mode === "duplicate"
-        ? "Copies role and settings from the source account. Enter a new phone number — it must be unique."
+        ? "Copies role, settings, and (for agencies) entities & tours. Enter a new phone — it must be unique."
         : "Creates an account immediately (no OTP). Phone must include country code.";
 
   return (
@@ -143,6 +150,22 @@ export function UserFormModal({
               </option>
             ))}
           </select>
+
+          {mode === "duplicate" && showAgencyName ? (
+            <>
+              <label htmlFor="user-agency-name">Agency name</label>
+              <input
+                id="user-agency-name"
+                value={form.agencyName}
+                onChange={(e) => setForm((p) => ({ ...p, agencyName: e.target.value }))}
+                placeholder="Agency business name"
+              />
+              <p className="muted">
+                Entities, entity groups, tours, and display settings are cloned onto this new
+                agency. Custom domain is not copied.
+              </p>
+            </>
+          ) : null}
 
           {(mode === "create" || mode === "duplicate") && (
             <>

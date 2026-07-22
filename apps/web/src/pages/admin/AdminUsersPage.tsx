@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { formatSessionInactivity } from "@tourpilot/shared";
 import { api } from "../../api/client";
 import { useAuth, type AgencyFeatures, DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
@@ -209,7 +210,42 @@ export function AdminUsersPage() {
     setSaving(true);
     try {
       const email = values.email.trim() ? values.email.trim() : null;
-      if (formMode === "create" || formMode === "duplicate") {
+      if (formMode === "duplicate" && editUser) {
+        const wallet = Number(values.walletBalance ?? 0);
+        const feeRaw = values.loginFeeLkr?.trim() ?? "";
+        const loginFeeLkr =
+          feeRaw === "" ? undefined : Math.max(0, Math.round(Number(feeRaw)));
+        const agencyName = values.agencyName?.trim();
+        const created = await api<{
+          name: string;
+          phone: string;
+          agency: {
+            name: string;
+            entitiesCloned: number;
+            groupsCloned: number;
+            toursCloned: number;
+          } | null;
+        }>(`/admin/users/${editUser.id}/duplicate`, {
+          method: "POST",
+          token,
+          body: JSON.stringify({
+            name: values.name,
+            phone: values.phone,
+            email,
+            role: values.role,
+            isActive: values.isActive,
+            walletBalance: Number.isFinite(wallet) ? Math.max(0, Math.round(wallet)) : 0,
+            ...(loginFeeLkr !== undefined && Number.isFinite(loginFeeLkr)
+              ? { loginFeeLkr }
+              : {}),
+            ...(agencyName ? { agencyName } : {}),
+          }),
+        });
+        const catalogNote = created.agency
+          ? ` Cloned ${created.agency.entitiesCloned} entities, ${created.agency.groupsCloned} groups, ${created.agency.toursCloned} tours.`
+          : "";
+        setMsg(`Duplicated as ${created.name} (${created.phone}).${catalogNote}`);
+      } else if (formMode === "create") {
         const wallet = Number(values.walletBalance ?? 0);
         const feeRaw = values.loginFeeLkr?.trim() ?? "";
         const loginFeeLkr =
@@ -229,11 +265,7 @@ export function AdminUsersPage() {
               : {}),
           }),
         });
-        setMsg(
-          formMode === "duplicate"
-            ? `Duplicated as ${values.name} (${values.phone}).`
-            : `Created ${values.name}.`
-        );
+        setMsg(`Created ${values.name}.`);
       } else if (editUser) {
         await api(`/admin/users/${editUser.id}`, {
           method: "PATCH",
@@ -269,11 +301,11 @@ export function AdminUsersPage() {
 
   function saveFeatures(payload: {
     features: AgencyFeatures;
-    sessionInactivityHours: number | null;
+    sessionInactivityMinutes: number | null;
   }) {
     if (!token || !featuresUser?.agency) return;
     const agency = featuresUser.agency;
-    const { features, sessionInactivityHours } = payload;
+    const { features, sessionInactivityMinutes } = payload;
     requestConfirm({
       title: "Update agency features?",
       description: "The agency dashboard will show or hide these modules.",
@@ -300,7 +332,11 @@ export function AdminUsersPage() {
         {
           label: "Session inactivity",
           value: features.sessionInactivityTimeout
-            ? `On (${sessionInactivityHours != null ? `${sessionInactivityHours}h` : "platform default"})`
+            ? `On (${
+                sessionInactivityMinutes != null
+                  ? formatSessionInactivity(sessionInactivityMinutes)
+                  : "platform default"
+              })`
             : "Off",
         },
       ],
@@ -310,7 +346,7 @@ export function AdminUsersPage() {
           await api(`/admin/agencies/${agency.id}/features`, {
             method: "PATCH",
             token,
-            body: JSON.stringify({ ...features, sessionInactivityHours }),
+            body: JSON.stringify({ ...features, sessionInactivityMinutes }),
           });
           setMsg(`Features updated for ${agency.name}.`);
           setFeaturesUser(null);
@@ -533,7 +569,12 @@ export function AdminUsersPage() {
           ...DEFAULT_AGENCY_FEATURES,
           ...(featuresUser?.agency?.features ?? {}),
         }}
-        initialSessionInactivityHours={featuresUser?.agency?.sessionInactivityHours ?? null}
+        initialSessionInactivityMinutes={
+          featuresUser?.agency?.sessionInactivityMinutes ??
+          (featuresUser?.agency?.sessionInactivityHours != null
+            ? featuresUser.agency.sessionInactivityHours * 60
+            : null)
+        }
         onClose={() => setFeaturesUser(null)}
         onSave={saveFeatures}
       />
@@ -547,6 +588,7 @@ export function AdminUsersPage() {
             ? `${editUser.name} · ${editUser.phone}`
             : null
         }
+        showAgencyName={formMode === "duplicate" && Boolean(editUser?.agency)}
         initial={
           formMode === "edit" && editUser
             ? {
@@ -568,6 +610,7 @@ export function AdminUsersPage() {
                     editUser.loginFeeOverride != null
                       ? String(editUser.loginFeeOverride)
                       : "",
+                  agencyName: editUser.agency?.name ?? "",
                 }
               : null
         }

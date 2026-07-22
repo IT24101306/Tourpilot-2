@@ -27,12 +27,15 @@ authRouter.post("/register-request", async (req, res, next) => {
     const body = z
       .object({
         name: z.string().min(2),
+        email: z.string().email("Enter a valid email address"),
         phone: z.string(),
         role: roleSchema,
         agencyName: z.string().optional(),
         agencyKyc: z.record(z.unknown()).optional(),
       })
       .parse(req.body);
+
+    const email = body.email.trim().toLowerCase();
 
     if (body.role === "AGENCY") {
       if (!body.agencyName?.trim()) {
@@ -69,6 +72,7 @@ authRouter.post("/register-request", async (req, res, next) => {
 
     const result = await createOtpChallenge(phone, "register", {
       name: body.name,
+      email,
       role: body.role,
       agencyName: body.agencyName,
       agencyKyc: body.role === "AGENCY" ? parseAgencyKyc(body.agencyKyc) : undefined,
@@ -99,13 +103,21 @@ authRouter.post("/verify-registration", async (req, res, next) => {
     const payload = await verifyOtpChallenge(body.challengeId, phone, body.otp, "register");
 
     const name = String(payload.name || "User");
+    const emailRaw = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
+    const email = emailRaw.includes("@") ? emailRaw : null;
     const role = payload.role as UserRole;
     const agencyName = String(payload.agencyName || `${name} Tours`);
     const agencyKycRaw = payload.agencyKyc;
 
+    if (!email) {
+      return res.status(400).json({
+        error: "Email is required. Please register again and include your email.",
+      });
+    }
+
     const user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
-        data: { phone, name, role },
+        data: { phone, name, role, email },
       });
 
       if (role === "AGENCY") {

@@ -1,4 +1,12 @@
 import { useEffect, useState } from "react";
+import {
+  SESSION_INACTIVITY_MAX_MINUTES,
+  SESSION_INACTIVITY_MIN_MINUTES,
+  formatSessionInactivity,
+  splitSessionInactivityForEdit,
+  toSessionInactivityMinutes,
+  type SessionInactivityUnit,
+} from "@tourpilot/shared";
 import type { AgencyFeatures } from "../../context/AuthContext";
 import { DEFAULT_AGENCY_FEATURES } from "../../context/AuthContext";
 
@@ -62,8 +70,8 @@ const FEATURE_ROWS: { key: keyof AgencyFeatures; label: string; hint: string }[]
 
 export type AgencyFeaturesSavePayload = {
   features: AgencyFeatures;
-  /** null = use platform default hours. */
-  sessionInactivityHours: number | null;
+  /** null = use platform default. Stored as minutes. */
+  sessionInactivityMinutes: number | null;
 };
 
 type Props = {
@@ -71,17 +79,34 @@ type Props = {
   open: boolean;
   loading: boolean;
   initial: AgencyFeatures;
-  /** Agency override; null/undefined = platform default. */
+  /** Agency override in minutes; null/undefined = platform default. */
+  initialSessionInactivityMinutes?: number | null;
+  /** @deprecated Legacy hours override — used only if minutes not provided. */
   initialSessionInactivityHours?: number | null;
   onClose: () => void;
   onSave: (payload: AgencyFeaturesSavePayload) => void;
 };
+
+function initialEditState(
+  minutes: number | null | undefined,
+  hours: number | null | undefined
+): { amount: string; unit: SessionInactivityUnit } {
+  if (minutes != null && Number.isFinite(minutes)) {
+    const split = splitSessionInactivityForEdit(minutes);
+    return { amount: String(split.amount), unit: split.unit };
+  }
+  if (hours != null && Number.isFinite(hours)) {
+    return { amount: String(hours), unit: "hours" };
+  }
+  return { amount: "", unit: "minutes" };
+}
 
 export function AgencyFeaturesModal({
   agencyName,
   open,
   loading,
   initial,
+  initialSessionInactivityMinutes = null,
   initialSessionInactivityHours = null,
   onClose,
   onSave,
@@ -90,18 +115,20 @@ export function AgencyFeaturesModal({
     ...DEFAULT_AGENCY_FEATURES,
     ...initial,
   });
-  const [hoursInput, setHoursInput] = useState(
-    initialSessionInactivityHours != null ? String(initialSessionInactivityHours) : ""
-  );
+  const [amountInput, setAmountInput] = useState("");
+  const [unit, setUnit] = useState<SessionInactivityUnit>("minutes");
 
   useEffect(() => {
     if (open) {
       setFeatures({ ...DEFAULT_AGENCY_FEATURES, ...initial });
-      setHoursInput(
-        initialSessionInactivityHours != null ? String(initialSessionInactivityHours) : ""
+      const next = initialEditState(
+        initialSessionInactivityMinutes,
+        initialSessionInactivityHours
       );
+      setAmountInput(next.amount);
+      setUnit(next.unit);
     }
-  }, [open, initial, initialSessionInactivityHours]);
+  }, [open, initial, initialSessionInactivityMinutes, initialSessionInactivityHours]);
 
   if (!open) return null;
 
@@ -109,24 +136,25 @@ export function AgencyFeaturesModal({
     setFeatures((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
+  const maxAmount = unit === "hours" ? 168 : SESSION_INACTIVITY_MAX_MINUTES;
+  const amountInvalid =
+    amountInput.trim() !== "" &&
+    (!Number.isFinite(Number(amountInput)) ||
+      Number(amountInput) < SESSION_INACTIVITY_MIN_MINUTES ||
+      Number(amountInput) > maxAmount);
+
   function handleSave() {
-    const raw = hoursInput.trim();
-    let sessionInactivityHours: number | null = null;
+    const raw = amountInput.trim();
+    let sessionInactivityMinutes: number | null = null;
     if (raw !== "") {
       const n = Number(raw);
-      if (!Number.isFinite(n) || n < 1 || n > 168) {
+      if (!Number.isFinite(n) || n < SESSION_INACTIVITY_MIN_MINUTES || n > maxAmount) {
         return;
       }
-      sessionInactivityHours = Math.round(n);
+      sessionInactivityMinutes = toSessionInactivityMinutes(n, unit);
     }
-    onSave({ features, sessionInactivityHours });
+    onSave({ features, sessionInactivityMinutes });
   }
-
-  const hoursInvalid =
-    hoursInput.trim() !== "" &&
-    (!Number.isFinite(Number(hoursInput)) ||
-      Number(hoursInput) < 1 ||
-      Number(hoursInput) > 168);
 
   return (
     <div className="gov-modal-backdrop" role="presentation" onClick={onClose}>
@@ -170,24 +198,45 @@ export function AgencyFeaturesModal({
         </div>
 
         {features.sessionInactivityTimeout ? (
-          <label className="gov-features-hours">
-            Idle timeout (hours)
-            <input
-              type="number"
-              min={1}
-              max={168}
-              placeholder="Platform default"
-              value={hoursInput}
-              disabled={loading}
-              onChange={(e) => setHoursInput(e.target.value)}
-            />
+          <div className="gov-features-hours">
+            <label htmlFor="agency-idle-amount">Idle timeout</label>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input
+                id="agency-idle-amount"
+                type="number"
+                min={SESSION_INACTIVITY_MIN_MINUTES}
+                max={maxAmount}
+                placeholder="Platform default"
+                value={amountInput}
+                disabled={loading}
+                onChange={(e) => setAmountInput(e.target.value)}
+              />
+              <select
+                className="agency-filter"
+                value={unit}
+                disabled={loading}
+                aria-label="Idle timeout unit"
+                onChange={(e) => setUnit(e.target.value as SessionInactivityUnit)}
+              >
+                <option value="minutes">Minutes</option>
+                <option value="hours">Hours</option>
+              </select>
+            </div>
             <span className="muted">
-              Leave blank to use the platform default from Settings. Range 1–168.
+              Leave blank to use the platform default from Settings.{" "}
+              {unit === "minutes"
+                ? `Range ${SESSION_INACTIVITY_MIN_MINUTES}–${SESSION_INACTIVITY_MAX_MINUTES} minutes.`
+                : "Range 1–168 hours."}
+              {amountInput.trim() && !amountInvalid
+                ? ` (= ${formatSessionInactivity(toSessionInactivityMinutes(Number(amountInput), unit))})`
+                : ""}
             </span>
-            {hoursInvalid ? (
-              <span className="form-error">Enter a whole number between 1 and 168.</span>
+            {amountInvalid ? (
+              <span className="form-error">
+                Enter a whole number in the allowed range for {unit}.
+              </span>
             ) : null}
-          </label>
+          </div>
         ) : null}
 
         <p className="gov-features-modal__note muted">
@@ -201,7 +250,7 @@ export function AgencyFeaturesModal({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={loading || hoursInvalid}
+            disabled={loading || amountInvalid}
             onClick={handleSave}
           >
             {loading ? "Saving…" : "Save"}

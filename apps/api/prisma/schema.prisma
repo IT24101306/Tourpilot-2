@@ -307,11 +307,13 @@ model Agency {
   featureExternalStorefront     Boolean @default(false)
   /**
    * When on, agency owner/staff sessions expire after inactivity (platform default
-   * or sessionInactivityHours). Re-login charges the login fee again.
+   * or sessionInactivityMinutes). Re-login charges the login fee again.
    */
   featureSessionInactivityTimeout Boolean @default(false)
-  /** Hours of inactivity before forced re-login. Null = use platform default. */
+  /** @deprecated Prefer sessionInactivityMinutes. Kept for older rows (value = hours). */
   sessionInactivityHours        Int?
+  /** Minutes of inactivity before forced re-login. Null = use platform default. */
+  sessionInactivityMinutes      Int?
   customDomain           String?             @unique @db.VarChar(255)
   customDomainStatus     CustomDomainStatus  @default(NONE)
   customDomainVerifiedAt DateTime?
@@ -842,10 +844,14 @@ model PlatformSettings {
   emailFrom          String?  @db.VarChar(255)
   walletTopupMinLkr  Int      @default(100)
   walletTopupMaxLkr  Int?
-  /** Default idle hours before agencies with the inactivity package must re-login. */
+  /** @deprecated Prefer sessionInactivityMinutes. Older installs stored hours here. */
   sessionInactivityHours Int  @default(3)
+  /** Minutes of inactivity before forced re-login (preferred). Null = derive from hours. */
+  sessionInactivityMinutes Int?
   /** Optional subject/body overrides keyed by template id. */
   emailTemplates     Json?
+  /** Support agents modal copy (title, subtitle, footer, agents[]). */
+  supportContent     Json?
   updatedAt          DateTime @updatedAt
 }
 

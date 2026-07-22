@@ -28,6 +28,7 @@ import {
   updatePlatformSettings,
 } from "../../services/platformSettings.js";
 import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
+import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
 
 export const adminRouter = Router();
 
@@ -74,6 +75,7 @@ adminRouter.put("/settings", async (req, res, next) => {
         walletTopupMinLkr: z.number().int().min(1).optional(),
         walletTopupMaxLkr: z.number().int().min(1).nullable().optional(),
         sessionInactivityHours: z.number().int().min(1).max(168).optional(),
+        sessionInactivityMinutes: z.number().int().min(1).max(10080).optional(),
         emailTemplates: z
           .record(
             z.string(),
@@ -82,6 +84,28 @@ adminRouter.put("/settings", async (req, res, next) => {
               body: z.string().max(8000).optional(),
             })
           )
+          .optional(),
+        supportContent: z
+          .object({
+            title: z.string().max(120),
+            subtitle: z.string().max(500),
+            footer: z.string().max(500),
+            agents: z
+              .array(
+                z.object({
+                  id: z.string().min(1).max(64),
+                  name: z.string().max(120),
+                  role: z.string().max(120),
+                  service: z.string().max(120),
+                  description: z.string().max(2000),
+                  priceUsd: z.number().min(0),
+                  priceLabel: z.string().max(80),
+                  phone: z.string().max(40),
+                  phoneDisplay: z.string().max(40),
+                })
+              )
+              .max(20),
+          })
           .optional(),
       })
       .parse(req.body);
@@ -171,6 +195,7 @@ adminRouter.get("/agencies", async (req, res, next) => {
         createdAt: a.createdAt,
         features: serializeAgencyFeatures(a),
         sessionInactivityHours: a.sessionInactivityHours,
+        sessionInactivityMinutes: a.sessionInactivityMinutes,
       }))
     );
   } catch (e) {
@@ -299,23 +324,42 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         customDomain: z.boolean().optional(),
         externalStorefront: z.boolean().optional(),
         sessionInactivityTimeout: z.boolean().optional(),
-        /** null clears override (use platform default hours). */
+        /** null clears override (use platform default). Preferred unit: minutes. */
+        sessionInactivityMinutes: z.number().int().min(1).max(10080).nullable().optional(),
+        /** Legacy hours override — converted to minutes when minutes omitted. */
         sessionInactivityHours: z.number().int().min(1).max(168).nullable().optional(),
       })
       .refine(
         (v) =>
-          Object.keys(v).some((k) => k !== "sessionInactivityHours") ||
-          v.sessionInactivityHours !== undefined,
+          Object.keys(v).some(
+            (k) => k !== "sessionInactivityHours" && k !== "sessionInactivityMinutes"
+          ) ||
+          v.sessionInactivityHours !== undefined ||
+          v.sessionInactivityMinutes !== undefined,
         { message: "At least one feature flag is required" }
       )
       .parse(req.body);
 
-    const { sessionInactivityHours, ...featureFlags } = body;
+    const { sessionInactivityHours, sessionInactivityMinutes, ...featureFlags } = body;
+    let minutesUpdate: { sessionInactivityMinutes: number | null; sessionInactivityHours: number | null } | undefined;
+    if (sessionInactivityMinutes !== undefined) {
+      minutesUpdate = {
+        sessionInactivityMinutes,
+        sessionInactivityHours:
+          sessionInactivityMinutes == null
+            ? null
+            : Math.max(1, Math.ceil(sessionInactivityMinutes / 60)),
+      };
+    } else if (sessionInactivityHours !== undefined) {
+      minutesUpdate = {
+        sessionInactivityHours,
+        sessionInactivityMinutes:
+          sessionInactivityHours == null ? null : sessionInactivityHours * 60,
+      };
+    }
     const data = {
       ...agencyFeatureDbFields(featureFlags as Partial<AgencyFeatures>),
-      ...(sessionInactivityHours !== undefined
-        ? { sessionInactivityHours }
-        : {}),
+      ...(minutesUpdate ?? {}),
     };
 
     const agency = await prisma.agency.update({
@@ -338,6 +382,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureExternalStorefront: true,
         featureSessionInactivityTimeout: true,
         sessionInactivityHours: true,
+        sessionInactivityMinutes: true,
       },
     });
 
@@ -348,6 +393,7 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
       status: agency.status,
       features: serializeAgencyFeatures(agency),
       sessionInactivityHours: agency.sessionInactivityHours,
+      sessionInactivityMinutes: agency.sessionInactivityMinutes,
     });
   } catch (e) {
     next(e);
@@ -400,6 +446,7 @@ adminRouter.get("/users", async (req, res, next) => {
             featureExternalStorefront: true,
             featureSessionInactivityTimeout: true,
             sessionInactivityHours: true,
+            sessionInactivityMinutes: true,
           },
         },
         agencyStaff: {
@@ -423,6 +470,7 @@ adminRouter.get("/users", async (req, res, next) => {
                 featureExternalStorefront: true,
                 featureSessionInactivityTimeout: true,
                 sessionInactivityHours: true,
+                sessionInactivityMinutes: true,
               },
             },
           },
@@ -454,6 +502,7 @@ adminRouter.get("/users", async (req, res, next) => {
                 status: agencyRow.status,
                 features: serializeAgencyFeatures(agencyRow),
                 sessionInactivityHours: agencyRow.sessionInactivityHours,
+                sessionInactivityMinutes: agencyRow.sessionInactivityMinutes,
               }
             : null,
         };
@@ -640,6 +689,43 @@ adminRouter.post("/users", async (req, res, next) => {
       agency: null,
     });
   } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * Duplicate a user. Admin must supply a new unique phone.
+ * When the source owns an agency, clones agency profile, display settings,
+ * entities, entity groups, and tours (with itinerary days/items).
+ */
+adminRouter.post("/users/:id/duplicate", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        name: z.string().min(1).max(120),
+        phone: z.string().min(8),
+        email: z.string().email().nullable().optional(),
+        role: z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]),
+        isActive: z.boolean().optional(),
+        walletBalance: z.number().min(0).optional(),
+        loginFeeLkr: z.number().min(0).nullable().optional(),
+        agencyName: z.string().min(1).max(160).optional(),
+      })
+      .parse(req.body);
+
+    const duplicated = await duplicateAdminUser(req.params.id, body);
+    res.status(201).json({
+      ...duplicated,
+      loginFee: await resolveLoginFeeForUser({
+        role: duplicated.role as UserRole,
+        loginFeeLkr: duplicated.loginFeeOverride,
+      }),
+    });
+  } catch (e) {
+    const err = e as Error & { status?: number };
+    if (err.status === 400 || err.status === 404 || err.status === 409) {
+      return res.status(err.status).json({ error: err.message });
+    }
     next(e);
   }
 });

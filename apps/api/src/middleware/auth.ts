@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 import { config } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import { getPlatformSettings } from "../services/platformSettings.js";
+import {
+  formatSessionInactivity,
+  resolveSessionInactivityMinutes,
+} from "@tourpilot/shared";
 import type { UserRole } from "@prisma/client";
 
 export type AuthUser = {
@@ -86,18 +90,20 @@ async function enforceAgencySessionInactivity(
   if (!agency?.featureSessionInactivityTimeout) return null;
 
   const settings = await getPlatformSettings();
-  const hours = Math.max(
-    1,
-    Math.min(168, agency.sessionInactivityHours ?? settings.sessionInactivityHours ?? 3)
-  );
+  const minutes = resolveSessionInactivityMinutes({
+    agencyMinutes: agency.sessionInactivityMinutes,
+    agencyHours: agency.sessionInactivityHours,
+    platformMinutes: settings.sessionInactivityMinutes,
+    platformHours: settings.sessionInactivityHours,
+  });
 
   if (!lastActiveAt) return null;
 
   const idleMs = Date.now() - lastActiveAt.getTime();
-  if (idleMs <= hours * 60 * 60 * 1000) return null;
+  if (idleMs <= minutes * 60 * 1000) return null;
 
   return {
-    error: `Session expired after ${hours} hour${hours === 1 ? "" : "s"} of inactivity. Please log in again (login fee applies).`,
+    error: `Session expired after ${formatSessionInactivity(minutes)} of inactivity. Please log in again (login fee applies).`,
     code: "SESSION_INACTIVE",
   };
 }
