@@ -486,7 +486,8 @@
 .hotel-modal {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  /* Above tourist trip drawer (1200) and similar overlays */
+  z-index: 1400;
   display: none;
   align-items: center;
   justify-content: center;

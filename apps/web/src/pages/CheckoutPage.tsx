@@ -145,6 +145,20 @@ export function CheckoutPage() {
 
 export function CheckoutReturnPage({ cancelled }: { cancelled?: boolean }) {
   const { invoiceId = "" } = useParams();
+  const { token } = useAuth();
+  const [tripRoomUrl, setTripRoomUrl] = useState(`/trips`);
+
+  useEffect(() => {
+    if (!token || !invoiceId) return;
+    api<CheckoutSession>(`/invoices/${invoiceId}/checkout-session`, { token })
+      .then((s) => {
+        if (s.tripRoomUrl) setTripRoomUrl(s.tripRoomUrl.replace(/^https?:\/\/[^/]+/, "") || "/trips");
+      })
+      .catch(() => {
+        /* keep /trips fallback */
+      });
+  }, [token, invoiceId]);
+
   return (
     <div className="page-narrow checkout-page">
       <h1>{cancelled ? "Payment cancelled" : "Payment received"}</h1>
@@ -153,7 +167,7 @@ export function CheckoutReturnPage({ cancelled }: { cancelled?: boolean }) {
           ? "You cancelled the payment. You can try again from your trip room invoice."
           : "If payment succeeded, your invoice will show as paid shortly after confirmation from the gateway."}
       </p>
-      <Link to={`/trips?room=${invoiceId}`} className="btn btn-primary">
+      <Link to={tripRoomUrl} className="btn btn-primary">
         Back to trip room
       </Link>
     </div>
