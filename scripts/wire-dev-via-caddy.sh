@@ -5,11 +5,10 @@
 # Use this when Caddy (not host nginx) owns :80/:443.
 # Prerequisites:
 #   - /var/www/tourpilot-dev exists with .env (HTTP_PORT=8081)
-#   - DEV stack is up: COMPOSE_PROJECT_NAME=tourpilot-dev docker compose ... up -d
+#   - DEV stack is up (or this script starts it)
 #   - DNS A record: dev → VPS IP
-#   - Prod Caddyfile includes the "dev.{$PLATFORM_DOMAIN}" site block
+#   - Prod Caddyfile lists dev.srilankatourpilot.com explicitly
 #
-# Run from either folder (or set PROD_DIR / DEV_DIR):
 #   bash scripts/wire-dev-via-caddy.sh
 set -euo pipefail
 
@@ -17,11 +16,10 @@ DOMAIN="${DOMAIN:-dev.srilankatourpilot.com}"
 PROD_DIR="${PROD_DIR:-/var/www/tourpilot}"
 DEV_DIR="${DEV_DIR:-/var/www/tourpilot-dev}"
 DOCKER_PORT="${DOCKER_PORT:-8081}"
-# Docker bridge gateway — Caddy in the prod network reaches host-published ports here.
-HOST_GW="${HOST_GW:-172.17.0.1}"
+HOST_GW="${HOST_GW:-host.docker.internal}"
 VPS_IP="${VPS_IP:-200.97.168.95}"
 
-echo "==> Path B: Caddy → host :${DOCKER_PORT} for ${DOMAIN}"
+echo "==> Path B: Caddy → ${HOST_GW}:${DOCKER_PORT} for ${DOMAIN}"
 echo "==> Prod dir: ${PROD_DIR}"
 echo "==> Dev dir:  ${DEV_DIR}"
 
@@ -33,6 +31,15 @@ if [ ! -f "${PROD_DIR}/.env" ]; then
   echo "Missing ${PROD_DIR}/.env" >&2
   exit 1
 fi
+
+set_env() {
+  local key="$1" val="$2" file="$3"
+  if grep -q "^${key}=" "$file"; then
+    sed -i "s|^${key}=.*|${key}=${val}|" "$file"
+  else
+    echo "${key}=${val}" >> "$file"
+  fi
+}
 
 echo "==> DNS check"
 RESOLVED="$(dig +short "${DOMAIN}" A | head -n1 || true)"
@@ -64,12 +71,16 @@ curl -fsS "http://127.0.0.1:${DOCKER_PORT}/api/health" || {
   exit 1
 }
 
-echo "==> Reload production Caddy (reads updated Caddyfile from ${PROD_DIR}/docker/Caddyfile)"
+echo "==> Point production Caddy at DEV (${HOST_GW}:${DOCKER_PORT})"
 cd "${PROD_DIR}"
-# Prefer recreate with edge profile so Caddy picks up file + env.
+set_env DEV_DOMAIN "${DOMAIN}" .env
+set_env DEV_UPSTREAM "${HOST_GW}:${DOCKER_PORT}" .env
+set_env USE_CADDY_EDGE "true" .env
+set_env PLATFORM_DOMAINS "srilankatourpilot.com,${DOMAIN}" .env
+
 if grep -qE '^USE_CADDY_EDGE=true' .env 2>/dev/null || docker compose -f docker-compose.prod.yml --env-file .env ps 2>/dev/null | grep -qi caddy; then
-  docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d caddy
-  # Soft reload if running
+  docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d --force-recreate caddy
+  sleep 3
   docker compose -f docker-compose.prod.yml --env-file .env exec -T caddy \
     caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true
 else
@@ -78,15 +89,16 @@ else
   exit 1
 fi
 
-echo "==> Public health check (may take a minute while Caddy issues the cert)"
-sleep 8
+echo "==> Prove routing (expect X-TourPilot-Env: development)"
+sleep 5
+curl -fsSI "https://${DOMAIN}/api/health" | tr -d '\r' | grep -iE 'HTTP/|x-tourpilot-env|content-type' || true
 curl -fsS "https://${DOMAIN}/api/health" || {
   echo "WARNING: https://${DOMAIN} not ready yet." >&2
   echo "Confirm DNS, then: docker compose -f docker-compose.prod.yml --env-file .env logs --tail 50 caddy" >&2
-  echo "Caddy proxies ${DOMAIN} → ${HOST_GW}:${DOCKER_PORT} (see docker/Caddyfile)."
   exit 1
 }
 
 echo ""
 echo "Done. Dev is live at https://${DOMAIN}"
+echo "Check header X-TourPilot-Env: development (production would say production / production-ondemand)."
 echo "DB/uploads are isolated (COMPOSE_PROJECT_NAME=tourpilot-dev)."

@@ -35,12 +35,13 @@ set_env WEB_APP_URL "https://${DOMAIN}"
 set_env HTTP_PORT "${DOCKER_PORT}"
 set_env PLATFORM_DOMAIN "${DOMAIN}"
 set_env PLATFORM_DOMAINS "${DOMAIN},dev.${DOMAIN}"
+set_env DEV_DOMAIN "dev.${DOMAIN}"
 set_env CADDY_EMAIL "${CADDY_EMAIL}"
 set_env CUSTOM_DOMAIN_A_TARGET "${VPS_IP}"
 # So CI/CD recreate keeps the Caddy edge profile:
 set_env USE_CADDY_EDGE "true"
-# Optional override for Path B (dev stack). Default matches docker/Caddyfile.
-set_env DEV_UPSTREAM "172.17.0.1:8081"
+# Path B: Caddy → DEV stack on the host
+set_env DEV_UPSTREAM "host.docker.internal:8081"
 
 echo "==> Free ports 80/443 (stop host nginx if present)"
 if systemctl is-active --quiet nginx; then

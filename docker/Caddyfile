@@ -1,12 +1,8 @@
 # TourPilot edge proxy with automatic HTTPS.
 #
-# - The platform domain gets a normal managed certificate.
-# - The platform DEV subdomain (dev.{$PLATFORM_DOMAIN}) proxies to the
-#   isolated DEV stack published on the host (default :8081).
-# - Any other host (an agency's custom domain) gets a certificate issued
-#   On-Demand, but ONLY after Caddy asks the API whether the host is a
-#   verified, active agency domain (the `ask` endpoint). This prevents
-#   unbounded certificate issuance for arbitrary hostnames.
+# - Apex + www → production web container.
+# - dev.srilankatourpilot.com → isolated DEV stack on the host (:8081).
+# - Any other host → On-Demand TLS (agency custom domains), gated by ask.
 
 {
 	email {$CADDY_EMAIL}
@@ -15,25 +11,30 @@
 	}
 }
 
-# Platform primary domain (apex + www) — standard managed TLS → PROD web.
+# Production platform domain → PROD web.
 {$PLATFORM_DOMAIN}, www.{$PLATFORM_DOMAIN} {
 	encode zstd gzip
+	header X-TourPilot-Env production
 	reverse_proxy web:80
 }
 
-# Platform DEV subdomain → isolated stack on host :8081 (COMPOSE_PROJECT_NAME=tourpilot-dev).
-# Explicit site block so it is never treated as an agency on-demand domain.
-dev.{$PLATFORM_DOMAIN} {
+# DEV subdomain → isolated stack (COMPOSE_PROJECT_NAME=tourpilot-dev).
+# Hostnames are listed explicitly so a missing PLATFORM_DOMAIN env can never
+# cause this traffic to fall through to the catch-all (which is production).
+dev.srilankatourpilot.com, {$DEV_DOMAIN} {
 	encode zstd gzip
+	header X-TourPilot-Env development
 	reverse_proxy {$DEV_UPSTREAM}
 }
 
-# Agency custom domains — certificate obtained on demand, gated by the ask endpoint.
+# Agency custom domains — On-Demand TLS, gated by the ask endpoint.
+# Do NOT put platform hosts here; they must match the blocks above.
 https:// {
 	tls {
 		on_demand
 	}
 	encode zstd gzip
+	header X-TourPilot-Env production-ondemand
 	reverse_proxy web:80
 }
 
