@@ -183,7 +183,10 @@ const contentSchema = z.object({
 
   transportOptions: z.array(transportOptionSchema).max(12).default([]),
 
-  offerBannerStyle: z.enum(["card", "strip"]).default("card"),
+  offerBannerStyle: z
+    .enum(["strip", "card"])
+    .default("strip")
+    .transform(() => "strip" as const),
 
 });
 

@@ -200,7 +200,7 @@ model SubscriptionPayment {
   currency       String        @default("LKR") @db.VarChar(8)
   status         PaymentStatus @default(PENDING)
   provider       String        @default("payhere") @db.VarChar(32)
-  payhereOrderId String?       @db.VarChar(128)
+  payhereOrderId String?       @db.VarChar(64)
   checkoutUrl    String?       @db.Text
   metadata       Json?
   paidAt         DateTime?
@@ -209,7 +209,6 @@ model SubscriptionPayment {
 
   @@index([userId, createdAt])
   @@index([payhereOrderId])
-  @@index([status])
 }
 
 model Notification {
@@ -286,7 +285,7 @@ model InfluencerProfile {
   socialLinks        Json?
   display            Json?
   /** Custom domain — available to influencers by default (no feature flag). */
-  customDomain           String?             @unique @db.VarChar(255)
+  customDomain           String?             @unique @db.VarChar(191)
   customDomainStatus     CustomDomainStatus  @default(NONE)
   customDomainVerifiedAt DateTime?
   codes              ReferralCode[]
@@ -353,7 +352,7 @@ model Agency {
   sessionInactivityHours        Int?
   /** Minutes of inactivity before forced re-login. Null = use platform default. */
   sessionInactivityMinutes      Int?
-  customDomain           String?             @unique @db.VarChar(255)
+  customDomain           String?             @unique @db.VarChar(191)
   customDomainStatus     CustomDomainStatus  @default(NONE)
   customDomainVerifiedAt DateTime?
   createdAt       DateTime         @default(now())

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { loginPath } from "../utils/authRedirect";
 import { CoverImage } from "../components/CoverImage";
 import { navLinkLightClass } from "../utils/navLinkClass";
@@ -13,15 +13,13 @@ import {
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { newId } from "../lib/newId";
-import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
 import { AgencyOfferFreeBanner } from "../components/discovery/AgencyOfferFreeBanner";
 import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 import { FormatLkr, FormatTourPrice } from "../components/currency/FormatLkr";
 import { displayTourPrice } from "../lib/tourPricing";
-import { offerBookPath } from "../lib/offerBookPaths";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
-import { EntityTypeLineIcon, LineCheckIcon, LineUserIcon } from "../components/icons/LineIcons";
+import { EntityTypeLineIcon, LineUserIcon } from "../components/icons/LineIcons";
 import { ClientBrand } from "../components/ClientBrand";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
 import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav";
@@ -203,6 +201,7 @@ function PackageCard({
   const inner = (
     <>
       <CoverImage src={image} className="agency-package-card-bg" />
+      <div className="agency-package-card__blur" aria-hidden="true" />
       {tour && (
         <SaveTourButton tourId={tour.id} className="agency-package-save" />
       )}
@@ -210,14 +209,16 @@ function PackageCard({
       <div className="agency-package-card-body">
         <h3>{pkg.title}</h3>
         <p>{pkg.location}</p>
-        <strong>
+        <strong className="agency-package-price">
           {tour ? (
             <FormatTourPrice amount={displayTourPrice(tour)} />
           ) : (
             pkg.priceLabel
           )}
         </strong>
-        {href && <span className="agency-package-cta">View itinerary →</span>}
+        {href ? (
+          <span className="agency-package-cta agency-package-cta--btn">View itinerary</span>
+        ) : null}
       </div>
     </>
   );
@@ -236,7 +237,6 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
   const params = useParams<{ slug: string }>();
   const slug = slugOverride ?? params.slug;
   const location = useLocation();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get("ref");
   const inquireTourId = searchParams.get("inquireTour");
@@ -355,10 +355,6 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
     document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  function openOfferBook(offer: DiscoveryOffer) {
-    navigate(offerBookPath(offer.id, agencyReturnPath));
-  }
-
   const [col1, col2, col3] = splitGalleryColumns(gallery);
   const agencyFeatures = agency.features ?? {};
   /** Content stays visible; only inquiry/booking actions respect sell features. */
@@ -378,17 +374,11 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
   const showTransport = sectionEnabled(enabled, "transport");
 
   const ratingDisplay = content.ratingScore || String(agency.avgRating.toFixed(1));
-  const ratingSub =
-    agency.reviewCount > 0
-      ? `${agency.reviewCount}+ traveler reviews`
-      : content.highlights[0] || "Trusted local journeys";
 
   const hasLoyaltyOffers = showOffers && loyaltyOffers.length > 0;
   const hasCmsOffers = showOffers && cmsOffers.length > 0;
   const hasOffers = hasLoyaltyOffers || hasCmsOffers;
-  const offerBannerStyle = content.offerBannerStyle === "strip" ? "strip" : "card";
-  const showStripBanner = showOffers && offerBannerStyle === "strip";
-  const showCardOffers = hasLoyaltyOffers && offerBannerStyle === "card";
+  const showStripBanner = hasLoyaltyOffers;
   const hasScenicContent =
     hasCmsOffers || showTours || showShowcase;
   const hasGallery = showGallery && gallery.length > 0;
@@ -506,25 +496,6 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
           </div>
         </div>
 
-        {showCardOffers && (
-          <AgencyOffersFlipShowcase
-            offers={loyaltyOffers.map((offer) => ({
-              ...offer,
-              agencyName: agency.name,
-              agencySlug: agency.slug,
-            }))}
-            agencyName={agency.name}
-            statusMsg={undefined}
-            onRegister={(offer) =>
-              openOfferBook({
-                ...offer,
-                agencyName: agency.name,
-                agencySlug: agency.slug,
-              })
-            }
-          />
-        )}
-
         {hasScenicContent && (
         <div className="agency-display-band agency-display-band--scenic">
           <div className="agency-display-inner">
@@ -584,23 +555,8 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
             <section className="agency-showcase" id={showReviews ? "reviews" : undefined}>
             <div className="agency-showcase-trust">
               <div className="agency-showcase-rating-block">
-                <div className="agency-showcase-rating">
-                  {ratingDisplay}
-                  <span>{content.ratingSuffix}</span>
-                </div>
-                <p className="agency-showcase-rating-sub">{ratingSub}</p>
+                <div className="agency-showcase-rating">{ratingDisplay}</div>
               </div>
-
-              <ul className="agency-showcase-highlights">
-                {content.highlights.slice(0, 4).map((line, i) => (
-                  <li key={i}>
-                    <span className="agency-highlight-icon" aria-hidden="true">
-                      <LineCheckIcon size={14} />
-                    </span>
-                    {line}
-                  </li>
-                ))}
-              </ul>
             </div>
 
             <div className="agency-showcase-visual">

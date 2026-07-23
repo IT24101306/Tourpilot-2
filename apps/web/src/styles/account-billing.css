@@ -367,8 +367,104 @@
   overflow-x: auto;
 }
 
+.account-billing-gateway-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.account-billing-gateway-pending__eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ab-muted);
+}
+
+.account-billing-gateway-pending__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ab-ink);
+}
+
+.account-billing-gateway-pending__lead {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ab-muted);
+}
+
+.account-billing-gateway-pending__plan {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: var(--ab-surface);
+  border: 1px solid var(--ab-line);
+}
+
+.account-billing-gateway-pending__plan > div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.account-billing-gateway-pending__plan dt {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ab-muted);
+}
+
+.account-billing-gateway-pending__plan dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ab-ink);
+}
+
+.account-billing-gateway-pending__contacts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.account-billing-gateway-pending__contacts li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.9375rem;
+}
+
+.account-billing-gateway-pending__contacts span {
+  color: var(--ab-muted);
+  font-size: 0.8125rem;
+}
+
+.account-billing-gateway-pending__contacts a {
+  color: var(--ab-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.account-billing-gateway-pending__contacts a:hover {
+  color: var(--ab-accent);
+}
+
 @media (max-width: 640px) {
   .account-billing-fields > div {
     grid-template-columns: 1fr;
+  }
+
+  .account-billing-gateway-pending__plan > div,
+  .account-billing-gateway-pending__contacts li {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
   }
 }

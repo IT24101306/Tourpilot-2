@@ -1,27 +1,19 @@
 import { Router } from "express";
 import { z } from "zod";
-import { createHash } from "node:crypto";
 import {
   DEFAULT_PRICING_PAGE,
   parsePricingPageContent,
   type PricingPageContent,
 } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
-import { authRequired, requireRoles, getAgencyForUser } from "../middleware/auth.js";
+import { authRequired, requireRoles } from "../middleware/auth.js";
 import { config } from "../lib/config.js";
+import { payHereCheckoutUrl, payHereConfigured } from "../lib/payhere.js";
 import {
-  buildPayHereCheckoutFields,
-  payHereCheckoutUrl,
-  payHereConfigured,
-} from "../lib/payhere.js";
-import {
-  activateSelectedPackage,
   buildTrialStatus,
-  fulfillSubscriptionPayment,
   parseSelectedPackage,
   trialUserUpdateData,
 } from "../services/trial.js";
-import { asJson } from "../utils/json.js";
 
 export const subscriptionRouter = Router();
 
@@ -183,87 +175,19 @@ subscriptionRouter.post(
         return res.status(400).json({ error: "No package selected for this account" });
       }
 
-      const billing = user.selectedPackageBilling || "MONTHLY";
-      const amountLkr = Math.round(Number(user.selectedPackagePriceLkr ?? 0));
-
-      // Zero-cost / PAYG activation without PayHere.
-      if (amountLkr <= 0 || billing === "PAYG" || billing === "CUSTOM") {
-        const result = await activateSelectedPackage(user.id);
-        return res.json({
-          mode: "activated",
-          result,
-          redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions?activated=1`,
-        });
-      }
-
-      const agency = await getAgencyForUser(user.id);
-      const payment = await prisma.subscriptionPayment.create({
-        data: {
-          userId: user.id,
-          agencyId: agency?.id ?? null,
-          packageId: user.selectedPackageId,
-          packageName: user.selectedPackageName,
-          amountLkr,
-          currency: "LKR",
-          status: "PENDING",
-          provider: payHereConfigured() ? "payhere" : "demo",
-          payhereOrderId: null,
+      // Payment gateway not live yet — do not auto-activate or start PayHere/demo checkout.
+      return res.status(503).json({
+        error:
+          "Online payments are not available yet. Please contact the system administrator to activate your package.",
+        mode: "manual_contact",
+        contact: {
+          company: "IYYO Solutions",
+          email: "info@iyyosolutions.com",
+          phone: "+94719990173",
+          whatsapp: "+94720140224",
+          website: "https://iyyosolutions.com",
         },
-      });
-
-      await prisma.subscriptionPayment.update({
-        where: { id: payment.id },
-        data: { payhereOrderId: payment.id },
-      });
-
-      const returnUrl = `${config.webAppUrl}/profile/billing/subscriptions/return?payment=${payment.id}`;
-      const cancelUrl = `${config.webAppUrl}/profile/billing/subscriptions/cancel?payment=${payment.id}`;
-      const notifyUrl = `${config.webAppUrl}/api/subscription/payhere/notify`;
-
-      const nameParts = (user.name || "Agency Owner").trim().split(/\s+/);
-      const fields = buildPayHereCheckoutFields({
-        orderId: payment.id,
-        amountLkr,
-        itemTitle: `TourPilot ${user.selectedPackageName}`,
-        returnUrl,
-        cancelUrl,
-        notifyUrl,
-        customer: {
-          firstName: nameParts[0] || "Agency",
-          lastName: nameParts.slice(1).join(" ") || "Owner",
-          email: user.email || "",
-          phone: user.phone || "",
-        },
-      });
-
-      if (fields) {
-        await prisma.subscriptionPayment.update({
-          where: { id: payment.id },
-          data: {
-            checkoutUrl: payHereCheckoutUrl(),
-            metadata: asJson({ fields }),
-          },
-        });
-        return res.json({
-          mode: "payhere",
-          paymentId: payment.id,
-          checkoutUrl: payHereCheckoutUrl(),
-          fields,
-          redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions/checkout?payment=${payment.id}`,
-        });
-      }
-
-      await prisma.subscriptionPayment.update({
-        where: { id: payment.id },
-        data: {
-          checkoutUrl: `${config.webAppUrl}/profile/billing/subscriptions/checkout?payment=${payment.id}`,
-        },
-      });
-
-      res.json({
-        mode: "demo",
-        paymentId: payment.id,
-        redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions/checkout?payment=${payment.id}`,
+        redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions/checkout`,
       });
     } catch (e) {
       next(e);
@@ -302,72 +226,16 @@ subscriptionRouter.post(
   "/demo-complete",
   authRequired,
   requireRoles("AGENCY"),
-  async (req, res, next) => {
-    try {
-      if (payHereConfigured()) {
-        return res.status(400).json({ error: "Demo checkout is disabled when PayHere is configured" });
-      }
-      const body = z.object({ paymentId: z.string().min(1) }).parse(req.body);
-      const payment = await prisma.subscriptionPayment.findUnique({ where: { id: body.paymentId } });
-      if (!payment || payment.userId !== req.user!.id) {
-        return res.status(404).json({ error: "Payment not found" });
-      }
-      const result = await fulfillSubscriptionPayment(payment.id);
-      res.json({
-        ok: true,
-        alreadyPaid: result.alreadyPaid,
-        trial: buildTrialStatus(result.user),
-        periodEnd: result.user.subscriptionPeriodEnd?.toISOString() ?? null,
-        redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions?paid=1`,
-      });
-    } catch (e) {
-      next(e);
-    }
+  async (_req, res) => {
+    res.status(503).json({
+      error:
+        "Online payments are not available yet. Please contact the system administrator to activate your package.",
+      mode: "manual_contact",
+    });
   }
 );
 
-subscriptionRouter.post("/payhere/notify", async (req, res, next) => {
-  try {
-    const orderId = String(req.body.order_id || req.body.orderId || "");
-    const statusCode = String(req.body.status_code || "");
-    const md5sig = String(req.body.md5sig || "").toUpperCase();
-
-    if (!orderId) return res.status(400).send("missing order_id");
-
-    if (payHereConfigured() && md5sig) {
-      const amount = String(req.body.payhere_amount || "");
-      const currency = String(req.body.payhere_currency || "LKR");
-      const secretHash = createHash("md5")
-        .update(config.payhere.merchantSecret)
-        .digest("hex")
-        .toUpperCase();
-      const local = createHash("md5")
-        .update(
-          config.payhere.merchantId +
-            orderId +
-            amount +
-            currency +
-            statusCode +
-            secretHash
-        )
-        .digest("hex")
-        .toUpperCase();
-      if (local !== md5sig) {
-        return res.status(400).send("invalid signature");
-      }
-    }
-
-    if (statusCode === "2" || statusCode === "0" || !payHereConfigured()) {
-      await fulfillSubscriptionPayment(orderId);
-    } else {
-      await prisma.subscriptionPayment.updateMany({
-        where: { id: orderId, status: "PENDING" },
-        data: { status: "FAILED" },
-      });
-    }
-
-    res.send("OK");
-  } catch (e) {
-    next(e);
-  }
+subscriptionRouter.post("/payhere/notify", async (_req, res) => {
+  // Payment gateway not live — ignore notifications so packages are not auto-activated.
+  res.status(503).send("payments_unavailable");
 });

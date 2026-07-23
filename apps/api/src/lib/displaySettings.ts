@@ -63,8 +63,8 @@ export type DisplayOffer = {
   imageUrl?: string;
 };
 
-/** Style 1 = flip card showcase; Style 2 = free-tour strip banner. */
-export type OfferBannerStyle = "card" | "strip";
+/** Free-tour strip banner on the public storefront. */
+export type OfferBannerStyle = "strip";
 
 export type DisplayTransportOption = {
   id: string;
@@ -193,7 +193,7 @@ export function defaultDisplayContent(): DisplayContent {
     packages: [],
     offers: [],
     transportOptions: DEFAULT_TRANSPORT_OPTIONS.map((option) => ({ ...option })),
-    offerBannerStyle: "card",
+    offerBannerStyle: "strip",
   };
 }
 
@@ -367,9 +367,8 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
     base.transportOptions = DEFAULT_TRANSPORT_OPTIONS.map((option) => ({ ...option }));
   }
 
-  if (content.offerBannerStyle === "strip" || content.offerBannerStyle === "card") {
-    base.offerBannerStyle = content.offerBannerStyle;
-  }
+  // Legacy "card" (flip showcase) is retired — always use strip.
+  base.offerBannerStyle = "strip";
 
   return base;
 }

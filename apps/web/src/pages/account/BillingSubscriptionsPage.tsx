@@ -1,7 +1,8 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { PaymentGatewayPendingNotice } from "../../components/billing/PaymentGatewayPendingNotice";
 import { formatCredits } from "../../lib/walletLedger";
 
 type SubscriptionPayload = {
@@ -52,12 +53,10 @@ export function BillingSubscriptionsPage() {
   }, [load]);
 
   useEffect(() => {
-    if (searchParams.get("paid") === "1" || searchParams.get("activated") === "1") {
-      setStatus("Subscription updated successfully.");
-      void refreshUser();
-      void load();
+    if (searchParams.get("cancelled") === "1") {
+      setStatus("Checkout cancelled.");
     }
-  }, [searchParams, refreshUser, load]);
+  }, [searchParams]);
 
   async function toggleAutoRenew(next: boolean) {
     if (!token) return;
@@ -78,35 +77,8 @@ export function BillingSubscriptionsPage() {
     }
   }
 
-  async function startCheckout() {
-    if (!token) return;
-    setBusy(true);
-    setError("");
-    setStatus("");
-    try {
-      const res = await api<{
-        mode: string;
-        redirectUrl?: string;
-        paymentId?: string;
-      }>("/subscription/checkout", { method: "POST", token });
-
-      if (res.mode === "activated") {
-        setStatus("Package activated.");
-        await refreshUser();
-        await load();
-        return;
-      }
-      if (res.redirectUrl) {
-        const path = res.redirectUrl.replace(/^https?:\/\/[^/]+/, "");
-        navigate(path || `/profile/billing/subscriptions/checkout?payment=${res.paymentId}`);
-        return;
-      }
-      setError("Checkout could not be started.");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Checkout failed");
-    } finally {
-      setBusy(false);
-    }
+  function openActivationCheckout() {
+    navigate("/profile/billing/subscriptions/checkout");
   }
 
   if (loading) return <p className="muted">Loading subscription…</p>;
@@ -230,9 +202,9 @@ export function BillingSubscriptionsPage() {
                   type="button"
                   className="btn btn-primary"
                   disabled={busy}
-                  onClick={() => void startCheckout()}
+                  onClick={openActivationCheckout}
                 >
-                  {busy ? "Working…" : ctaLabel}
+                  {ctaLabel}
                 </button>
               </div>
             ) : trial.billing === "MONTHLY" ? (
@@ -241,9 +213,9 @@ export function BillingSubscriptionsPage() {
                   type="button"
                   className="btn btn-teal"
                   disabled={busy}
-                  onClick={() => void startCheckout()}
+                  onClick={openActivationCheckout}
                 >
-                  {busy ? "Working…" : "Renew now"}
+                  Renew now
                 </button>
               </div>
             ) : null}
@@ -255,128 +227,59 @@ export function BillingSubscriptionsPage() {
 }
 
 export function BillingSubscriptionCheckoutPage() {
-  const { token, refreshUser } = useAuth();
-  const [searchParams] = useSearchParams();
-  const paymentId = searchParams.get("payment") ?? "";
-  const navigate = useNavigate();
-  const [error, setError] = useState("");
-  const [working, setWorking] = useState(false);
-  const [session, setSession] = useState<{
-    mode: "payhere" | "demo";
-    payment: { id: string; status: string; amountLkr: number; packageName: string };
-    payHere: { checkoutUrl: string; fields: Record<string, string> } | null;
-  } | null>(null);
-  const autoSubmitRef = useRef(false);
+  const { token } = useAuth();
+  const [data, setData] = useState<SubscriptionPayload | null>(null);
 
   useEffect(() => {
-    if (!token || !paymentId) return;
-    api<NonNullable<typeof session>>(
-      `/subscription/checkout-session?payment=${encodeURIComponent(paymentId)}`,
-      { token }
-    )
-      .then(setSession)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load checkout"));
-  }, [token, paymentId]);
+    if (!token) return;
+    api<SubscriptionPayload>("/subscription", { token })
+      .then(setData)
+      .catch(() => setData(null));
+  }, [token]);
 
-  useEffect(() => {
-    if (!session?.payHere || autoSubmitRef.current) return;
-    if (session.mode !== "payhere") return;
-    autoSubmitRef.current = true;
-    const form = document.getElementById("sub-payhere-form") as HTMLFormElement | null;
-    form?.submit();
-  }, [session]);
-
-  async function completeDemo(e: FormEvent) {
-    e.preventDefault();
-    if (!token || !paymentId) return;
-    setWorking(true);
-    setError("");
-    try {
-      const result = await api<{ redirectUrl: string }>("/subscription/demo-complete", {
-        method: "POST",
-        token,
-        body: JSON.stringify({ paymentId }),
-      });
-      await refreshUser();
-      const path = result.redirectUrl.replace(/^https?:\/\/[^/]+/, "");
-      navigate(path || "/profile/billing/subscriptions?paid=1");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Payment failed");
-    } finally {
-      setWorking(false);
-    }
-  }
-
-  if (error && !session) {
-    return (
-      <div className="account-billing-page">
-        <h1 className="account-billing-title">Checkout</h1>
-        <p className="form-error">{error}</p>
-        <Link to="/profile/billing/subscriptions">Back to subscriptions</Link>
-      </div>
-    );
-  }
-
-  if (!session) return <p className="muted">Preparing checkout…</p>;
-
-  if (session.mode === "payhere" && session.payHere) {
-    return (
-      <div className="account-billing-page">
-        <h1 className="account-billing-title">Redirecting to PayHere…</h1>
-        <form id="sub-payhere-form" method="POST" action={session.payHere.checkoutUrl}>
-          {Object.entries(session.payHere.fields).map(([key, value]) => (
-            <input key={key} type="hidden" name={key} value={value} />
-          ))}
-        </form>
-      </div>
-    );
-  }
+  const trial = data?.trial;
+  const amountLabel =
+    trial?.priceLabel ||
+    (trial?.priceLkr != null && trial.priceLkr > 0
+      ? formatCredits(trial.priceLkr)
+      : trial
+        ? "Pay as you go"
+        : null);
 
   return (
     <div className="account-billing-page">
-      <h1 className="account-billing-title">Complete payment</h1>
+      <nav className="account-billing-crumbs" aria-label="Breadcrumb">
+        <Link to="/profile">Account</Link>
+        <span aria-hidden="true">/</span>
+        <Link to="/profile/billing/subscriptions">Subscriptions</Link>
+        <span aria-hidden="true">/</span>
+        <span>Checkout</span>
+      </nav>
+      <h1 className="account-billing-title">Activate package</h1>
       <div className="account-billing-card">
-        <p>
-          <strong>{session.payment.packageName}</strong>
+        <PaymentGatewayPendingNotice
+          packageName={trial?.packageName}
+          amountLabel={amountLabel}
+        />
+        <p className="muted" style={{ marginTop: "1.25rem", marginBottom: 0 }}>
+          <Link to="/profile/billing/subscriptions">← Back to subscriptions</Link>
         </p>
-        <p>Amount: {formatCredits(session.payment.amountLkr)}</p>
-        <p className="muted">Demo checkout (PayHere not configured).</p>
-        {error ? <p className="form-error">{error}</p> : null}
-        <form onSubmit={completeDemo}>
-          <button type="submit" className="btn btn-primary" disabled={working}>
-            {working ? "Processing…" : "Pay now (demo)"}
-          </button>
-        </form>
       </div>
     </div>
   );
 }
 
 export function BillingSubscriptionReturnPage({ cancelled = false }: { cancelled?: boolean }) {
-  const { token, refreshUser } = useAuth();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const paymentId = searchParams.get("payment") ?? "";
 
   useEffect(() => {
-    if (cancelled) {
-      navigate("/profile/billing/subscriptions?cancelled=1", { replace: true });
-      return;
-    }
-    void (async () => {
-      await refreshUser();
-      if (token && paymentId) {
-        try {
-          await api(`/subscription/checkout-session?payment=${encodeURIComponent(paymentId)}`, {
-            token,
-          });
-        } catch {
-          /* ignore */
-        }
-      }
-      navigate("/profile/billing/subscriptions?paid=1", { replace: true });
-    })();
-  }, [cancelled, navigate, refreshUser, token, paymentId]);
+    navigate(
+      cancelled
+        ? "/profile/billing/subscriptions?cancelled=1"
+        : "/profile/billing/subscriptions/checkout",
+      { replace: true }
+    );
+  }, [cancelled, navigate]);
 
   return <p className="muted">Returning to subscriptions…</p>;
 }

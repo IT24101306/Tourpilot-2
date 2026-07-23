@@ -621,6 +621,16 @@ async function main() {
     },
   });
 
+  // Clear slug collisions from other profiles (base seed / prior runs) so updates are idempotent.
+  await prisma.influencerProfile.updateMany({
+    where: { slug: "island-vibes", NOT: { id: influencer1.id } },
+    data: { slug: null },
+  });
+  await prisma.influencerProfile.updateMany({
+    where: { slug: "lanka-lens", NOT: { id: influencer2.id } },
+    data: { slug: null },
+  });
+
   influencer1 = await prisma.influencerProfile.update({
     where: { id: influencer1.id },
     data: {

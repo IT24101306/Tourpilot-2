@@ -42,7 +42,7 @@ export function AgencyOverviewPage() {
       <ModuleHeader
         module="operations"
         title="Operations overview"
-        subtitle="Your mission control for today's bookings, follow-ups, and confirmations."
+        subtitle="Today’s bookings, follow-ups, and confirmations in one place."
       >
         <Link to="/dashboard/agency/tasks" className="btn btn-primary">
           Open tasks
@@ -80,38 +80,33 @@ export function AgencyOverviewPage() {
             value: metrics.confirmed,
             hint: "Ready to execute",
           },
+          {
+            id: "tours",
+            label: "Active tours",
+            value: activeTours,
+            hint: features.readyMadeTours
+              ? `${tours.length} in catalog`
+              : "Publishing disabled for this agency",
+            href: features.readyMadeTours ? "/dashboard/agency/tours" : undefined,
+          },
+          {
+            id: "catalog",
+            label: "Catalog value",
+            value: `LKR ${publishedValue.toLocaleString()}`,
+            hint: "Published tour pricing",
+          },
+          {
+            id: "open",
+            label: "Open inquiries",
+            value: metrics.total,
+            hint: "Across all stages",
+          },
         ]}
       />
 
-      <div className="ops-kpi-row">
-        {features.readyMadeTours ? (
-          <Link to="/dashboard/agency/tours" className="agency-stat-card clickable">
-            <h3>Active tours</h3>
-            <p className="agency-stat-value">{activeTours}</p>
-            <p className="agency-stat-sub">{tours.length} in catalog</p>
-          </Link>
-        ) : (
-          <div className="agency-stat-card">
-            <h3>Active tours</h3>
-            <p className="agency-stat-value">{activeTours}</p>
-            <p className="agency-stat-sub">Publishing disabled for this agency</p>
-          </div>
-        )}
-        <div className="agency-stat-card">
-          <h3>Catalog value</h3>
-          <p className="agency-stat-value">LKR {publishedValue.toLocaleString()}</p>
-          <p className="agency-stat-sub">Published tour pricing</p>
-        </div>
-        <div className="agency-stat-card">
-          <h3>Open inquiries</h3>
-          <p className="agency-stat-value">{metrics.total}</p>
-          <p className="agency-stat-sub">Across all stages</p>
-        </div>
-      </div>
-
       <section className="ops-board">
         <div className="ops-board-head">
-          <h3>Live operations board</h3>
+          <h3>Live board</h3>
           <p className="muted">Prioritized by what needs your attention first.</p>
         </div>
         {loading ? (

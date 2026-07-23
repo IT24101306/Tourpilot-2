@@ -18,25 +18,24 @@ export function SaveTourButton({ tourId, className = "", showLabel = false, onCh
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [known, setKnown] = useState(false);
+  const canSave = Boolean(token && user?.role === "TOURIST");
 
   const refresh = useCallback(async () => {
-    if (!token || user?.role !== "TOURIST") {
+    if (!canSave) {
       setKnown(true);
       return;
     }
-    const { tourIds } = await api<{ tourIds: string[] }>("/saved-tours/ids", { token });
+    const { tourIds } = await api<{ tourIds: string[] }>("/saved-tours/ids", { token: token! });
     setSaved(tourIds.includes(tourId));
     setKnown(true);
-  }, [token, user?.role, tourId]);
+  }, [canSave, token, tourId]);
 
   useEffect(() => {
     refresh().catch(() => setKnown(true));
   }, [refresh]);
 
-  if (user?.role !== "TOURIST") return null;
-
   async function toggle() {
-    if (!token || loading) return;
+    if (!token || !canSave || loading) return;
     setLoading(true);
     try {
       if (saved) {
@@ -60,15 +59,19 @@ export function SaveTourButton({ tourId, className = "", showLabel = false, onCh
     e.stopPropagation();
   }
 
-  if (!user) {
+  if (!canSave) {
     return (
       <Link
         to={loginPath(currentPath(location))}
-        className={`save-tour-btn save-tour-btn--guest ${className}`}
-        title="Log in to save"
+        className={`save-tour-btn save-tour-btn--guest${className ? ` ${className}` : ""}`}
+        title="Log in to add to favourites"
+        aria-label="Add to favourites"
         onClick={stopNav}
       >
-        {showLabel ? "Save tour" : "♡"}
+        <span className="save-tour-btn-icon" aria-hidden="true">
+          ♡
+        </span>
+        {showLabel ? <span>Add to favourites</span> : null}
       </Link>
     );
   }
@@ -83,12 +86,13 @@ export function SaveTourButton({ tourId, className = "", showLabel = false, onCh
       }}
       disabled={loading || !known}
       aria-pressed={saved}
-      title={saved ? "Remove from saved tours" : "Save to wishlist"}
+      aria-label={saved ? "Remove from favourites" : "Add to favourites"}
+      title={saved ? "Remove from favourites" : "Add to favourites"}
     >
       <span className="save-tour-btn-icon" aria-hidden="true">
         {saved ? "♥" : "♡"}
       </span>
-      {showLabel && <span>{saved ? "Saved" : "Save"}</span>}
+      {showLabel && <span>{saved ? "Saved" : "Add to favourites"}</span>}
     </button>
   );
 }

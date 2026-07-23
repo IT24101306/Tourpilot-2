@@ -2011,13 +2011,16 @@ a.agency-icon-btn {
 .agency-dashboard .agency-stat-card,
 .agency-dashboard .agency-panel,
 .agency-dashboard .agency-list-item,
-.agency-dashboard .module-operations .ops-metric-card,
-.agency-dashboard .module-operations .ops-board,
 .agency-dashboard .module-operations .ops-empty-panel {
   border: 1px solid var(--dash-card-border);
   border-left: 4px solid var(--green);
   box-shadow: var(--dash-card-shadow);
   background: #fff;
+}
+
+.agency-dashboard .module-operations .ops-metric-card,
+.agency-dashboard .module-operations .ops-board {
+  border-left: 1px solid var(--dash-card-border);
 }
 
 .agency-stat-card {
@@ -2800,56 +2803,71 @@ a.agency-icon-btn {
   flex-shrink: 0;
 }
 
-/* Operations — mission control (denser, status-first) */
+/* Operations — modern mission strip + board */
 
 .module-operations .agency-content,
 .module-operations {
-  --module-bg: #f4f8f6;
+  --module-bg: #f3f7f5;
 }
 
 .module-operations .ops-metric-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
 }
 
 .module-operations .ops-metric-card {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--white);
-  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+  min-height: 118px;
+  border: 1px solid rgba(13, 43, 29, 0.08);
+  border-radius: 18px;
+  background: #fff;
+  padding: 18px 18px 16px;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
   font-family: inherit;
   cursor: default;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgba(15, 26, 22, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.module-operations button.ops-metric-card {
+.module-operations .ops-metric-card--interactive {
   cursor: pointer;
 }
 
-.module-operations button.ops-metric-card:hover {
-  border-color: #b9d4c4;
-  transform: translateY(-1px);
+.module-operations button.ops-metric-card,
+.module-operations a.ops-metric-card {
+  cursor: pointer;
+}
+
+.module-operations .ops-metric-card--interactive:hover,
+.module-operations button.ops-metric-card:hover,
+.module-operations a.ops-metric-card:hover {
+  border-color: rgba(0, 178, 0, 0.28);
+  box-shadow: 0 14px 32px rgba(15, 26, 22, 0.08);
+  transform: translateY(-2px);
 }
 
 .module-operations .ops-metric-card.active {
-  border-color: var(--green);
-  background: var(--green-soft);
-  box-shadow: 0 12px 24px rgba(31, 143, 88, 0.12);
+  border-color: rgba(0, 178, 0, 0.4);
+  background: linear-gradient(180deg, #f4fbf6 0%, #fff 100%);
+  box-shadow: 0 12px 28px rgba(0, 178, 0, 0.1);
 }
 
 .agency-dashboard .module-operations .ops-metric-card.active {
-  border-left-color: var(--green);
-  box-shadow: 0 14px 36px rgba(0, 140, 2, 0.22);
+  border-left-color: rgba(0, 178, 0, 0.4);
+  box-shadow: 0 12px 28px rgba(0, 178, 0, 0.1);
 }
 
 .module-operations .ops-metric-value {
   display: block;
   font-family: var(--font-heading);
-  font-size: 1.75rem;
+  font-size: clamp(1.55rem, 2.4vw, 1.9rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
@@ -2858,49 +2876,56 @@ a.agency-icon-btn {
 
 .module-operations .ops-metric-label {
   display: block;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  margin-top: 4px;
-  color: #2a3a34;
+  margin-top: 2px;
+  color: #1f2f28;
 }
 
 .module-operations .ops-metric-hint {
   display: block;
   font-size: 0.78rem;
+  line-height: 1.35;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: auto;
+  padding-top: 6px;
 }
 
 .module-operations .ops-kpi-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 22px;
+  display: none;
 }
 
 .module-operations .ops-board {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--module-bg);
-  padding: 18px;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(13, 43, 29, 0.08);
+  border-radius: 22px;
+  background: #fff;
+  padding: 22px 22px 20px;
+  box-shadow: 0 10px 28px rgba(15, 26, 22, 0.04);
 }
 
 .module-operations .ops-board-head {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .module-operations .ops-board-head h3 {
   font-family: var(--font-heading);
-  margin: 0 0 4px;
-  font-size: 1.1rem;
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.module-operations .ops-board-head .muted {
+  margin: 0;
 }
 
 .module-operations .ops-empty-panel {
-  border: 1px dashed var(--line);
-  border-radius: var(--radius-md);
-  background: var(--white);
-  padding: 24px;
+  border: 1px dashed rgba(13, 43, 29, 0.16);
+  border-radius: 16px;
+  background: #f8fbf9;
+  padding: 28px 20px;
   text-align: center;
 }
 
@@ -3179,6 +3204,20 @@ a.agency-icon-btn {
 
 .trip-room-surface .neg-panel--chat {
   padding-bottom: 24px;
+}
+
+.trip-room-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line, #dbe6e0);
+}
+
+.trip-room-actions .btn {
+  min-height: 42px;
 }
 
 .trip-room-surface .inquiry-thread {
@@ -9025,10 +9064,6 @@ a.agency-icon-btn {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .module-operations .ops-kpi-row {
-    grid-template-columns: 1fr;
-  }
-
   .module-operations .ops-queue {
     grid-template-columns: 1fr;
   }
@@ -9273,10 +9308,6 @@ a.agency-icon-btn {
   padding: 16px 20px 28px;
 }
 
-.trip-room-embedded__actions {
-  padding: 0 20px 12px;
-}
-
 @media (max-width: 720px) {
   .tourist-trip-drawer__panel {
     width: 100%;
@@ -9319,7 +9350,7 @@ a.agency-icon-btn {
 }
 
 .save-tour-btn-icon {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   line-height: 1;
 }
 
@@ -9327,12 +9358,19 @@ a.agency-icon-btn {
   position: relative;
 }
 
-.agency-package-save {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
-  z-index: 2;
-  background: rgba(255, 255, 255, 0.92);
+.agency-package-save.save-tour-btn {
+  padding: 0;
+  min-width: 40px;
+  color: #fff;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.agency-package-save.save-tour-btn:hover:not(:disabled) {
+  color: #fff;
+  background: transparent;
+  border: none;
 }
 
 .saved-tour-grid {
