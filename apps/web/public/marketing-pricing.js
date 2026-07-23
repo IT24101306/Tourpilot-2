@@ -246,7 +246,7 @@
       (cta.target ? ' target="' + cta.target + '"' : "") +
       (cta.target === "_blank" ? ' rel="noopener noreferrer"' : "") +
       ' class="btn-primary pkg-cta inline-flex w-full items-center justify-center rounded-full bg-lime px-4 py-2.5 text-sm font-semibold text-white">' +
-      escapeHtml(pkg.ctaLabel || "Get Started") +
+      escapeHtml(pkg.ctaLabel || "START FREE TRIAL") +
       "</a>" +
       featuresHtml +
       extraFeaturesHtml +

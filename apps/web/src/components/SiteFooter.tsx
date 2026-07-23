@@ -29,7 +29,7 @@ export function SiteFooter() {
         <nav className="site-footer__nav" aria-label="Footer">
           <Link to="/offers">Offers</Link>
           <Link to="/login">Login</Link>
-          <a href="https://iyyosolutions.com/" target="_blank" rel="noopener noreferrer">
+          <a href="https://iyyosolutions.com" target="_blank" rel="noopener noreferrer">
             IYYO
           </a>
         </nav>
@@ -40,7 +40,7 @@ export function SiteFooter() {
           <span>
             Built by{" "}
             <a
-              href="https://iyyosolutions.com/"
+              href="https://iyyosolutions.com"
               target="_blank"
               rel="noopener noreferrer"
               className="site-footer__link"

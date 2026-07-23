@@ -34,7 +34,7 @@ function blankPackage(): PricingPackage {
     tagline: "",
     price: "LKR 0",
     priceSub: "",
-    ctaLabel: "Get Started",
+    ctaLabel: "START FREE TRIAL",
     ctaHref: "#contact",
     features: [{ text: "Feature one" }],
     featuresExtraTitle: "",
