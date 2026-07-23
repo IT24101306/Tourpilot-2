@@ -8,7 +8,7 @@
  * Run `npm run db:seed` first if the database is empty (creates core login accounts).
  */
 import { PrismaClient } from "@prisma/client";
-import { DEFAULT_PRICING_PAGE, LANKA_TOUR_TRAILS_LOGO, LANKA_TOUR_TRAILS_SOCIAL_LINKS, MEDIA, defaultAgencyKyc } from "@tourpilot/shared";
+import { DEFAULT_PRICING_PAGE, LANKA_TOUR_TRAILS_LOGO, LANKA_TOUR_TRAILS_SOCIAL_LINKS, MEDIA, defaultAgencyKyc, trialEndsAtFrom } from "@tourpilot/shared";
 import { hashPassword } from "../src/services/password.js";
 import { printTableCounts, seedExtendedData } from "./seed-demo-extended.js";
 
@@ -62,25 +62,66 @@ async function main() {
     },
   });
 
+  const starterPkg = DEFAULT_PRICING_PAGE.packages.find((p) => p.id === "starter");
+  const agency1TrialEnds = trialEndsAtFrom(new Date());
+
   const agencyUser1 = await prisma.user.upsert({
     where: { phone: PHONES.agency1 },
-    update: { walletBalance: 500 },
+    update: {
+      walletBalance: 500,
+      selectedPackageId: starterPkg?.id ?? "starter",
+      selectedPackageName: starterPkg?.name ?? "Starter",
+      selectedPackagePriceLkr: starterPkg?.priceLkr ?? 5000,
+      selectedPackagePriceLabel: starterPkg?.priceLabel ?? starterPkg?.price ?? "LKR 5,000 / month",
+      selectedPackageBilling: starterPkg?.billing ?? "MONTHLY",
+      trialEndsAt: agency1TrialEnds,
+      packageActivatedAt: null,
+      subscriptionAutoRenew: true,
+      subscriptionPeriodEnd: null,
+    },
     create: {
       phone: PHONES.agency1,
       name: "Lanka Tour Trails Agency",
       role: "AGENCY",
       walletBalance: 500,
+      selectedPackageId: starterPkg?.id ?? "starter",
+      selectedPackageName: starterPkg?.name ?? "Starter",
+      selectedPackagePriceLkr: starterPkg?.priceLkr ?? 5000,
+      selectedPackagePriceLabel: starterPkg?.priceLabel ?? starterPkg?.price ?? "LKR 5,000 / month",
+      selectedPackageBilling: starterPkg?.billing ?? "MONTHLY",
+      trialEndsAt: agency1TrialEnds,
+      packageActivatedAt: null,
+      subscriptionAutoRenew: true,
     },
   });
 
   const agencyUser2 = await prisma.user.upsert({
     where: { phone: PHONES.agency2 },
-    update: {},
+    update: {
+      selectedPackageId: "payg-lite",
+      selectedPackageName: "Pay-As-You-Go Lite",
+      selectedPackagePriceLkr: 250,
+      selectedPackagePriceLabel: "LKR 250 per login",
+      selectedPackageBilling: "PAYG",
+      trialEndsAt: null,
+      packageActivatedAt: new Date(),
+      subscriptionAutoRenew: false,
+      subscriptionPeriodEnd: null,
+      loginFeeLkr: 250,
+    },
     create: {
       phone: PHONES.agency2,
       name: "IYYO Travels",
       role: "AGENCY",
       walletBalance: 250,
+      selectedPackageId: "payg-lite",
+      selectedPackageName: "Pay-As-You-Go Lite",
+      selectedPackagePriceLkr: 250,
+      selectedPackagePriceLabel: "LKR 250 per login",
+      selectedPackageBilling: "PAYG",
+      packageActivatedAt: new Date(),
+      subscriptionAutoRenew: false,
+      loginFeeLkr: 250,
     },
   });
 

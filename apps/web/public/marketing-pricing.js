@@ -117,13 +117,38 @@
 
   function ctaHref(href) {
     var h = (href || "#contact").trim() || "#contact";
-    // Keep users on the home page for common app routes; contact section is the CTA.
-    if (h === "/pricing" || h === "/register-pro" || h === "/register") {
-      return { href: "#contact", target: "" };
+    // Keep hash anchors on the marketing page; send signup CTAs into the app.
+    if (h === "/pricing") {
+      return { href: "#pricing", target: "" };
+    }
+    if (h.indexOf("/register-pro") === 0 || h.indexOf("/register/pro") === 0) {
+      return { href: h, target: "_top" };
+    }
+    if (h === "/register") {
+      return { href: "/register", target: "_top" };
     }
     if (h.charAt(0) === "#") return { href: h, target: "" };
     if (h.indexOf("http") === 0) return { href: h, target: "_blank" };
     return { href: h, target: "_top" };
+  }
+
+  function packageRegisterHref(pkg, buildTotal) {
+    var params = new URLSearchParams();
+    params.set("package", pkg.id || "package");
+    params.set("name", pkg.name || "Package");
+    var billing = pkg.billing || (pkg.buildYourself ? "CUSTOM" : "MONTHLY");
+    params.set("billing", billing);
+    var priceLkr =
+      pkg.buildYourself && buildTotal != null
+        ? Math.round(Number(buildTotal) || 0)
+        : Math.round(Number(pkg.priceLkr) || Number(pkg.loginFeeLkr) || 0);
+    params.set("priceLkr", String(priceLkr));
+    var label =
+      pkg.buildYourself && buildTotal != null
+        ? "LKR " + Math.round(Number(buildTotal) || 0).toLocaleString("en-LK") + " / month"
+        : pkg.priceLabel || pkg.price || "LKR " + priceLkr.toLocaleString("en-LK");
+    params.set("priceLabel", label);
+    return "/register-pro?" + params.toString();
   }
 
   function featureCheckbox(f) {
@@ -152,7 +177,8 @@
     var border = pkg.featured
       ? "border-2 border-lime bg-surface-card shadow-lift"
       : "bg-surface shadow-card";
-    var cta = ctaHref(pkg.ctaHref);
+    var registerHref = packageRegisterHref(pkg);
+    var cta = ctaHref(registerHref);
     var featuresHtml = renderFeatureList(pkg.features);
     var extraFeaturesHtml = "";
     var extraLines = normalizeLines(pkg.featuresExtra);

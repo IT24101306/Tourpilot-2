@@ -63,7 +63,7 @@ export function AdminInfluencersPage() {
                     {row.user.phone}
                     {row.user.email && <p className="muted gov-cell-sub">{row.user.email}</p>}
                   </td>
-                  <td>LKR {row.user.walletBalance.toLocaleString()}</td>
+                  <td>{row.user.walletBalance.toLocaleString()} Credits</td>
                   <td>{row.codeCount}</td>
                   <td>{row.commissionCount}</td>
                   <td>

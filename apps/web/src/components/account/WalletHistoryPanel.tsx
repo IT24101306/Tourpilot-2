@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import {
+  formatCredits,
   formatWalletAmount,
   walletTxnLabel,
   type WalletLedgerEntry,
@@ -56,7 +57,7 @@ function HistoryTable({
               <td className={row.amountLkr < 0 ? "wallet-history-amount--debit" : "wallet-history-amount--credit"}>
                 {formatWalletAmount(row.amountLkr)}
               </td>
-              <td>LKR {row.balanceAfter.toLocaleString()}</td>
+              <td>{formatCredits(row.balanceAfter)}</td>
               <td className="muted wallet-history-table__note-col">{row.note ?? "—"}</td>
             </tr>
           ))}

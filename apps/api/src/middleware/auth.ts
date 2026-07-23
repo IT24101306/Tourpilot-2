@@ -4,10 +4,13 @@ import { config } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import { getPlatformSettings } from "../services/platformSettings.js";
 import {
+  buildTrialStatus,
   formatSessionInactivity,
+  isTrialExpiredUnpaid,
   resolveSessionInactivityMinutes,
 } from "@tourpilot/shared";
 import type { UserRole } from "@prisma/client";
+import { trialExemptPath } from "../services/trial.js";
 
 export type AuthUser = {
   id: string;
@@ -53,6 +56,13 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
         role: true,
         isActive: true,
         lastActiveAt: true,
+        trialEndsAt: true,
+        packageActivatedAt: true,
+        selectedPackageId: true,
+        selectedPackageName: true,
+        selectedPackagePriceLkr: true,
+        selectedPackagePriceLabel: true,
+        selectedPackageBilling: true,
       },
     });
     if (!user || !user.isActive) {
@@ -64,6 +74,19 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
       if (inactive) {
         return res.status(401).json(inactive);
       }
+    }
+
+    const expiredUnpaid = isTrialExpiredUnpaid({
+      trialEndsAt: user.trialEndsAt,
+      packageActivatedAt: user.packageActivatedAt,
+    });
+    if (expiredUnpaid && !trialExemptPath(req.originalUrl || req.path)) {
+      const trial = buildTrialStatus(user);
+      return res.status(402).json({
+        error: `Your free trial has ended. Activate ${trial.packageName || "your package"} (${trial.priceLabel || "selected plan"}) to continue.`,
+        code: "TRIAL_EXPIRED",
+        trial,
+      });
     }
 
     req.user = { id: user.id, phone: user.phone, role: user.role };

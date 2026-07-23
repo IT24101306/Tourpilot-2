@@ -1,4 +1,5 @@
 import type { UserRole, WalletTxnType } from "@prisma/client";
+import { isTrialActive } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
 import {
   resolveLoginFeeForUser,
@@ -8,13 +9,19 @@ import { notifyWalletReceipt } from "./notifications.js";
 
 export async function chargeLoginFee(userId: string, _role?: UserRole) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+  // 7-day free trial from pricing Get Started: no OTP/login fee.
+  if (isTrialActive(user.trialEndsAt) && !user.packageActivatedAt) {
+    return { charged: 0, balance: Number(user.walletBalance) };
+  }
+
   const fee = await resolveLoginFeeForUser(user);
   if (fee <= 0) return { charged: 0, balance: null as number | null };
 
   const balance = Number(user.walletBalance);
 
   if (balance < fee) {
-    const err = new Error(`Insufficient wallet balance. Login fee: LKR ${fee}`);
+    const err = new Error(`Insufficient wallet balance. Login fee: ${fee} Credits`);
     (err as Error & { status: number }).status = 402;
     throw err;
   }

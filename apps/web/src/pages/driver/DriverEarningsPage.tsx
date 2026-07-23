@@ -33,7 +33,7 @@ export function DriverEarningsPage() {
         </div>
         <div className="agency-stat-card">
           <h3>Wallet balance</h3>
-          <p className="agency-stat-value">LKR {wallet.toLocaleString()}</p>
+          <p className="agency-stat-value">{wallet.toLocaleString()} Credits</p>
           <p className="agency-stat-sub">Platform wallet credits</p>
         </div>
       </div>

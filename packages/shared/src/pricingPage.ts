@@ -46,6 +46,14 @@ export type PricingPackage = {
   /** Opens the included-features modal */
   showIncludedFeatures?: boolean;
   includedFeaturesLabel?: string;
+  /** Amount charged after the 7-day trial (0 for free-to-start / PAYG). */
+  priceLkr?: number;
+  /** Display label for post-trial amount (optional override of `price`). */
+  priceLabel?: string;
+  /** MONTHLY | ONE_TIME | PAYG | CUSTOM */
+  billing?: "MONTHLY" | "ONE_TIME" | "PAYG" | "CUSTOM";
+  /** For PAYG: per-login fee applied after trial. */
+  loginFeeLkr?: number;
 };
 
 export type PricingPageContent = {
@@ -112,9 +120,11 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       price: "LKR 20,000",
       priceSub: "one-time payment",
       ctaLabel: "Get Started",
-      ctaHref: "/register-pro",
+      ctaHref: "/register-pro?package=signature-website&name=Signature%20Website&priceLkr=20000&priceLabel=LKR%2020%2C000&billing=ONE_TIME",
       categories: ["website"],
       featured: true,
+      priceLkr: 20000,
+      billing: "ONE_TIME",
       features: [
         fl("Custom, Unique website", { bold: true }),
         fl("Full ERP — free Month 1"),
@@ -133,8 +143,10 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       price: "LKR 5,000",
       priceSub: "per month — all features included",
       ctaLabel: "Get Started",
-      ctaHref: "/register-pro",
+      ctaHref: "/register-pro?package=starter&name=Starter&priceLkr=5000&priceLabel=LKR%205%2C000%20%2F%20month&billing=MONTHLY",
       categories: ["system"],
+      priceLkr: 5000,
+      billing: "MONTHLY",
       features: [
         fl("7 day Free trial", { bold: true }),
         fl("Build your website"),
@@ -153,9 +165,11 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       price: "Pay-per-use",
       priceSub: "choose features · billed monthly",
       ctaLabel: "Get Started",
-      ctaHref: "/register-pro",
+      ctaHref: "/register-pro?package=build-yourself&name=Build%20Yourself&priceLkr=0&priceLabel=Pay-per-use&billing=CUSTOM",
       categories: ["website", "system"],
       buildYourself: true,
+      priceLkr: 0,
+      billing: "CUSTOM",
       features: [
         fl("7 day Free trial", { bold: true }),
         fl("Free hosting"),
@@ -170,10 +184,13 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       price: "Free to start",
       priceSub: "no monthly fee, no setup cost",
       ctaLabel: "Get Started",
-      ctaHref: "/register-pro",
+      ctaHref: "/register-pro?package=payg-lite&name=Pay-As-You-Go%20Lite&priceLkr=250&priceLabel=LKR%20250%20per%20login&billing=PAYG",
       categories: ["system"],
       showIncludedFeatures: true,
       includedFeaturesLabel: "View included features",
+      priceLkr: 250,
+      billing: "PAYG",
+      loginFeeLkr: 250,
       features: [
         fl("7 day Free trial", { bold: true }),
         fl("Build your website"),
@@ -193,10 +210,13 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       price: "Free to start",
       priceSub: "no monthly fee, no setup cost",
       ctaLabel: "Get Started",
-      ctaHref: "/register-pro",
+      ctaHref: "/register-pro?package=payg-plus&name=Pay-As-You-Go%20Plus&priceLkr=150&priceLabel=LKR%20150%20per%20login&billing=PAYG",
       categories: ["system"],
       showIncludedFeatures: true,
       includedFeaturesLabel: "View included features",
+      priceLkr: 150,
+      billing: "PAYG",
+      loginFeeLkr: 150,
       features: [
         fl("7 day Free trial", { bold: true }),
         fl("Build your website"),

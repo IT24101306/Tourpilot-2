@@ -2,12 +2,14 @@ import { createApp } from "./app.js";
 import { config } from "./lib/config.js";
 import { prisma } from "./lib/prisma.js";
 import { startInquiryExpiryScheduler } from "./services/inquiryExpiry.js";
+import { startTrialReminderScheduler } from "./services/trial.js";
 
 const app = createApp();
 
 async function main() {
   await prisma.$connect();
   startInquiryExpiryScheduler();
+  startTrialReminderScheduler();
   app.listen(config.port, () => {
     console.log(`TourPilot API running on http://localhost:${config.port}`);
     console.log(`Email mode: ${config.email.mode}`);
@@ -18,6 +20,7 @@ async function main() {
       );
     }
     console.log(`Inquiry auto-expiry: ${config.inquiryExpiryDays} days`);
+    console.log("Trial ending reminders: hourly");
     if (config.logOtpToConsole) {
       console.log("DEV: OTP codes will be printed to this console on send-otp / register-request");
     }

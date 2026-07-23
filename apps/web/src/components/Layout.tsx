@@ -156,7 +156,9 @@ export function DashboardLayout({ links }: { links: { to: string; label: string 
         <div className="nav nav--dashboard">
           <div className="nav-meta">
             <span className="nav-meta-name">{user?.name}</span>
-            <span className="nav-meta-wallet">LKR {user?.walletBalance?.toFixed(0)}</span>
+            <span className="nav-meta-wallet">
+              {Math.round(user?.walletBalance ?? 0).toLocaleString()} Credits
+            </span>
           </div>
           <button type="button" className="btn btn-ghost btn-nav" onClick={logout}>
             Log out

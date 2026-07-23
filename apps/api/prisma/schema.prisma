@@ -152,6 +152,21 @@ model User {
   isActive             Boolean               @default(true)
   /** Last authenticated API activity — used for optional inactivity session timeout. */
   lastActiveAt         DateTime?
+  /** Pricing-package 7-day free trial (pro signups from Get Started). */
+  trialEndsAt                DateTime?
+  trialReminderSentAt        DateTime?
+  selectedPackageId          String?   @db.VarChar(64)
+  selectedPackageName        String?   @db.VarChar(120)
+  selectedPackagePriceLkr    Decimal?  @db.Decimal(12, 2)
+  selectedPackagePriceLabel  String?   @db.VarChar(120)
+  /** MONTHLY | ONE_TIME | PAYG | CUSTOM */
+  selectedPackageBilling     String?   @db.VarChar(20)
+  /** Set when post-trial package payment / PAYG activation completes. */
+  packageActivatedAt         DateTime?
+  /** Prefer automatic renewal when period ends (user-initiated renew still required in v1). */
+  subscriptionAutoRenew      Boolean   @default(true)
+  /** Current paid subscription period end (monthly packages). */
+  subscriptionPeriodEnd      DateTime?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   agency               Agency?
@@ -164,6 +179,7 @@ model User {
   savedTours           SavedTour[]
   savedTripPlans       SavedTripPlan[]
   walletLedger         WalletLedger[]
+  subscriptionPayments SubscriptionPayment[]
   refreshTokens        RefreshToken[]
   referralAttributions ReferralAttribution[]
   agencyDriver              AgencyDriver?
@@ -171,6 +187,29 @@ model User {
   inquiryChatPresence       InquiryChatPresence[]
   authoredInquiryResponses  InquiryResponse[] @relation("InquiryResponseAuthor")
   notifications             Notification[]
+}
+
+model SubscriptionPayment {
+  id             String        @id @default(cuid()) @db.VarChar(25)
+  userId         String        @db.VarChar(25)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agencyId       String?       @db.VarChar(25)
+  packageId      String        @db.VarChar(64)
+  packageName    String        @db.VarChar(120)
+  amountLkr      Decimal       @db.Decimal(12, 2)
+  currency       String        @default("LKR") @db.VarChar(8)
+  status         PaymentStatus @default(PENDING)
+  provider       String        @default("payhere") @db.VarChar(32)
+  payhereOrderId String?       @db.VarChar(128)
+  checkoutUrl    String?       @db.Text
+  metadata       Json?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([payhereOrderId])
+  @@index([status])
 }
 
 model Notification {

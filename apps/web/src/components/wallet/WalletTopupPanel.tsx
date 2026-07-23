@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { formatCredits } from "../../lib/walletLedger";
 
 type Props = {
   balance: number;
@@ -42,7 +43,7 @@ export function WalletTopupPanel({
     try {
       const nextBalance = await onTopup(value);
       setDisplayBalance(nextBalance);
-      setStatus(`Topup successful. LKR ${value.toLocaleString()} added.`);
+      setStatus(`Topup successful. ${formatCredits(value)} added.`);
       setAmount("");
       window.setTimeout(() => {
         setOpen(false);
@@ -70,12 +71,12 @@ export function WalletTopupPanel({
       <div className={rootClass}>
         <div className="login-wallet-panel__copy">
           <span className="login-wallet-panel__label">Wallet balance</span>
-          <strong className="login-wallet-panel__value">LKR {displayBalance.toLocaleString()}</strong>
+          <strong className="login-wallet-panel__value">{formatCredits(displayBalance)}</strong>
           {feeHint != null && feeHint > 0 ? (
             <span className="login-wallet-panel__fee">
               {lowBalance
-                ? `Balance is below the LKR ${feeHint.toLocaleString()} login fee — top up to keep access smooth.`
-                : `Login fee: LKR ${feeHint.toLocaleString()}`}
+                ? `Balance is below the ${formatCredits(feeHint)} login fee — top up to keep access smooth.`
+                : `Login fee: ${formatCredits(feeHint)}`}
             </span>
           ) : null}
         </div>
@@ -104,7 +105,7 @@ export function WalletTopupPanel({
               </button>
             </div>
             <p className="dialog-sub muted">
-              Current balance: <strong>LKR {displayBalance.toLocaleString()}</strong>
+              Current balance: <strong>{formatCredits(displayBalance)}</strong>
             </p>
             <form className="topup-form" onSubmit={handleSubmit}>
               <div className="topup-quick-row">
@@ -123,7 +124,7 @@ export function WalletTopupPanel({
                   </button>
                 ))}
               </div>
-              <label htmlFor="loginTopupAmount">Custom amount (LKR)</label>
+              <label htmlFor="loginTopupAmount">Custom amount (Credits)</label>
               <input
                 id="loginTopupAmount"
                 type="number"

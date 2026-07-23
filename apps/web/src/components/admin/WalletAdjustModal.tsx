@@ -29,7 +29,7 @@ export function WalletAdjustModal({ userName, open, loading, onClose, onConfirm 
         { label: "User", value: userName },
         {
           label: "Amount",
-          value: `${value < 0 ? "−" : "+"}LKR ${Math.abs(value).toLocaleString()}`,
+          value: `${value < 0 ? "−" : "+"}${Math.abs(value).toLocaleString()} Credits`,
           tone: value < 0 ? "warning" : "default",
         },
         { label: "Note", value: note.trim() },
@@ -44,7 +44,7 @@ export function WalletAdjustModal({ userName, open, loading, onClose, onConfirm 
         <h3>Adjust wallet — {userName}</h3>
         <p className="muted">Use negative amounts to debit. A ledger entry is recorded.</p>
         <form onSubmit={handleSubmit}>
-          <label htmlFor="adj-amount">Amount (LKR)</label>
+          <label htmlFor="adj-amount">Amount (Credits)</label>
           <input
             id="adj-amount"
             type="number"

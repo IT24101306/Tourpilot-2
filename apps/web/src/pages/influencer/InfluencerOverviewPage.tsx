@@ -49,7 +49,7 @@ export function InfluencerOverviewPage() {
             id: "wallet",
             label: "Wallet",
             value: Math.round(stats.walletBalance),
-            hint: `LKR ${stats.paidToWallet.toLocaleString()} paid in`,
+            hint: `${stats.paidToWallet.toLocaleString()} Credits paid in`,
           },
           {
             id: "clicks",

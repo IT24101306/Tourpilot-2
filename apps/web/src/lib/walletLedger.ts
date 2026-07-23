@@ -32,7 +32,12 @@ export function walletTxnLabel(type: WalletLedgerType): string {
   }
 }
 
+/** Wallet units shown to users — never a currency code. */
+export function formatCredits(amount: number): string {
+  return `${Math.round(amount).toLocaleString()} Credits`;
+}
+
 export function formatWalletAmount(amount: number): string {
-  const prefix = amount >= 0 ? "+" : "-";
-  return `${prefix}LKR ${Math.abs(amount).toLocaleString()}`;
+  const prefix = amount >= 0 ? "+" : "−";
+  return `${prefix}${Math.abs(amount).toLocaleString()} Credits`;
 }

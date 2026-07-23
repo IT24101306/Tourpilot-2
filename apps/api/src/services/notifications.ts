@@ -10,10 +10,12 @@ import {
   proposalSentEmail,
   sendPlatformEmail,
   tripMessageEmail,
+  trialEndingEmail,
   walletReceiptEmail,
   welcomeEmail,
 } from "./email.js";
 import { getPlatformSettings } from "./platformSettings.js";
+import { buildTrialStatus } from "@tourpilot/shared";
 
 export type NotifyInput = {
   userId: string;
@@ -474,6 +476,55 @@ export async function notifyWelcome(user: {
   });
 }
 
+export async function notifyTrialEnding(user: {
+  id: string;
+  name: string;
+  email: string | null;
+  trialEndsAt?: Date | null;
+  selectedPackageName?: string | null;
+  selectedPackagePriceLabel?: string | null;
+  selectedPackagePriceLkr?: unknown;
+  selectedPackageId?: string | null;
+  selectedPackageBilling?: string | null;
+  packageActivatedAt?: Date | null;
+}) {
+  const trial = buildTrialStatus(user);
+  const packageName = trial.packageName || "your package";
+  const priceLabel =
+    trial.priceLabel ||
+    (trial.priceLkr != null ? `LKR ${trial.priceLkr.toLocaleString("en-LK")}` : "your selected plan");
+  const endsAtLabel = trial.endsAt
+    ? new Date(trial.endsAt).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })
+    : "soon";
+  const base = await appBaseUrl();
+  const activateUrl = `${base}/billing/activate`;
+  const mail = await finalizeEmailTemplate(
+    "trialEnding",
+    trialEndingEmail({
+      name: user.name,
+      packageName,
+      priceLabel,
+      endsAtLabel,
+      activateUrl,
+    }),
+    {
+      name: user.name,
+      packageName,
+      priceLabel,
+      endsAtLabel,
+      activateUrl,
+    }
+  );
+  await createNotification({
+    userId: user.id,
+    type: "TRIAL_ENDING",
+    title: "Free trial ending soon",
+    body: `Your trial for ${packageName} ends on ${endsAtLabel}. Activate to keep access.`,
+    email: user.email,
+    emailContent: mail,
+  });
+}
+
 export async function notifyAgencyApproved(agencyId: string) {
   const agency = await prisma.agency.findUnique({
     where: { id: agencyId },
@@ -538,8 +589,8 @@ export async function notifyWalletReceipt(params: {
     title: params.kind === "LOGIN_FEE" ? "Login fee charged" : "Wallet topped up",
     body:
       params.kind === "LOGIN_FEE"
-        ? `LKR ${params.amountLkr.toLocaleString()} login fee charged.`
-        : `LKR ${params.amountLkr.toLocaleString()} added to your wallet.`,
+        ? `${params.amountLkr.toLocaleString()} Credits login fee charged.`
+        : `${params.amountLkr.toLocaleString()} Credits added to your wallet.`,
     email: params.email,
     emailContent: mail,
   });
@@ -565,7 +616,7 @@ export async function notifyCommissionPaid(
     userId,
     type: "COMMISSION_PAID",
     title: "Commission credited",
-    body: `LKR ${amountLkr.toLocaleString()} was added to your wallet.`,
+    body: `${amountLkr.toLocaleString()} Credits was added to your wallet.`,
     email,
     emailContent: mail,
   });

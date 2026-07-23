@@ -12,6 +12,7 @@ import { offersRouter } from "./routes/offers.js";
 import { influencerRouter } from "./routes/influencer.js";
 import { influencersRouter } from "./routes/influencers.js";
 import { walletRouter } from "./routes/wallet.js";
+import { billingRouter } from "./routes/billing.js";
 import { adminRouter } from "./routes/admin/index.js";
 import { driverRouter } from "./routes/driver.js";
 import { driversRouter } from "./routes/drivers.js";
@@ -24,6 +25,7 @@ import { cmsRouter } from "./routes/cms.js";
 import { supportRouter } from "./routes/support.js";
 import { domainsRouter } from "./routes/domains.js";
 import { invoicesRouter } from "./routes/invoices.js";
+import { subscriptionRouter } from "./routes/subscription.js";
 
 export function createApp() {
   const app = express();
@@ -72,6 +74,7 @@ export function createApp() {
   app.use("/api/influencer", influencerRouter);
   app.use("/api/influencers", influencersRouter);
   app.use("/api/wallet", walletRouter);
+  app.use("/api/billing", billingRouter);
   app.use("/api/admin", adminRouter);
   app.use("/api/driver", driverRouter);
   app.use("/api/drivers", driversRouter);
@@ -83,6 +86,7 @@ export function createApp() {
   app.use("/api/cms", cmsRouter);
   app.use("/api/support", supportRouter);
   app.use("/api/invoices", invoicesRouter);
+  app.use("/api/subscription", subscriptionRouter);
   app.use("/api", domainsRouter);
 
   app.use(
@@ -102,7 +106,16 @@ export function createApp() {
         return res.status(400).json({ error: message, details: issues });
       }
       const status = err.status || 500;
-      res.status(status).json({ error: err.message || "Internal Server Error" });
+      const payload: { error: string; code?: string; details?: unknown } = {
+        error: err.message || "Internal Server Error",
+      };
+      if ((err as Error & { code?: string }).code) {
+        payload.code = (err as Error & { code?: string }).code;
+      }
+      if (err.name === "ZodError") {
+        /* handled above */
+      }
+      res.status(status).json(payload);
     }
   );
 

@@ -21,6 +21,22 @@ export type AuthUser = {
   /** Effective login fee for this account (role default or custom override). */
   loginFee?: number;
   loginFeeOverride?: number | null;
+  trial?: {
+    active: boolean;
+    expiredUnpaid: boolean;
+    endsAt: string | null;
+    daysRemaining: number | null;
+    packageId: string | null;
+    packageName: string | null;
+    priceLkr: number | null;
+    priceLabel: string | null;
+    billing: "MONTHLY" | "ONE_TIME" | "PAYG" | "CUSTOM" | null;
+    activatedAt: string | null;
+  };
+  subscription?: {
+    autoRenew: boolean;
+    periodEnd: string | null;
+  };
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: {
     id: string;

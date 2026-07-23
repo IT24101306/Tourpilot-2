@@ -1,11 +1,13 @@
-import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   dashboardPathForRole,
   defaultAgencyKyc,
   isValidInternationalPhone,
   toStoredPhone,
+  TRIAL_DAYS,
   type AgencyKycInput,
+  type PackageBilling,
   type UserRole,
 } from "@tourpilot/shared";
 import { api } from "../api/client";
@@ -20,6 +22,7 @@ type Step = "details" | "kyc" | "otp";
 
 export function RegisterProPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setSession } = useAuth();
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
@@ -36,6 +39,21 @@ export function RegisterProPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const selectedPackage = useMemo(() => {
+    const packageId = searchParams.get("package")?.trim();
+    const packageName = searchParams.get("name")?.trim();
+    if (!packageId || !packageName) return null;
+    const priceLkr = Math.max(0, Math.round(Number(searchParams.get("priceLkr") || 0)));
+    const priceLabel =
+      searchParams.get("priceLabel")?.trim() ||
+      (priceLkr > 0 ? `LKR ${priceLkr.toLocaleString("en-LK")}` : "Selected package");
+    const billingRaw = (searchParams.get("billing") || "MONTHLY").toUpperCase();
+    const billing = (
+      ["MONTHLY", "ONE_TIME", "PAYG", "CUSTOM"].includes(billingRaw) ? billingRaw : "CUSTOM"
+    ) as PackageBilling;
+    return { packageId, packageName, priceLkr, priceLabel, billing };
+  }, [searchParams]);
 
   useEffect(() => {
     if (role !== "AGENCY") return;
@@ -116,6 +134,7 @@ export function RegisterProPage() {
             role,
             agencyName: role === "AGENCY" ? agencyName : undefined,
             agencyKyc: role === "AGENCY" ? agencyKyc : undefined,
+            selectedPackage: selectedPackage ?? undefined,
           }),
         }
       );
@@ -156,15 +175,43 @@ export function RegisterProPage() {
   return (
     <AuthLayout
       title="Professional registration"
-      subtitle="For travel agencies, influencers, and drivers. Drivers invited by an agency should use Login with OTP instead — no signup here."
+      subtitle={
+        selectedPackage
+          ? `${selectedPackage.packageName} · ${TRIAL_DAYS}-day free trial, then ${selectedPackage.priceLabel}. Existing account? Log in.`
+          : "For travel agencies, influencers, and drivers. Drivers invited by an agency should use Login with OTP instead — no signup here."
+      }
     >
       <p className="muted auth-footnote" style={{ marginTop: 0 }}>
         <Link to="/register" className="auth-switch-link">
           ← Tourist sign up
         </Link>
+        {" · "}
+        <Link to="/login" className="auth-switch-link">
+          Already have an account? Log in
+        </Link>
       </p>
 
-      {error && <p className="form-error">{error}</p>}
+      {selectedPackage && (
+        <div className="gov-form-card" style={{ marginBottom: 12, padding: 12 }}>
+          <strong>{selectedPackage.packageName}</strong>
+          <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.9rem" }}>
+            {TRIAL_DAYS}-day free trial — no login fees. Full feature access. After trial:{" "}
+            {selectedPackage.priceLabel}.
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <p className="form-error">
+          {error}
+          {(error.toLowerCase().includes("log in") || error.toLowerCase().includes("already exists")) && (
+            <>
+              {" "}
+              <Link to="/login">Go to login</Link>
+            </>
+          )}
+        </p>
+      )}
 
       {step === "details" && (
         <form className="form-grid" onSubmit={handleDetailsSubmit}>
@@ -181,7 +228,7 @@ export function RegisterProPage() {
             required
           />
           <p className="muted" style={{ margin: "-4px 0 0", fontSize: "0.85rem" }}>
-            Used for account notices and occasional TourPilot offers.
+            Used for trial reminders, account notices, and occasional TourPilot offers.
           </p>
           <PhoneInput value={phoneInput} onChange={setPhoneInput} id="pro-phone" />
           <label htmlFor="role">I am a</label>
@@ -217,57 +264,34 @@ export function RegisterProPage() {
             onChange={setTermsAccepted}
             id="register-terms-kyc"
           />
-          <div className="agency-kyc-register-actions">
+          <div className="gov-form-actions">
             <button
               type="button"
               className="btn btn-ghost"
+              onClick={() => setStep("details")}
               disabled={loading}
-              onClick={() => {
-                setStep("details");
-                setError("");
-              }}
             >
               Back
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
-              Send OTP
+              {loading ? "Sending…" : "Send OTP"}
             </button>
           </div>
         </form>
       )}
 
       {step === "otp" && (
-        <>
-          <p className="muted" style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>
-            Code sent to your email on file (phone {phone})
-            {role === "AGENCY" && (
-              <>
-                <br />
-                After verification, your agency is submitted for review (usually within 1–2 business
-                days).
-              </>
-            )}
-          </p>
-          <OtpStep
-            otp={otp}
-            demoOtp={demoOtp}
-            bypassCode={bypassCode}
-            loading={loading}
-            submitLabel="Verify & create account"
-            onOtpChange={setOtp}
-            onSubmit={handleOtpSubmit}
-            onBack={() => {
-              setStep(role === "AGENCY" ? "kyc" : "details");
-              setOtp("");
-              setError("");
-            }}
-          />
-        </>
+        <OtpStep
+          otp={otp}
+          onOtpChange={setOtp}
+          onSubmit={handleOtpSubmit}
+          loading={loading}
+          submitLabel="Verify & start trial"
+          demoOtp={demoOtp}
+          bypassCode={bypassCode}
+          onBack={() => setStep(role === "AGENCY" ? "kyc" : "details")}
+        />
       )}
-
-      <p className="muted auth-footnote">
-        Already registered? <Link to="/login" className="auth-switch-link">Log in</Link>
-      </p>
     </AuthLayout>
   );
 }

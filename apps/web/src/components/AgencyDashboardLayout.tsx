@@ -228,7 +228,7 @@ function AgencyDashboardLayoutInner() {
         body: JSON.stringify({ amount: value }),
       });
       await refreshUser();
-      setTopupStatus(`Topup successful. LKR ${value.toLocaleString()} added.`);
+      setTopupStatus(`Topup successful. ${value.toLocaleString()} Credits added.`);
       setTopupAmount("");
       setTimeout(() => {
         setTopupOpen(false);
@@ -253,7 +253,7 @@ function AgencyDashboardLayoutInner() {
       title: "Confirm wallet topup",
       description: "Funds will be added to your agency wallet immediately.",
       confirmLabel: "Add funds",
-      summary: [{ label: "Amount", value: `LKR ${value.toLocaleString()}` }],
+      summary: [{ label: "Amount", value: `${value.toLocaleString()} Credits` }],
       onConfirm: () => executeTopup(value),
     });
   }
@@ -473,7 +473,7 @@ function AgencyDashboardLayoutInner() {
                   </button>
                 ))}
               </div>
-              <label htmlFor="topupAmount">Custom amount (LKR)</label>
+              <label htmlFor="topupAmount">Custom amount (Credits)</label>
               <input
                 id="topupAmount"
                 type="number"

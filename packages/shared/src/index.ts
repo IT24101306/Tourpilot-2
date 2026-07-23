@@ -166,3 +166,16 @@ export {
   toSessionInactivityMinutes,
   type SessionInactivityUnit,
 } from "./sessionInactivity.js";
+
+export {
+  TRIAL_DAYS,
+  TRIAL_REMINDER_HOURS_BEFORE,
+  buildTrialStatus,
+  isTrialActive,
+  isTrialExpiredUnpaid,
+  registerProUrlForPackage,
+  trialEndsAtFrom,
+  type PackageBilling,
+  type SelectedPackageInput,
+  type TrialStatusView,
+} from "./trial.js";

@@ -169,7 +169,7 @@ export function UserFormModal({
 
           {(mode === "create" || mode === "duplicate") && (
             <>
-              <label htmlFor="user-wallet">Opening wallet (LKR)</label>
+              <label htmlFor="user-wallet">Opening wallet (Credits)</label>
               <input
                 id="user-wallet"
                 type="number"

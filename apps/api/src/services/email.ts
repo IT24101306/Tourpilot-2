@@ -303,6 +303,33 @@ export function welcomeEmail(params: {
   return { subject, text, html };
 }
 
+export function trialEndingEmail(params: {
+  name: string;
+  packageName: string;
+  priceLabel: string;
+  endsAtLabel: string;
+  activateUrl: string;
+}) {
+  const subject = `Your TourPilot free trial ends soon (${params.packageName})`;
+  const text = [
+    `Hello ${params.name},`,
+    "",
+    `Your 7-day free trial for ${params.packageName} ends on ${params.endsAtLabel}.`,
+    "",
+    `After that, access pauses until you activate your package (${params.priceLabel}).`,
+    "",
+    `Activate / top up: ${params.activateUrl}`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.name)},</p>
+<p>Your <strong>7-day free trial</strong> for <strong>${escapeHtml(params.packageName)}</strong> ends on <strong>${escapeHtml(params.endsAtLabel)}</strong>.</p>
+<p>After that, access pauses until you activate your package (<strong>${escapeHtml(params.priceLabel)}</strong>).</p>
+<p><a href="${escapeHtml(params.activateUrl)}">Activate your package</a></p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
 export function tripMessageEmail(params: {
   recipientName: string;
   preview: string;
@@ -392,22 +419,22 @@ export function walletReceiptEmail(params: {
 }) {
   const isFee = params.kind === "LOGIN_FEE";
   const subject = isFee
-    ? `Login fee receipt — LKR ${params.amountLkr.toLocaleString()}`
-    : `Wallet top-up receipt — LKR ${params.amountLkr.toLocaleString()}`;
+    ? `Login fee receipt — ${params.amountLkr.toLocaleString()} Credits`
+    : `Wallet top-up receipt — ${params.amountLkr.toLocaleString()} Credits`;
   const action = isFee
-    ? `A login fee of LKR ${params.amountLkr.toLocaleString()} was charged.`
-    : `LKR ${params.amountLkr.toLocaleString()} was added to your wallet.`;
+    ? `A login fee of ${params.amountLkr.toLocaleString()} Credits was charged.`
+    : `${params.amountLkr.toLocaleString()} Credits was added to your wallet.`;
   const text = [
     `Hello ${params.recipientName},`,
     "",
     action,
-    `Wallet balance: LKR ${params.balanceLkr.toLocaleString()}.`,
+    `Wallet balance: ${params.balanceLkr.toLocaleString()} Credits.`,
     "",
     "— TourPilot",
   ].join("\n");
   const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
 <p>${escapeHtml(action)}</p>
-<p>Wallet balance: <strong>LKR ${params.balanceLkr.toLocaleString()}</strong>.</p>
+<p>Wallet balance: <strong>${params.balanceLkr.toLocaleString()} Credits</strong>.</p>
 <p>— TourPilot</p>`;
   return { subject, text, html };
 }
@@ -508,18 +535,18 @@ export function commissionPaidEmail(params: {
   amountLkr: number;
   walletBalance: number;
 }) {
-  const subject = `Commission paid — LKR ${params.amountLkr.toLocaleString()}`;
+  const subject = `Commission paid — ${params.amountLkr.toLocaleString()} Credits`;
   const text = [
     `Hello ${params.influencerName},`,
     "",
-    `LKR ${params.amountLkr.toLocaleString()} has been credited to your TourPilot wallet.`,
-    `New wallet balance: LKR ${params.walletBalance.toLocaleString()}.`,
+    `${params.amountLkr.toLocaleString()} Credits has been credited to your TourPilot wallet.`,
+    `New wallet balance: ${params.walletBalance.toLocaleString()} Credits.`,
     "",
     "— TourPilot",
   ].join("\n");
   const html = `<p>Hello ${escapeHtml(params.influencerName)},</p>
-<p><strong>LKR ${params.amountLkr.toLocaleString()}</strong> has been credited to your TourPilot wallet.</p>
-<p>New balance: <strong>LKR ${params.walletBalance.toLocaleString()}</strong>.</p>
+<p><strong>${params.amountLkr.toLocaleString()} Credits</strong> has been credited to your TourPilot wallet.</p>
+<p>New balance: <strong>${params.walletBalance.toLocaleString()} Credits</strong>.</p>
 <p>— TourPilot</p>`;
   return { subject, text, html };
 }
