@@ -1,8 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
   DEFAULT_PRICING_PAGE,
+  normalizePricingFeatureLines,
   parsePricingPageContent,
   type PricingAddonFeature,
+  type PricingFeatureLine,
   type PricingIncludedSection,
   type PricingPackage,
   type PricingPageContent,
@@ -21,6 +23,10 @@ function newId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function blankLine(): PricingFeatureLine {
+  return { text: "", bold: false, underline: false };
+}
+
 function blankPackage(): PricingPackage {
   return {
     id: newId("pkg"),
@@ -30,7 +36,9 @@ function blankPackage(): PricingPackage {
     priceSub: "",
     ctaLabel: "Get Started",
     ctaHref: "#contact",
-    features: ["Feature one"],
+    features: [{ text: "Feature one" }],
+    featuresExtraTitle: "",
+    featuresExtra: [],
     categories: ["system"],
   };
 }
@@ -48,8 +56,96 @@ function blankAddon(): PricingAddonFeature {
 function blankSection(): PricingIncludedSection {
   return {
     title: "New section",
-    details: ["Detail line"],
+    details: [{ text: "Detail line" }],
   };
+}
+
+function FeatureLinesEditor({
+  label,
+  hint,
+  lines,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  lines: PricingFeatureLine[];
+  onChange: (next: PricingFeatureLine[]) => void;
+}) {
+  function patchLine(index: number, patch: Partial<PricingFeatureLine>) {
+    onChange(lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  }
+
+  return (
+    <div className="pricing-feature-editor">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
+          marginBottom: 6,
+        }}
+      >
+        <label style={{ margin: 0 }}>{label}</label>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => onChange([...lines, blankLine()])}
+        >
+          + Add line
+        </button>
+      </div>
+      {hint ? <p className="muted" style={{ marginTop: 0 }}>{hint}</p> : null}
+      {lines.length === 0 ? (
+        <p className="muted">No lines yet.</p>
+      ) : (
+        lines.map((line, i) => (
+          <div
+            key={i}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto auto auto",
+              gap: 8,
+              alignItems: "center",
+              marginBottom: 6,
+            }}
+          >
+            <input
+              value={line.text}
+              onChange={(e) => patchLine(i, { text: e.target.value })}
+              placeholder="Feature text"
+              aria-label={`Feature line ${i + 1}`}
+            />
+            <label className="gov-check-row" title="Bold">
+              <input
+                type="checkbox"
+                checked={Boolean(line.bold)}
+                onChange={(e) => patchLine(i, { bold: e.target.checked })}
+              />
+              <strong>B</strong>
+            </label>
+            <label className="gov-check-row" title="Underline">
+              <input
+                type="checkbox"
+                checked={Boolean(line.underline)}
+                onChange={(e) => patchLine(i, { underline: e.target.checked })}
+              />
+              <span style={{ textDecoration: "underline" }}>U</span>
+            </label>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => onChange(lines.filter((_, idx) => idx !== i))}
+              aria-label={`Remove feature line ${i + 1}`}
+            >
+              ×
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+  );
 }
 
 export function AdminPricingPage() {
@@ -105,7 +201,9 @@ export function AdminPricingPage() {
       ...content,
       packages: content.packages.map((p) => ({
         ...p,
-        features: p.features.map((l) => l.trim()).filter(Boolean),
+        features: normalizePricingFeatureLines(p.features),
+        featuresExtraTitle: p.featuresExtraTitle?.trim() || undefined,
+        featuresExtra: normalizePricingFeatureLines(p.featuresExtra),
       })),
       buildYourselfFeatures: content.buildYourselfFeatures.map((f) => ({
         ...f,
@@ -114,7 +212,7 @@ export function AdminPricingPage() {
       includedFeaturesSections: content.includedFeaturesSections.map((s) => ({
         ...s,
         title: s.title.trim(),
-        details: s.details.map((l) => l.trim()).filter(Boolean),
+        details: normalizePricingFeatureLines(s.details),
       })),
     };
 
@@ -169,7 +267,7 @@ export function AdminPricingPage() {
       <ModuleHeader
         module="governance"
         title="Pricing"
-        subtitle="Edit packages, prices, and feature lists on the home page. Add or remove plans and features here."
+        subtitle="Edit packages, prices, and feature lists on the home page. Bold or underline any line; use section 2 for extra features."
       />
 
       <form className="gov-panel" onSubmit={handleSave} style={{ display: "grid", gap: 20 }}>
@@ -243,7 +341,8 @@ export function AdminPricingPage() {
             </button>
           </div>
           <p className="muted">
-            Feature lines = one bullet per line. Add a new line to add a feature to that plan.
+            Use <strong>B</strong> / <span style={{ textDecoration: "underline" }}>U</span> on each
+            line. Section 2 is an optional second feature list under the first.
           </p>
           {content.packages.map((pkg, i) => (
             <div
@@ -319,16 +418,29 @@ export function AdminPricingPage() {
                   />
                 </div>
               </div>
-              <label>Feature lines (one per line — add lines to add features)</label>
-              <textarea
-                rows={Math.max(5, pkg.features.length + 2)}
-                value={pkg.features.join("\n")}
-                onChange={(e) =>
-                  updatePackage(i, {
-                    features: e.target.value.split("\n").map((l) => l.trimEnd()),
-                  })
-                }
+
+              <FeatureLinesEditor
+                label="Feature lines (section 1)"
+                hint="Main bullet list on the package card."
+                lines={pkg.features}
+                onChange={(features) => updatePackage(i, { features })}
               />
+
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px dashed var(--border, #e5e7eb)" }}>
+                <label>Section 2 title (optional)</label>
+                <input
+                  value={pkg.featuresExtraTitle || ""}
+                  onChange={(e) => updatePackage(i, { featuresExtraTitle: e.target.value })}
+                  placeholder="e.g. Also included"
+                />
+                <FeatureLinesEditor
+                  label="Feature lines (section 2)"
+                  hint="Second feature list under the first. Leave empty to hide."
+                  lines={pkg.featuresExtra ?? []}
+                  onChange={(featuresExtra) => updatePackage(i, { featuresExtra })}
+                />
+              </div>
+
               <label className="gov-check-row" style={{ marginTop: 8 }}>
                 <input
                   type="checkbox"
@@ -558,15 +670,10 @@ export function AdminPricingPage() {
                 value={section.title}
                 onChange={(e) => updateSection(i, { title: e.target.value })}
               />
-              <label>Detail lines (one per line)</label>
-              <textarea
-                rows={Math.max(3, section.details.length + 2)}
-                value={section.details.join("\n")}
-                onChange={(e) =>
-                  updateSection(i, {
-                    details: e.target.value.split("\n").map((l) => l.trimEnd()),
-                  })
-                }
+              <FeatureLinesEditor
+                label="Detail lines"
+                lines={section.details}
+                onChange={(details) => updateSection(i, { details })}
               />
             </div>
           ))}

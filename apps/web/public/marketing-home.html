@@ -649,27 +649,12 @@
 
       .pkg-grid {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 280px));
+        justify-content: center;
         gap: 1.25rem;
         align-items: stretch;
-      }
-
-      @media (min-width: 640px) {
-        .pkg-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-      }
-
-      @media (min-width: 1024px) {
-        .pkg-grid {
-          grid-template-columns: repeat(3, 1fr);
-        }
-      }
-
-      @media (min-width: 1280px) {
-        .pkg-grid {
-          grid-template-columns: repeat(5, 1fr);
-        }
+        max-width: 1400px;
+        margin-inline: auto;
       }
 
       .pkg-card {
@@ -732,6 +717,40 @@
         color: #00B200;
         font-weight: 700;
         font-size: 0.8125rem;
+      }
+
+      .pkg-features li.is-bold {
+        font-weight: 700;
+        color: #0D2B1D;
+      }
+
+      .pkg-features li.is-underline {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .pkg-features-extra-title {
+        margin: 0.75rem 0 0.35rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+
+      .pkg-features--extra {
+        margin-top: 0.25rem;
+        padding-top: 0.35rem;
+        border-top: 1px dashed #EAEFEA;
+      }
+
+      .detail-list li.is-bold {
+        font-weight: 700;
+      }
+
+      .detail-list li.is-underline {
+        text-decoration: underline;
+        text-underline-offset: 2px;
       }
 
       .feature-picker {
@@ -1101,15 +1120,15 @@
                 aria-expanded="false"
                 onclick="toggleSelect(this)"
               >
-                <span class="custom-select-value">All</span>
+                <span class="custom-select-value">Website + Full System</span>
                 <svg class="pkg-chevron h-[18px] w-[18px] shrink-0 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
               <ul class="pkg-options" role="listbox">
-                <li role="option" class="selected" data-value="All" onclick="selectOption(this)">All</li>
+                <li role="option" data-value="All" onclick="selectOption(this)">All</li>
                 <li role="option" data-value="Website" onclick="selectOption(this)">Website</li>
-                <li role="option" data-value="Website + Full System" onclick="selectOption(this)">Website + Full System</li>
+                <li role="option" class="selected" data-value="Website + Full System" onclick="selectOption(this)">Website + Full System</li>
               </ul>
             </div>
           </div>
@@ -2102,6 +2121,9 @@
         });
       }
 
+      // Default view: Website + Full System (matches the package type shown in the dropdown).
+      filterPackages("Website + Full System");
+
       function syncFeature(source) {
         const key = source.dataset.feature;
         if (key) {
@@ -2134,6 +2156,6 @@
 
       updateBuildTotal();
     </script>
-    <script src="/marketing-pricing.js"></script>
+    <script src="/marketing-pricing.js?v=20260723-features"></script>
   </body>
 </html>

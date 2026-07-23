@@ -50,11 +50,13 @@ export function getEmailDeliveryStatus() {
         ? "EMAIL_MODE=log — emails only print in the API console. Set EMAIL_MODE=smtp and SMTP_* then restart the API."
         : config.email.mode === "smtp" && !host
           ? "SMTP_HOST is missing."
-          : config.email.mode === "smtp" && !pass
-            ? "SMTP_PASS is empty — set the mailbox password and restart the API."
-            : config.email.mode === "smtp"
-              ? "SMTP looks configured."
-              : undefined,
+            : config.email.mode === "smtp" && !pass
+              ? "SMTP_PASS is empty — set the mailbox password and restart the API."
+              : config.email.mode === "smtp" && host.toLowerCase().startsWith("mail.")
+                ? "If sends time out, Hostinger mailboxes usually need SMTP_HOST=smtp.hostinger.com (or smtp.titan.email), not mail.yourdomain.com."
+                : config.email.mode === "smtp"
+                  ? "SMTP looks configured."
+                  : undefined,
   };
 }
 

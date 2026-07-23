@@ -5,7 +5,12 @@ export type PricingFilterOption = {
   label: string;
 };
 
-export type PricingFeatureLine = string;
+/** One bullet on a package card (or included-features modal). */
+export type PricingFeatureLine = {
+  text: string;
+  bold?: boolean;
+  underline?: boolean;
+};
 
 export type PricingAddonFeature = {
   id: string;
@@ -18,7 +23,7 @@ export type PricingAddonFeature = {
 
 export type PricingIncludedSection = {
   title: string;
-  details: string[];
+  details: PricingFeatureLine[];
 };
 
 export type PricingPackage = {
@@ -30,6 +35,9 @@ export type PricingPackage = {
   ctaLabel: string;
   ctaHref: string;
   features: PricingFeatureLine[];
+  /** Optional second feature list on the card. */
+  featuresExtraTitle?: string;
+  featuresExtra?: PricingFeatureLine[];
   /** "website" | "system" — comma-joined categories for filter */
   categories: string[];
   featured?: boolean;
@@ -57,6 +65,35 @@ export type PricingPageContent = {
   termsBody: string;
 };
 
+/** Accept legacy plain strings or rich `{ text, bold?, underline? }` lines. */
+export function normalizePricingFeatureLine(line: unknown): PricingFeatureLine | null {
+  if (typeof line === "string") {
+    const text = line.trim();
+    return text ? { text } : null;
+  }
+  if (line && typeof line === "object") {
+    const raw = line as { text?: unknown; bold?: unknown; underline?: unknown };
+    if (typeof raw.text !== "string") return null;
+    const text = raw.text.trim();
+    if (!text) return null;
+    return {
+      text,
+      bold: Boolean(raw.bold),
+      underline: Boolean(raw.underline),
+    };
+  }
+  return null;
+}
+
+export function normalizePricingFeatureLines(lines: unknown): PricingFeatureLine[] {
+  if (!Array.isArray(lines)) return [];
+  return lines.map(normalizePricingFeatureLine).filter((l): l is PricingFeatureLine => Boolean(l));
+}
+
+function fl(text: string, style?: { bold?: boolean; underline?: boolean }): PricingFeatureLine {
+  return { text, ...style };
+}
+
 export const DEFAULT_PRICING_PAGE: PricingPageContent = {
   type: "pricing",
   headline: "Choose the way you grow online",
@@ -79,14 +116,14 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       categories: ["website"],
       featured: true,
       features: [
-        "Custom, Unique website",
-        "Full ERP — free Month 1",
-        "Free hosting",
-        "Free subdomain",
-        "Free admin panel - 1 Month",
-        "Unlimited pages",
-        "Free SEO optimisation",
-        "Free maintenance - 1 month",
+        fl("Custom, Unique website", { bold: true }),
+        fl("Full ERP — free Month 1"),
+        fl("Free hosting"),
+        fl("Free subdomain"),
+        fl("Free admin panel - 1 Month"),
+        fl("Unlimited pages"),
+        fl("Free SEO optimisation"),
+        fl("Free maintenance - 1 month"),
       ],
     },
     {
@@ -99,14 +136,14 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       ctaHref: "/register-pro",
       categories: ["system"],
       features: [
-        "7 day Free trial",
-        "Build your website",
-        "Free hosting",
-        "Free subdomain",
-        "Shareable website link",
-        "Unlimited usage time",
-        "Full ERP",
-        "All features included",
+        fl("7 day Free trial", { bold: true }),
+        fl("Build your website"),
+        fl("Free hosting"),
+        fl("Free subdomain"),
+        fl("Shareable website link"),
+        fl("Unlimited usage time"),
+        fl("Full ERP"),
+        fl("All features included"),
       ],
     },
     {
@@ -119,7 +156,12 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       ctaHref: "/register-pro",
       categories: ["website", "system"],
       buildYourself: true,
-      features: ["7 day Free trial", "Free hosting", "Free subdomain", "Unlimited pages"],
+      features: [
+        fl("7 day Free trial", { bold: true }),
+        fl("Free hosting"),
+        fl("Free subdomain"),
+        fl("Unlimited pages"),
+      ],
     },
     {
       id: "payg-lite",
@@ -133,15 +175,15 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       showIncludedFeatures: true,
       includedFeaturesLabel: "View included features",
       features: [
-        "7 day Free trial",
-        "Build your website",
-        "Full ERP",
-        "All features free",
-        "LKR 250 per login",
-        "5% transaction fee",
-        "Earnings & income view",
-        "Easy wallet top-ups",
-        "Free tourist/admin login",
+        fl("7 day Free trial", { bold: true }),
+        fl("Build your website"),
+        fl("Full ERP"),
+        fl("All features free"),
+        fl("LKR 250 per login", { underline: true }),
+        fl("5% transaction fee", { underline: true }),
+        fl("Earnings & income view"),
+        fl("Easy wallet top-ups"),
+        fl("Free tourist/admin login"),
       ],
     },
     {
@@ -156,15 +198,15 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
       showIncludedFeatures: true,
       includedFeaturesLabel: "View included features",
       features: [
-        "7 day Free trial",
-        "Build your website",
-        "Full ERP",
-        "All features free",
-        "LKR 150 per login",
-        "10% transaction fee",
-        "Earnings & income view",
-        "Easy wallet top-ups",
-        "Free tourist/admin login",
+        fl("7 day Free trial", { bold: true }),
+        fl("Build your website"),
+        fl("Full ERP"),
+        fl("All features free"),
+        fl("LKR 150 per login", { underline: true }),
+        fl("10% transaction fee", { underline: true }),
+        fl("Earnings & income view"),
+        fl("Easy wallet top-ups"),
+        fl("Free tourist/admin login"),
       ],
     },
   ],
@@ -188,57 +230,57 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
     {
       title: "Influencer Connections",
       details: [
-        "Referral codes & share links — promote agency tours, earn commission on referred bookings",
-        "Commission on tours — % of tour base price (default agency rate or negotiated rate)",
-        "Commission negotiation — request/agree commission % with agencies (partners tab)",
-        "Influencer login fee — LKR 25 per login (wallet debit)",
+        fl("Referral codes & share links — promote agency tours, earn commission on referred bookings"),
+        fl("Commission on tours — % of tour base price (default agency rate or negotiated rate)"),
+        fl("Commission negotiation — request/agree commission % with agencies (partners tab)"),
+        fl("Influencer login fee — LKR 25 per login (wallet debit)"),
       ],
     },
     {
       title: "Booking (Direct Package Booking)",
       details: [
-        "Ready-made tour packages — priced tours published on the storefront (USD shown to travelers)",
-        "Traveler purchase flow — inquiry → proposal → accept (no in-app card payment yet)",
-        "Offer registrations — travelers join promo campaigns (screenshot/terms flow, not a paid checkout)",
+        fl("Ready-made tour packages — priced tours published on the storefront (USD shown to travelers)"),
+        fl("Traveler purchase flow — inquiry → proposal → accept (no in-app card payment yet)"),
+        fl("Offer registrations — travelers join promo campaigns (screenshot/terms flow, not a paid checkout)"),
       ],
     },
     {
       title: "Negotiations",
       details: [
-        "Custom tour proposals — agency builds itineraries with priced stops and sends quotes to travelers",
-        "Negotiated bookings — traveler accepts a proposal → becomes a confirmed booking (payment off-platform today)",
-        "Commission negotiation — also a back-and-forth agree-on-a-number flow between agency and influencer",
+        fl("Custom tour proposals — agency builds itineraries with priced stops and sends quotes to travelers"),
+        fl("Negotiated bookings — traveler accepts a proposal → becomes a confirmed booking (payment off-platform today)"),
+        fl("Commission negotiation — also a back-and-forth agree-on-a-number flow between agency and influencer"),
       ],
     },
     {
       title: "Display Tab (Customise Display Page)",
       details: [
-        "Storefront sales funnel — public agency page: hero, packages, transport, gallery, reviews",
-        "Influencer storefront — influencer's own page to sell/promote tours (\"share as mine\" style)",
-        "Loyalty / promo offers — discounted price or free-tour style campaigns on the storefront",
-        "Admin platform offers — site-wide promotional campaigns (acquisition-focused, not direct checkout)",
+        fl("Storefront sales funnel — public agency page: hero, packages, transport, gallery, reviews"),
+        fl("Influencer storefront — influencer's own page to sell/promote tours (\"share as mine\" style)"),
+        fl("Loyalty / promo offers — discounted price or free-tour style campaigns on the storefront"),
+        fl("Admin platform offers — site-wide promotional campaigns (acquisition-focused, not direct checkout)"),
       ],
     },
     {
       title: "Driver handling",
       details: [
-        "Trip assignments — driver assigned to agency bookings",
-        "Earnings view — wallet balance + estimated weekly trip income",
-        "Driver login fee — LKR 25 per login (wallet debit)",
+        fl("Trip assignments — driver assigned to agency bookings"),
+        fl("Earnings view — wallet balance + estimated weekly trip income"),
+        fl("Driver login fee — LKR 25 per login (wallet debit)"),
       ],
     },
     {
       title: "Wallet & logins",
       details: [
-        "Wallet top-ups — users add funds to platform wallet",
-        "Tourist & Admin login — free, no fee",
+        fl("Wallet top-ups — users add funds to platform wallet"),
+        fl("Tourist & Admin login — free, no fee"),
       ],
     },
     {
       title: "Marketing strategies",
       details: [
-        "Proven marketing strategies specialised for the tourism industry",
-        "Individual branding attention",
+        fl("Proven marketing strategies specialised for the tourism industry"),
+        fl("Individual branding attention"),
       ],
     },
   ],
@@ -250,6 +292,15 @@ export const DEFAULT_PRICING_PAGE: PricingPageContent = {
     "SriLankaTourPilot has the right to change the packages when needed, with 6 months' notice.",
 };
 
+function normalizePackage(pkg: PricingPackage): PricingPackage {
+  return {
+    ...pkg,
+    features: normalizePricingFeatureLines(pkg.features),
+    featuresExtraTitle: pkg.featuresExtraTitle?.trim() || undefined,
+    featuresExtra: normalizePricingFeatureLines(pkg.featuresExtra),
+  };
+}
+
 export function parsePricingPageContent(blocks: unknown): PricingPageContent {
   const list = Array.isArray(blocks) ? blocks : [];
   const block = list.find(
@@ -257,20 +308,26 @@ export function parsePricingPageContent(blocks: unknown): PricingPageContent {
       Boolean(b) && typeof b === "object" && (b as { type?: string }).type === "pricing"
   );
   if (!block) return structuredClone(DEFAULT_PRICING_PAGE);
+  const base = structuredClone(DEFAULT_PRICING_PAGE);
+  const packages = (block.packages?.length ? block.packages : base.packages).map(normalizePackage);
+  const includedFeaturesSections = (
+    block.includedFeaturesSections?.length
+      ? block.includedFeaturesSections
+      : base.includedFeaturesSections
+  ).map((s) => ({
+    title: s.title,
+    details: normalizePricingFeatureLines(s.details),
+  }));
   return {
-    ...structuredClone(DEFAULT_PRICING_PAGE),
+    ...base,
     ...block,
     type: "pricing",
-    filterOptions: block.filterOptions?.length
-      ? block.filterOptions
-      : DEFAULT_PRICING_PAGE.filterOptions,
-    packages: block.packages?.length ? block.packages : DEFAULT_PRICING_PAGE.packages,
+    filterOptions: block.filterOptions?.length ? block.filterOptions : base.filterOptions,
+    packages,
     buildYourselfFeatures: block.buildYourselfFeatures?.length
       ? block.buildYourselfFeatures
-      : DEFAULT_PRICING_PAGE.buildYourselfFeatures,
-    includedFeaturesSections: block.includedFeaturesSections?.length
-      ? block.includedFeaturesSections
-      : DEFAULT_PRICING_PAGE.includedFeaturesSections,
+      : base.buildYourselfFeatures,
+    includedFeaturesSections,
   };
 }
 

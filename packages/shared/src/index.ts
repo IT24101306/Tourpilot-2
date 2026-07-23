@@ -137,8 +137,11 @@ export {
 export {
   DEFAULT_PRICING_PAGE,
   formatPricingLkr,
+  normalizePricingFeatureLine,
+  normalizePricingFeatureLines,
   parsePricingPageContent,
   type PricingAddonFeature,
+  type PricingFeatureLine,
   type PricingFilterOption,
   type PricingIncludedSection,
   type PricingPackage,

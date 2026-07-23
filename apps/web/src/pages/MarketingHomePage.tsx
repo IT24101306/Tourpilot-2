@@ -40,7 +40,7 @@ export function MarketingHomePage() {
         ref={iframeRef}
         className="marketing-home__frame"
         title="TourPilot"
-        src="/marketing-home.html?v=20260723"
+        src="/marketing-home.html?v=20260723-features"
         onLoad={() => {
           const section = (hash || "").replace(/^#/, "");
           if (!section) return;
