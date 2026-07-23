@@ -67,6 +67,10 @@
 
   function ctaHref(href) {
     var h = (href || "#contact").trim() || "#contact";
+    // Keep users on the home page for common app routes; contact section is the CTA.
+    if (h === "/pricing" || h === "/register-pro" || h === "/register") {
+      return { href: "#contact", target: "" };
+    }
     if (h.charAt(0) === "#") return { href: h, target: "" };
     if (h.indexOf("http") === 0) return { href: h, target: "_blank" };
     return { href: h, target: "_top" };

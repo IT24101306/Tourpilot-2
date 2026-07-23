@@ -1907,6 +1907,29 @@
       window.addEventListener("scroll", setActiveNav, { passive: true });
       setActiveNav();
 
+      function scrollToSection(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      document.querySelectorAll('a[href="#pricing"]').forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          scrollToSection("pricing");
+          try {
+            history.replaceState(null, "", "#pricing");
+          } catch (_) {}
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+        const data = event.data;
+        if (!data || data.type !== "tourpilot-scroll" || !data.section) return;
+        scrollToSection(data.section);
+      });
+
       const reveals = document.querySelectorAll(".reveal, .reveal-scale, .reveal-left, .reveal-right");
       const observer = new IntersectionObserver(
         (entries) => {

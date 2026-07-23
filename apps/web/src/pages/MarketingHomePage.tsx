@@ -1,12 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 /**
- * Serves the marketing home from /marketing-home.html (copy of repo-root index.html).
- * Hash (#pricing, #services, #contact) is forwarded into the iframe.
+ * Marketing home iframe. Hash (#pricing, etc.) scrolls inside the iframe
+ * without reloading it (changing iframe src would feel like a new page).
  */
 export function MarketingHomePage() {
   const { hash } = useLocation();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.add("marketing-home-active");
@@ -17,11 +18,38 @@ export function MarketingHomePage() {
     };
   }, []);
 
-  const src = `/marketing-home.html${hash || ""}`;
+  useEffect(() => {
+    const section = (hash || "").replace(/^#/, "");
+    if (!section) return;
+
+    const send = () => {
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: "tourpilot-scroll", section },
+        window.location.origin
+      );
+    };
+
+    send();
+    const t = window.setTimeout(send, 400);
+    return () => window.clearTimeout(t);
+  }, [hash]);
 
   return (
     <div className="marketing-home">
-      <iframe className="marketing-home__frame" title="TourPilot" src={src} />
+      <iframe
+        ref={iframeRef}
+        className="marketing-home__frame"
+        title="TourPilot"
+        src="/marketing-home.html?v=20260723"
+        onLoad={() => {
+          const section = (hash || "").replace(/^#/, "");
+          if (!section) return;
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: "tourpilot-scroll", section },
+            window.location.origin
+          );
+        }}
+      />
     </div>
   );
 }

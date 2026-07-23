@@ -17,6 +17,41 @@ function cloneDefault(): PricingPageContent {
   return structuredClone(DEFAULT_PRICING_PAGE);
 }
 
+function newId(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function blankPackage(): PricingPackage {
+  return {
+    id: newId("pkg"),
+    name: "New package",
+    tagline: "",
+    price: "LKR 0",
+    priceSub: "",
+    ctaLabel: "Get Started",
+    ctaHref: "#contact",
+    features: ["Feature one"],
+    categories: ["system"],
+  };
+}
+
+function blankAddon(): PricingAddonFeature {
+  return {
+    id: newId("addon"),
+    name: "New feature",
+    priceLkr: 0,
+    primary: false,
+    defaultChecked: false,
+  };
+}
+
+function blankSection(): PricingIncludedSection {
+  return {
+    title: "New section",
+    details: ["Detail line"],
+  };
+}
+
 export function AdminPricingPage() {
   const { token } = useAuth();
   const { requestConfirm } = useConfirmAction();
@@ -65,13 +100,32 @@ export function AdminPricingPage() {
   function handleSave(e: FormEvent) {
     e.preventDefault();
     if (!token) return;
+
+    const cleaned: PricingPageContent = {
+      ...content,
+      packages: content.packages.map((p) => ({
+        ...p,
+        features: p.features.map((l) => l.trim()).filter(Boolean),
+      })),
+      buildYourselfFeatures: content.buildYourselfFeatures.map((f) => ({
+        ...f,
+        name: f.name.trim(),
+      })),
+      includedFeaturesSections: content.includedFeaturesSections.map((s) => ({
+        ...s,
+        title: s.title.trim(),
+        details: s.details.map((l) => l.trim()).filter(Boolean),
+      })),
+    };
+
     requestConfirm({
-      title: "Publish pricing page?",
-      description: "Changes go live on the public home page immediately.",
+      title: "Publish pricing?",
+      description: "Changes go live on the home page Pricing section immediately.",
       confirmLabel: "Save pricing",
       summary: [
-        { label: "Packages", value: String(content.packages.length) },
-        { label: "Add-ons", value: String(content.buildYourselfFeatures.length) },
+        { label: "Packages", value: String(cleaned.packages.length) },
+        { label: "Add-ons", value: String(cleaned.buildYourselfFeatures.length) },
+        { label: "Included sections", value: String(cleaned.includedFeaturesSections.length) },
       ],
       onConfirm: async () => {
         setSaving(true);
@@ -82,11 +136,12 @@ export function AdminPricingPage() {
             token,
             body: JSON.stringify({
               title: "Pricing",
-              blocks: [content],
+              blocks: [cleaned],
               isPublished: true,
             }),
           });
-          setMsg("Pricing saved. The home page Pricing section is updated.");
+          setContent(cleaned);
+          setMsg("Pricing saved. Refresh the home page to see updates.");
         } catch {
           setMsg("Save failed.");
         } finally {
@@ -114,7 +169,7 @@ export function AdminPricingPage() {
       <ModuleHeader
         module="governance"
         title="Pricing"
-        subtitle="Edit packages and add-ons shown in the home page Pricing section."
+        subtitle="Edit packages, prices, and feature lists on the home page. Add or remove plans and features here."
       />
 
       <form className="gov-panel" onSubmit={handleSave} style={{ display: "grid", gap: 20 }}>
@@ -161,14 +216,64 @@ export function AdminPricingPage() {
         </section>
 
         <section>
-          <h3 className="gov-panel-title">Packages</h3>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 8,
+            }}
+          >
+            <h3 className="gov-panel-title" style={{ margin: 0 }}>
+              Packages
+            </h3>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                setContent((prev) => ({
+                  ...prev,
+                  packages: [...prev.packages, blankPackage()],
+                }))
+              }
+            >
+              + Add package
+            </button>
+          </div>
+          <p className="muted">
+            Feature lines = one bullet per line. Add a new line to add a feature to that plan.
+          </p>
           {content.packages.map((pkg, i) => (
             <div
               key={pkg.id}
               className="gov-panel"
               style={{ marginBottom: 12, border: "1px solid var(--border, #e5e7eb)", padding: 16 }}
             >
-              <strong>{pkg.name || `Package ${i + 1}`}</strong>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <strong>{pkg.name || `Package ${i + 1}`}</strong>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() =>
+                    setContent((prev) => ({
+                      ...prev,
+                      packages: prev.packages.filter((_, idx) => idx !== i),
+                    }))
+                  }
+                >
+                  Remove
+                </button>
+              </div>
               <label>Name</label>
               <input
                 value={pkg.name}
@@ -186,6 +291,7 @@ export function AdminPricingPage() {
                   <input
                     value={pkg.price}
                     onChange={(e) => updatePackage(i, { price: e.target.value })}
+                    placeholder="LKR 5,000"
                   />
                 </div>
                 <div>
@@ -209,12 +315,13 @@ export function AdminPricingPage() {
                   <input
                     value={pkg.ctaHref}
                     onChange={(e) => updatePackage(i, { ctaHref: e.target.value })}
+                    placeholder="#contact"
                   />
                 </div>
               </div>
-              <label>Feature lines (one per line)</label>
+              <label>Feature lines (one per line — add lines to add features)</label>
               <textarea
-                rows={Math.max(4, pkg.features.length + 1)}
+                rows={Math.max(5, pkg.features.length + 2)}
                 value={pkg.features.join("\n")}
                 onChange={(e) =>
                   updatePackage(i, {
@@ -222,28 +329,84 @@ export function AdminPricingPage() {
                   })
                 }
               />
+              <label className="gov-check-row" style={{ marginTop: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(pkg.showIncludedFeatures)}
+                  onChange={(e) =>
+                    updatePackage(i, { showIncludedFeatures: e.target.checked })
+                  }
+                />
+                Show “included features” button
+              </label>
               {pkg.showIncludedFeatures ? (
                 <>
                   <label>Included-features button label</label>
                   <input
                     value={pkg.includedFeaturesLabel || ""}
-                    onChange={(e) => updatePackage(i, { includedFeaturesLabel: e.target.value })}
+                    onChange={(e) =>
+                      updatePackage(i, { includedFeaturesLabel: e.target.value })
+                    }
                   />
                 </>
               ) : null}
+              <label className="gov-check-row" style={{ marginTop: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(pkg.buildYourself)}
+                  onChange={(e) => updatePackage(i, { buildYourself: e.target.checked })}
+                />
+                Build Yourself picker (uses add-ons below)
+              </label>
+              <label className="gov-check-row">
+                <input
+                  type="checkbox"
+                  checked={Boolean(pkg.featured)}
+                  onChange={(e) => updatePackage(i, { featured: e.target.checked })}
+                />
+                Featured highlight
+              </label>
             </div>
           ))}
         </section>
 
         <section>
-          <h3 className="gov-panel-title">Build Yourself add-ons</h3>
-          <p className="muted">Each row is a selectable feature with its monthly LKR price.</p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 8,
+            }}
+          >
+            <h3 className="gov-panel-title" style={{ margin: 0 }}>
+              Build Yourself add-ons
+            </h3>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                setContent((prev) => ({
+                  ...prev,
+                  buildYourselfFeatures: [...prev.buildYourselfFeatures, blankAddon()],
+                }))
+              }
+            >
+              + Add feature
+            </button>
+          </div>
+          <p className="muted">
+            Selectable extras with monthly LKR price. “On card” shows on the package card; others
+            appear in “more features”.
+          </p>
           {content.buildYourselfFeatures.map((f, i) => (
             <div
               key={f.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "1.4fr 120px 90px 90px",
+                gridTemplateColumns: "1.4fr 120px 90px 90px auto",
                 gap: 8,
                 alignItems: "end",
                 marginBottom: 8,
@@ -281,6 +444,20 @@ export function AdminPricingPage() {
                 />
                 Default on
               </label>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() =>
+                  setContent((prev) => ({
+                    ...prev,
+                    buildYourselfFeatures: prev.buildYourselfFeatures.filter(
+                      (_, idx) => idx !== i
+                    ),
+                  }))
+                }
+              >
+                Remove
+              </button>
             </div>
           ))}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
@@ -295,7 +472,9 @@ export function AdminPricingPage() {
               <label>More-features subtitle</label>
               <input
                 value={content.moreFeaturesSubtitle}
-                onChange={(e) => setContent({ ...content, moreFeaturesSubtitle: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, moreFeaturesSubtitle: e.target.value })
+                }
               />
             </div>
           </div>
@@ -307,22 +486,81 @@ export function AdminPricingPage() {
         </section>
 
         <section>
-          <h3 className="gov-panel-title">Included features modal</h3>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 8,
+            }}
+          >
+            <h3 className="gov-panel-title" style={{ margin: 0 }}>
+              Included features modal
+            </h3>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                setContent((prev) => ({
+                  ...prev,
+                  includedFeaturesSections: [
+                    ...prev.includedFeaturesSections,
+                    blankSection(),
+                  ],
+                }))
+              }
+            >
+              + Add section
+            </button>
+          </div>
           <label>Modal title</label>
           <input
             value={content.includedFeaturesTitle}
             onChange={(e) => setContent({ ...content, includedFeaturesTitle: e.target.value })}
           />
           {content.includedFeaturesSections.map((section, i) => (
-            <div key={section.title + i} style={{ marginTop: 12 }}>
-              <label>Section title</label>
+            <div
+              key={section.title + i}
+              style={{
+                marginTop: 12,
+                border: "1px solid var(--border, #e5e7eb)",
+                borderRadius: 8,
+                padding: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <label style={{ margin: 0 }}>Section title</label>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() =>
+                    setContent((prev) => ({
+                      ...prev,
+                      includedFeaturesSections: prev.includedFeaturesSections.filter(
+                        (_, idx) => idx !== i
+                      ),
+                    }))
+                  }
+                >
+                  Remove
+                </button>
+              </div>
               <input
                 value={section.title}
                 onChange={(e) => updateSection(i, { title: e.target.value })}
               />
               <label>Detail lines (one per line)</label>
               <textarea
-                rows={Math.max(3, section.details.length + 1)}
+                rows={Math.max(3, section.details.length + 2)}
                 value={section.details.join("\n")}
                 onChange={(e) =>
                   updateSection(i, {
@@ -337,14 +575,14 @@ export function AdminPricingPage() {
         {msg && <p className="gov-status-msg">{msg}</p>}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "Saving…" : "Save pricing page"}
+            {saving ? "Saving…" : "Save pricing"}
           </button>
           <button
             type="button"
             className="btn btn-ghost"
             onClick={() => setContent(cloneDefault())}
           >
-            Reset to original HTML copy
+            Reset to defaults
           </button>
         </div>
       </form>

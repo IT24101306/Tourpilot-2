@@ -42,7 +42,7 @@ export function OtpStep({
             </>
           ) : (
             <>
-              Demo OTP: <strong>{demoOtp}</strong>
+              Temporary OTP: <strong>{demoOtp}</strong>
             </>
           )}
         </div>
