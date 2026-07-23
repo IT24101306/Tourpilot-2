@@ -10,8 +10,10 @@ import {
   absolutePublicUrl,
   agencyRejectionEmail,
   finalizeEmailTemplate,
+  getEmailDeliveryStatus,
   promotionalEmail,
   sendPlatformEmail,
+  verifySmtpConnection,
 } from "../../services/email.js";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
@@ -120,6 +122,31 @@ adminRouter.put("/settings", async (req, res, next) => {
 });
 
 const promoAudienceRoles = z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"]);
+
+adminRouter.get("/email-status", async (_req, res, next) => {
+  try {
+    res.json(getEmailDeliveryStatus());
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/email-status/verify", async (_req, res, next) => {
+  try {
+    const status = getEmailDeliveryStatus();
+    if (status.mode !== "smtp") {
+      return res.json({
+        ...status,
+        ok: false,
+        error: `EMAIL_MODE is "${status.mode}" — set EMAIL_MODE=smtp to send real mail`,
+      });
+    }
+    const result = await verifySmtpConnection();
+    res.json({ ...status, ...result });
+  } catch (e) {
+    next(e);
+  }
+});
 
 adminRouter.get("/promo-email/audience", async (req, res, next) => {
   try {

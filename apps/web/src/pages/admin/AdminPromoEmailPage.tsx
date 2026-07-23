@@ -13,6 +13,22 @@ type OfferOption = {
   isActive: boolean;
 };
 
+type EmailStatus = {
+  mode: string;
+  from: string;
+  smtp: {
+    host: string | null;
+    port: number;
+    user: string | null;
+    secure: boolean;
+    passConfigured: boolean;
+  };
+  ready: boolean;
+  hint?: string;
+  ok?: boolean;
+  error?: string;
+};
+
 const AUDIENCE_ROLES: { role: Exclude<UserRole, "ADMIN">; label: string }[] = [
   { role: "TOURIST", label: "Tourists" },
   { role: "AGENCY", label: "Agencies" },
@@ -37,14 +53,27 @@ export function AdminPromoEmailPage() {
   const [audienceCount, setAudienceCount] = useState<number | null>(null);
   const [status, setStatus] = useState("");
   const [sending, setSending] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   const rolesKey = useMemo(() => roles.slice().sort().join(","), [roles]);
+
+  async function refreshEmailStatus() {
+    if (!token) return;
+    try {
+      const data = await api<EmailStatus>("/admin/email-status", { token });
+      setEmailStatus(data);
+    } catch {
+      setEmailStatus(null);
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
     api<OfferOption[]>("/offers", { token })
       .then((list) => setOffers(list.filter((o) => o.isActive)))
       .catch(console.error);
+    void refreshEmailStatus();
   }, [token]);
 
   useEffect(() => {
@@ -58,6 +87,27 @@ export function AdminPromoEmailPage() {
       .then((data) => setAudienceCount(data.count))
       .catch(() => setAudienceCount(null));
   }, [token, rolesKey, roles.length]);
+
+  async function verifySmtp() {
+    if (!token) return;
+    setVerifying(true);
+    try {
+      const data = await api<EmailStatus>("/admin/email-status/verify", {
+        method: "POST",
+        token,
+      });
+      setEmailStatus(data);
+      setStatus(
+        data.ok
+          ? "SMTP connection OK — try Send test next."
+          : `SMTP check failed: ${data.error || data.hint || "unknown"}`
+      );
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "SMTP verify failed");
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   function toggleRole(role: Exclude<UserRole, "ADMIN">) {
     setRoles((prev) =>
@@ -169,6 +219,58 @@ export function AdminPromoEmailPage() {
         title="Promotional email"
         subtitle="Send offers and posters to users who registered with an email."
       />
+
+      {emailStatus && (
+        <div
+          className="gov-panel"
+          style={{
+            maxWidth: 720,
+            marginBottom: 16,
+            borderColor: emailStatus.ready && emailStatus.mode === "smtp" ? undefined : "#b45309",
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            <strong>Email mode:</strong> {emailStatus.mode}
+            {emailStatus.mode === "smtp" ? (
+              <>
+                {" "}
+                · host {emailStatus.smtp.host || "(missing)"}:{emailStatus.smtp.port}
+                {" "}
+                · user {emailStatus.smtp.user || "(missing)"}
+                {" "}
+                · password {emailStatus.smtp.passConfigured ? "set" : "MISSING"}
+              </>
+            ) : null}
+          </p>
+          {emailStatus.hint ? (
+            <p className="muted" style={{ margin: "8px 0 0" }}>
+              {emailStatus.hint}
+            </p>
+          ) : null}
+          {emailStatus.error ? (
+            <p className="form-error" style={{ margin: "8px 0 0" }}>
+              {emailStatus.error}
+            </p>
+          ) : null}
+          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={verifying}
+              onClick={() => void verifySmtp()}
+            >
+              {verifying ? "Checking…" : "Test SMTP connection"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void refreshEmailStatus()}
+            >
+              Refresh status
+            </button>
+          </div>
+        </div>
+      )}
 
       <form className="form-grid" style={{ maxWidth: 720 }} onSubmit={sendTest}>
         <label htmlFor="promo-subject">Subject</label>

@@ -29,6 +29,57 @@ export type EmailResult = {
 
 let smtpTransport: Transporter | null = null;
 
+export function getEmailDeliveryStatus() {
+  const { host, port, user, pass, secure } = config.email.smtp;
+  return {
+    mode: config.email.mode,
+    from: config.email.from,
+    smtp: {
+      host: host || null,
+      port,
+      user: user || null,
+      secure,
+      passConfigured: Boolean(pass),
+    },
+    ready:
+      config.email.mode === "log" ||
+      (config.email.mode === "webhook" && Boolean(config.email.webhookUrl)) ||
+      (config.email.mode === "smtp" && Boolean(host) && Boolean(pass)),
+    hint:
+      config.email.mode === "log"
+        ? "EMAIL_MODE=log — emails only print in the API console. Set EMAIL_MODE=smtp and SMTP_* then restart the API."
+        : config.email.mode === "smtp" && !host
+          ? "SMTP_HOST is missing."
+          : config.email.mode === "smtp" && !pass
+            ? "SMTP_PASS is empty — set the mailbox password and restart the API."
+            : config.email.mode === "smtp"
+              ? "SMTP looks configured."
+              : undefined,
+  };
+}
+
+export async function verifySmtpConnection(): Promise<{ ok: boolean; error?: string }> {
+  if (config.email.mode !== "smtp") {
+    return { ok: false, error: `EMAIL_MODE is "${config.email.mode}", not smtp` };
+  }
+  const transport = await getSmtpTransport();
+  if (!transport) {
+    return { ok: false, error: "SMTP_HOST not configured" };
+  }
+  if (config.email.smtp.user && !config.email.smtp.pass) {
+    return { ok: false, error: "SMTP_PASS is empty" };
+  }
+  try {
+    await transport.verify();
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "SMTP verify failed",
+    };
+  }
+}
+
 async function getSmtpTransport() {
   if (smtpTransport) return smtpTransport;
   const { host, port, user, pass, secure } = config.email.smtp;
