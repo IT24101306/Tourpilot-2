@@ -72,14 +72,11 @@ export function PublicLayout() {
             )}
             {!onProfile && (
               <>
-                <NavLink to="/#pricing" className={navLinkClass}>
+                <NavLink to={{ pathname: "/", hash: "pricing" }} className={navLinkClass}>
                   Pricing
                 </NavLink>
                 <NavLink to="/offers" className={navLinkClass}>
                   Offers
-                </NavLink>
-                <NavLink to="/discover" className={navLinkClass}>
-                  Discover
                 </NavLink>
               </>
             )}
