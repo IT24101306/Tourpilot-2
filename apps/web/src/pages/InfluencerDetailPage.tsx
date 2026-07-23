@@ -324,7 +324,7 @@ export function InfluencerDetailPage({ slugOverride }: { slugOverride?: string }
                     <DiscoveryOfferCard
                       key={offer.id}
                       offer={offer}
-                      onRegister={openOfferBook}
+                      onRegister={() => openOfferBook(offer)}
                     />
                   ))}
                 </div>
