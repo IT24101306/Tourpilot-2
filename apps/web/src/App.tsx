@@ -11,7 +11,6 @@ import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
 import { PublicLayout } from "./components/Layout";
-import { LandingPage } from "./pages/LandingPage";
 import { MarketingHomePage } from "./pages/MarketingHomePage";
 import { DiscoverPage } from "./pages/DiscoverPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -160,7 +159,7 @@ function AppShell() {
           <Route element={<PublicLayout />}>
             <Route index element={<HomeRoute />} />
             <Route path="discover" element={<DiscoverPage />} />
-            <Route path="pricing" element={<LandingPage />} />
+            <Route path="pricing" element={<Navigate to="/#pricing" replace />} />
             <Route path="agencies" element={<AgenciesListingRedirect />} />
             <Route path="offers" element={<OffersPage />} />
             <Route path="offers/:offerId/book" element={<OfferBookPage />} />

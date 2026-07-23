@@ -3643,7 +3643,8 @@ textarea.field-invalid {
 }
 
 .confirm-action-backdrop {
-  z-index: 1200;
+  /* Above entity/tour form modals (1400) so confirm always stacks on top */
+  z-index: 1600;
 }
 
 .confirm-summary {

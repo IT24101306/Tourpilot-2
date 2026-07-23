@@ -86,7 +86,7 @@ export function AdminPricingPage() {
               isPublished: true,
             }),
           });
-          setMsg("Pricing page saved. Public home is updated.");
+          setMsg("Pricing saved. The home page Pricing section is updated.");
         } catch {
           setMsg("Save failed.");
         } finally {
@@ -99,7 +99,11 @@ export function AdminPricingPage() {
   if (loading) {
     return (
       <div className="module-shell module-governance">
-        <ModuleHeader module="governance" title="Pricing" subtitle="Edit the public revenue / packages page." />
+        <ModuleHeader
+          module="governance"
+          title="Pricing"
+          subtitle="Edit packages and add-ons shown in the home page Pricing section."
+        />
         <p className="muted">Loading…</p>
       </div>
     );
@@ -110,7 +114,7 @@ export function AdminPricingPage() {
       <ModuleHeader
         module="governance"
         title="Pricing"
-        subtitle="Edit every headline, package, price, and feature line on the public home page."
+        subtitle="Edit packages and add-ons shown in the home page Pricing section."
       />
 
       <form className="gov-panel" onSubmit={handleSave} style={{ display: "grid", gap: 20 }}>
