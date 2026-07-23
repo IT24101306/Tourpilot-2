@@ -155,7 +155,7 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
         to: "/dashboard/admin/pricing",
         category: "Content",
         title: "Pricing",
-        description: "Revenue packages, prices, and feature copy",
+        description: "Home page packages, prices, and feature copy",
         icon: "cms",
       },
     ],

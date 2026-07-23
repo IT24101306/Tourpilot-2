@@ -72,7 +72,7 @@ export function PublicLayout() {
             )}
             {!onProfile && (
               <>
-                <NavLink to="/pricing" className={navLinkClass}>
+                <NavLink to="/#pricing" className={navLinkClass}>
                   Pricing
                 </NavLink>
                 <NavLink to="/offers" className={navLinkClass}>
