@@ -577,7 +577,7 @@ button.agency-hero-banner__ghost {
 }
 
 .agency-display-band--transport {
-  padding-block: 16px;
+  padding-block: 40px;
   background: #fff;
 }
 
@@ -597,7 +597,7 @@ button.agency-hero-banner__ghost {
 
 .agency-transport-section-head {
   border-bottom: none;
-  margin-bottom: 10px;
+  margin-bottom: 1.75rem;
   padding-bottom: 0;
 }
 
@@ -621,40 +621,44 @@ button.agency-hero-banner__ghost {
 .agency-transport-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 1.75rem 2rem;
 }
 
 .agency-transport-card {
   position: relative;
-  background: var(--green-soft, #e5fbe5);
-  border: 1px solid color-mix(in srgb, var(--green, #00af02) 28%, transparent);
-  border-radius: 10px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 12px;
+  aspect-ratio: 16 / 9;
+  width: 100%;
   min-height: 0;
+  background: transparent;
+  border: 1px solid rgba(15, 26, 22, 0.14);
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
   box-shadow: none;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
+  transition: border-color 0.18s ease;
 }
 
 .agency-transport-card:hover {
-  transform: translateY(-1px);
-  border-color: var(--green, #00af02);
-  box-shadow: 0 4px 12px rgba(0, 175, 2, 0.12);
+  transform: none;
+  border-color: rgba(0, 175, 2, 0.45);
+  box-shadow: none;
 }
 
 .agency-transport-card__icon-wrap {
-  width: 44px;
-  height: 44px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 3.5rem;
+  height: 3.5rem;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: 0 0 100% 0;
   display: grid;
   place-items: center;
+  padding: 0.35rem 0.55rem 0.65rem 0.3rem;
   color: #fff;
   background: var(--green, #00af02);
   border: none;
@@ -664,23 +668,26 @@ button.agency-hero-banner__ghost {
 .agency-transport-card__body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.35rem;
   flex: 1;
   min-width: 0;
   width: 100%;
+  padding: 0.85rem 1.15rem 0.85rem 4.25rem;
+  justify-content: center;
 }
 
 .agency-transport-card__title-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 8px;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 0.15rem;
 }
 
 .agency-transport-card__title {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--green-dark, #008c02);
   letter-spacing: -0.02em;
@@ -700,15 +707,16 @@ button.agency-hero-banner__ghost {
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.35;
+  font-size: 0.82rem;
+  line-height: 1.45;
   color: #2f4a38;
 }
 
 .agency-transport-card__meta {
-  margin: 0;
+  margin-top: auto;
+  padding-top: 0.5rem;
   font-size: 0.78rem;
-  line-height: 1.35;
+  line-height: 1.45;
   color: var(--green-dark, #008c02);
   font-weight: 700;
 }
@@ -716,16 +724,27 @@ button.agency-hero-banner__ghost {
 @media (max-width: 900px) {
   .agency-transport-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.35rem 1.5rem;
   }
 }
 
 @media (max-width: 640px) {
   .agency-transport-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .agency-transport-card__icon-wrap {
+    width: 2.85rem;
+    height: 2.85rem;
+  }
+
+  .agency-transport-card__body {
+    padding: 0.65rem 0.75rem 0.65rem 3.35rem;
   }
 
   .agency-display-band--transport {
-    padding-block: 14px;
+    padding-block: 28px;
   }
 }
 
@@ -1079,13 +1098,17 @@ button.agency-hero-banner__ghost {
   top: 14px;
   left: 14px;
   z-index: 3;
-  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--ad-ink);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.02em;
+  line-height: 1;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
@@ -1159,12 +1182,12 @@ button.agency-hero-banner__ghost {
 
 .agency-package-save {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   z-index: 3;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   padding: 0 !important;
   gap: 0;
   display: inline-flex;
@@ -1218,13 +1241,11 @@ button.agency-hero-banner__ghost {
 }
 
 .agency-showcase-trust {
-  background: var(--ad-card);
-  border: 1px solid var(--ad-line);
-  border-radius: 28px;
-  padding: 28px 32px;
-  box-shadow:
-    0 4px 6px rgba(15, 26, 22, 0.03),
-    0 20px 48px rgba(15, 26, 22, 0.08);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1232,7 +1253,7 @@ button.agency-hero-banner__ghost {
   gap: 0;
   position: sticky;
   top: 88px;
-  min-height: 140px;
+  min-height: 0;
   text-align: center;
 }
 
@@ -1241,7 +1262,7 @@ button.agency-hero-banner__ghost {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  gap: 0.55rem;
   padding-bottom: 0;
   border-bottom: none;
   width: 100%;
@@ -1249,12 +1270,31 @@ button.agency-hero-banner__ghost {
 
 .agency-showcase-rating {
   font-family: var(--font-heading);
-  font-size: 3.75rem;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
-  color: var(--ad-ink);
+  font-size: clamp(4.75rem, 12vw, 7rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: #fff;
   text-align: center;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
+}
+
+.agency-showcase-rating-stars {
+  color: #f5c84a;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  letter-spacing: 0.28em;
+  line-height: 1;
+  padding-left: 0.28em;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+
+.agency-showcase-rating-count {
+  margin: 0;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
 }
 
 .agency-showcase-highlights {

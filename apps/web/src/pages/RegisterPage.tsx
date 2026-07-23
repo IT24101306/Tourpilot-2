@@ -101,8 +101,9 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
+      fullScreen
+      billboardLines={["Start", "Manage", "Automate", "Scale"]}
       title="Create your account"
-      subtitle="Enter your details — we'll email a one-time code to verify you."
     >
       <AuthSwitch mode="register" returnTo={returnTo} />
 
@@ -134,9 +135,6 @@ export function RegisterPage() {
             Used for trip updates and occasional TourPilot offers.
           </p>
           <PhoneInput value={phoneInput} onChange={setPhoneInput} id="register-phone" />
-          <p className="auth-benefit muted">
-            Save tours, send inquiries, and keep your trip plans in one place.
-          </p>
           <RegisterTermsConsent checked={termsAccepted} onChange={setTermsAccepted} />
           <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
             Send OTP

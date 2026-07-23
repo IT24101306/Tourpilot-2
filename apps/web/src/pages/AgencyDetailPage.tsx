@@ -556,6 +556,9 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
             <div className="agency-showcase-trust">
               <div className="agency-showcase-rating-block">
                 <div className="agency-showcase-rating">{ratingDisplay}</div>
+                <div className="agency-showcase-rating-stars" aria-hidden="true">
+                  {"★★★★★"}
+                </div>
               </div>
             </div>
 

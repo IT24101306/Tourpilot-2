@@ -233,7 +233,7 @@ export function LoginPage() {
       subtitle={
         step === "password"
           ? "Admin account detected. Enter your password to continue."
-          : "Enter the phone number you registered with — we'll email a one-time code if you have an email on file."
+          : "Enter your registered phone number. We’ll send a one-time code so you can log in."
       }
     >
       <AuthSwitch mode="login" returnTo={returnTo} />

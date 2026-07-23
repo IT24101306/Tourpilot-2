@@ -164,7 +164,9 @@ toursRouter.get("/public/:agencySlug/:tourSlug", async (req, res, next) => {
             },
           },
         },
-        agency: { select: { id: true, name: true, slug: true, influencerCommissionPct: true } },
+        agency: {
+          select: { id: true, name: true, slug: true, logoUrl: true, influencerCommissionPct: true },
+        },
       },
     });
 
@@ -723,7 +725,13 @@ function serializeTourDetail(tour: {
   districtTags: unknown;
   coverUrl: string | null;
   media: unknown;
-  agency: { id: string; name: string; slug: string; influencerCommissionPct?: unknown };
+  agency: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl?: string | null;
+    influencerCommissionPct?: unknown;
+  };
   tourDays: Array<{
     id: string;
     dayNumber: number;

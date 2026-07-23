@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import { CoverImage } from "../components/CoverImage";
 import { TourItineraryPreview } from "../components/itinerary/TourItineraryPreview";
 import { formatTourDaysNights } from "@tourpilot/shared";
 import { FormatTourPrice } from "../components/currency/FormatLkr";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
+import { ClientBrand } from "../components/ClientBrand";
+import { NotificationBell } from "../components/NotificationBell";
+import { LineUserIcon } from "../components/icons/LineIcons";
+import { useAuth } from "../context/AuthContext";
+import { currentPath, loginPath } from "../utils/authRedirect";
+import { navLinkLightClass } from "../utils/navLinkClass";
 
 export function TourDetailPage() {
   const { agencySlug, tourSlug } = useParams<{ agencySlug: string; tourSlug: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const { user, logout } = useAuth();
   const refCode = searchParams.get("ref");
   const [tour, setTour] = useState<Awaited<ReturnType<typeof loadTour>> | null>(null);
+  const returnPath = currentPath(location);
 
   async function loadTour() {
     return api<{
@@ -24,7 +32,7 @@ export function TourDetailPage() {
       publicPriceLkr?: number;
       seasonTag: string | null;
       coverUrl?: string | null;
-      agency: { name: string; slug: string };
+      agency: { name: string; slug: string; logoUrl?: string | null };
       features?: {
         readyMadeTours?: boolean;
         customInquiries?: boolean;
@@ -62,6 +70,13 @@ export function TourDetailPage() {
   if (!tour) {
     return (
       <div className="tour-detail">
+        <header className="topbar topbar--site tour-detail-topbar">
+          <ClientBrand
+            name={agencySlug || "Tour"}
+            to={agencySlug ? `/agencies/${agencySlug}` : "/"}
+            onDark
+          />
+        </header>
         <div className="tour-detail-main">Loading…</div>
       </div>
     );
@@ -77,12 +92,38 @@ export function TourDetailPage() {
 
   return (
     <div className="tour-detail">
-      <header className="tour-detail-hero-strip">
-        <CoverImage src={tour.coverUrl} className="tour-detail-hero-strip__bg" alt="" />
-        <div className="tour-detail-hero-strip__shade" aria-hidden="true" />
-        <div className="tour-detail-hero-strip__inner">
-          <div className="tour-detail-hero-strip__copy">
-            <div className="tour-detail-hero-strip__top">
+      <header className="topbar topbar--site tour-detail-topbar">
+        <ClientBrand
+          name={tour.agency.name}
+          logoUrl={tour.agency.logoUrl}
+          to={`/agencies/${tour.agency.slug}`}
+          onDark
+        />
+        <nav className="nav nav--light" aria-label="Tour">
+          <div className="nav-actions nav-actions--light">
+            {user ? (
+              <>
+                <NotificationBell />
+                <NavLink to="/profile" className="agency-icon-btn" aria-label="Profile">
+                  <LineUserIcon />
+                </NavLink>
+                <button type="button" className="nav-link-light" onClick={logout}>
+                  Log out
+                </button>
+              </>
+            ) : (
+              <NavLink to={loginPath(returnPath)} className={navLinkLightClass}>
+                Login
+              </NavLink>
+            )}
+          </div>
+        </nav>
+      </header>
+
+      <div className="tour-detail-main">
+        <header className="tour-detail-intro">
+          <div className="tour-detail-intro__copy">
+            <div className="tour-detail-intro__top">
               <Link to={`/agencies/${tour.agency.slug}`} className="tour-detail-eyebrow">
                 {tour.agency.name}
               </Link>
@@ -96,16 +137,14 @@ export function TourDetailPage() {
               <p className="tour-detail-desc">{tour.description || tour.summary}</p>
             )}
           </div>
-          <div className="tour-detail-hero-strip__aside">
+          <div className="tour-detail-intro__aside">
             <p className="tour-detail-price">
               <FormatTourPrice amount={tour.publicPriceLkr ?? tour.basePriceLkr} />
             </p>
             <SaveTourButton tourId={tour.id} showLabel className="tour-detail-save" />
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="tour-detail-main">
         <TourItineraryPreview days={tour.tourDays} />
 
         <footer className="tour-detail-foot">

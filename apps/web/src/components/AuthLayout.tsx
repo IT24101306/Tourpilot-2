@@ -1,32 +1,50 @@
 import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { TourPilotBrand } from "./TourPilotBrand";
+import { MarketingTopNav } from "./MarketingTopNav";
 
 export function AuthLayout({
   title,
   subtitle,
   children,
   fullScreen = false,
+  billboardLines,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   children: ReactNode;
   fullScreen?: boolean;
+  /** Large stacked headline outside the auth card (fullscreen only). */
+  billboardLines?: string[];
 }) {
   if (fullScreen) {
+    const hasBillboard = Boolean(billboardLines?.length);
     return (
-      <div className="auth-page auth-page--fullscreen">
+      <div
+        className={`auth-page auth-page--fullscreen${hasBillboard ? " auth-page--with-billboard" : ""}`}
+      >
         <div className="auth-page__backdrop" aria-hidden="true" />
-        <header className="auth-page__top">
-          <TourPilotBrand onImage />
-        </header>
-        <div className="auth-card auth-card--floating">
-          <div className="auth-box auth-box--floating auth-glass">
-            <div className="auth-glass__shine" aria-hidden="true" />
-            <div className="auth-glass__content">
-              <h2 className="auth-box__title">{title}</h2>
-              <p className="muted auth-glass__subtitle auth-box__subtitle">{subtitle}</p>
-              {children}
+        <MarketingTopNav />
+        <div className="auth-page__stage">
+          {hasBillboard ? (
+            <p className="auth-billboard">
+              {billboardLines!.map((line) => (
+                <span key={line} className="auth-billboard__line">
+                  {line}
+                </span>
+              ))}
+            </p>
+          ) : null}
+          <div className="auth-card auth-card--floating">
+            <div className="auth-box auth-box--floating auth-glass">
+              <div className="auth-glass__shine" aria-hidden="true" />
+              <div className="auth-glass__content">
+                <h2 className="auth-box__title">{title}</h2>
+                {subtitle ? (
+                  <p className="muted auth-glass__subtitle auth-box__subtitle">{subtitle}</p>
+                ) : null}
+                {children}
+              </div>
             </div>
           </div>
         </div>
@@ -49,7 +67,7 @@ export function AuthLayout({
       <div className="auth-card">
         <div className="auth-box">
           <h2 className="auth-box__title">{title}</h2>
-          <p className="muted auth-box__subtitle">{subtitle}</p>
+          {subtitle ? <p className="muted auth-box__subtitle">{subtitle}</p> : null}
           {children}
         </div>
       </div>

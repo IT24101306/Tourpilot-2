@@ -14,6 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="/marketing-nav.css?v=20260723" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -91,7 +92,8 @@
         .reveal,
         .reveal-scale,
         .reveal-left,
-        .reveal-right {
+        .reveal-right,
+        .chat-pop {
           animation: none !important;
           transition: none !important;
           opacity: 1 !important;
@@ -277,10 +279,25 @@
         transition-delay: var(--reveal-delay, 0ms);
       }
 
+      .chat-pop {
+        opacity: 0;
+        transform: scale(0.55) translateY(12px);
+        transition:
+          opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.55s cubic-bezier(0.34, 1.45, 0.64, 1);
+        transition-delay: var(--reveal-delay, 0ms);
+        transform-origin: bottom left;
+      }
+
+      .chat-blob--creator.chat-pop {
+        transform-origin: bottom right;
+      }
+
       .reveal.is-visible,
       .reveal-scale.is-visible,
       .reveal-left.is-visible,
-      .reveal-right.is-visible {
+      .reveal-right.is-visible,
+      .chat-pop.is-visible {
         opacity: 1;
         transform: none;
       }
@@ -304,32 +321,99 @@
 
       .power-section {
         background: linear-gradient(180deg, #0D2B1D 0%, #143526 45%, #1a4a3a 100%);
+        padding-bottom: 0;
+      }
+
+      .power-statement {
+        width: 100%;
+        background: #fff;
+        padding: clamp(2.75rem, 7vw, 5rem) 1.25rem clamp(1.5rem, 4vw, 2.75rem);
+      }
+
+      @media (min-width: 640px) {
+        .power-statement {
+          padding-inline: 1.75rem;
+        }
+      }
+
+      @media (min-width: 768px) {
+        .power-statement {
+          padding-inline: 2.5rem;
+        }
+      }
+
+      .power-statement__text {
+        margin: 0;
+        max-width: none;
+        width: 100%;
+        text-align: left;
+        font-size: clamp(1.6rem, 4.4vw, 3.15rem);
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        line-height: 1.55;
+        color: #0D2B1D;
+      }
+
+      .power-statement__text em {
+        font-style: normal;
+        color: #00B200;
+      }
+
+      .power-statement__text i {
+        font-style: italic;
+        font-weight: 700;
       }
 
       .power-scroll {
-        display: flex;
-        gap: 1.25rem;
+        display: block;
         overflow-x: auto;
         overflow-y: hidden;
-        scroll-snap-type: x mandatory;
-        scroll-padding-inline: 1.25rem;
+        /* Room for hover lift above cards; scrollbar sits at section bottom */
+        padding-top: 0.75rem;
         padding-bottom: 0.75rem;
+        margin-top: -0.25rem;
+        margin-bottom: 0;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
-        scrollbar-color: rgba(0, 178, 0, 0.45) transparent;
+        scrollbar-color: rgba(0, 178, 0, 0.65) rgba(255, 255, 255, 0.1);
       }
 
       .power-scroll::-webkit-scrollbar {
-        height: 6px;
+        height: 10px;
       }
 
       .power-scroll::-webkit-scrollbar-track {
-        background: transparent;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
       }
 
       .power-scroll::-webkit-scrollbar-thumb {
-        background: rgba(0, 178, 0, 0.4);
+        background: rgba(0, 178, 0, 0.65);
         border-radius: 999px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+
+      .power-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 178, 0, 0.85);
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+
+      .power-scroll__track {
+        display: flex;
+        width: max-content;
+        gap: 1.25rem;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .power-scroll {
+          scroll-snap-type: x mandatory;
+        }
+
+        .power-scroll .power-card {
+          scroll-snap-align: start;
+        }
       }
 
       .power-card {
@@ -338,7 +422,6 @@
         flex: 0 0 auto;
         width: min(280px, 78vw);
         aspect-ratio: 2 / 2.5;
-        scroll-snap-align: start;
         padding: 1.5rem 1.35rem 1.6rem;
         border-radius: 1.25rem;
         background: rgba(255, 255, 255, 0.06);
@@ -356,9 +439,8 @@
           width: 300px;
         }
 
-        .power-scroll {
+        .power-scroll__track {
           gap: 1.35rem;
-          scroll-padding-inline: 1.5rem;
         }
       }
 
@@ -963,8 +1045,34 @@
       }
 
       .trial-banner {
-        background: linear-gradient(90deg, #009400 0%, #00B200 45%, #00C800 100%);
-        border-block: 1px solid rgba(255, 255, 255, 0.12);
+        position: absolute;
+        left: 50%;
+        bottom: 1.5rem;
+        z-index: 30;
+        width: min(42rem, calc(100% - 1.75rem));
+        transform: translateX(-50%) translateY(-18%);
+        border-radius: 1.15rem;
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.22) 0%,
+          rgba(255, 255, 255, 0.1) 45%,
+          rgba(255, 255, 255, 0.16) 100%
+        );
+        backdrop-filter: blur(18px) saturate(1.45);
+        -webkit-backdrop-filter: blur(18px) saturate(1.45);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow:
+          0 18px 40px rgba(6, 18, 14, 0.28),
+          inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        overflow: hidden;
+      }
+
+      @media (min-width: 640px) {
+        .trial-banner {
+          bottom: 2rem;
+          width: min(48rem, calc(100% - 2.5rem));
+          transform: translateX(-50%) translateY(-16%);
+        }
       }
 
       .trial-banner__link {
@@ -973,14 +1081,14 @@
         justify-content: center;
         gap: 0.65rem;
         min-height: 52px;
-        padding: 0.85rem 1.25rem;
+        padding: 0.9rem 1.35rem;
         text-decoration: none;
         color: #fff;
         transition: background 0.2s ease, filter 0.2s ease;
       }
 
       .trial-banner__link:hover {
-        filter: brightness(1.06);
+        background: rgba(255, 255, 255, 0.1);
       }
 
       .trial-banner__text {
@@ -988,6 +1096,7 @@
         font-weight: 700;
         letter-spacing: 0.02em;
         text-align: center;
+        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
       }
 
       .trial-banner__arrow {
@@ -999,6 +1108,212 @@
 
       .trial-banner__link:hover .trial-banner__arrow {
         transform: translateX(4px);
+      }
+
+      .audience-chats {
+        position: relative;
+        overflow: hidden;
+        padding-top: 2.5rem;
+        background-color: #e5ddd5;
+        background-image:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23c9bfb4' stroke-width='1.2' opacity='0.45'%3E%3Ccircle cx='28' cy='36' r='7'/%3E%3Cpath d='M58 30c8 0 12 6 12 12s-4 12-12 12-12-6-12-12 4-12 12-12z'/%3E%3Cpath d='M92 42h18M101 33v18'/%3E%3Cpath d='M130 28l10 18h-20z'/%3E%3Crect x='160' y='28' width='16' height='16' rx='2'/%3E%3Cpath d='M198 44c6-8 18-8 24 0'/%3E%3Cpath d='M30 90c10-2 18 6 16 16'/%3E%3Ccircle cx='78' cy='98' r='5'/%3E%3Cpath d='M108 88h22v14h-22z'/%3E%3Cpath d='M148 102c0-8 6-14 14-14s14 6 14 14'/%3E%3Cpath d='M198 88l12 20-12 4-12-4z'/%3E%3Cpath d='M24 150h20l-10 16z'/%3E%3Ccircle cx='72' cy='158' r='9'/%3E%3Cpath d='M108 148c8 0 14 6 14 14s-6 14-14 14'/%3E%3Cpath d='M152 152h24M164 140v24'/%3E%3Cpath d='M206 146c10 4 10 20 0 24'/%3E%3Cpath d='M36 210c0-8 8-12 14-8s6 14-2 16'/%3E%3Crect x='72' y='200' width='18' height='12' rx='6'/%3E%3Cpath d='M118 208l16 8-16 8z'/%3E%3Ccircle cx='168' cy='214' r='6'/%3E%3Cpath d='M200 204h22v16h-10l-4 6-4-6h-4z'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: 260px 260px;
+      }
+
+      .audience-chats::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(229, 221, 213, 0.35), rgba(229, 221, 213, 0.15));
+        pointer-events: none;
+      }
+
+      .audience-chats__inner {
+        position: relative;
+        z-index: 1;
+        max-width: 58rem;
+        margin-inline: auto;
+        padding: 3rem 1rem 3.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 3rem;
+      }
+
+      @media (min-width: 640px) {
+        .audience-chats__inner {
+          max-width: 68rem;
+          padding: 4rem 1.75rem 4.5rem;
+          gap: 4.25rem;
+        }
+      }
+
+      .chat-blob {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        width: fit-content;
+        max-width: 94%;
+        padding: 1.25rem 1.35rem 1.4rem;
+        box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+      }
+
+      .chat-blob--agent {
+        align-self: flex-start;
+        width: min(100%, 28rem);
+        max-width: 90%;
+        margin-right: auto;
+        border-radius: 0.4rem 1.25rem 1.25rem 1.25rem;
+        background: #fff;
+      }
+
+      .chat-blob--agent::before {
+        content: "";
+        position: absolute;
+        left: -9px;
+        top: 0;
+        width: 12px;
+        height: 18px;
+        background: #fff;
+        clip-path: polygon(100% 0, 0 0, 100% 100%);
+      }
+
+      .chat-blob--creator {
+        align-self: flex-end;
+        width: min(100%, 40rem);
+        max-width: 95%;
+        margin-left: auto;
+        margin-top: 0;
+        border-radius: 1.25rem 0.4rem 1.25rem 1.25rem;
+        background: #d9fdd3;
+      }
+
+      .chat-blob--creator::before {
+        content: "";
+        position: absolute;
+        right: -9px;
+        top: 0;
+        width: 12px;
+        height: 18px;
+        background: #d9fdd3;
+        clip-path: polygon(0 0, 100% 0, 0 100%);
+      }
+
+      @media (min-width: 640px) {
+        .chat-blob--agent {
+          width: min(100%, 34rem);
+          padding: 1.55rem 1.7rem 1.7rem;
+        }
+
+        .chat-blob--creator {
+          width: min(100%, 46rem);
+          padding: 1.65rem 1.85rem 1.85rem;
+        }
+      }
+
+      .chat-blob__label {
+        display: inline-flex;
+        align-self: flex-start;
+        margin: 0;
+        font-size: 0.88rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #02a698;
+      }
+
+      .chat-blob--creator .chat-blob__label {
+        color: #027a4c;
+      }
+
+      .chat-blob__title {
+        margin: 0;
+        font-size: clamp(1.25rem, 2.8vw, 1.55rem);
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        line-height: 1.4;
+        color: #111b21;
+      }
+
+      .chat-blob__title em {
+        font-style: normal;
+        color: #00a884;
+      }
+
+      .chat-blob__body {
+        margin: 0;
+        font-size: 1.12rem;
+        line-height: 1.65;
+        color: #3b4a54;
+        font-weight: 500;
+      }
+
+      .chat-blob__footer {
+        margin: 0.2rem 0 0;
+        font-size: 1.08rem;
+        font-weight: 650;
+        line-height: 1.5;
+        color: #111b21;
+      }
+
+      .proof-grid {
+        display: grid;
+        gap: 2.75rem 1.5rem;
+      }
+
+      @media (min-width: 768px) {
+        .proof-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 2.5rem 1.75rem;
+        }
+      }
+
+      .proof-item {
+        text-align: center;
+        min-width: 0;
+      }
+
+      .proof-lead {
+        display: block;
+        margin: 0;
+        font-size: clamp(1.55rem, 3.2vw, 2.15rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.25;
+        color: #00B200;
+        text-align: left;
+        hyphens: none;
+      }
+
+      .proof-copy {
+        margin: 0.55rem 0 0;
+        max-width: none;
+        width: 100%;
+        font-size: 1.05rem;
+        line-height: 1.65;
+        color: #52665c;
+        font-weight: 500;
+        text-align: justify;
+        text-align-last: left;
+        text-justify: inter-word;
+        hyphens: none;
+        -webkit-hyphens: none;
+        -ms-hyphens: none;
+        word-break: normal;
+        overflow-wrap: normal;
+      }
+
+      @media (min-width: 768px) {
+        .proof-item {
+          text-align: left;
+        }
+
+        .proof-lead {
+          text-align: left;
+        }
+
+        .proof-copy {
+          font-size: 1.1rem;
+        }
       }
 
       /* Footer — matches SiteFooter / design */
@@ -1163,92 +1478,56 @@
     </style>
   </head>
   <body class="font-sans antialiased">
-    <!-- Navigation — dark forest green bar -->
-    <header class="nav-slide-in fixed inset-x-0 top-0 z-50 bg-forest">
-      <nav class="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3 sm:px-5 sm:py-3.5 md:gap-8 md:px-8">
-        <a href="#top" class="flex shrink-0 items-center gap-2.5">
+    <!-- Navigation — shared mkt-nav (same as login / register) -->
+    <header class="mkt-nav nav-slide-in">
+      <nav class="mkt-nav__bar" aria-label="Main">
+        <a href="#top" class="mkt-nav__brand">
           <img
             src="/images/tourpilot-logo.png"
             alt=""
-            class="logo-img h-9 w-9 object-contain md:h-10 md:w-10"
-            width="40"
-            height="40"
+            class="mkt-nav__logo logo-img"
+            width="48"
+            height="48"
           />
-          <span class="text-lg font-bold tracking-tight text-white md:text-xl">
-            Tour<span class="text-lime">Pilot</span>
+          <span class="mkt-nav__wordmark">
+            Tour<span class="mkt-nav__lime">Pilot</span>
           </span>
         </a>
 
-        <ul class="hidden items-center gap-8 text-sm font-semibold text-white/85 md:flex">
-          <li><a href="#pricing" class="nav-link hover:text-white">Pricing</a></li>
-          <li><a href="#services" class="nav-link hover:text-white">Services</a></li>
-          <li><a href="#contact" class="nav-link hover:text-white">Contact</a></li>
+        <ul class="mkt-nav__links">
+          <li><a href="#pricing" class="mkt-nav__link">Pricing</a></li>
+          <li><a href="#modules" class="mkt-nav__link">Services</a></li>
+          <li><a href="#contact" class="mkt-nav__link">Contact</a></li>
         </ul>
 
-        <div class="ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-3">
-          <a
-            href="#contact"
-            class="btn-primary hidden h-9 items-center justify-center rounded-full bg-lime px-4 text-sm font-semibold text-white sm:px-5 md:inline-flex"
-          >
-            Get Started
-          </a>
-          <a
-            href="/login"
-            target="_top"
-            class="hidden h-9 items-center justify-center rounded-full border border-white/35 px-3.5 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10 sm:px-4 md:inline-flex"
-          >
-            Log in
-          </a>
-          <a
-            href="/register"
-            target="_top"
-            class="btn-primary hidden h-9 items-center justify-center rounded-full bg-lime px-3.5 text-sm font-semibold text-white sm:px-4 md:inline-flex"
-          >
-            Sign up
-          </a>
+        <div class="mkt-nav__actions">
+          <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop">Log in</a>
+          <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop">Sign up</a>
           <button
             id="menu-toggle"
             type="button"
-            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white md:hidden"
+            class="mkt-nav__menu-toggle"
             aria-label="Toggle menu"
             aria-expanded="false"
           >
-            <svg id="icon-open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <svg id="icon-open" class="mkt-nav__menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
             </svg>
-            <svg id="icon-close" class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+            <svg id="icon-close" class="mkt-nav__menu-icon is-hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
       </nav>
 
-      <div id="mobile-menu" class="mobile-menu border-t border-white/10 bg-forest-soft md:hidden">
-        <ul class="flex flex-col gap-1 px-4 py-4 text-base font-medium text-white/90 sm:px-5">
-          <li><a href="#pricing" class="block min-h-[44px] py-3">Pricing</a></li>
-          <li><a href="#services" class="block min-h-[44px] py-3">Services</a></li>
-          <li><a href="#contact" class="block min-h-[44px] py-3">Contact</a></li>
-          <li class="pt-2 flex flex-col gap-2">
-            <a
-              href="#contact"
-              class="btn-primary inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-lime px-5 py-3 text-sm font-semibold text-white"
-            >
-              Get Started
-            </a>
-            <a
-              href="/login"
-              target="_top"
-              class="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-white/35 px-5 py-3 text-sm font-semibold text-white"
-            >
-              Log in
-            </a>
-            <a
-              href="/register"
-              target="_top"
-              class="btn-primary inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-lime px-5 py-3 text-sm font-semibold text-white"
-            >
-              Sign up
-            </a>
+      <div id="mobile-menu" class="mkt-nav__mobile">
+        <ul>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#modules">Services</a></li>
+          <li><a href="#contact">Contact</a></li>
+          <li class="mkt-nav__mobile-ctas">
+            <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost">Log in</a>
+            <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid">Sign up</a>
           </li>
         </ul>
       </div>
@@ -1256,20 +1535,20 @@
 
     <main id="top">
       <!-- Hero -->
-      <section class="hero-plane relative overflow-hidden md:min-h-[100svh]">
-        <div class="relative mx-auto flex max-w-6xl flex-col items-center justify-center gap-8 px-4 pb-14 pt-24 sm:px-5 sm:pb-16 sm:pt-28 md:min-h-[100svh] md:flex-row md:items-center md:justify-between md:gap-10 md:px-8 md:pb-28 md:pt-32">
+      <section class="hero-plane relative overflow-visible md:min-h-[100svh]">
+        <div class="relative mx-auto flex max-w-6xl flex-col items-center justify-center gap-8 px-4 pb-28 pt-28 sm:px-5 sm:pb-32 sm:pt-32 md:min-h-[100svh] md:flex-row md:items-center md:justify-between md:gap-10 md:px-8 md:pb-36 md:pt-36">
           <div class="order-2 w-full max-w-xl text-center md:order-1 md:max-w-2xl md:text-left">
-            <p class="animate-fade-up text-[1.75rem] font-extrabold leading-relaxed tracking-tight text-white sm:text-4xl md:text-5xl lg:text-[3.5rem]">
+            <p class="animate-fade-up text-[2.15rem] font-extrabold leading-relaxed tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[4.25rem]">
               Tour<span class="text-lime">Pilot</span>
             </p>
 
-            <h1 class="animate-fade-up delay-1 mt-5 text-[1.35rem] font-bold leading-[1.45] tracking-tight text-white sm:mt-7 sm:text-4xl sm:leading-[1.4] md:text-[2.5rem] md:leading-[1.35] lg:text-[2.75rem]">
+            <h1 class="animate-fade-up delay-1 mt-5 text-[1.65rem] font-bold leading-[1.4] tracking-wide text-white sm:mt-7 sm:text-5xl sm:leading-[1.3] md:text-[3.15rem] md:leading-[1.3] lg:text-[3.65rem]">
               Launch Your Tourism Agency for 100% Free
             </h1>
 
             <div class="animate-fade-up delay-2 mt-8 flex w-full flex-col items-stretch gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center md:justify-start">
               <a
-                href="#contact"
+                href="#pricing"
                 class="btn-primary btn-pulse inline-flex min-h-[48px] items-center justify-center rounded-full bg-lime px-6 py-3.5 text-sm font-semibold text-white sm:px-7 sm:text-base"
               >
                 Try Free Trial
@@ -1293,18 +1572,211 @@
             />
           </div>
         </div>
+
+        <!-- Free trial glass banner — floats at bottom of hero -->
+        <aside class="trial-banner" aria-label="Free trial">
+          <a href="#pricing" class="trial-banner__link">
+            <span class="trial-banner__text">Claim Your 7-Day Free Trial</span>
+            <span class="trial-banner__arrow" aria-hidden="true">→</span>
+          </a>
+        </aside>
       </section>
 
-      <!-- Free trial banner -->
-      <aside class="trial-banner" aria-label="Free trial">
-        <a href="#pricing" class="trial-banner__link">
-          <span class="trial-banner__text">Claim Your 7-Day Free Trial</span>
-          <span class="trial-banner__arrow" aria-hidden="true">→</span>
-        </a>
-      </aside>
+      <!-- Sellers reach -->
+      <section class="audience-chats" aria-label="For agencies and creators">
+        <div class="audience-chats__inner">
+          <article class="chat-blob chat-blob--agent chat-pop" aria-labelledby="chat-agent-title" style="--reveal-delay: 0ms">
+            <p class="chat-blob__label">For agents</p>
+            <h2 id="chat-agent-title" class="chat-blob__title">
+              Expand your reach with over <em>1,000 sellers</em> working for you to promote your business.
+            </h2>
+          </article>
+          <article class="chat-blob chat-blob--creator chat-pop" aria-labelledby="chat-creator-title" style="--reveal-delay: 520ms">
+            <p class="chat-blob__label">For creators</p>
+            <h2 id="chat-creator-title" class="chat-blob__title">
+              Already Creating Travel Content? Start Monetizing It with Zero Extra Work.
+            </h2>
+            <p class="chat-blob__body">
+              Whether you’re an Influencer, YouTuber, or Travel Content Creator, TourPilot lets you turn your audience into passive income.
+            </p>
+            <p class="chat-blob__footer">
+              Keep doing what you do best - we’ll handle the rest.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Platform services — horizontal scroll cards -->
+      <section id="modules" class="power-section pt-14 sm:pt-20 md:pt-28 pb-0">
+        <div class="mx-auto max-w-6xl px-4 sm:px-5 md:px-8">
+          <div class="reveal">
+            <h2 class="max-w-xl text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl">
+              More power when you need it
+            </h2>
+          </div>
+        </div>
+
+        <div class="power-scroll mt-10 px-4 sm:mt-12 sm:px-5 md:mt-14 md:px-[max(2rem,calc((100vw-72rem)/2+2rem))]" data-power-scroll>
+          <div class="power-scroll__track">
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 0ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Website builder</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Design and launch your tourism storefront with drag-and-drop ease.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 50ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Custom subdomain</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Get a branded subdomain so travelers find you instantly online.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 100ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Booking Management</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Track inquiries, confirmations, and tour bookings in one place.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 150ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Negotiations</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Build custom proposals and negotiate tour quotes with travelers.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 200ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Admin Panel</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Control users, tours, and operations from a central dashboard.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 250ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Driver handling</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Assign drivers to trips and track earnings in real time.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 300ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Influencer Connections</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Partner with influencers, share codes, and grow referred bookings.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 350ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Display Tab</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Customise your public display page, packages, gallery, and offers.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 400ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Wallet &amp; earnings</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Top up wallets and view income across bookings and partners.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 450ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Analytics dashboard</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">See performance insights for tours, traffic, and conversions.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 500ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Custom domain support</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Connect your own domain for a fully branded tourism website.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 550ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">SEO tools</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Optimise pages so travelers discover your tours on search engines.</p>
+            </a>
+
+            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 600ms">
+              <div class="mb-5 flex items-start justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </span>
+                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
+              </div>
+              <h3 class="text-lg font-bold text-white sm:text-xl">Priority support</h3>
+              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Get faster help when you need it most during peak seasons.</p>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="power-statement" aria-label="Platform overview">
+        <p class="power-statement__text reveal">
+          One platform for every stage<br>
+          <em>START, MANAGE, AUTOMATE, and SCALE.</em><br>
+          Whether you’re a <i>new tour agent, a growing agency,<br>
+          or an established tour operator</i><br>
+          still relying on spreadsheets and paperwork,<br>
+          we’ve got you covered.
+        </p>
+      </section>
 
       <!-- Pricing (hydrated from /api/cms/pricing when available) -->
-      <section id="pricing" class="bg-white py-14 sm:py-20 md:py-28">
+      <section id="pricing" class="bg-white pt-8 pb-14 sm:pt-12 sm:pb-20 md:pt-14 md:pb-28">
         <div class="mx-auto max-w-[1400px] px-4 sm:px-5 md:px-8" id="pricing-cms-root">
           <div class="reveal mx-auto max-w-2xl text-center">
             <h2 class="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl md:text-4xl">
@@ -1534,255 +2006,27 @@
         </div>
       </section>
 
-      <!-- Core Services -->
-      <section id="services" class="bg-surface py-14 sm:py-20 md:py-28">
-        <div class="mx-auto max-w-6xl px-4 sm:px-5 md:px-8">
-          <div class="reveal mx-auto max-w-2xl text-center">
-            <h2 class="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl md:text-4xl">
-              Tailored Technology for the Tourism Sector
-            </h2>
-          </div>
 
-          <div class="mt-10 grid gap-5 sm:mt-14 sm:gap-6 md:mt-16 md:grid-cols-2 md:gap-8">
-            <article class="service-card reveal-left rounded-card bg-surface-card p-6 shadow-card sm:p-8 md:p-10">
-              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime/10 text-lime-dark">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 class="mt-6 text-xl font-bold text-ink-900 md:text-2xl">Custom Tourism Websites</h3>
-              <ul class="mt-5 space-y-3 text-[0.9375rem] leading-relaxed text-ink-500">
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lime"></span>
-                  Lightning-fast loading speeds
-                </li>
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lime"></span>
-                  Integrated booking widgets
-                </li>
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lime"></span>
-                  Mobile-optimized itineraries
-                </li>
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lime"></span>
-                  Custom branding
-                </li>
-              </ul>
-              <a href="#contact" class="link-arrow mt-8 inline-flex items-center gap-2 text-sm font-semibold text-lime-dark">
-                Build Your Site
-                <span aria-hidden="true">→</span>
-              </a>
+      <section class="proof-section bg-surface py-16 sm:py-20 md:py-28" aria-label="Why TourPilot">
+        <div class="mx-auto max-w-[1400px] px-4 sm:px-5 md:px-8">
+          <div class="proof-grid">
+            <article class="proof-item reveal" style="--reveal-delay: 0ms">
+              <h3 class="proof-lead">Proven marketing strategies,</h3>
+              <p class="proof-copy">
+                powerful execution tools, real-time performance tracking with business insights, and growth opportunities that help you scale your tourism business.
+              </p>
             </article>
-
-            <article id="erp" class="service-card reveal-right rounded-card bg-surface-card p-6 shadow-card sm:p-8 md:p-10" style="--reveal-delay: 120ms">
-              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-aqua/10 text-aqua-dark">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 7a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V7zM4 15a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" />
-                </svg>
-              </div>
-              <h3 class="mt-6 text-xl font-bold text-ink-900 md:text-2xl">All-in-One Tourism ERP</h3>
-              <ul class="mt-5 space-y-3 text-[0.9375rem] leading-relaxed text-ink-500">
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-aqua"></span>
-                  Automated itinerary generation
-                </li>
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-aqua"></span>
-                  Tour booking management
-                </li>
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-aqua"></span>
-                  Supplier &amp; vendor payments
-                </li>
-                <li class="flex gap-3">
-                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-aqua"></span>
-                  Real-time availability tracking
-                </li>
-              </ul>
-              <a href="#contact" class="link-arrow mt-8 inline-flex items-center gap-2 text-sm font-semibold text-aqua-dark">
-                Explore ERP Features
-                <span aria-hidden="true">→</span>
-              </a>
+            <article class="proof-item reveal" style="--reveal-delay: 100ms">
+              <h3 class="proof-lead">You don’t need millions in investment</h3>
+              <p class="proof-copy">
+                to compete at the next level. TourPilot gives tour agents everything needed to grow from startup to large-scale operations.
+              </p>
             </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- Platform services — horizontal scroll cards -->
-      <section id="modules" class="power-section overflow-hidden py-14 sm:py-20 md:py-28">
-        <div class="mx-auto max-w-6xl px-4 sm:px-5 md:px-8">
-          <div class="reveal">
-            <h2 class="max-w-xl text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl">
-              More power when you need it
-            </h2>
-          </div>
-        </div>
-
-        <div class="power-scroll mt-10 px-4 sm:mt-12 sm:px-5 md:mt-14 md:px-[max(2rem,calc((100vw-72rem)/2+2rem))]">
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 0ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Website builder</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Design and launch your tourism storefront with drag-and-drop ease.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 50ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Custom subdomain</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Get a branded subdomain so travelers find you instantly online.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 100ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Booking Management</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Track inquiries, confirmations, and tour bookings in one place.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 150ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Negotiations</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Build custom proposals and negotiate tour quotes with travelers.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 200ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Admin Panel</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Control users, tours, and operations from a central dashboard.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 250ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Driver handling</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Assign drivers to trips and track earnings in real time.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 300ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Influencer Connections</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Partner with influencers, share codes, and grow referred bookings.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 350ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Display Tab</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Customise your public display page, packages, gallery, and offers.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 400ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Wallet &amp; earnings</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Top up wallets and view income across bookings and partners.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 450ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Analytics dashboard</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">See performance insights for tours, traffic, and conversions.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 500ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Custom domain support</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Connect your own domain for a fully branded tourism website.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 550ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua/15 text-aqua">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">SEO tools</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Optimise pages so travelers discover your tours on search engines.</p>
-            </a>
-
-            <a href="#contact" class="power-card reveal-scale" style="--reveal-delay: 600ms">
-              <div class="mb-5 flex items-start justify-between">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-lime/15 text-lime">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                </span>
-                <span class="power-arrow text-white/70" aria-hidden="true">↗</span>
-              </div>
-              <h3 class="text-lg font-bold text-white sm:text-xl">Priority support</h3>
-              <p class="mt-3 text-sm leading-relaxed text-white/55 sm:text-[0.9375rem]">Get faster help when you need it most during peak seasons.</p>
-            </a>
-        </div>
-      </section>
-
-      <!-- Social Proof / Stats — dashboard-style metric cards -->
-      <section class="bg-surface py-12 sm:py-16 md:py-20">
-        <div class="mx-auto max-w-6xl px-4 sm:px-5 md:px-8">
-          <div class="grid gap-4 sm:grid-cols-3 sm:gap-6">
-            <article class="stat-card reveal-scale rounded-card bg-surface-card px-5 py-6 text-center shadow-card sm:px-6 sm:py-7 sm:text-left" style="--reveal-delay: 0ms">
-              <p class="stat-value text-3xl font-bold tracking-tight text-lime md:text-4xl" data-count="100" data-suffix="%">0%</p>
-              <p class="mt-2 text-base font-bold text-ink-900">Focused on Tourism</p>
-              <p class="mt-1 text-sm text-ink-500">Purpose-built for tour operators</p>
-            </article>
-            <article class="stat-card reveal-scale rounded-card bg-surface-card px-5 py-6 text-center shadow-card sm:px-6 sm:py-7 sm:text-left" style="--reveal-delay: 100ms">
-              <p class="stat-value text-3xl font-bold tracking-tight text-lime md:text-4xl">Auto</p>
-              <p class="mt-2 text-base font-bold text-ink-900">Itineraries</p>
-              <p class="mt-1 text-sm text-ink-500">Generate &amp; manage in minutes</p>
-            </article>
-            <article class="stat-card reveal-scale rounded-card bg-surface-card px-5 py-6 text-center shadow-card sm:px-6 sm:py-7 sm:text-left" style="--reveal-delay: 200ms">
-              <p class="stat-value text-3xl font-bold tracking-tight text-lime md:text-4xl" data-count="24" data-suffix="/7">0/7</p>
-              <p class="mt-2 text-base font-bold text-ink-900">System Reliability</p>
-              <p class="mt-1 text-sm text-ink-500">Cloud uptime you can trust</p>
+            <article class="proof-item reveal" style="--reveal-delay: 200ms">
+              <h3 class="proof-lead">Operate like a global travel company</h3>
+              <p class="proof-copy">
+                with professional workflows, international standards, and powerful digital tools, without any upfront investment.
+              </p>
             </article>
           </div>
         </div>
@@ -1810,7 +2054,7 @@
                   name="name"
                   required
                   placeholder="Name"
-                  class="form-field w-full rounded-full border border-white/10 bg-white px-5 py-3.5 text-base text-ink-900 placeholder:text-ink-400 sm:text-sm"
+                  class="form-field w-full rounded-xl border border-white/10 bg-white px-5 py-3.5 text-base text-ink-900 placeholder:text-ink-400 sm:text-sm"
                 />
               </div>
               <div>
@@ -1821,7 +2065,7 @@
                   name="email"
                   required
                   placeholder="Business Email"
-                  class="form-field w-full rounded-full border border-white/10 bg-white px-5 py-3.5 text-base text-ink-900 placeholder:text-ink-400 sm:text-sm"
+                  class="form-field w-full rounded-xl border border-white/10 bg-white px-5 py-3.5 text-base text-ink-900 placeholder:text-ink-400 sm:text-sm"
                 />
               </div>
               <div class="relative" id="serviceSelectWrap">
@@ -1830,7 +2074,7 @@
                 <button
                   type="button"
                   id="serviceSelectBtn"
-                  class="form-field flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-lime/40 bg-white px-5 py-3.5 text-left text-base text-ink-500 shadow-[0_0_0_1px_rgba(0,178,0,0.15)] transition sm:text-sm"
+                  class="form-field flex w-full items-center justify-between gap-3 rounded-xl border-2 border-lime/40 bg-white px-5 py-3.5 text-left text-base text-ink-500 shadow-[0_0_0_1px_rgba(0,178,0,0.15)] transition sm:text-sm"
                   aria-haspopup="listbox"
                   aria-expanded="false"
                   aria-labelledby="service-label"
@@ -1842,27 +2086,27 @@
                 </button>
                 <ul
                   id="serviceOptions"
-                  class="service-options absolute left-0 right-0 top-[calc(100%+6px)] z-40 hidden overflow-hidden rounded-2xl border-2 border-lime/50 bg-white p-1.5 shadow-[0_12px_32px_rgba(13,43,29,0.18),0_0_0_1px_rgba(0,178,0,0.2)]"
+                  class="service-options absolute left-0 right-0 top-[calc(100%+6px)] z-40 hidden overflow-hidden rounded-xl border-2 border-lime/50 bg-white p-1.5 shadow-[0_12px_32px_rgba(13,43,29,0.18),0_0_0_1px_rgba(0,178,0,0.2)]"
                   role="listbox"
                   aria-labelledby="service-label"
                 >
-                  <li role="option" data-value="website" class="cursor-pointer rounded-xl px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
+                  <li role="option" data-value="website" class="cursor-pointer rounded-lg px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
                     Custom Website Development
                   </li>
-                  <li role="option" data-value="erp" class="cursor-pointer rounded-xl px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
+                  <li role="option" data-value="erp" class="cursor-pointer rounded-lg px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
                     Tourism ERP System
                   </li>
-                  <li role="option" data-value="both" class="cursor-pointer rounded-xl px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
+                  <li role="option" data-value="both" class="cursor-pointer rounded-lg px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
                     Both Website &amp; ERP
                   </li>
-                  <li role="option" data-value="demo" class="cursor-pointer rounded-xl px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
+                  <li role="option" data-value="demo" class="cursor-pointer rounded-lg px-4 py-3 text-sm font-medium text-ink-900 transition hover:bg-lime/10 hover:text-lime-dark">
                     Book a Free Demo
                   </li>
                 </ul>
               </div>
               <button
                 type="submit"
-                class="btn-primary mt-2 min-h-[48px] w-full rounded-full bg-lime px-6 py-3.5 text-sm font-semibold text-white"
+                class="btn-primary mt-2 min-h-[48px] w-full rounded-xl bg-lime px-6 py-3.5 text-sm font-semibold text-white"
               >
                 Request Consultation
               </button>
@@ -2114,26 +2358,26 @@
       const iconClose = document.getElementById("icon-close");
 
       toggle.addEventListener("click", () => {
-        const open = menu.classList.toggle("open");
+        const open = menu.classList.toggle("is-open");
         toggle.setAttribute("aria-expanded", open);
-        iconOpen.classList.toggle("hidden", open);
-        iconClose.classList.toggle("hidden", !open);
+        iconOpen.classList.toggle("is-hidden", open);
+        iconClose.classList.toggle("is-hidden", !open);
       });
 
       menu.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => {
-          menu.classList.remove("open");
+          menu.classList.remove("is-open");
           toggle.setAttribute("aria-expanded", "false");
-          iconOpen.classList.remove("hidden");
-          iconClose.classList.add("hidden");
+          iconOpen.classList.remove("is-hidden");
+          iconClose.classList.add("is-hidden");
         });
       });
 
       // Active nav underline on scroll
-      const sections = ["pricing", "services", "contact"]
+      const sections = ["modules", "pricing", "contact"]
         .map((id) => document.getElementById(id))
         .filter(Boolean);
-      const navLinks = document.querySelectorAll(".nav-link");
+      const navLinks = document.querySelectorAll(".mkt-nav__link");
 
       const setActiveNav = () => {
         const y = window.scrollY + 120;
@@ -2172,7 +2416,7 @@
         scrollToSection(data.section);
       });
 
-      const reveals = document.querySelectorAll(".reveal, .reveal-scale, .reveal-left, .reveal-right");
+      const reveals = document.querySelectorAll(".reveal, .reveal-scale, .reveal-left, .reveal-right, .chat-pop");
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
@@ -2187,8 +2431,76 @@
       );
       reveals.forEach((el) => observer.observe(el));
 
+      // Auto-scroll "More power" cards + native scrollbar
+      (function initPowerScroll() {
+        const root = document.querySelector("[data-power-scroll]");
+        const track = root?.querySelector(".power-scroll__track");
+        if (!root || !track) return;
+
+        const originals = Array.from(track.children);
+        originals.forEach((card) => {
+          const clone = card.cloneNode(true);
+          clone.removeAttribute("style");
+          clone.classList.add("is-visible");
+          clone.setAttribute("aria-hidden", "true");
+          clone.setAttribute("tabindex", "-1");
+          track.appendChild(clone);
+        });
+
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduceMotion) return;
+
+        let paused = false;
+        let ignoreScrollUntil = 0;
+        let resumeTimer = 0;
+        let lastTs = 0;
+        const speed = 48; // px per second
+
+        const loopWidth = () => track.scrollWidth / 2;
+
+        const pauseForUser = () => {
+          paused = true;
+          window.clearTimeout(resumeTimer);
+          resumeTimer = window.setTimeout(() => {
+            paused = false;
+            lastTs = 0;
+          }, 2200);
+        };
+
+        root.addEventListener("wheel", pauseForUser, { passive: true });
+        root.addEventListener("touchstart", pauseForUser, { passive: true });
+        root.addEventListener("pointerdown", pauseForUser);
+        root.addEventListener(
+          "scroll",
+          () => {
+            if (performance.now() < ignoreScrollUntil) return;
+            pauseForUser();
+          },
+          { passive: true }
+        );
+
+        const tick = (ts) => {
+          if (!lastTs) lastTs = ts;
+          const dt = Math.min(0.064, (ts - lastTs) / 1000);
+          lastTs = ts;
+
+          if (!paused) {
+            ignoreScrollUntil = performance.now() + 80;
+            root.scrollLeft += speed * dt;
+            const half = loopWidth();
+            if (half > 0 && root.scrollLeft >= half - 1) {
+              root.scrollLeft -= half;
+            }
+          }
+
+          requestAnimationFrame(tick);
+        };
+
+        requestAnimationFrame(tick);
+      })();
+
       window.__tpObserveReveals = function () {
-        document.querySelectorAll(".reveal, .reveal-scale, .reveal-left, .reveal-right").forEach((el) => {
+        document.querySelectorAll(".reveal, .reveal-scale, .reveal-left, .reveal-right, .chat-pop").forEach((el) => {
           if (el.classList.contains("is-visible")) return;
           observer.observe(el);
         });
