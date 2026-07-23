@@ -181,8 +181,19 @@ adminRouter.post("/promo-email", async (req, res, next) => {
         body: z.string().min(3).max(8000),
         posterUrl: z.string().max(2000).optional().nullable(),
         offerId: z.string().optional().nullable(),
-        roles: z.array(promoAudienceRoles).min(1).default(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"]),
+        roles: z
+          .array(promoAudienceRoles)
+          .default(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER"]),
         testTo: z.string().email().optional().nullable(),
+      })
+      .superRefine((val, ctx) => {
+        if (!val.testTo?.trim() && val.roles.length < 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Select at least one audience role",
+            path: ["roles"],
+          });
+        }
       })
       .parse(req.body);
 

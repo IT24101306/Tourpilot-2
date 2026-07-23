@@ -4,6 +4,9 @@ declare module "nodemailer" {
     port?: number;
     secure?: boolean;
     auth?: { user: string; pass: string };
+    connectionTimeout?: number;
+    greetingTimeout?: number;
+    socketTimeout?: number;
   };
 
   export type SendMailOptions = {

@@ -90,6 +90,9 @@ async function getSmtpTransport() {
     port,
     secure,
     auth: user ? { user, pass } : undefined,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 20_000,
   });
   return smtpTransport;
 }
