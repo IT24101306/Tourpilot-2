@@ -28,6 +28,7 @@ import { InquiryReplyModal } from "../components/inquiry/InquiryReplyModal";
 import { ChatRoomPopup } from "../components/inquiry/ChatRoomPopup";
 import { InquiryThread, type ThreadMessage } from "../components/inquiry/InquiryThread";
 import {
+  computeMissingRequirements,
   defaultTourForm,
   type EntityOption,
   type GroupOption,
@@ -324,11 +325,9 @@ export function AgencyDashboard() {
     e.preventDefault();
     if (!token) return;
 
-    const invalidDay = tourForm.days.find(
-      (d) => !d.entries.some((entry) => entry.time && entry.entityId)
-    );
-    if (invalidDay) {
-      setTourStatus(`Day ${invalidDay.dayNumber} needs at least one timed entity.`);
+    const missing = computeMissingRequirements(tourForm);
+    if (missing.length) {
+      setTourStatus(missing[0]!);
       return;
     }
 

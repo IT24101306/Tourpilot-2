@@ -40,6 +40,7 @@ import {
   validateOfferDates,
 } from "../lib/offers.js";
 import { applyOfferUpdate } from "../lib/offers.js";
+import { recordAuditEvent, snapshotOffer } from "../services/auditLog.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import { config } from "../lib/config.js";
@@ -878,6 +879,16 @@ agenciesRouter.post("/mine/offers", authRequired, requireRoles("AGENCY"), requir
       where: { id: offer.id },
       include: offerIncludeAdmin,
     });
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "OFFER",
+      entityId: withMeta.id,
+      entityLabel: withMeta.title,
+      action: "CREATE",
+      summary: `Created offer "${withMeta.title}" (LKR ${Number(withMeta.tourPriceLkr)})`,
+      after: snapshotOffer(withMeta),
+    });
     res.status(201).json(serializeOfferAdmin(withMeta));
   } catch (e) {
     next(e);
@@ -908,7 +919,19 @@ agenciesRouter.patch(
       }
 
       try {
+        const beforeSnap = snapshotOffer(existing);
         const updated = await applyOfferUpdate(existing, body);
+        await recordAuditEvent({
+          actor: req.user!,
+          agencyId: agency.id,
+          entityType: "OFFER",
+          entityId: updated.id,
+          entityLabel: updated.title,
+          action: "UPDATE",
+          summary: `Updated offer "${updated.title}"`,
+          before: beforeSnap,
+          after: snapshotOffer(updated),
+        });
         res.json(serializeOfferAdmin(updated));
       } catch (e) {
         const err = e as Error & { status?: number };
@@ -930,12 +953,25 @@ agenciesRouter.delete(
       const agency = await getAgencyForUser(req.user!.id);
       if (!agency) return res.status(404).json({ error: "Agency not found" });
 
-      const existing = await prisma.offer.findUnique({ where: { id: req.params.id } });
+      const existing = await prisma.offer.findUnique({
+        where: { id: req.params.id },
+        include: offerIncludeAdmin,
+      });
       if (!existing || existing.agencyId !== agency.id) {
         return res.status(404).json({ error: "Offer not found" });
       }
 
       await prisma.offer.delete({ where: { id: existing.id } });
+      await recordAuditEvent({
+        actor: req.user!,
+        agencyId: agency.id,
+        entityType: "OFFER",
+        entityId: existing.id,
+        entityLabel: existing.title,
+        action: "DELETE",
+        summary: `Deleted offer "${existing.title}"`,
+        before: snapshotOffer(existing),
+      });
       res.json({ ok: true });
     } catch (e) {
       next(e);

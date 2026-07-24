@@ -59,11 +59,11 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-TourPilot <noreply@example.com>}
       EMAIL_WEBHOOK_URL: ${EMAIL_WEBHOOK_URL:-}
       SMTP_HOST: ${SMTP_HOST:-}
-      # cPanel: mail.domain.com with 465 + SSL (or 587 + STARTTLS)
-      SMTP_PORT: ${SMTP_PORT:-465}
+      # cPanel: prefer server hostname (Reverse DNS) + 587 STARTTLS if mail.domain.com times out
+      SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
       DEV_BYPASS_OTP: ${DEV_BYPASS_OTP:-false}
       DEMO_OTP_IN_RESPONSE: ${DEMO_OTP_IN_RESPONSE:-false}
       LOG_OTP_TO_CONSOLE: ${LOG_OTP_TO_CONSOLE:-false}

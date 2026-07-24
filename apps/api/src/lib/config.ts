@@ -27,14 +27,14 @@ export const config = {
     webhookUrl: process.env.EMAIL_WEBHOOK_URL?.trim() || "",
     smtp: {
       host: process.env.SMTP_HOST?.trim() || "",
-      // Default matches Hostinger SSL; override with SMTP_PORT=587 + SMTP_SECURE=false for STARTTLS
-      port: Number(process.env.SMTP_PORT || 465),
+      // Default STARTTLS (cPanel server hostname); use 465 + SMTP_SECURE=true for SSL
+      port: Number(process.env.SMTP_PORT || 587),
       user: process.env.SMTP_USER?.trim() || "",
       pass: process.env.SMTP_PASS || "",
       secure:
         process.env.SMTP_SECURE === "true" ||
         (process.env.SMTP_SECURE !== "false" &&
-          Number(process.env.SMTP_PORT || 465) === 465),
+          Number(process.env.SMTP_PORT || 587) === 465),
     },
   },
   inquiryExpiryDays: Number(process.env.INQUIRY_EXPIRY_DAYS || 14),
