@@ -63,6 +63,7 @@ import { AdminOverviewPage } from "./pages/admin/AdminOverviewPage";
 import { AdminAgenciesPage } from "./pages/admin/AdminAgenciesPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminToursPage } from "./pages/admin/AdminToursPage";
+import { AdminAuditLogPage } from "./pages/admin/AdminAuditLogPage";
 import { AdminInquiriesPage } from "./pages/admin/AdminInquiriesPage";
 import { AdminCommissionsPage } from "./pages/admin/AdminCommissionsPage";
 import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
@@ -333,6 +334,7 @@ function AppShell() {
             <Route path="tours" element={<AdminToursPage />} />
             <Route path="commissions" element={<AdminCommissionsPage />} />
             <Route path="ledger" element={<AdminLedgerPage />} />
+            <Route path="audit" element={<AdminAuditLogPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
             <Route path="promo-email" element={<AdminPromoEmailPage />} />
             <Route path="vouchers" element={<AdminVouchersPage />} />

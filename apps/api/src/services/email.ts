@@ -59,9 +59,11 @@ function formatSmtpError(error: unknown, host: string): string {
   if (!timedOut) return message;
 
   const tips = [
-    `Could not reach SMTP host "${host}".`,
-    "For cPanel use SMTP_HOST=mail.yourdomain.com with SMTP_PORT=465 and SMTP_SECURE=true (or 587 with SMTP_SECURE=false).",
-    "Confirm the API container/VPS can open outbound TCP to that host:port, then restart the API after changing env.",
+    `Could not reach SMTP host "${host}" on the configured port.`,
+    "This is a network/firewall issue, not wrong credentials: TCP never connected.",
+    "On cPanel, use the server hostname from Reverse DNS / Email Routing (e.g. server34.lakgate.com) with SMTP_PORT=587 and SMTP_SECURE=false — mail.yourdomain.com often blocks 465/587 publicly.",
+    "If the API runs on the same machine as cPanel, try SMTP_HOST=127.0.0.1.",
+    "Otherwise use a relay (Resend/SendGrid/Mailgun) via EMAIL_MODE=webhook.",
   ];
   return `${message} — ${tips.join(" ")}`;
 }
@@ -91,7 +93,7 @@ export function getEmailDeliveryStatus() {
           : config.email.mode === "smtp" && !pass
             ? "SMTP_PASS is empty — set the mailbox password and restart the API."
             : config.email.mode === "smtp"
-              ? "SMTP looks configured. cPanel typically uses mail.yourdomain.com:465 (SSL) with the full email as username."
+              ? "SMTP looks configured. If mail.yourdomain.com times out, use the Reverse DNS hostname (e.g. server34.lakgate.com) on port 587."
               : undefined,
   };
 }

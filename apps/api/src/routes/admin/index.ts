@@ -35,6 +35,7 @@ import {
 } from "../../services/platformSettings.js";
 import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
 import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
+import { recordAuditEvent } from "../../services/auditLog.js";
 
 export const adminRouter = Router();
 
@@ -115,7 +116,19 @@ adminRouter.put("/settings", async (req, res, next) => {
           .optional(),
       })
       .parse(req.body);
-    res.json(await updatePlatformSettings(body));
+    const before = await getPlatformSettings();
+    const after = await updatePlatformSettings(body);
+    await recordAuditEvent({
+      actor: req.user!,
+      entityType: "PLATFORM_SETTINGS",
+      entityId: "default",
+      entityLabel: "Platform settings",
+      action: "UPDATE",
+      summary: "Updated platform settings (fees, email, session, support)",
+      before,
+      after,
+    });
+    res.json(after);
   } catch (e) {
     next(e);
   }
@@ -556,6 +569,28 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
       ...(minutesUpdate ?? {}),
     };
 
+    const before = await prisma.agency.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        featureDriversAndPartners: true,
+        featureSupport: true,
+        featureWalletTopup: true,
+        featureOffers: true,
+        featureDisplay: true,
+        featureReadyMadeTours: true,
+        featureCustomInquiries: true,
+        featureNegotiationsBookings: true,
+        featureCustomDomain: true,
+        featureExternalStorefront: true,
+        featureSessionInactivityTimeout: true,
+        sessionInactivityHours: true,
+        sessionInactivityMinutes: true,
+      },
+    });
+    if (!before) return res.status(404).json({ error: "Agency not found" });
+
     const agency = await prisma.agency.update({
       where: { id: req.params.id },
       data,
@@ -577,6 +612,26 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
         featureSessionInactivityTimeout: true,
         sessionInactivityHours: true,
         sessionInactivityMinutes: true,
+      },
+    });
+
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "AGENCY_FEATURES",
+      entityId: agency.id,
+      entityLabel: agency.name,
+      action: "UPDATE",
+      summary: `Updated feature flags for agency "${agency.name}"`,
+      before: {
+        features: serializeAgencyFeatures(before),
+        sessionInactivityHours: before.sessionInactivityHours,
+        sessionInactivityMinutes: before.sessionInactivityMinutes,
+      },
+      after: {
+        features: serializeAgencyFeatures(agency),
+        sessionInactivityHours: agency.sessionInactivityHours,
+        sessionInactivityMinutes: agency.sessionInactivityMinutes,
       },
     });
 
@@ -1067,6 +1122,19 @@ adminRouter.patch("/tours/:id", async (req, res, next) => {
       })
       .parse(req.body);
 
+    const existing = await prisma.tour.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        isPublished: true,
+        agencyId: true,
+        agency: { select: { name: true, slug: true } },
+      },
+    });
+    if (!existing) return res.status(404).json({ error: "Tour not found" });
+
     const tour = await prisma.tour.update({
       where: { id: req.params.id },
       data: body,
@@ -1075,9 +1143,36 @@ adminRouter.patch("/tours/:id", async (req, res, next) => {
         title: true,
         slug: true,
         isPublished: true,
+        agencyId: true,
         agency: { select: { name: true, slug: true } },
       },
     });
+
+    const action =
+      body.isPublished === undefined || existing.isPublished === tour.isPublished
+        ? ("UPDATE" as const)
+        : tour.isPublished
+          ? ("PUBLISH" as const)
+          : ("UNPUBLISH" as const);
+
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: tour.agencyId,
+      entityType: "TOUR",
+      entityId: tour.id,
+      entityLabel: tour.title,
+      action,
+      summary: `Admin ${action.toLowerCase()} tour "${tour.title}" (${tour.agency.name})`,
+      before: {
+        title: existing.title,
+        isPublished: existing.isPublished,
+      },
+      after: {
+        title: tour.title,
+        isPublished: tour.isPublished,
+      },
+    });
+
     res.json(tour);
   } catch (e) {
     next(e);
@@ -1321,6 +1416,121 @@ adminRouter.get("/ledger", async (req, res, next) => {
   }
 });
 
+adminRouter.get("/audit-events", async (req, res, next) => {
+  try {
+    const entityType = typeof req.query.entityType === "string" ? req.query.entityType : undefined;
+    const entityId = typeof req.query.entityId === "string" ? req.query.entityId : undefined;
+    const agencyId = typeof req.query.agencyId === "string" ? req.query.agencyId : undefined;
+    const actorId = typeof req.query.actorId === "string" ? req.query.actorId : undefined;
+    const action = typeof req.query.action === "string" ? req.query.action : undefined;
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    const take = Math.min(500, Math.max(1, Number(req.query.take) || 200));
+
+    const where: Prisma.AuditEventWhereInput = {};
+    if (entityType) where.entityType = entityType;
+    if (entityId) where.entityId = entityId;
+    if (agencyId) where.agencyId = agencyId;
+    if (actorId) where.actorId = actorId;
+    if (action) where.action = action;
+    if (q) {
+      where.OR = [
+        { summary: { contains: q } },
+        { entityLabel: { contains: q } },
+        { actorName: { contains: q } },
+        { entityId: { contains: q } },
+      ];
+    }
+
+    const rows = await prisma.auditEvent.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take,
+      include: {
+        agency: { select: { id: true, name: true, slug: true } },
+        actor: { select: { id: true, name: true, phone: true, role: true } },
+      },
+    });
+
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        createdAt: r.createdAt,
+        entityType: r.entityType,
+        entityId: r.entityId,
+        entityLabel: r.entityLabel,
+        action: r.action,
+        summary: r.summary,
+        before: r.beforeJson,
+        after: r.afterJson,
+        changes: r.changesJson,
+        relatedInquiryId: r.relatedInquiryId,
+        actor: r.actor
+          ? {
+              id: r.actor.id,
+              name: r.actor.name,
+              phone: r.actor.phone,
+              role: r.actor.role,
+            }
+          : r.actorId
+            ? {
+                id: r.actorId,
+                name: r.actorName,
+                phone: r.actorPhone,
+                role: r.actorRole,
+              }
+            : null,
+        agency: r.agency,
+      }))
+    );
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.get("/audit-events/:id", async (req, res, next) => {
+  try {
+    const row = await prisma.auditEvent.findUnique({
+      where: { id: req.params.id },
+      include: {
+        agency: { select: { id: true, name: true, slug: true } },
+        actor: { select: { id: true, name: true, phone: true, role: true } },
+      },
+    });
+    if (!row) return res.status(404).json({ error: "Audit event not found" });
+    res.json({
+      id: row.id,
+      createdAt: row.createdAt,
+      entityType: row.entityType,
+      entityId: row.entityId,
+      entityLabel: row.entityLabel,
+      action: row.action,
+      summary: row.summary,
+      before: row.beforeJson,
+      after: row.afterJson,
+      changes: row.changesJson,
+      relatedInquiryId: row.relatedInquiryId,
+      actor: row.actor
+        ? {
+            id: row.actor.id,
+            name: row.actor.name,
+            phone: row.actor.phone,
+            role: row.actor.role,
+          }
+        : row.actorId
+          ? {
+              id: row.actorId,
+              name: row.actorName,
+              phone: row.actorPhone,
+              role: row.actorRole,
+            }
+          : null,
+      agency: row.agency,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 adminRouter.get("/reviews", async (_req, res, next) => {
   try {
     const reviews = await prisma.review.findMany({
@@ -1462,6 +1672,8 @@ adminRouter.put("/cms/:slug", async (req, res, next) => {
       })
       .parse(req.body);
 
+    const existing = await prisma.cmsPage.findUnique({ where: { slug: req.params.slug } });
+
     const page = await prisma.cmsPage.upsert({
       where: { slug: req.params.slug },
       create: {
@@ -1475,6 +1687,19 @@ adminRouter.put("/cms/:slug", async (req, res, next) => {
         blocks: asJson(body.blocks),
         isPublished: body.isPublished,
       },
+    });
+
+    await recordAuditEvent({
+      actor: req.user!,
+      entityType: "CMS_PAGE",
+      entityId: page.slug,
+      entityLabel: page.title,
+      action: existing ? "UPDATE" : "CREATE",
+      summary: `${existing ? "Updated" : "Created"} CMS page "${page.title}" (${page.slug})`,
+      before: existing
+        ? { title: existing.title, isPublished: existing.isPublished, blocks: existing.blocks }
+        : null,
+      after: { title: page.title, isPublished: page.isPublished, blocks: page.blocks },
     });
 
     res.json(page);

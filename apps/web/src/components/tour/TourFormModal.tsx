@@ -16,6 +16,7 @@ import {
   filterEntityOptions,
   filterGroupOptions,
   renumberDays,
+  suggestNextEntryTime,
   type DayPlan,
   type EntityOption,
   type GroupOption,
@@ -170,7 +171,9 @@ export function TourFormModal({
   function addEntry(dayId: string) {
     updateDays(
       form.days.map((d) =>
-        d.id === dayId ? { ...d, entries: [...d.entries, createEntry()] } : d
+        d.id === dayId
+          ? { ...d, entries: [...d.entries, createEntry(suggestNextEntryTime(d.entries))] }
+          : d
       )
     );
   }
@@ -180,7 +183,7 @@ export function TourFormModal({
       form.days.map((d) => {
         if (d.id !== dayId) return d;
         const entries = d.entries.filter((e) => e.id !== entryId);
-        return { ...d, entries: entries.length ? entries : [createEntry()] };
+        return { ...d, entries: entries.length ? entries : [createEntry("09:00")] };
       })
     );
   }
@@ -212,14 +215,21 @@ export function TourFormModal({
     }
 
     updateDays(
-      form.days.map((d) =>
-        d.id === dayId
-          ? {
-              ...d,
-              entries: d.entries.map((e) => (e.id === entryId ? { ...e, ...mergedPatch } : e)),
+      form.days.map((d) => {
+        if (d.id !== dayId) return d;
+        return {
+          ...d,
+          entries: d.entries.map((e) => {
+            if (e.id !== entryId) return e;
+            const next = { ...e, ...mergedPatch };
+            // Selecting an entity without a time used to drop the row on save.
+            if (mergedPatch.entityId && !next.time) {
+              next.time = suggestNextEntryTime(d.entries.filter((x) => x.id !== entryId));
             }
-          : d
-      )
+            return next;
+          }),
+        };
+      })
     );
   }
 

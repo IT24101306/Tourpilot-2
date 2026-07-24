@@ -187,6 +187,7 @@ model User {
   inquiryChatPresence       InquiryChatPresence[]
   authoredInquiryResponses  InquiryResponse[] @relation("InquiryResponseAuthor")
   notifications             Notification[]
+  auditEvents               AuditEvent[]
 }
 
 model SubscriptionPayment {
@@ -368,6 +369,7 @@ model Agency {
   offers                 Offer[]
   influencerCommissionRequests InfluencerCommissionRequest[]
   savedTripPlans               SavedTripPlan[]
+  auditEvents                  AuditEvent[]
 }
 
 model AgencyStaff {
@@ -985,4 +987,39 @@ model Payment {
 
   @@index([invoiceId, createdAt])
   @@index([providerRef])
+}
+
+/**
+ * Immutable audit trail for pricing, package content, availability, and related
+ * service details — retained for tourist ↔ provider dispute evidence.
+ */
+model AuditEvent {
+  id               String    @id @default(cuid()) @db.VarChar(25)
+  createdAt        DateTime  @default(now())
+  actorId          String?   @db.VarChar(25)
+  actor            User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole        UserRole?
+  /** Denormalized so history survives actor account changes. */
+  actorName        String?   @db.VarChar(191)
+  actorPhone       String?   @db.VarChar(20)
+  agencyId         String?   @db.VarChar(25)
+  agency           Agency?   @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  /** TOUR | OFFER | ENTITY | AGENCY_FEATURES | PLATFORM_SETTINGS | CMS_PAGE | VOUCHER */
+  entityType       String    @db.VarChar(40)
+  entityId         String    @db.VarChar(64)
+  entityLabel      String?   @db.VarChar(255)
+  /** CREATE | UPDATE | DELETE | PUBLISH | UNPUBLISH */
+  action           String    @db.VarChar(32)
+  summary          String    @db.VarChar(500)
+  beforeJson       Json?
+  afterJson        Json?
+  /** Field-level diffs: { field: { from, to } } */
+  changesJson      Json?
+  relatedInquiryId String?   @db.VarChar(25)
+
+  @@index([createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([agencyId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([relatedInquiryId])
 }

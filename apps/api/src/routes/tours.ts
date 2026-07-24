@@ -13,6 +13,10 @@ import {
 import { slugify } from "../utils/slug.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import { agencyHasFeature, serializeAgencyFeatures } from "../lib/agencyFeatures.js";
+import {
+  recordAuditEvent,
+  snapshotTour,
+} from "../services/auditLog.js";
 
 export const toursRouter = Router();
 
@@ -298,6 +302,19 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
 
       const loaded = await getAgencyTour(agency.id, created.id, tx);
       if (!loaded) throw new Error("Tour not found after create");
+      await recordAuditEvent(
+        {
+          actor: req.user!,
+          agencyId: agency.id,
+          entityType: "TOUR",
+          entityId: loaded.id,
+          entityLabel: loaded.title,
+          action: "CREATE",
+          summary: `Created tour "${loaded.title}" (${willPublish ? "published" : "draft"}) at LKR ${Number(loaded.basePriceLkr)}`,
+          after: snapshotTour(loaded),
+        },
+        tx
+      );
       return loaded;
     });
 
@@ -362,6 +379,7 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
       if (linkErr) return res.status(400).json({ error: linkErr });
     }
 
+    const beforeSnap = snapshotTour(existing);
     const tour = await prisma.$transaction(async (tx) => {
       await tx.tour.update({
         where: { id: existing.id },
@@ -392,6 +410,27 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
 
       const loaded = await getAgencyTour(agency.id, existing.id, tx);
       if (!loaded) throw new Error("Tour not found after update");
+      const afterSnap = snapshotTour(loaded);
+      const publishedChanged =
+        beforeSnap.isPublished !== afterSnap.isPublished
+          ? afterSnap.isPublished
+            ? ("PUBLISH" as const)
+            : ("UNPUBLISH" as const)
+          : ("UPDATE" as const);
+      await recordAuditEvent(
+        {
+          actor: req.user!,
+          agencyId: agency.id,
+          entityType: "TOUR",
+          entityId: loaded.id,
+          entityLabel: loaded.title,
+          action: publishedChanged,
+          summary: `Updated tour "${loaded.title}" (price LKR ${Number(loaded.basePriceLkr)}, ${loaded.isPublished ? "published" : "draft"})`,
+          before: beforeSnap,
+          after: afterSnap,
+        },
+        tx
+      );
       return loaded;
     });
 
@@ -417,6 +456,17 @@ toursRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res,
 
     const existing = await prisma.tour.findFirst({
       where: { id: req.params.id, agencyId: agency.id },
+      include: {
+        tourDays: {
+          orderBy: { dayNumber: "asc" },
+          include: {
+            items: {
+              orderBy: { sortOrder: "asc" },
+              include: { entity: { select: { id: true, name: true, type: true } } },
+            },
+          },
+        },
+      },
     });
     if (!existing) return res.status(404).json({ error: "Tour not found" });
 
@@ -450,6 +500,7 @@ toursRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res,
       if (clash) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
     }
 
+    const beforeSnap = snapshotTour(existing);
     const tour = await prisma.tour.update({
       where: { id: existing.id },
       data: {
@@ -476,6 +527,25 @@ toursRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res,
       },
     });
 
+    const afterSnap = snapshotTour(tour);
+    const action =
+      beforeSnap.isPublished !== afterSnap.isPublished
+        ? afterSnap.isPublished
+          ? ("PUBLISH" as const)
+          : ("UNPUBLISH" as const)
+        : ("UPDATE" as const);
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "TOUR",
+      entityId: tour.id,
+      entityLabel: tour.title,
+      action,
+      summary: `Updated tour "${tour.title}"`,
+      before: beforeSnap,
+      after: afterSnap,
+    });
+
     res.json(serializeTourListItem(tour, Number(agency.influencerCommissionPct)));
   } catch (e) {
     next(e);
@@ -487,12 +557,21 @@ toursRouter.delete("/:id", authRequired, requireRoles("AGENCY"), async (req, res
     const agency = await getAgencyForUser(req.user!.id);
     if (!agency) return res.status(404).json({ error: "Agency not found" });
 
-    const existing = await prisma.tour.findFirst({
-      where: { id: req.params.id, agencyId: agency.id },
-    });
+    const existing = await getAgencyTour(agency.id, req.params.id);
     if (!existing) return res.status(404).json({ error: "Tour not found" });
 
+    const beforeSnap = snapshotTour(existing);
     await prisma.tour.delete({ where: { id: existing.id } });
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "TOUR",
+      entityId: existing.id,
+      entityLabel: existing.title,
+      action: "DELETE",
+      summary: `Deleted tour "${existing.title}"`,
+      before: beforeSnap,
+    });
     res.status(204).send();
   } catch (e) {
     next(e);
