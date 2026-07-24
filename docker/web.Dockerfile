@@ -4,6 +4,7 @@ FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/shared/scripts/prepare.mjs ./packages/shared/scripts/
 COPY apps/web/package.json ./apps/web/
 # Lockfile lists all workspaces — stubs keep `npm ci` in sync.
 COPY apps/api/package.json ./apps/api/

@@ -1,0 +1,45 @@
+{
+  "name": "@tourpilot/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "prebuild": "node scripts/ensure-deps.mjs",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "postinstall": "prisma generate",
+    "start": "node dist/index.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "prisma generate && tsx prisma/seed.ts",
+    "db:seed:only": "tsx prisma/seed.ts",
+    "db:seed:demo": "prisma generate && tsx prisma/seed-demo.ts",
+    "db:seed:demo:only": "tsx prisma/seed-demo.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "@tourpilot/shared": "*",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.10",
+    "prisma": "^6.8.2",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.28"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.18",
+    "@types/express": "^4.17.22",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4"
+  }
+}

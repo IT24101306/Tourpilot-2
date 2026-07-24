@@ -6,11 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/shared/scripts/prepare.mjs ./packages/shared/scripts/
 COPY apps/api/package.json ./apps/api/
 # Lockfile lists all workspaces — stubs keep `npm ci` in sync.
 COPY apps/web/package.json ./apps/web/
 COPY apps/mobile/package.json ./apps/mobile/
-# Skip postinstall (prisma generate) — schema is not copied until the build stage.
+# Skip dependency postinstalls (prisma generate) — schema arrives in the build stage.
+# Workspace `prepare` may still run; shared prepare.mjs no-ops without tsconfig.
 RUN npm ci --workspace=@tourpilot/shared --workspace=@tourpilot/api --include-workspace-root --ignore-scripts
 
 FROM deps AS build
