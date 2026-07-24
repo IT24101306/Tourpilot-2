@@ -22,8 +22,6 @@ type EmailStatus = {
     user: string | null;
     secure: boolean;
     passConfigured: boolean;
-    configuredHost?: string | null;
-    rewrittenFrom?: string | null;
   };
   ready: boolean;
   hint?: string;
@@ -273,12 +271,6 @@ export function AdminPromoEmailPage() {
                 · user {emailStatus.smtp.user || "(missing)"}
                 {" "}
                 · password {emailStatus.smtp.passConfigured ? "set" : "MISSING"}
-                {emailStatus.smtp.rewrittenFrom ? (
-                  <>
-                    {" "}
-                    · remapped from {emailStatus.smtp.rewrittenFrom}
-                  </>
-                ) : null}
               </>
             ) : null}
           </p>
