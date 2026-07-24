@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { currentPath, loginPath } from "./utils/authRedirect";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CurrencyProvider } from "./context/CurrencyContext";
@@ -16,12 +16,21 @@ import { DiscoverPage } from "./pages/DiscoverPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterProPage } from "./pages/RegisterProPage";
+import { TrialActivatePage } from "./pages/TrialActivatePage";
 import { TermsPage } from "./pages/TermsPage";
 import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
 import { OffersPage } from "./pages/OffersPage";
 import { OfferBookPage } from "./pages/OfferBookPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { AccountBillingLayout } from "./components/account/AccountBillingLayout";
+import {
+  BillingSubscriptionCheckoutPage,
+  BillingSubscriptionReturnPage,
+  BillingSubscriptionsPage,
+} from "./pages/account/BillingSubscriptionsPage";
+import { BillingPaymentHistoryPage } from "./pages/account/BillingPaymentHistoryPage";
+import { BillingPaymentMethodsPage } from "./pages/account/BillingPaymentMethodsPage";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
 import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
@@ -54,6 +63,7 @@ import { AdminOverviewPage } from "./pages/admin/AdminOverviewPage";
 import { AdminAgenciesPage } from "./pages/admin/AdminAgenciesPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminToursPage } from "./pages/admin/AdminToursPage";
+import { AdminAuditLogPage } from "./pages/admin/AdminAuditLogPage";
 import { AdminInquiriesPage } from "./pages/admin/AdminInquiriesPage";
 import { AdminCommissionsPage } from "./pages/admin/AdminCommissionsPage";
 import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
@@ -167,10 +177,24 @@ function AppShell() {
               path="profile"
               element={
                 <Protected>
-                  <ProfilePage />
+                  <Outlet />
                 </Protected>
               }
-            />
+            >
+              <Route index element={<ProfilePage />} />
+              <Route path="billing" element={<AccountBillingLayout />}>
+                <Route index element={<Navigate to="subscriptions" replace />} />
+                <Route path="subscriptions" element={<BillingSubscriptionsPage />} />
+                <Route path="subscriptions/checkout" element={<BillingSubscriptionCheckoutPage />} />
+                <Route path="subscriptions/return" element={<BillingSubscriptionReturnPage />} />
+                <Route
+                  path="subscriptions/cancel"
+                  element={<BillingSubscriptionReturnPage cancelled />}
+                />
+                <Route path="history" element={<BillingPaymentHistoryPage />} />
+                <Route path="methods" element={<BillingPaymentMethodsPage />} />
+              </Route>
+            </Route>
             <Route
               path="trips"
               element={
@@ -221,6 +245,8 @@ function AppShell() {
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="register/pro" element={<RegisterProPage />} />
+          <Route path="register-pro" element={<RegisterProPage />} />
+          <Route path="billing/activate" element={<TrialActivatePage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
           <Route path="agencies/:slug/build-my-trip" element={<BuildMyTripLegacyRedirect />} />
@@ -308,6 +334,7 @@ function AppShell() {
             <Route path="tours" element={<AdminToursPage />} />
             <Route path="commissions" element={<AdminCommissionsPage />} />
             <Route path="ledger" element={<AdminLedgerPage />} />
+            <Route path="audit" element={<AdminAuditLogPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
             <Route path="promo-email" element={<AdminPromoEmailPage />} />
             <Route path="vouchers" element={<AdminVouchersPage />} />

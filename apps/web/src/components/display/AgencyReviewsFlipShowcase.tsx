@@ -6,7 +6,6 @@ type Props = {
   reviews: Review[];
   avgRating: number;
   reviewCount: number;
-  title?: string;
 };
 
 const FLIP_MS = 700;
@@ -21,7 +20,6 @@ export function AgencyReviewsFlipShowcase({
   reviews,
   avgRating,
   reviewCount,
-  title = "What travelers say",
 }: Props) {
   const [index, setIndex] = useState(0);
   const [flipPhase, setFlipPhase] = useState<"idle" | "out" | "in">("idle");
@@ -61,13 +59,11 @@ export function AgencyReviewsFlipShowcase({
 
   return (
     <div className="agency-review-flip-wrap">
-      <div className="agency-review-flip__head">
-        <h3 className="agency-reviews-title">{title}</h3>
+      <div className="agency-review-flip__head agency-review-flip__head--score-only">
         <div
           className="agency-review-flip__score"
           aria-label={`Average rating ${avgRating.toFixed(1)} out of 5 from ${reviewCount} reviews`}
         >
-          <span className="agency-review-flip__score-label">Average</span>
           <span className="agency-review-flip__score-num">{avgRating.toFixed(1)}</span>
           <span className="agency-review-flip__score-out">/ 5</span>
           <span className="agency-review-flip__score-stars" aria-hidden="true">

@@ -37,6 +37,12 @@ export async function api<T>(
         window.location.assign(`/login?${params.toString()}`);
       }
     }
+    if (res.status === 402 && errBody.code === "TRIAL_EXPIRED") {
+      const onBilling = window.location.pathname.startsWith("/billing");
+      if (!onBilling) {
+        window.location.assign("/billing/activate");
+      }
+    }
     throw new ApiError(errBody.error || res.statusText, res.status, errBody.code);
   }
 

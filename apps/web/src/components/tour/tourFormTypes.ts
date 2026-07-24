@@ -83,11 +83,25 @@ export function createEntry(
   return { id: newId(), time, entityId, costLkr, sellingPriceLkr };
 }
 
+/** Next suggested clock time after the last filled entry (30‑min steps). */
+export function suggestNextEntryTime(entries: DayEntry[]): string {
+  const times = entries.map((e) => e.time).filter(Boolean);
+  if (times.length === 0) return "09:00";
+  const last = times[times.length - 1]!;
+  const [hRaw, mRaw] = last.split(":").map((n) => Number(n));
+  const h = Number.isFinite(hRaw) ? hRaw : 9;
+  const m = Number.isFinite(mRaw) ? mRaw : 0;
+  const total = Math.min(23 * 60 + 30, h * 60 + m + 30);
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
 export function createDayPlan(dayNumber: number): DayPlan {
   return {
     id: newId(),
     dayNumber,
-    entries: [createEntry()],
+    entries: [createEntry("09:00")],
     transportVehicleId: "",
     transportRateLkr: 0,
     transportSellingPriceLkr: 0,
@@ -133,7 +147,16 @@ export function renumberDays(days: DayPlan[]): DayPlan[] {
 
 export function isTourFormSavable(form: TourFormState): boolean {
   if (!form.title.trim()) return false;
-  return form.days.every((day) => day.entries.some((entry) => entry.time && entry.entityId));
+  return form.days.every((day) => {
+    const complete = day.entries.filter((entry) => entry.time && entry.entityId);
+    if (complete.length === 0) return false;
+    // Any started row (time or entity) must be fully filled — otherwise it is silently dropped on save.
+    return day.entries.every((entry) => {
+      const started = Boolean(entry.time || entry.entityId);
+      if (!started) return true;
+      return Boolean(entry.time && entry.entityId);
+    });
+  });
 }
 
 /** Human-readable list of required fields still missing, for validation feedback. */
@@ -141,9 +164,21 @@ export function computeMissingRequirements(form: TourFormState): string[] {
   const missing: string[] = [];
   if (!form.title.trim()) missing.push("Tour title");
   form.days.forEach((day) => {
-    if (!day.entries.some((entry) => entry.time && entry.entityId)) {
+    const complete = day.entries.filter((entry) => entry.time && entry.entityId);
+    if (complete.length === 0) {
       missing.push(`Day ${day.dayNumber}: add at least one entity with a scheduled time`);
+      return;
     }
+    day.entries.forEach((entry, idx) => {
+      const started = Boolean(entry.time || entry.entityId);
+      if (!started) return;
+      if (!entry.entityId) {
+        missing.push(`Day ${day.dayNumber}, row ${idx + 1}: select an entity`);
+      }
+      if (!entry.time) {
+        missing.push(`Day ${day.dayNumber}, row ${idx + 1}: set a time`);
+      }
+    });
   });
   return missing;
 }
@@ -167,7 +202,7 @@ export function tourToFormState(tour: AgencyTourDetail): TourFormState {
                     item.sellingPriceLkr ?? item.priceLkr ?? 0
                   )
                 )
-              : [createEntry()],
+              : [createEntry("09:00")],
         }))
       : [createDayPlan(1)];
 

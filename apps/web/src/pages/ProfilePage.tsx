@@ -216,6 +216,16 @@ export function ProfilePage() {
           description: "Packages, gallery, and inquiry form for travelers.",
           to: `/agencies/${user.agency.slug}`,
         });
+        highlights.push({
+          id: "billing",
+          label: "Subscription",
+          value: user.trial?.packageName || "Billing",
+          description: user.trial?.active
+            ? `Trial · ${user.trial.daysRemaining ?? "?"} day(s) left`
+            : user.trial?.priceLabel || "Manage plan, payments, and credits",
+          to: "/profile/billing/subscriptions",
+          span: 1,
+        });
         fields.push({
           label: "Store URL",
           value: `srilankatourpilot.com/agencies/${user.agency.slug}`,
@@ -237,6 +247,11 @@ export function ProfilePage() {
         if (features.offers) {
           actions.push({ label: "Offers", to: "/dashboard/agency/offers" });
         }
+        actions.push({
+          label: "Manage subscription",
+          to: "/profile/billing/subscriptions",
+          variant: "ghost",
+        });
       }
       break;
     }

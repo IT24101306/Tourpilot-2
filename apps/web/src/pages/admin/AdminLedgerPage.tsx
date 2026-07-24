@@ -55,7 +55,7 @@ export function AdminLedgerPage() {
                     {r.amountLkr >= 0 ? "+" : ""}
                     {r.amountLkr.toLocaleString()}
                   </td>
-                  <td>LKR {r.balanceAfter.toLocaleString()}</td>
+                  <td>{r.balanceAfter.toLocaleString()} Credits</td>
                   <td className="muted">{r.note ?? "—"}</td>
                 </tr>
               ))}

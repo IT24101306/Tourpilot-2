@@ -3,6 +3,8 @@
  * Falls back to embedded defaults if the API is unavailable.
  */
 (function () {
+  var DEFAULT_FILTER = "Website + Full System";
+
   var DEFAULT = {
     type: "pricing",
     headline: "Choose the way you grow online",
@@ -31,6 +33,54 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  /** Normalize legacy string lines or `{ text, bold, underline }` objects. */
+  function normalizeLine(line) {
+    if (typeof line === "string") {
+      var t = line.trim();
+      return t ? { text: t, bold: false, underline: false } : null;
+    }
+    if (line && typeof line === "object" && typeof line.text === "string") {
+      var text = line.text.trim();
+      if (!text) return null;
+      return {
+        text: text,
+        bold: Boolean(line.bold),
+        underline: Boolean(line.underline),
+      };
+    }
+    return null;
+  }
+
+  function normalizeLines(lines) {
+    if (!Array.isArray(lines)) return [];
+    return lines.map(normalizeLine).filter(Boolean);
+  }
+
+  function renderFeatureLi(line) {
+    var cls = [];
+    if (line.bold) cls.push("is-bold");
+    if (line.underline) cls.push("is-underline");
+    return (
+      "<li" +
+      (cls.length ? ' class="' + cls.join(" ") + '"' : "") +
+      ">" +
+      escapeHtml(line.text) +
+      "</li>"
+    );
+  }
+
+  function renderFeatureList(lines, extraClass) {
+    var items = normalizeLines(lines);
+    if (!items.length) return "";
+    return (
+      '<ul class="pkg-features' +
+      (extraClass ? " " + extraClass : "") +
+      '">' +
+      items.map(renderFeatureLi).join("") +
+      "</ul>"
+    );
   }
 
   function formatLkr(amount) {
@@ -67,13 +117,38 @@
 
   function ctaHref(href) {
     var h = (href || "#contact").trim() || "#contact";
-    // Keep users on the home page for common app routes; contact section is the CTA.
-    if (h === "/pricing" || h === "/register-pro" || h === "/register") {
-      return { href: "#contact", target: "" };
+    // Keep hash anchors on the marketing page; send signup CTAs into the app.
+    if (h === "/pricing") {
+      return { href: "#pricing", target: "" };
+    }
+    if (h.indexOf("/register-pro") === 0 || h.indexOf("/register/pro") === 0) {
+      return { href: h, target: "_top" };
+    }
+    if (h === "/register") {
+      return { href: "/register", target: "_top" };
     }
     if (h.charAt(0) === "#") return { href: h, target: "" };
     if (h.indexOf("http") === 0) return { href: h, target: "_blank" };
     return { href: h, target: "_top" };
+  }
+
+  function packageRegisterHref(pkg, buildTotal) {
+    var params = new URLSearchParams();
+    params.set("package", pkg.id || "package");
+    params.set("name", pkg.name || "Package");
+    var billing = pkg.billing || (pkg.buildYourself ? "CUSTOM" : "MONTHLY");
+    params.set("billing", billing);
+    var priceLkr =
+      pkg.buildYourself && buildTotal != null
+        ? Math.round(Number(buildTotal) || 0)
+        : Math.round(Number(pkg.priceLkr) || Number(pkg.loginFeeLkr) || 0);
+    params.set("priceLkr", String(priceLkr));
+    var label =
+      pkg.buildYourself && buildTotal != null
+        ? "LKR " + Math.round(Number(buildTotal) || 0).toLocaleString("en-LK") + " / month"
+        : pkg.priceLabel || pkg.price || "LKR " + priceLkr.toLocaleString("en-LK");
+    params.set("priceLabel", label);
+    return "/register-pro?" + params.toString();
   }
 
   function featureCheckbox(f) {
@@ -102,12 +177,18 @@
     var border = pkg.featured
       ? "border-2 border-lime bg-surface-card shadow-lift"
       : "bg-surface shadow-card";
-    var cta = ctaHref(pkg.ctaHref);
-    var features = (pkg.features || [])
-      .map(function (f) {
-        return "<li>" + escapeHtml(f) + "</li>";
-      })
-      .join("");
+    var registerHref = packageRegisterHref(pkg);
+    var cta = ctaHref(registerHref);
+    var featuresHtml = renderFeatureList(pkg.features);
+    var extraFeaturesHtml = "";
+    var extraLines = normalizeLines(pkg.featuresExtra);
+    if (extraLines.length) {
+      var extraTitle = (pkg.featuresExtraTitle || "").trim();
+      extraFeaturesHtml =
+        (extraTitle
+          ? '<p class="pkg-features-extra-title">' + escapeHtml(extraTitle) + "</p>"
+          : "") + renderFeatureList(pkg.featuresExtra, "pkg-features--extra");
+    }
 
     var extra = "";
     if (pkg.buildYourself) {
@@ -165,11 +246,10 @@
       (cta.target ? ' target="' + cta.target + '"' : "") +
       (cta.target === "_blank" ? ' rel="noopener noreferrer"' : "") +
       ' class="btn-primary pkg-cta inline-flex w-full items-center justify-center rounded-full bg-lime px-4 py-2.5 text-sm font-semibold text-white">' +
-      escapeHtml(pkg.ctaLabel || "Get Started") +
+      escapeHtml(pkg.ctaLabel || "START FREE TRIAL") +
       "</a>" +
-      '<ul class="pkg-features">' +
-      features +
-      "</ul>" +
+      featuresHtml +
+      extraFeaturesHtml +
       extra +
       "</article>"
     );
@@ -179,11 +259,23 @@
     var root = document.getElementById("pricing-cms-root");
     if (!root) return;
 
-    var filterOpts = (content.filterOptions || [])
-      .map(function (o, i) {
+    var options = content.filterOptions || [];
+    var defaultOpt = null;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i] && options[i].value === DEFAULT_FILTER) {
+        defaultOpt = options[i];
+        break;
+      }
+    }
+    if (!defaultOpt && options.length) defaultOpt = options[0];
+    var defaultValue = (defaultOpt && defaultOpt.value) || DEFAULT_FILTER;
+    var defaultLabel = (defaultOpt && defaultOpt.label) || defaultValue;
+
+    var filterOpts = options
+      .map(function (o) {
         return (
           '<li role="option"' +
-          (i === 0 ? ' class="selected"' : "") +
+          (o.value === defaultValue ? ' class="selected"' : "") +
           ' data-value="' +
           escapeHtml(o.value) +
           '" onclick="selectOption(this)">' +
@@ -192,10 +284,6 @@
         );
       })
       .join("");
-
-    var firstLabel =
-      (content.filterOptions && content.filterOptions[0] && content.filterOptions[0].label) ||
-      "All";
 
     var cards = (content.packages || [])
       .map(function (pkg, i) {
@@ -232,7 +320,7 @@
       '<div class="pkg-select-wrap" id="packageSelect">' +
       '<button type="button" class="pkg-select flex w-full items-center justify-between gap-3 rounded-card border border-ink-900/10 bg-white px-4 py-3.5 text-left text-[0.9375rem] text-ink-900 shadow-card transition hover:border-lime" aria-haspopup="listbox" aria-expanded="false" onclick="toggleSelect(this)">' +
       '<span class="custom-select-value">' +
-      escapeHtml(firstLabel) +
+      escapeHtml(defaultLabel) +
       "</span>" +
       '<svg class="pkg-chevron h-[18px] w-[18px] shrink-0 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
       "</button>" +
@@ -255,10 +343,19 @@
           return (
             '<details class="feature-row"><summary><span>' +
             escapeHtml(sec.title) +
-            "</span><span>✓</span></summary><ul class=\"detail-list\">" +
-            (sec.details || [])
+            '</span><span>✓</span></summary><ul class="detail-list">' +
+            normalizeLines(sec.details)
               .map(function (d) {
-                return "<li>" + escapeHtml(d) + "</li>";
+                var cls = [];
+                if (d.bold) cls.push("is-bold");
+                if (d.underline) cls.push("is-underline");
+                return (
+                  "<li" +
+                  (cls.length ? ' class="' + cls.join(" ") + '"' : "") +
+                  ">" +
+                  escapeHtml(d.text) +
+                  "</li>"
+                );
               })
               .join("") +
             "</ul></details>"
@@ -284,6 +381,7 @@
     if (modalTotalLabel) modalTotalLabel.textContent = content.monthlyTotalLabel || "Monthly total";
 
     if (typeof updateBuildTotal === "function") updateBuildTotal();
+    if (typeof filterPackages === "function") filterPackages(defaultValue);
 
     // Re-observe reveals for newly injected nodes
     if (window.__tpObserveReveals) window.__tpObserveReveals();

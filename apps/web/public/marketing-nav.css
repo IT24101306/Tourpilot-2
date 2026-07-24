@@ -1,0 +1,256 @@
+/* Shared TourPilot marketing top nav — used by marketing-home.html + React auth pages */
+
+.mkt-nav {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 50;
+  background: #0d2b1d;
+}
+
+.mkt-nav__bar {
+  margin-inline: auto;
+  display: flex;
+  width: 100%;
+  max-width: 90rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .mkt-nav__bar {
+    padding: 1.25rem 1.75rem;
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .mkt-nav__bar {
+    gap: 2rem;
+    padding: 1.25rem 2.5rem;
+  }
+}
+
+.mkt-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: #fff;
+}
+
+.mkt-nav__logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+@media (min-width: 768px) {
+  .mkt-nav__logo {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+.mkt-nav__wordmark {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+@media (min-width: 768px) {
+  .mkt-nav__wordmark {
+    font-size: 1.5rem;
+  }
+}
+
+.mkt-nav__lime {
+  color: #00b200;
+}
+
+.mkt-nav__links {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  gap: 2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (min-width: 768px) {
+  .mkt-nav__links {
+    display: flex;
+  }
+}
+
+.mkt-nav__link {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.mkt-nav__link:hover,
+.mkt-nav__link.is-active {
+  color: #fff;
+}
+
+.mkt-nav__link.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 999px;
+  background: #00b200;
+}
+
+.mkt-nav__actions {
+  margin-left: auto;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .mkt-nav__actions {
+    gap: 0.75rem;
+  }
+}
+
+.mkt-nav__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.mkt-nav__btn--desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mkt-nav__btn--desktop {
+    display: inline-flex;
+  }
+}
+
+.mkt-nav__btn--solid {
+  background: #00b200;
+  color: #fff;
+  border: none;
+}
+
+.mkt-nav__btn--solid:hover {
+  background: #009400;
+  color: #fff;
+}
+
+.mkt-nav__btn--ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.mkt-nav__btn--ghost:hover,
+.mkt-nav__btn--ghost.is-active {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.mkt-nav__menu-toggle {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .mkt-nav__menu-toggle {
+    display: none;
+  }
+}
+
+.mkt-nav__menu-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.mkt-nav__menu-icon.is-hidden {
+  display: none;
+}
+
+.mkt-nav__mobile {
+  display: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: #143526;
+}
+
+.mkt-nav__mobile.is-open {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .mkt-nav__mobile,
+  .mkt-nav__mobile.is-open {
+    display: none;
+  }
+}
+
+.mkt-nav__mobile ul {
+  list-style: none;
+  margin: 0;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mkt-nav__mobile a {
+  display: block;
+  min-height: 44px;
+  padding: 0.75rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mkt-nav__mobile-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.mkt-nav__mobile-ctas .mkt-nav__btn {
+  width: 100%;
+  min-height: 48px;
+}

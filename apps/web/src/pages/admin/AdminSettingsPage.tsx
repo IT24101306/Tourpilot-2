@@ -273,10 +273,10 @@ export function AdminSettingsPage() {
       confirmLabel: "Save settings",
       summary: [
         { label: "Inquiry expiry", value: `${Math.round(expiry)} days` },
-        { label: "Top-up min", value: `LKR ${Math.round(min).toLocaleString()}` },
+        { label: "Top-up min", value: `${Math.round(min).toLocaleString()} Credits` },
         {
           label: "Top-up max",
-          value: max == null ? "No max" : `LKR ${Math.round(max).toLocaleString()}`,
+          value: max == null ? "No max" : `${Math.round(max).toLocaleString()} Credits`,
         },
         {
           label: "Session inactivity default",
@@ -391,7 +391,7 @@ export function AdminSettingsPage() {
                 />
               </label>
               <label>
-                Wallet top-up min (LKR)
+                Wallet top-up min (Credits)
                 <input
                   type="number"
                   min={1}
@@ -400,7 +400,7 @@ export function AdminSettingsPage() {
                 />
               </label>
               <label>
-                Wallet top-up max (LKR, blank = no max)
+                Wallet top-up max (Credits, blank = no max)
                 <input
                   type="number"
                   min={1}

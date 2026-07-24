@@ -16,6 +16,7 @@ import {
   type TourOfferLinkState,
 } from "../../lib/tourOfferLink";
 import {
+  computeMissingRequirements,
   defaultTourForm,
   normalizeTourForm,
   tourToFormState,
@@ -305,11 +306,9 @@ export function AgencyToursPage() {
     e.preventDefault();
     if (!token) return;
 
-    const invalidDay = tourForm.days.find(
-      (d) => !d.entries.some((entry) => entry.time && entry.entityId)
-    );
-    if (invalidDay) {
-      setTourStatus(`Day ${invalidDay.dayNumber} needs at least one timed entity.`);
+    const missing = computeMissingRequirements(tourForm);
+    if (missing.length) {
+      setTourStatus(missing[0]!);
       return;
     }
 

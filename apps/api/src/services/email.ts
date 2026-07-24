@@ -28,18 +28,132 @@ export type EmailResult = {
 };
 
 let smtpTransport: Transporter | null = null;
+let smtpTransportKey = "";
+
+/** Normalize port/TLS; never rewrite the configured host (cPanel uses mail.domain.com). */
+function resolveSmtpEndpoint() {
+  const host = config.email.smtp.host.trim();
+  const port = config.email.smtp.port;
+  let secure = config.email.smtp.secure;
+
+  // Keep TLS mode consistent with the port (mismatches often hang until timeout).
+  if (port === 465) secure = true;
+  else if (port === 587 && process.env.SMTP_SECURE !== "true") secure = false;
+
+  return {
+    host,
+    port,
+    secure,
+    user: config.email.smtp.user,
+    pass: config.email.smtp.pass,
+  };
+}
+
+function formatSmtpError(error: unknown, host: string): string {
+  const message = error instanceof Error ? error.message : "SMTP send failed";
+  const authFailed = /invalid login|authentication failed|535/i.test(message);
+  if (authFailed) {
+    return `${message} — Check SMTP_USER (full mailbox address) and SMTP_PASS match the cPanel email account password for ${host}.`;
+  }
+  const timedOut = /timeout|timed out|etimedout|econnrefused|enotfound/i.test(message);
+  if (!timedOut) return message;
+
+  const tips = [
+    `Could not reach SMTP host "${host}" on the configured port.`,
+    "This is a network/firewall issue, not wrong credentials: TCP never connected.",
+    "On cPanel, use the server hostname from Reverse DNS / Email Routing (e.g. server34.lakgate.com) with SMTP_PORT=587 and SMTP_SECURE=false — mail.yourdomain.com often blocks 465/587 publicly.",
+    "If the API runs on the same machine as cPanel, try SMTP_HOST=127.0.0.1.",
+    "Otherwise use a relay (Resend/SendGrid/Mailgun) via EMAIL_MODE=webhook.",
+  ];
+  return `${message} — ${tips.join(" ")}`;
+}
+
+export function getEmailDeliveryStatus() {
+  const endpoint = resolveSmtpEndpoint();
+  const { host, port, user, pass, secure } = endpoint;
+  return {
+    mode: config.email.mode,
+    from: config.email.from,
+    smtp: {
+      host: host || null,
+      port,
+      user: user || null,
+      secure,
+      passConfigured: Boolean(pass),
+    },
+    ready:
+      config.email.mode === "log" ||
+      (config.email.mode === "webhook" && Boolean(config.email.webhookUrl)) ||
+      (config.email.mode === "smtp" && Boolean(host) && Boolean(pass)),
+    hint:
+      config.email.mode === "log"
+        ? "EMAIL_MODE=log — emails only print in the API console. Set EMAIL_MODE=smtp and SMTP_* then restart the API."
+        : config.email.mode === "smtp" && !host
+          ? "SMTP_HOST is missing."
+          : config.email.mode === "smtp" && !pass
+            ? "SMTP_PASS is empty — set the mailbox password and restart the API."
+            : config.email.mode === "smtp"
+              ? "SMTP looks configured. If mail.yourdomain.com times out, use the Reverse DNS hostname (e.g. server34.lakgate.com) on port 587."
+              : undefined,
+  };
+}
+
+export async function verifySmtpConnection(): Promise<{ ok: boolean; error?: string }> {
+  if (config.email.mode !== "smtp") {
+    return { ok: false, error: `EMAIL_MODE is "${config.email.mode}", not smtp` };
+  }
+  // Drop any cached broken transport before verifying.
+  smtpTransport = null;
+  smtpTransportKey = "";
+  const transport = await getSmtpTransport();
+  const endpoint = resolveSmtpEndpoint();
+  if (!transport) {
+    return { ok: false, error: "SMTP_HOST not configured" };
+  }
+  if (endpoint.user && !endpoint.pass) {
+    return { ok: false, error: "SMTP_PASS is empty" };
+  }
+  try {
+    await transport.verify();
+    return { ok: true };
+  } catch (e) {
+    smtpTransport = null;
+    smtpTransportKey = "";
+    return {
+      ok: false,
+      error: formatSmtpError(e, endpoint.host),
+    };
+  }
+}
 
 async function getSmtpTransport() {
-  if (smtpTransport) return smtpTransport;
-  const { host, port, user, pass, secure } = config.email.smtp;
+  const endpoint = resolveSmtpEndpoint();
+  const { host, port, user, pass, secure } = endpoint;
   if (!host) return null;
+
+  const key = `${host}|${port}|${secure}|${user}|${pass ? "1" : "0"}`;
+  if (smtpTransport && smtpTransportKey === key) return smtpTransport;
+
   const nodemailer = (await import("nodemailer")).default;
-  smtpTransport = nodemailer.createTransport({
+  // `family` is supported by smtp-connection but missing from nodemailer TransportOptions.
+  const transportOptions = {
     host,
     port,
     secure,
     auth: user ? { user, pass } : undefined,
-  });
+    // IPv6 AAAA answers frequently hang on VPS networks.
+    family: 4 as const,
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 30_000,
+    tls: {
+      servername: host,
+      minVersion: "TLSv1.2" as const,
+    },
+    requireTLS: !secure && port === 587,
+  };
+  smtpTransport = nodemailer.createTransport(transportOptions);
+  smtpTransportKey = key;
   return smtpTransport;
 }
 
@@ -114,8 +228,8 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
     return { delivered: false, mode: "smtp", error: "SMTP_HOST not configured" };
   }
 
-  const { user, pass } = config.email.smtp;
-  if (user && !pass) {
+  const endpoint = resolveSmtpEndpoint();
+  if (endpoint.user && !endpoint.pass) {
     return {
       delivered: false,
       mode: "smtp",
@@ -144,10 +258,12 @@ export async function sendPlatformEmail(payload: EmailPayload): Promise<EmailRes
     } as Parameters<Transporter["sendMail"]>[0]);
     return { delivered: true, mode: "smtp" };
   } catch (e) {
+    smtpTransport = null;
+    smtpTransportKey = "";
     return {
       delivered: false,
       mode: "smtp",
-      error: e instanceof Error ? e.message : "SMTP send failed",
+      error: formatSmtpError(e, endpoint.host),
     };
   }
 }
@@ -247,6 +363,33 @@ export function welcomeEmail(params: {
   return { subject, text, html };
 }
 
+export function trialEndingEmail(params: {
+  name: string;
+  packageName: string;
+  priceLabel: string;
+  endsAtLabel: string;
+  activateUrl: string;
+}) {
+  const subject = `Your TourPilot free trial ends soon (${params.packageName})`;
+  const text = [
+    `Hello ${params.name},`,
+    "",
+    `Your 7-day free trial for ${params.packageName} ends on ${params.endsAtLabel}.`,
+    "",
+    `After that, access pauses until you activate your package (${params.priceLabel}).`,
+    "",
+    `Activate / top up: ${params.activateUrl}`,
+    "",
+    "— TourPilot",
+  ].join("\n");
+  const html = `<p>Hello ${escapeHtml(params.name)},</p>
+<p>Your <strong>7-day free trial</strong> for <strong>${escapeHtml(params.packageName)}</strong> ends on <strong>${escapeHtml(params.endsAtLabel)}</strong>.</p>
+<p>After that, access pauses until you activate your package (<strong>${escapeHtml(params.priceLabel)}</strong>).</p>
+<p><a href="${escapeHtml(params.activateUrl)}">Activate your package</a></p>
+<p>— TourPilot</p>`;
+  return { subject, text, html };
+}
+
 export function tripMessageEmail(params: {
   recipientName: string;
   preview: string;
@@ -336,22 +479,22 @@ export function walletReceiptEmail(params: {
 }) {
   const isFee = params.kind === "LOGIN_FEE";
   const subject = isFee
-    ? `Login fee receipt — LKR ${params.amountLkr.toLocaleString()}`
-    : `Wallet top-up receipt — LKR ${params.amountLkr.toLocaleString()}`;
+    ? `Login fee receipt — ${params.amountLkr.toLocaleString()} Credits`
+    : `Wallet top-up receipt — ${params.amountLkr.toLocaleString()} Credits`;
   const action = isFee
-    ? `A login fee of LKR ${params.amountLkr.toLocaleString()} was charged.`
-    : `LKR ${params.amountLkr.toLocaleString()} was added to your wallet.`;
+    ? `A login fee of ${params.amountLkr.toLocaleString()} Credits was charged.`
+    : `${params.amountLkr.toLocaleString()} Credits was added to your wallet.`;
   const text = [
     `Hello ${params.recipientName},`,
     "",
     action,
-    `Wallet balance: LKR ${params.balanceLkr.toLocaleString()}.`,
+    `Wallet balance: ${params.balanceLkr.toLocaleString()} Credits.`,
     "",
     "— TourPilot",
   ].join("\n");
   const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
 <p>${escapeHtml(action)}</p>
-<p>Wallet balance: <strong>LKR ${params.balanceLkr.toLocaleString()}</strong>.</p>
+<p>Wallet balance: <strong>${params.balanceLkr.toLocaleString()} Credits</strong>.</p>
 <p>— TourPilot</p>`;
   return { subject, text, html };
 }
@@ -452,18 +595,18 @@ export function commissionPaidEmail(params: {
   amountLkr: number;
   walletBalance: number;
 }) {
-  const subject = `Commission paid — LKR ${params.amountLkr.toLocaleString()}`;
+  const subject = `Commission paid — ${params.amountLkr.toLocaleString()} Credits`;
   const text = [
     `Hello ${params.influencerName},`,
     "",
-    `LKR ${params.amountLkr.toLocaleString()} has been credited to your TourPilot wallet.`,
-    `New wallet balance: LKR ${params.walletBalance.toLocaleString()}.`,
+    `${params.amountLkr.toLocaleString()} Credits has been credited to your TourPilot wallet.`,
+    `New wallet balance: ${params.walletBalance.toLocaleString()} Credits.`,
     "",
     "— TourPilot",
   ].join("\n");
   const html = `<p>Hello ${escapeHtml(params.influencerName)},</p>
-<p><strong>LKR ${params.amountLkr.toLocaleString()}</strong> has been credited to your TourPilot wallet.</p>
-<p>New balance: <strong>LKR ${params.walletBalance.toLocaleString()}</strong>.</p>
+<p><strong>${params.amountLkr.toLocaleString()} Credits</strong> has been credited to your TourPilot wallet.</p>
+<p>New balance: <strong>${params.walletBalance.toLocaleString()} Credits</strong>.</p>
 <p>— TourPilot</p>`;
   return { subject, text, html };
 }

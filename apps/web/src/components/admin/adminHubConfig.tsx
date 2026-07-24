@@ -118,6 +118,14 @@ export const HUB_SECTIONS: { title: string; modules: HubModule[] }[] = [
         icon: "ledger",
       },
       {
+        id: "audit",
+        to: "/dashboard/admin/audit",
+        category: "Trust",
+        title: "Audit trail",
+        description: "Pricing and service change history for disputes",
+        icon: "ledger",
+      },
+      {
         id: "offers",
         to: "/dashboard/admin/offers",
         category: "Loyalty",

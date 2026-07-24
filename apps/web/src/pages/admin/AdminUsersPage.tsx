@@ -448,7 +448,7 @@ export function AdminUsersPage() {
                       ))}
                     </select>
                   </td>
-                  <td>LKR {u.walletBalance.toLocaleString()}</td>
+                  <td>{u.walletBalance.toLocaleString()} Credits</td>
                   <td>
                     LKR {(u.loginFee ?? 0).toLocaleString()}
                     {u.loginFeeOverride != null ? (

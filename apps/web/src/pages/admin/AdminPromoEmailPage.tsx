@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { UserRole } from "@tourpilot/shared";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
@@ -11,6 +11,22 @@ type OfferOption = {
   title: string;
   imageUrl?: string | null;
   isActive: boolean;
+};
+
+type EmailStatus = {
+  mode: string;
+  from: string;
+  smtp: {
+    host: string | null;
+    port: number;
+    user: string | null;
+    secure: boolean;
+    passConfigured: boolean;
+  };
+  ready: boolean;
+  hint?: string;
+  ok?: boolean;
+  error?: string;
 };
 
 const AUDIENCE_ROLES: { role: Exclude<UserRole, "ADMIN">; label: string }[] = [
@@ -36,15 +52,35 @@ export function AdminPromoEmailPage() {
   const [testTo, setTestTo] = useState("");
   const [audienceCount, setAudienceCount] = useState<number | null>(null);
   const [status, setStatus] = useState("");
+  const [statusTone, setStatusTone] = useState<"muted" | "error" | "ok">("muted");
   const [sending, setSending] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  function showStatus(message: string, tone: "muted" | "error" | "ok" = "muted") {
+    setStatus(message);
+    setStatusTone(tone);
+  }
 
   const rolesKey = useMemo(() => roles.slice().sort().join(","), [roles]);
+
+  async function refreshEmailStatus() {
+    if (!token) return;
+    try {
+      const data = await api<EmailStatus>("/admin/email-status", { token });
+      setEmailStatus(data);
+    } catch {
+      setEmailStatus(null);
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
     api<OfferOption[]>("/offers", { token })
       .then((list) => setOffers(list.filter((o) => o.isActive)))
       .catch(console.error);
+    void refreshEmailStatus();
   }, [token]);
 
   useEffect(() => {
@@ -59,17 +95,62 @@ export function AdminPromoEmailPage() {
       .catch(() => setAudienceCount(null));
   }, [token, rolesKey, roles.length]);
 
+  async function verifySmtp() {
+    if (!token) return;
+    setVerifying(true);
+    try {
+      const data = await api<EmailStatus>("/admin/email-status/verify", {
+        method: "POST",
+        token,
+      });
+      setEmailStatus(data);
+      showStatus(
+        data.ok
+          ? "SMTP connection OK — try Send test next."
+          : `SMTP check failed: ${data.error || data.hint || "unknown"}`,
+        data.ok ? "ok" : "error"
+      );
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "SMTP verify failed", "error");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   function toggleRole(role: Exclude<UserRole, "ADMIN">) {
     setRoles((prev) =>
       prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
     );
   }
 
-  async function sendTest(e: FormEvent) {
-    e.preventDefault();
-    if (!token || !testTo.trim()) return;
-    setSending(true);
-    setStatus("");
+  async function sendTest() {
+    if (!token) {
+      showStatus("Sign in again, then retry.", "error");
+      return;
+    }
+    const to = testTo.trim();
+    if (!subject.trim() || subject.trim().length < 3) {
+      showStatus("Subject must be at least 3 characters.", "error");
+      return;
+    }
+    if (!body.trim() || body.trim().length < 3) {
+      showStatus("Message must be at least 3 characters.", "error");
+      return;
+    }
+    if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      showStatus("Enter a valid test email address.", "error");
+      return;
+    }
+    if (emailStatus && emailStatus.mode === "smtp" && !emailStatus.smtp.passConfigured) {
+      showStatus(
+        "SMTP password is missing on the API server. Set SMTP_PASS in apps/api/.env and restart the API.",
+        "error"
+      );
+      return;
+    }
+
+    setTesting(true);
+    showStatus("Sending test email…", "muted");
     try {
       const result = await api<{
         sent: number;
@@ -77,32 +158,32 @@ export function AdminPromoEmailPage() {
         deliveryMode?: string;
         errors?: string[];
       }>("/admin/promo-email", {
-          method: "POST",
-          token,
-          body: JSON.stringify({
-            subject,
-            body,
-            posterUrl: posterUrl.trim() || null,
-            offerId: offerId || null,
-            roles,
-            testTo: testTo.trim(),
-          }),
-        }
-      );
+        method: "POST",
+        token,
+        body: JSON.stringify({
+          subject: subject.trim(),
+          body: body.trim(),
+          posterUrl: posterUrl.trim() || null,
+          offerId: offerId || null,
+          roles: roles.length ? roles : ["TOURIST"],
+          testTo: to,
+        }),
+      });
       if (result.sent && result.deliveryMode === "smtp") {
-        setStatus(`Test email sent to ${testTo.trim()} via SMTP.`);
+        showStatus(`Test email sent to ${to} via SMTP.`, "ok");
       } else if (result.sent && result.deliveryMode === "log") {
-        setStatus(
+        showStatus(
           result.errors?.[0] ||
-            "Logged to API console only (EMAIL_MODE=log). Configure SMTP to send real mail."
+            "Logged to API console only (EMAIL_MODE=log). Configure SMTP to send real mail.",
+          "error"
         );
       } else {
-        setStatus(`Test failed: ${result.errors?.[0] || "unknown error"}`);
+        showStatus(`Test failed: ${result.errors?.[0] || "unknown error"}`, "error");
       }
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : "Test send failed");
+      showStatus(err instanceof Error ? err.message : "Test send failed", "error");
     } finally {
-      setSending(false);
+      setTesting(false);
     }
   }
 
@@ -128,7 +209,7 @@ export function AdminPromoEmailPage() {
       ],
       onConfirm: async () => {
         setSending(true);
-        setStatus("");
+        showStatus("Sending promotional email…", "muted");
         try {
           const result = await api<{
             audience: number;
@@ -147,14 +228,14 @@ export function AdminPromoEmailPage() {
               roles,
             }),
           });
-          setStatus(
+          const summary =
             `Sent ${result.sent} of ${result.audience}` +
-              (result.deliveryMode ? ` via ${result.deliveryMode}` : "") +
-              (result.failed ? ` (${result.failed} failed)` : "") +
-              (result.errors?.length ? `. ${result.errors[0]}` : "")
-          );
+            (result.deliveryMode ? ` via ${result.deliveryMode}` : "") +
+            (result.failed ? ` (${result.failed} failed)` : "") +
+            (result.errors?.length ? `. ${result.errors[0]}` : "");
+          showStatus(summary, result.failed || result.deliveryMode === "log" ? "error" : "ok");
         } catch (err) {
-          setStatus(err instanceof Error ? err.message : "Broadcast failed");
+          showStatus(err instanceof Error ? err.message : "Broadcast failed", "error");
         } finally {
           setSending(false);
         }
@@ -170,13 +251,65 @@ export function AdminPromoEmailPage() {
         subtitle="Send offers and posters to users who registered with an email."
       />
 
-      <form className="form-grid" style={{ maxWidth: 720 }} onSubmit={sendTest}>
+      {emailStatus && (
+        <div
+          className="gov-panel"
+          style={{
+            maxWidth: 720,
+            marginBottom: 16,
+            borderColor: emailStatus.ready && emailStatus.mode === "smtp" ? undefined : "#b45309",
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            <strong>Email mode:</strong> {emailStatus.mode}
+            {emailStatus.mode === "smtp" ? (
+              <>
+                {" "}
+                · host {emailStatus.smtp.host || "(missing)"}:{emailStatus.smtp.port}
+                {emailStatus.smtp.secure ? " (SSL)" : " (STARTTLS)"}
+                {" "}
+                · user {emailStatus.smtp.user || "(missing)"}
+                {" "}
+                · password {emailStatus.smtp.passConfigured ? "set" : "MISSING"}
+              </>
+            ) : null}
+          </p>
+          {emailStatus.hint ? (
+            <p className="muted" style={{ margin: "8px 0 0" }}>
+              {emailStatus.hint}
+            </p>
+          ) : null}
+          {emailStatus.error ? (
+            <p className="form-error" style={{ margin: "8px 0 0" }}>
+              {emailStatus.error}
+            </p>
+          ) : null}
+          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={verifying}
+              onClick={() => void verifySmtp()}
+            >
+              {verifying ? "Checking…" : "Test SMTP connection"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => void refreshEmailStatus()}
+            >
+              Refresh status
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="form-grid" style={{ maxWidth: 720 }}>
         <label htmlFor="promo-subject">Subject</label>
         <input
           id="promo-subject"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
-          required
           minLength={3}
           placeholder="Summer specials on TourPilot"
         />
@@ -186,7 +319,6 @@ export function AdminPromoEmailPage() {
           id="promo-body"
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          required
           minLength={3}
           rows={6}
           placeholder="Tell travelers what’s new…"
@@ -242,7 +374,7 @@ export function AdminPromoEmailPage() {
         </fieldset>
 
         <label htmlFor="promo-test">Send a test to</label>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <input
             id="promo-test"
             type="email"
@@ -250,13 +382,20 @@ export function AdminPromoEmailPage() {
             onChange={(e) => setTestTo(e.target.value)}
             placeholder="you@example.com"
             style={{ flex: 1, minWidth: 200 }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void sendTest();
+              }
+            }}
           />
           <button
-            type="submit"
+            type="button"
             className="btn btn-ghost"
-            disabled={sending || !subject.trim() || !body.trim() || !testTo.trim()}
+            disabled={testing || sending}
+            onClick={() => void sendTest()}
           >
-            Send test
+            {testing ? "Sending test…" : "Send test"}
           </button>
         </div>
 
@@ -264,15 +403,27 @@ export function AdminPromoEmailPage() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={sending || !subject.trim() || !body.trim() || !roles.length}
+            disabled={sending || testing || !subject.trim() || !body.trim() || !roles.length}
             onClick={() => void sendBroadcast()}
           >
             {sending ? "Sending…" : "Send promotional email"}
           </button>
         </div>
 
-        {status && <p className="muted">{status}</p>}
-      </form>
+        {status ? (
+          <p
+            className={statusTone === "error" ? "form-error" : "muted"}
+            style={
+              statusTone === "ok"
+                ? { color: "#166534", fontWeight: 600 }
+                : undefined
+            }
+            role="status"
+          >
+            {status}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

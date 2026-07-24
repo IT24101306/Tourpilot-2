@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { asJson } from "../utils/json.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
+import { recordAuditEvent, snapshotEntity } from "../services/auditLog.js";
 
 export const entitiesRouter = Router();
 
@@ -83,6 +84,17 @@ entitiesRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, 
         media: body.media ? asJson(body.media) : undefined,
         metadata: body.metadata ? asJson(body.metadata) : undefined,
       },
+    });
+
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "ENTITY",
+      entityId: entity.id,
+      entityLabel: entity.name,
+      action: "CREATE",
+      summary: `Created service "${entity.name}" (${entity.type})`,
+      after: snapshotEntity(entity),
     });
 
     res.status(201).json(serializeEntity(entity));
@@ -171,6 +183,7 @@ entitiesRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, r
     if (!existing) return res.status(404).json({ error: "Entity not found" });
 
     const body = entityBodySchema.partial().parse(req.body);
+    const beforeSnap = snapshotEntity(existing);
     const entity = await prisma.entity.update({
       where: { id: existing.id },
       data: {
@@ -187,6 +200,18 @@ entitiesRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, r
         ...(body.media !== undefined ? { media: asJson(body.media) } : {}),
         ...(body.metadata !== undefined ? { metadata: asJson(body.metadata) } : {}),
       },
+    });
+
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "ENTITY",
+      entityId: entity.id,
+      entityLabel: entity.name,
+      action: "UPDATE",
+      summary: `Updated service "${entity.name}"`,
+      before: beforeSnap,
+      after: snapshotEntity(entity),
     });
 
     res.json(serializeEntity(entity));
@@ -206,6 +231,16 @@ entitiesRouter.delete("/:id", authRequired, requireRoles("AGENCY"), async (req, 
     if (!existing) return res.status(404).json({ error: "Entity not found" });
 
     await prisma.entity.delete({ where: { id: existing.id } });
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "ENTITY",
+      entityId: existing.id,
+      entityLabel: existing.name,
+      action: "DELETE",
+      summary: `Deleted service "${existing.name}"`,
+      before: snapshotEntity(existing),
+    });
     res.status(204).send();
   } catch (e) {
     next(e);

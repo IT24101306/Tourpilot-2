@@ -7,8 +7,7 @@ import {
   resolveImageUrl,
 } from "@tourpilot/shared";
 import { FormatTourPrice } from "../components/currency/FormatLkr";
-import { type DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
-import { AgencyOffersFlipShowcase } from "../components/discovery/AgencyOffersFlipShowcase";
+import { DiscoveryOfferCard, type DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
 import { AgencyHeroBanner } from "../components/display/AgencyHeroBanner";
 import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav";
 import { AgencyWhoWeAreSection } from "../components/display/AgencyWhoWeAreSection";
@@ -79,6 +78,7 @@ function InfluencerPackageCard({
   const body = (
     <>
       <CoverImage src={image} className="agency-package-card-bg" />
+      <div className="agency-package-card__blur" aria-hidden="true" />
       <SaveTourButton tourId={tour.id} className="agency-package-save" />
       <span className="agency-package-days">{formatTourDaysNights(tour.days)}</span>
       {gallery.length > 0 ? (
@@ -98,11 +98,11 @@ function InfluencerPackageCard({
         {!tour.shareAsMine && !tour.hideAgencyName && tour.agency ? (
           <p>{tour.agency.name}</p>
         ) : null}
-        <strong>
+        <strong className="agency-package-price">
           <FormatTourPrice amount={tour.publicPriceLkr} />
         </strong>
-        <span className="agency-package-cta">
-          {tour.shareAsMine ? "View details →" : "View itinerary →"}
+        <span className="agency-package-cta agency-package-cta--btn">
+          {tour.shareAsMine ? "View details" : "View itinerary"}
         </span>
       </div>
     </>
@@ -312,12 +312,25 @@ export function InfluencerDetailPage({ slugOverride }: { slugOverride?: string }
         )}
 
         {hasOffers && (
-          <AgencyOffersFlipShowcase
-            offers={storefront.offers}
-            agencyName={storefront.name}
-            statusMsg={undefined}
-            onRegister={openOfferBook}
-          />
+          <div className="agency-display-band agency-display-band--white" id="offers">
+            <div className="agency-display-inner">
+              <section className="agency-section">
+                <div className="agency-display-section-head">
+                  <h2>Offers</h2>
+                  <p>Limited deals curated by {storefront.name}.</p>
+                </div>
+                <div className="agency-offers-grid">
+                  {storefront.offers.map((offer) => (
+                    <DiscoveryOfferCard
+                      key={offer.id}
+                      offer={offer}
+                      onRegister={() => openOfferBook(offer)}
+                    />
+                  ))}
+                </div>
+              </section>
+            </div>
+          </div>
         )}
 
         <div className="agency-display-band agency-display-band--scenic">

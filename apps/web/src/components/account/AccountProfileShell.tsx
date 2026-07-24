@@ -7,8 +7,8 @@ import type {
   AccountHighlight,
   AccountStat,
 } from "./accountProfileUtils";
-import { useFormatMoney } from "../../context/CurrencyContext";
-import { formatPhone, initials, roleLabel, lkr } from "./accountProfileUtils";
+import { formatPhone, initials, roleLabel } from "./accountProfileUtils";
+import { formatCredits } from "../../lib/walletLedger";
 
 export type AccountContextPartner = {
   name: string;
@@ -55,14 +55,12 @@ export function AccountProfileShell({
   variant = "page",
   children,
 }: Props) {
-  const { format: formatMoney } = useFormatMoney();
-
   const infoFields: AccountField[] = email
     ? [...fields, { label: "Email", value: email }]
     : fields;
 
   const featured = highlights[0] ?? null;
-  const walletDisplay = role === "TOURIST" ? formatMoney(walletBalance) : lkr(walletBalance);
+  const walletDisplay = formatCredits(walletBalance);
   const hasShortcuts = actions.length > 0;
   const hasStats = stats.length > 0;
   const hasDetails = infoFields.length > 0;

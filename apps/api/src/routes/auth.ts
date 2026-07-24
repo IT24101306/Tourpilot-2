@@ -18,10 +18,27 @@ import { serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 import { buildAgencyKycRecord, parseAgencyKyc } from "../lib/agencyKyc.js";
 import { asJson } from "../utils/json.js";
 import { notifyWelcome } from "../services/notifications.js";
+import {
+  parseSelectedPackage,
+  TRIAL_AGENCY_FEATURES,
+  trialUserUpdateData,
+  buildTrialStatus,
+} from "../services/trial.js";
+import { TRIAL_DAYS } from "@tourpilot/shared";
 
 export const authRouter = Router();
 
 const roleSchema = z.enum(["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"]);
+
+const selectedPackageSchema = z
+  .object({
+    packageId: z.string().min(1).max(64),
+    packageName: z.string().min(1).max(120),
+    priceLkr: z.number().min(0),
+    priceLabel: z.string().min(1).max(120),
+    billing: z.enum(["MONTHLY", "ONE_TIME", "PAYG", "CUSTOM"]),
+  })
+  .optional();
 
 authRouter.post("/register-request", async (req, res, next) => {
   try {
@@ -33,6 +50,7 @@ authRouter.post("/register-request", async (req, res, next) => {
         role: roleSchema,
         agencyName: z.string().optional(),
         agencyKyc: z.record(z.unknown()).optional(),
+        selectedPackage: selectedPackageSchema,
       })
       .parse(req.body);
 
@@ -68,8 +86,15 @@ authRouter.post("/register-request", async (req, res, next) => {
           code: "ACCOUNT_EXISTS_LOGIN",
         });
       }
-      return res.status(409).json({ error: "Account already exists for this phone" });
+      return res.status(409).json({
+        error: "Account already exists for this phone. Please log in instead.",
+        code: "ACCOUNT_EXISTS_LOGIN",
+      });
     }
+
+    const selectedPackage = body.selectedPackage
+      ? parseSelectedPackage(body.selectedPackage)
+      : null;
 
     const result = await createOtpChallenge(phone, "register", {
       name: body.name,
@@ -77,13 +102,18 @@ authRouter.post("/register-request", async (req, res, next) => {
       role: body.role,
       agencyName: body.agencyName,
       agencyKyc: body.role === "AGENCY" ? parseAgencyKyc(body.agencyKyc) : undefined,
+      selectedPackage: selectedPackage ?? undefined,
+      startTrial: Boolean(selectedPackage) && body.role !== "TOURIST",
     });
 
     res.json({
       challengeId: result.challengeId,
       otp: result.otp,
       bypassOtp: result.bypassOtp,
-      message: "OTP sent (demo mode includes otp in response)",
+      message: selectedPackage
+        ? `OTP sent. After verify you get a ${TRIAL_DAYS}-day free trial.`
+        : "OTP sent (demo mode includes otp in response)",
+      trialDays: selectedPackage ? TRIAL_DAYS : undefined,
     });
   } catch (e) {
     next(e);
@@ -109,6 +139,9 @@ authRouter.post("/verify-registration", async (req, res, next) => {
     const role = payload.role as UserRole;
     const agencyName = String(payload.agencyName || `${name} Tours`);
     const agencyKycRaw = payload.agencyKyc;
+    const selectedPackage = parseSelectedPackage(payload.selectedPackage);
+    const startTrial =
+      Boolean(payload.startTrial) && Boolean(selectedPackage) && role !== "TOURIST";
 
     if (!email) {
       return res.status(400).json({
@@ -118,7 +151,13 @@ authRouter.post("/verify-registration", async (req, res, next) => {
 
     const user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
-        data: { phone, name, role, email },
+        data: {
+          phone,
+          name,
+          role,
+          email,
+          ...(startTrial && selectedPackage ? trialUserUpdateData(selectedPackage) : {}),
+        },
       });
 
       if (role === "AGENCY") {
@@ -147,6 +186,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
             kycSubmittedAt: new Date(),
             pageConfig: defaultAgencyPageConfig(agencyName),
             gallery: [],
+            ...(startTrial ? TRIAL_AGENCY_FEATURES : {}),
           },
         });
         await tx.displaySettings.create({
@@ -437,6 +477,15 @@ async function serializeUser(user: {
   avatarUrl: string | null;
   walletBalance: unknown;
   loginFeeLkr?: unknown;
+  trialEndsAt?: Date | null;
+  packageActivatedAt?: Date | null;
+  selectedPackageId?: string | null;
+  selectedPackageName?: string | null;
+  selectedPackagePriceLkr?: unknown;
+  selectedPackagePriceLabel?: string | null;
+  selectedPackageBilling?: string | null;
+  subscriptionAutoRenew?: boolean;
+  subscriptionPeriodEnd?: Date | null;
   touristProfile?: { loyaltyPoints: number; displayCurrency?: string } | null;
   agency?: {
     id: string;
@@ -452,6 +501,9 @@ async function serializeUser(user: {
     featureReadyMadeTours?: boolean;
     featureCustomInquiries?: boolean;
     featureNegotiationsBookings?: boolean;
+    featureCustomDomain?: boolean;
+    featureExternalStorefront?: boolean;
+    featureSessionInactivityTimeout?: boolean;
   } | null;
   agencyDriver?: {
     id: string;
@@ -477,6 +529,13 @@ async function serializeUser(user: {
       loginFeeOverride != null && Number.isFinite(loginFeeOverride)
         ? Math.round(loginFeeOverride)
         : null,
+    trial: buildTrialStatus(user),
+    subscription: {
+      autoRenew: user.subscriptionAutoRenew !== false,
+      periodEnd: user.subscriptionPeriodEnd
+        ? user.subscriptionPeriodEnd.toISOString()
+        : null,
+    },
     touristProfile: user.touristProfile
       ? {
           loyaltyPoints: user.touristProfile.loyaltyPoints,

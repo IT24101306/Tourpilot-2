@@ -53,7 +53,6 @@ export function TourItineraryPreview({ days, title = "Itinerary" }: Props) {
           <h2 className="tour-itinerary-section__title">{title}</h2>
           <p className="tour-itinerary-section__sub">Day by day — expand to see each stop.</p>
         </header>
-        <TourPackagePricingNotice className="tour-package-pricing-notice--itinerary" />
         <ItineraryExploreView
           days={exploreDays}
           compact
@@ -63,7 +62,10 @@ export function TourItineraryPreview({ days, title = "Itinerary" }: Props) {
         />
       </section>
 
-      <ItineraryGalleryRail slides={gallery} activeKey={activeKey} />
+      <aside className="tour-itinerary-aside">
+        <TourPackagePricingNotice className="tour-package-pricing-notice--itinerary" />
+        <ItineraryGalleryRail slides={gallery} activeKey={activeKey} />
+      </aside>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { MarketingTopNav } from "../components/MarketingTopNav";
 
 type TermsSection = {
   type?: string;
@@ -75,27 +76,38 @@ export function TermsPage() {
   }, []);
 
   return (
-    <section className="section legal-page">
-      <div className="legal-page__inner">
-        <p className="legal-page__back">
-          <Link to="/register">← Back to sign up</Link>
-        </p>
-        <h1>{title}</h1>
-        <p className="muted legal-page__updated">
-          {updatedAt
-            ? `Last updated: ${new Date(updatedAt).toLocaleDateString()}`
-            : "Last updated: June 2026"}
-        </p>
-
-        <div className="legal-page__body">
-          {sections.map((section, i) => (
-            <div key={`${section.heading}-${i}`}>
-              {section.heading ? <h2>{section.heading}</h2> : null}
-              {section.body ? <p>{section.body}</p> : null}
-            </div>
-          ))}
+    <div className="legal-page">
+      <MarketingTopNav />
+      <header className="legal-page__hero">
+        <div className="legal-page__hero-inner">
+          <p className="legal-page__eyebrow">TourPilot</p>
+          <h1 className="legal-page__title">{title}</h1>
+          <p className="legal-page__updated">
+            {updatedAt
+              ? `Last updated: ${new Date(updatedAt).toLocaleDateString()}`
+              : "Last updated: June 2026"}
+          </p>
         </div>
-      </div>
-    </section>
+      </header>
+
+      <main className="legal-page__main">
+        <div className="legal-page__inner">
+          <p className="legal-page__back">
+            <Link to="/register">← Back to sign up</Link>
+            {" · "}
+            <Link to="/">Home</Link>
+          </p>
+
+          <div className="legal-page__body">
+            {sections.map((section, i) => (
+              <article key={`${section.heading}-${i}`} className="legal-page__section">
+                {section.heading ? <h2>{section.heading}</h2> : null}
+                {section.body ? <p>{section.body}</p> : null}
+              </article>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }

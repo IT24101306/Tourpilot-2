@@ -4,6 +4,9 @@ declare module "nodemailer" {
     port?: number;
     secure?: boolean;
     auth?: { user: string; pass: string };
+    connectionTimeout?: number;
+    greetingTimeout?: number;
+    socketTimeout?: number;
   };
 
   export type SendMailOptions = {
@@ -16,6 +19,7 @@ declare module "nodemailer" {
 
   export interface Transporter {
     sendMail(options: SendMailOptions): Promise<unknown>;
+    verify(): Promise<true>;
   }
 
   export function createTransport(options: TransportOptions): Transporter;

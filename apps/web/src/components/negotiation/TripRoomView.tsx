@@ -302,11 +302,6 @@ export function TripRoomView({
               {role === "TOURIST" ? `Your trip with ${counterparty}` : `Trip room · ${counterparty}`}
             </h2>
           </div>
-          {onClose ? (
-            <button type="button" className="btn btn-ghost" onClick={onClose}>
-              Back to list
-            </button>
-          ) : null}
         </header>
       ) : (
         <ModuleHeader
@@ -339,53 +334,8 @@ export function TripRoomView({
                   ? "Reply to travelers who inquired from your shared tours."
                   : "Plan together — clarify details, compare options, and confirm the trip."
           }
-        >
-          <Link to={backTo} className="btn btn-ghost">
-            {backLabel}
-          </Link>
-          {role === "AGENCY" && (
-            <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
-              {inquiry.proposal ? "Update proposal" : "Send proposal"}
-            </button>
-          )}
-          {role === "AGENCY" && inquiry.status === "ACCEPTED" && (
-            <button type="button" className="btn btn-teal" onClick={() => setInvoiceModalOpen(true)}>
-              {inquiry.invoice ? "Edit / send invoice" : "Generate invoice"}
-            </button>
-          )}
-          {role === "TOURIST" &&
-            inquiry.invoice &&
-            (inquiry.invoice.status === "SENT" || inquiry.invoice.status === "PAID") && (
-              <button type="button" className="btn btn-primary" onClick={() => setInvoiceModalOpen(true)}>
-                {inquiry.invoice.status === "PAID" ? "View paid invoice" : "View invoice & pay"}
-              </button>
-            )}
-        </ModuleHeader>
+        />
       )}
-
-      {embedded && role === "AGENCY" ? (
-        <div className="trip-room-embedded__actions">
-          <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
-            {inquiry.proposal ? "Update proposal" : "Send proposal"}
-          </button>
-          {inquiry.status === "ACCEPTED" && (
-            <button type="button" className="btn btn-teal" onClick={() => setInvoiceModalOpen(true)}>
-              {inquiry.invoice ? "Edit / send invoice" : "Generate invoice"}
-            </button>
-          )}
-        </div>
-      ) : null}
-
-      {embedded &&
-      role === "TOURIST" &&
-      inquiry.invoice &&
-      (inquiry.invoice.status === "SENT" || inquiry.invoice.status === "PAID") ? (
-        <div className="trip-room-embedded__actions">
-          <button type="button" className="btn btn-primary" onClick={() => setInvoiceModalOpen(true)}>
-            {inquiry.invoice.status === "PAID" ? "View paid invoice" : "View invoice & pay"}
-          </button>
-        </div>
-      ) : null}
 
       <div className="trip-room-surface">
         {role === "TOURIST" ? (
@@ -532,6 +482,86 @@ export function TripRoomView({
               </button>
             </form>
           )}
+
+          <div className="trip-room-actions" aria-label="Trip room actions">
+            {embedded && onClose ? (
+              <button type="button" className="btn btn-ghost" onClick={onClose}>
+                Back to list
+              </button>
+            ) : (
+              <Link to={backTo} className="btn btn-ghost">
+                {backLabel}
+              </Link>
+            )}
+            {role === "AGENCY" && (
+              <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
+                {inquiry.proposal ? "Update proposal" : "Send proposal"}
+              </button>
+            )}
+            {role === "AGENCY" && inquiry.status === "ACCEPTED" && (
+              <button type="button" className="btn btn-teal" onClick={() => setInvoiceModalOpen(true)}>
+                {inquiry.invoice ? "Edit / send invoice" : "Generate invoice"}
+              </button>
+            )}
+            {role === "TOURIST" &&
+              inquiry.invoice &&
+              (inquiry.invoice.status === "SENT" || inquiry.invoice.status === "PAID") && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setInvoiceModalOpen(true)}
+                >
+                  {inquiry.invoice.status === "PAID" ? "View paid invoice" : "View invoice & pay"}
+                </button>
+              )}
+            {canRespond && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={acting}
+                onClick={() => touristRespond("accept")}
+              >
+                Accept proposal
+              </button>
+            )}
+            {canRequestChanges && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={acting}
+                onClick={() => setRevisionOpen((v) => !v)}
+              >
+                Request changes
+              </button>
+            )}
+            {canRequestChanges && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={acting}
+                onClick={() => touristRespond("decline")}
+              >
+                Decline
+              </button>
+            )}
+          </div>
+
+          {revisionOpen && (
+            <form className="neg-revision-form" onSubmit={onRevisionSubmit}>
+              <label htmlFor="revisionNote">What would you like changed?</label>
+              <textarea
+                id="revisionNote"
+                rows={3}
+                value={revisionNote}
+                onChange={(e) => setRevisionNote(e.target.value)}
+                placeholder="e.g. Prefer fewer travel days, add a beach stay…"
+                required
+              />
+              <button type="submit" className="btn btn-teal" disabled={acting}>
+                Send revision request
+              </button>
+            </form>
+          )}
         </section>
 
         <section className="neg-panel neg-panel--proposal">
@@ -559,64 +589,6 @@ export function TripRoomView({
                 : inquiry.agency?.name
             }
           />
-
-          {(canRespond || canRequestChanges) && (
-            <div className="neg-decision-bar">
-              <p className="neg-decision-lead">
-                {bookingsEnabled
-                  ? "Ready to decide?"
-                  : "Bookings are currently unavailable with this agency. You can still request changes or decline."}
-              </p>
-              <div className="neg-decision-actions">
-                {canRespond && (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={acting}
-                    onClick={() => touristRespond("accept")}
-                  >
-                    Accept proposal
-                  </button>
-                )}
-                {canRequestChanges && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    disabled={acting}
-                    onClick={() => setRevisionOpen((v) => !v)}
-                  >
-                    Request changes
-                  </button>
-                )}
-                {canRequestChanges && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    disabled={acting}
-                    onClick={() => touristRespond("decline")}
-                  >
-                    Decline
-                  </button>
-                )}
-              </div>
-              {revisionOpen && (
-                <form className="neg-revision-form" onSubmit={onRevisionSubmit}>
-                  <label htmlFor="revisionNote">What would you like changed?</label>
-                  <textarea
-                    id="revisionNote"
-                    rows={3}
-                    value={revisionNote}
-                    onChange={(e) => setRevisionNote(e.target.value)}
-                    placeholder="e.g. Prefer fewer travel days, add a beach stay…"
-                    required
-                  />
-                  <button type="submit" className="btn btn-teal" disabled={acting}>
-                    Send revision request
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
         </section>
         </div>
       </div>

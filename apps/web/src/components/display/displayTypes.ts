@@ -85,8 +85,8 @@ export type DisplayOffer = {
   imageUrl?: string;
 };
 
-/** Style 1 = flip card showcase; Style 2 = free-tour strip banner. */
-export type OfferBannerStyle = "card" | "strip";
+/** Free-tour strip banner on the public storefront. */
+export type OfferBannerStyle = "strip";
 
 export type DisplayTransportOption = TransportOption;
 
@@ -148,7 +148,7 @@ export const defaultDisplayContent = (): DisplayContent => ({
   packages: [],
   offers: [],
   transportOptions: AGENCY_TRANSPORT_OPTIONS.map((option) => ({ ...option })),
-  offerBannerStyle: "card",
+  offerBannerStyle: "strip",
 });
 
 export const defaultDisplayConfig = (): DisplayConfig => ({

@@ -137,8 +137,11 @@ export {
 export {
   DEFAULT_PRICING_PAGE,
   formatPricingLkr,
+  normalizePricingFeatureLine,
+  normalizePricingFeatureLines,
   parsePricingPageContent,
   type PricingAddonFeature,
+  type PricingFeatureLine,
   type PricingFilterOption,
   type PricingIncludedSection,
   type PricingPackage,
@@ -163,3 +166,16 @@ export {
   toSessionInactivityMinutes,
   type SessionInactivityUnit,
 } from "./sessionInactivity.js";
+
+export {
+  TRIAL_DAYS,
+  TRIAL_REMINDER_HOURS_BEFORE,
+  buildTrialStatus,
+  isTrialActive,
+  isTrialExpiredUnpaid,
+  registerProUrlForPackage,
+  trialEndsAtFrom,
+  type PackageBilling,
+  type SelectedPackageInput,
+  type TrialStatusView,
+} from "./trial.js";
