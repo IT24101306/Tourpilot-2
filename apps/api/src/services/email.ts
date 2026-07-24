@@ -151,22 +151,24 @@ async function getSmtpTransport() {
   }
 
   const nodemailer = (await import("nodemailer")).default;
-  smtpTransport = nodemailer.createTransport({
+  // `family` is supported by smtp-connection but missing from nodemailer TransportOptions.
+  const transportOptions = {
     host,
     port,
     secure,
     auth: user ? { user, pass } : undefined,
     // IPv6 AAAA answers frequently hang on VPS networks.
-    family: 4,
+    family: 4 as const,
     connectionTimeout: 20_000,
     greetingTimeout: 20_000,
     socketTimeout: 30_000,
     tls: {
       servername: host,
-      minVersion: "TLSv1.2",
+      minVersion: "TLSv1.2" as const,
     },
     requireTLS: !secure && port === 587,
-  });
+  };
+  smtpTransport = nodemailer.createTransport(transportOptions);
   smtpTransportKey = key;
   return smtpTransport;
 }
