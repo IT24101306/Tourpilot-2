@@ -16,7 +16,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "tsc -p tsconfig.json"
+    "prepare": "node ./scripts/prepare.mjs"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

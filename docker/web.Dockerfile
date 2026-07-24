@@ -5,7 +5,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
-RUN npm ci --workspace=@tourpilot/shared --workspace=@tourpilot/web --include-workspace-root
+# Lockfile lists all workspaces — stubs keep `npm ci` in sync.
+COPY apps/api/package.json ./apps/api/
+COPY apps/mobile/package.json ./apps/mobile/
+RUN npm ci --workspace=@tourpilot/shared --workspace=@tourpilot/web --include-workspace-root --ignore-scripts
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 RUN npm run build -w @tourpilot/shared && npm run build -w @tourpilot/web

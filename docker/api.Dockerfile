@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
+# Lockfile lists all workspaces — stubs keep `npm ci` in sync.
+COPY apps/web/package.json ./apps/web/
+COPY apps/mobile/package.json ./apps/mobile/
 # Skip postinstall (prisma generate) — schema is not copied until the build stage.
 RUN npm ci --workspace=@tourpilot/shared --workspace=@tourpilot/api --include-workspace-root --ignore-scripts
 
