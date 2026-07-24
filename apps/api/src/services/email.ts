@@ -30,19 +30,11 @@ export type EmailResult = {
 let smtpTransport: Transporter | null = null;
 let smtpTransportKey = "";
 
-/** Prefer public Hostinger/Titan SMTP hosts — mail.domain.com often times out from VPS. */
+/** Normalize port/TLS; never rewrite the configured host (cPanel uses mail.domain.com). */
 function resolveSmtpEndpoint() {
-  const rawHost = config.email.smtp.host.trim();
+  const host = config.email.smtp.host.trim();
   const port = config.email.smtp.port;
-  let host = rawHost;
   let secure = config.email.smtp.secure;
-  let rewrittenFrom: string | null = null;
-
-  const lower = rawHost.toLowerCase();
-  if (lower.startsWith("mail.") && !lower.includes("hostinger") && !lower.includes("titan")) {
-    rewrittenFrom = rawHost;
-    host = "smtp.hostinger.com";
-  }
 
   // Keep TLS mode consistent with the port (mismatches often hang until timeout).
   if (port === 465) secure = true;
@@ -54,18 +46,21 @@ function resolveSmtpEndpoint() {
     secure,
     user: config.email.smtp.user,
     pass: config.email.smtp.pass,
-    rewrittenFrom,
   };
 }
 
 function formatSmtpError(error: unknown, host: string): string {
   const message = error instanceof Error ? error.message : "SMTP send failed";
+  const authFailed = /invalid login|authentication failed|535/i.test(message);
+  if (authFailed) {
+    return `${message} — Check SMTP_USER (full mailbox address) and SMTP_PASS match the cPanel email account password for ${host}.`;
+  }
   const timedOut = /timeout|timed out|etimedout|econnrefused|enotfound/i.test(message);
   if (!timedOut) return message;
 
   const tips = [
     `Could not reach SMTP host "${host}".`,
-    "For Hostinger use SMTP_HOST=smtp.hostinger.com (not mail.yourdomain.com), SMTP_PORT=465 and SMTP_SECURE=true — or port 587 with SMTP_SECURE=false.",
+    "For cPanel use SMTP_HOST=mail.yourdomain.com with SMTP_PORT=465 and SMTP_SECURE=true (or 587 with SMTP_SECURE=false).",
     "Confirm the API container/VPS can open outbound TCP to that host:port, then restart the API after changing env.",
   ];
   return `${message} — ${tips.join(" ")}`;
@@ -73,7 +68,7 @@ function formatSmtpError(error: unknown, host: string): string {
 
 export function getEmailDeliveryStatus() {
   const endpoint = resolveSmtpEndpoint();
-  const { host, port, user, pass, secure, rewrittenFrom } = endpoint;
+  const { host, port, user, pass, secure } = endpoint;
   return {
     mode: config.email.mode,
     from: config.email.from,
@@ -83,8 +78,6 @@ export function getEmailDeliveryStatus() {
       user: user || null,
       secure,
       passConfigured: Boolean(pass),
-      configuredHost: config.email.smtp.host || null,
-      rewrittenFrom,
     },
     ready:
       config.email.mode === "log" ||
@@ -97,14 +90,9 @@ export function getEmailDeliveryStatus() {
           ? "SMTP_HOST is missing."
           : config.email.mode === "smtp" && !pass
             ? "SMTP_PASS is empty — set the mailbox password and restart the API."
-            : config.email.mode === "smtp" && rewrittenFrom
-              ? `SMTP_HOST was "${rewrittenFrom}" which often times out — using smtp.hostinger.com. Set SMTP_HOST=smtp.hostinger.com explicitly and restart.`
-              : config.email.mode === "smtp" &&
-                  config.email.smtp.host.toLowerCase().startsWith("mail.")
-                ? "If sends time out, Hostinger mailboxes usually need SMTP_HOST=smtp.hostinger.com (or smtp.titan.email), not mail.yourdomain.com."
-                : config.email.mode === "smtp"
-                  ? "SMTP looks configured. Use smtp.hostinger.com:465 (SSL) if you still see connection timeouts."
-                  : undefined,
+            : config.email.mode === "smtp"
+              ? "SMTP looks configured. cPanel typically uses mail.yourdomain.com:465 (SSL) with the full email as username."
+              : undefined,
   };
 }
 
@@ -138,17 +126,11 @@ export async function verifySmtpConnection(): Promise<{ ok: boolean; error?: str
 
 async function getSmtpTransport() {
   const endpoint = resolveSmtpEndpoint();
-  const { host, port, user, pass, secure, rewrittenFrom } = endpoint;
+  const { host, port, user, pass, secure } = endpoint;
   if (!host) return null;
 
   const key = `${host}|${port}|${secure}|${user}|${pass ? "1" : "0"}`;
   if (smtpTransport && smtpTransportKey === key) return smtpTransport;
-
-  if (rewrittenFrom) {
-    console.warn(
-      `[email] SMTP_HOST=${rewrittenFrom} often times out from cloud hosts; using ${host}:${port} secure=${secure}`
-    );
-  }
 
   const nodemailer = (await import("nodemailer")).default;
   // `family` is supported by smtp-connection but missing from nodemailer TransportOptions.

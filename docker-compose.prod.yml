@@ -59,7 +59,7 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-TourPilot <noreply@example.com>}
       EMAIL_WEBHOOK_URL: ${EMAIL_WEBHOOK_URL:-}
       SMTP_HOST: ${SMTP_HOST:-}
-      # Hostinger/Titan: 465 + SSL (avoid mail.domain.com — use smtp.hostinger.com)
+      # cPanel: mail.domain.com with 465 + SSL (or 587 + STARTTLS)
       SMTP_PORT: ${SMTP_PORT:-465}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
