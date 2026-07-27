@@ -1,3 +1,5 @@
+import { stripRichHtml } from "@tourpilot/shared";
+
 /** Public URL for a single offer (opens /offers with highlight). */
 export function offerShareUrl(offerId: string, origin = typeof window !== "undefined" ? window.location.origin : "") {
   return `${origin}/offers?offer=${encodeURIComponent(offerId)}`;
@@ -14,7 +16,8 @@ export type OfferSharePayload = {
 
 export async function shareOffer(offer: OfferSharePayload): Promise<OfferShareResult> {
   const url = offerShareUrl(offer.id);
-  const text = [offer.rewardText, offer.description?.trim()].filter(Boolean).join(" — ");
+  const descPlain = stripRichHtml(offer.description);
+  const text = [offer.rewardText, descPlain].filter(Boolean).join(" — ");
 
   try {
     if (typeof navigator.share === "function") {

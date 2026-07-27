@@ -8,6 +8,7 @@ import {
 } from "../display/DisplayEditorUi";
 import { SOCIAL_PLATFORMS, type DisplaySocialLink, type HeroSlide } from "../display/displayTypes";
 import { SocialLineIcon } from "../icons/LineIcons";
+import { RichTextEditor } from "../richtext/RichTextEditor";
 
 type Props = {
   token: string | null | undefined;
@@ -217,12 +218,13 @@ export function InfluencerDisplayContentEditor({
         </label>
         <label className="field">
           <span>About you</span>
-          <textarea
+          <RichTextEditor
             rows={4}
             value={aboutDescription}
-            onChange={(e) => onAboutDescriptionChange(e.target.value)}
+            onChange={onAboutDescriptionChange}
             placeholder="Tell followers who you are, what you share, and why you recommend these trips."
             maxLength={1200}
+            aria-label="About you"
           />
         </label>
       </div>

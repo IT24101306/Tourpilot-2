@@ -8,6 +8,7 @@ import { OfferRegistrantsModal } from "./OfferRegistrantsModal";
 import { formatOfferMonthLabel, formatDisplayMoney, MEDIA } from "@tourpilot/shared";
 import { OfferRewardRoadmap } from "./OfferRewardRoadmap";
 import { OfferShareButton } from "./OfferShareButton";
+import { RichTextHtml } from "../richtext/RichTextHtml";
 import type { OfferRewardTier } from "@tourpilot/shared";
 
 export type OfferTourOption = {
@@ -134,7 +135,9 @@ export function DiscoveryOfferCard({
 
           <h3>{offer.title}</h3>
 
-          {offer.description && <p className="disc-offer-desc">{offer.description}</p>}
+          {offer.description && (
+            <RichTextHtml html={offer.description} className="disc-offer-desc" plain />
+          )}
 
           {formatOfferMonthLabel(offer.offerMonth) && (
             <p className="disc-offer-month">Dedicated to {formatOfferMonthLabel(offer.offerMonth)}</p>
@@ -223,7 +226,9 @@ export function DiscoveryOfferCard({
         </span>
       </div>
       <h3>{offer.title}</h3>
-      {!compact && offer.description && <p className="disc-offer-desc">{offer.description}</p>}
+      {!compact && offer.description && (
+        <RichTextHtml html={offer.description} className="disc-offer-desc" plain />
+      )}
       <p className={`disc-offer-reward${hero ? " disc-offer-reward--hero" : ""}`}>{offer.rewardText}</p>
       <p className="disc-offer-price">
         <OfferPrice offer={offer} />

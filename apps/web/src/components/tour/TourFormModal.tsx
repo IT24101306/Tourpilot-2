@@ -7,6 +7,7 @@ import type { TourOfferLinkState } from "../../lib/tourOfferLink";
 import { computeTourFormPricing } from "../../lib/tourFormPricing";
 import { TourOfferLinkSection } from "./TourOfferLinkSection";
 import { TourPackagePricingNotice } from "../itinerary/TourPackagePricingNotice";
+import { RichTextEditor } from "../richtext/RichTextEditor";
 import {
   computeMissingRequirements,
   createDayPlan,
@@ -331,29 +332,32 @@ export function TourFormModal({
           </div>
 
           <FormField label="Short summary" full>
-            <input
-              type="text"
+            <RichTextEditor
+              rows={2}
               value={form.summary}
-              onChange={(e) => onChange({ ...form, summary: e.target.value })}
+              onChange={(summary) => onChange({ ...form, summary })}
               placeholder="Highlights, regions, or who this tour is for"
+              aria-label="Short summary"
             />
           </FormField>
 
           <FormField label="Description" full>
-            <textarea
-              rows={3}
+            <RichTextEditor
+              rows={4}
               value={form.description}
-              onChange={(e) => onChange({ ...form, description: e.target.value })}
+              onChange={(description) => onChange({ ...form, description })}
               placeholder="Full description shown on the public tour page"
+              aria-label="Description"
             />
           </FormField>
 
           <FormField label="Special instructions for influencers" full>
-            <textarea
+            <RichTextEditor
               rows={3}
               value={form.influencerInstructions}
-              onChange={(e) => onChange({ ...form, influencerInstructions: e.target.value })}
+              onChange={(influencerInstructions) => onChange({ ...form, influencerInstructions })}
               placeholder="Promo rules, content guidelines, or dos and don'ts for influencers featuring this tour"
+              aria-label="Special instructions for influencers"
             />
           </FormField>
 
@@ -378,6 +382,11 @@ export function TourFormModal({
                 coverUrl: form.coverUrl,
                 basePriceLkr: form.basePriceLkr,
                 isPublished: form.isPublished,
+              }}
+              onEnsurePublished={() => {
+                if (!form.isPublished) {
+                  onChange({ ...form, isPublished: true });
+                }
               }}
             />
           )}

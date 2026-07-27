@@ -10,6 +10,7 @@ import {
 import { optionalImageUrlSchema } from "./imageUrlSchema.js";
 import { parseDisplayPayload } from "./displaySettings.js";
 import { prisma } from "./prisma.js";
+import { sanitizeOptionalRichText } from "./sanitizeRichText.js";
 
 const offerMonthSchema = z
   .string()
@@ -217,7 +218,9 @@ export async function applyOfferUpdate(
       where: { id: existing.id },
       data: {
         ...(body.title !== undefined ? { title: body.title } : {}),
-        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.description !== undefined
+          ? { description: sanitizeOptionalRichText(body.description) ?? null }
+          : {}),
         ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
         ...(body.rewardText !== undefined ? { rewardText: body.rewardText } : {}),
         ...(body.offerMonth !== undefined ? { offerMonth: body.offerMonth } : {}),

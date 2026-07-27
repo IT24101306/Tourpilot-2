@@ -2367,6 +2367,12 @@ a.agency-icon-btn {
   font-size: 0.9rem;
 }
 
+.groups-studio .groups-toast--error {
+  background: #fef2f2;
+  color: #9b1c1c;
+  border: 1px solid #fecaca;
+}
+
 .groups-studio-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import type { UserRole } from "@tourpilot/shared";
+import { isRichTextEmpty, stripRichHtml, type UserRole } from "@tourpilot/shared";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { ImageUrlField } from "../../components/ImageUrlField";
+import { RichTextEditor } from "../../components/richtext/RichTextEditor";
 
 type OfferOption = {
   id: string;
@@ -133,7 +134,7 @@ export function AdminPromoEmailPage() {
       showStatus("Subject must be at least 3 characters.", "error");
       return;
     }
-    if (!body.trim() || body.trim().length < 3) {
+    if (isRichTextEmpty(body) || stripRichHtml(body).length < 3) {
       showStatus("Message must be at least 3 characters.", "error");
       return;
     }
@@ -315,13 +316,13 @@ export function AdminPromoEmailPage() {
         />
 
         <label htmlFor="promo-body">Message</label>
-        <textarea
+        <RichTextEditor
           id="promo-body"
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          minLength={3}
+          onChange={setBody}
           rows={6}
           placeholder="Tell travelers what’s new…"
+          aria-label="Promo email message"
         />
 
         <ImageUrlField
@@ -403,7 +404,13 @@ export function AdminPromoEmailPage() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={sending || testing || !subject.trim() || !body.trim() || !roles.length}
+            disabled={
+              sending ||
+              testing ||
+              !subject.trim() ||
+              isRichTextEmpty(body) ||
+              !roles.length
+            }
             onClick={() => void sendBroadcast()}
           >
             {sending ? "Sending…" : "Send promotional email"}

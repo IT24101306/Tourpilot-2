@@ -2,6 +2,7 @@ import type { ConfirmSummaryItem } from "../components/confirm/ConfirmActionCont
 import type { ManagedOffer } from "../components/offers/OffersDashboard";
 import type { TourFormState, TourKind, EntityOption } from "../components/tour/tourFormTypes";
 import { buildTourPlanPayload } from "../components/tour/tourFormTypes";
+import { isRichTextEmpty } from "@tourpilot/shared";
 
 export type TourOfferNewDraft = {
   title: string;
@@ -99,18 +100,28 @@ export function validateTourOfferLink(
   if (!link.enabled) return null;
 
   if (!link.createNew && link.existingOfferIds.length === 0) {
-    return "Select at least one existing offer or enable “Create new offer”.";
+    return "Loyalty offers: select an existing offer or enable “Create new offer with this tour”.";
   }
 
   if (opts?.isPublished === false) {
-    return "Publish the tour or turn off offer linking before saving.";
+    return "Loyalty offers: publish the tour (checkbox above) or turn off offer linking before saving.";
   }
 
   if (link.createNew) {
-    if (!link.newOffer.title.trim()) return "Offer title is required.";
-    if (!link.newOffer.rewardText.trim()) return "Reward text is required.";
-    if (!link.newOffer.validFrom || !link.newOffer.validUntil) return "Offer dates are required.";
-    if (Number(link.newOffer.registrationCap) < 1) return "Registration cap must be at least 1.";
+    if (!link.newOffer.title.trim()) return "Loyalty offers: offer title is required.";
+    if (!link.newOffer.rewardText.trim()) return "Loyalty offers: reward text is required.";
+    if (!link.newOffer.validFrom || !link.newOffer.validUntil) {
+      return "Loyalty offers: offer dates are required.";
+    }
+    if (Number(link.newOffer.registrationCap) < 1) {
+      return "Loyalty offers: registration cap must be at least 1.";
+    }
+
+    const from = new Date(link.newOffer.validFrom);
+    const until = new Date(link.newOffer.validUntil);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(until.getTime())) {
+      return "Loyalty offers: offer dates are invalid.";
+    }
 
     const dateErr = validateOfferDates(link.newOffer.validFrom, link.newOffer.validUntil);
     if (dateErr) return dateErr;
@@ -144,7 +155,9 @@ export function buildOfferLinkPayload(
       ? {
           newOffer: {
             title: link.newOffer.title.trim(),
-            description: link.newOffer.description.trim() || undefined,
+            description: isRichTextEmpty(link.newOffer.description)
+              ? undefined
+              : link.newOffer.description,
             imageUrl: link.newOffer.imageUrl.trim() || undefined,
             rewardText: link.newOffer.rewardText.trim(),
             registrationCap: Number(link.newOffer.registrationCap),

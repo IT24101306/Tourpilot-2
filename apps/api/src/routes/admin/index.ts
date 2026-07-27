@@ -15,6 +15,7 @@ import {
   sendPlatformEmail,
   verifySmtpConnection,
 } from "../../services/email.js";
+import { sanitizeRichHtml, stripRichHtml } from "@tourpilot/shared";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
@@ -207,8 +208,18 @@ adminRouter.post("/promo-email", async (req, res, next) => {
             path: ["roles"],
           });
         }
+        const plain = stripRichHtml(val.body);
+        if (plain.length < 3) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Message must be at least 3 characters",
+            path: ["body"],
+          });
+        }
       })
       .parse(req.body);
+
+    const promoBody = sanitizeRichHtml(body.body);
 
     const settings = await getPlatformSettings();
     const base = (settings.webAppUrl || "").replace(/\/$/, "") || "https://srilankatourpilot.com";
@@ -232,7 +243,7 @@ adminRouter.post("/promo-email", async (req, res, next) => {
       const content = promotionalEmail({
         recipientName: "there",
         subject: body.subject.trim(),
-        body: body.body.trim(),
+        body: promoBody,
         posterUrl,
         offerTitle,
         offerUrl,
@@ -276,7 +287,7 @@ adminRouter.post("/promo-email", async (req, res, next) => {
           const content = promotionalEmail({
             recipientName: user.name || "there",
             subject: body.subject.trim(),
-            body: body.body.trim(),
+            body: promoBody,
             posterUrl,
             offerTitle,
             offerUrl,

@@ -315,6 +315,10 @@ export function AgencyToursPage() {
     const offerErr = validateTourOfferLink(offerLink, { isPublished: tourForm.isPublished });
     if (offerErr) {
       setTourStatus(offerErr);
+      document.getElementById("tour-offer-link-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       return;
     }
 

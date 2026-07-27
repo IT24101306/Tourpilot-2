@@ -13,6 +13,7 @@ import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { RichTextEditor } from "../../components/richtext/RichTextEditor";
 import type { AdminCmsPage } from "./types";
 
 function cloneDefault(): PricingPageContent {
@@ -305,11 +306,12 @@ export function AdminPricingPage() {
             onChange={(e) => setContent({ ...content, termsTitle: e.target.value })}
           />
           <label htmlFor="pricing-terms-body">Terms body</label>
-          <textarea
+          <RichTextEditor
             id="pricing-terms-body"
             rows={3}
             value={content.termsBody}
-            onChange={(e) => setContent({ ...content, termsBody: e.target.value })}
+            onChange={(termsBody) => setContent({ ...content, termsBody })}
+            aria-label="Terms body"
           />
         </section>
 

@@ -47,11 +47,13 @@ type ActiveRequest = ConfirmActionRequest & { open: boolean };
 function ConfirmActionDialog({
   request,
   loading,
+  error,
   onCancel,
   onConfirm,
 }: {
   request: ActiveRequest | null;
   loading: boolean;
+  error: string | null;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -124,6 +126,12 @@ function ConfirmActionDialog({
           </dl>
         )}
 
+        {error ? (
+          <p className="form-error" role="alert" style={{ marginTop: 0 }}>
+            {error}
+          </p>
+        ) : null}
+
         <div className="gov-form-actions confirm-action-actions">
           <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={loading}>
             {request.cancelLabel ?? "Cancel"}
@@ -141,11 +149,13 @@ function ConfirmActionDialog({
 export function ConfirmActionProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<ActiveRequest | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const onConfirmRef = useRef<(() => void | Promise<void>) | null>(null);
 
   const close = useCallback(() => {
     if (loading) return;
     setRequest(null);
+    setError(null);
     onConfirmRef.current = null;
   }, [loading]);
 
@@ -153,16 +163,20 @@ export function ConfirmActionProvider({ children }: { children: ReactNode }) {
     onConfirmRef.current = next.onConfirm;
     setRequest({ ...next, open: true });
     setLoading(false);
+    setError(null);
   }, []);
 
   const runConfirm = useCallback(async () => {
     const action = onConfirmRef.current;
     if (!action || loading) return;
     setLoading(true);
+    setError(null);
     try {
       await action();
       setRequest(null);
       onConfirmRef.current = null;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -171,7 +185,13 @@ export function ConfirmActionProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmActionContext.Provider value={{ requestConfirm }}>
       {children}
-      <ConfirmActionDialog request={request} loading={loading} onCancel={close} onConfirm={runConfirm} />
+      <ConfirmActionDialog
+        request={request}
+        loading={loading}
+        error={error}
+        onCancel={close}
+        onConfirm={runConfirm}
+      />
     </ConfirmActionContext.Provider>
   );
 }

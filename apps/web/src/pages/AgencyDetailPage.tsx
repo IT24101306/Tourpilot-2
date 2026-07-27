@@ -26,6 +26,7 @@ import { AgencyHeroSectionNav } from "../components/display/AgencyHeroSectionNav
 import { AgencyReviewsFlipShowcase } from "../components/display/AgencyReviewsFlipShowcase";
 import { AgencyTransportSection } from "../components/display/AgencyTransportSection";
 import { AgencyWhoWeAreSection } from "../components/display/AgencyWhoWeAreSection";
+import { RichTextHtml } from "../components/richtext/RichTextHtml";
 import { entityDetailsSummary, entityLocationLabel } from "../components/entity/entityTypes";
 import {
   defaultDisplayConfig,
@@ -144,7 +145,9 @@ function GalleryEntityModalBody({ entity }: { entity: GalleryEntitySnapshot }) {
           <span>{kindLabel}</span>
         </div>
 
-        {entity.description ? <p className="agency-gallery-entity-desc">{entity.description}</p> : null}
+        {entity.description ? (
+          <RichTextHtml html={entity.description} className="agency-gallery-entity-desc" />
+        ) : null}
 
         {detailsSummary && detailsSummary !== "—" ? (
           <p className="muted agency-gallery-entity-details">{detailsSummary}</p>
@@ -517,7 +520,7 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
                     <div className="agency-offer-card-body">
                       {offer.badge && <span className="agency-offer-badge">{offer.badge}</span>}
                       <h3>{offer.title}</h3>
-                      <p>{offer.description}</p>
+                      <RichTextHtml html={offer.description} />
                       {offer.priceLabel && (
                         <p className="agency-offer-price">{offer.priceLabel}</p>
                       )}

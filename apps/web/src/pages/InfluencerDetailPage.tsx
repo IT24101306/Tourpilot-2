@@ -4,6 +4,7 @@ import { CoverImage } from "../components/CoverImage";
 import {
   DEFAULT_TOUR_COVER_URL,
   formatTourDaysNights,
+  isRichTextEmpty,
   resolveImageUrl,
 } from "@tourpilot/shared";
 import { FormatTourPrice } from "../components/currency/FormatLkr";
@@ -190,7 +191,9 @@ export function InfluencerDetailPage({ slugOverride }: { slugOverride?: string }
   const pageUrl = typeof window !== "undefined" ? window.location.href : "";
   const hasOffers = (storefront.offers?.length ?? 0) > 0;
   const hasTours = storefront.tours.length > 0;
-  const aboutBody = storefront.aboutDescription?.trim() || storefront.bio?.trim() || "";
+  const aboutBody = !isRichTextEmpty(storefront.aboutDescription)
+    ? storefront.aboutDescription
+    : storefront.bio?.trim() || "";
   const hasAbout = Boolean(aboutBody) || (storefront.socialLinks?.length ?? 0) > 0;
 
   const heroSectionLinks: { id: string; label: string }[] = [];
