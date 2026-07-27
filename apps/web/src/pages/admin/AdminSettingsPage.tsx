@@ -5,6 +5,7 @@ import {
   SESSION_INACTIVITY_MAX_MINUTES,
   SESSION_INACTIVITY_MIN_MINUTES,
   formatSessionInactivity,
+  isRichTextEmpty,
   splitSessionInactivityForEdit,
   toSessionInactivityMinutes,
   type SessionInactivityUnit,
@@ -16,6 +17,7 @@ import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { RichTextEditor } from "../../components/richtext/RichTextEditor";
 
 type EmailTemplate = { subject?: string; body?: string };
 
@@ -239,7 +241,7 @@ export function AdminSettingsPage() {
         name: a.name.trim(),
         role: a.role.trim(),
         service: a.service.trim(),
-        description: a.description.trim(),
+        description: isRichTextEmpty(a.description) ? "" : a.description,
         priceUsd: Number.isFinite(Number(a.priceUsd)) ? Number(a.priceUsd) : 0,
         priceLabel: a.priceLabel.trim(),
         phone: a.phone.trim(),
@@ -497,10 +499,11 @@ export function AdminSettingsPage() {
                   </label>
                   <label>
                     Description
-                    <textarea
+                    <RichTextEditor
                       rows={3}
                       value={agent.description}
-                      onChange={(e) => updateAgent(index, { description: e.target.value })}
+                      onChange={(description) => updateAgent(index, { description })}
+                      aria-label={`Agent ${index + 1} description`}
                     />
                   </label>
                   <label>
@@ -587,15 +590,16 @@ export function AdminSettingsPage() {
                   </label>
                   <label>
                     Body
-                    <textarea
+                    <RichTextEditor
                       rows={5}
                       value={templates[meta.key]?.body || ""}
-                      onChange={(e) =>
+                      onChange={(body) =>
                         setTemplates((prev) => ({
                           ...prev,
-                          [meta.key]: { ...prev[meta.key], body: e.target.value },
+                          [meta.key]: { ...prev[meta.key], body },
                         }))
                       }
+                      aria-label={`${meta.label} body`}
                     />
                   </label>
                 </details>

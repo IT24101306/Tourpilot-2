@@ -4,7 +4,21 @@ import { prisma } from "../lib/prisma.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { asJson } from "../utils/json.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
+import { sanitizeOptionalRichText } from "../lib/sanitizeRichText.js";
 import { recordAuditEvent, snapshotEntity } from "../services/auditLog.js";
+import { sanitizeRichHtml, isRichTextEmpty } from "@tourpilot/shared";
+
+function sanitizeEntityMetadata(meta: unknown): unknown {
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) return meta;
+  const out = { ...(meta as Record<string, unknown>) };
+  for (const key of ["otherInfo", "amenities"] as const) {
+    if (typeof out[key] === "string") {
+      const cleaned = sanitizeRichHtml(out[key] as string);
+      out[key] = isRichTextEmpty(cleaned) ? undefined : cleaned;
+    }
+  }
+  return out;
+}
 
 export const entitiesRouter = Router();
 
@@ -75,14 +89,14 @@ entitiesRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, 
         type: body.type,
         city: body.city?.trim() || undefined,
         district: body.district?.trim() || undefined,
-        description: body.description?.trim() || undefined,
+        description: sanitizeOptionalRichText(body.description) ?? undefined,
         durationMin: body.durationMin,
         priceHint: body.priceHint,
         contact: body.contact?.trim() || undefined,
         lat: body.lat,
         lng: body.lng,
         media: body.media ? asJson(body.media) : undefined,
-        metadata: body.metadata ? asJson(body.metadata) : undefined,
+        metadata: body.metadata ? asJson(sanitizeEntityMetadata(body.metadata)) : undefined,
       },
     });
 
@@ -120,6 +134,134 @@ entitiesRouter.get("/groups", authRequired, requireRoles("AGENCY"), async (req, 
     });
 
     res.json(groups.map(serializeGroup));
+  } catch (e) {
+    next(e);
+  }
+});
+
+entitiesRouter.post("/groups", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const body = z
+      .object({
+        name: z.string().min(1, "Group name is required"),
+        description: z.string().optional().nullable(),
+        entityIds: z.array(z.string().min(1)).min(1, "Select at least one entity"),
+      })
+      .parse(req.body);
+
+    const entityIds = [...new Set(body.entityIds.map((id) => id.trim()).filter(Boolean))];
+    if (entityIds.length === 0) {
+      return res.status(400).json({ error: "Select at least one entity" });
+    }
+
+    const owned = await prisma.entity.findMany({
+      where: { agencyId: agency.id, id: { in: entityIds } },
+      select: { id: true },
+    });
+    if (owned.length !== entityIds.length) {
+      return res.status(400).json({
+        error: "One or more selected entities are invalid or not in your catalog",
+      });
+    }
+
+    const group = await prisma.entityGroup.create({
+      data: {
+        agencyId: agency.id,
+        name: body.name.trim(),
+        description: sanitizeOptionalRichText(body.description) ?? undefined,
+        items: {
+          create: entityIds.map((entityId, idx) => ({
+            entityId,
+            sortOrder: idx,
+          })),
+        },
+      },
+      include: { items: { include: { entity: true }, orderBy: { sortOrder: "asc" } } },
+    });
+
+    res.status(201).json(serializeGroup(group));
+  } catch (e) {
+    next(e);
+  }
+});
+
+entitiesRouter.patch("/groups/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.entityGroup.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Group not found" });
+
+    const body = z
+      .object({
+        name: z.string().min(1).optional(),
+        description: z.string().optional().nullable(),
+        entityIds: z.array(z.string().min(1)).min(1).optional(),
+      })
+      .parse(req.body);
+
+    let entityIds = body.entityIds;
+    if (entityIds) {
+      entityIds = [...new Set(entityIds.map((id) => id.trim()).filter(Boolean))];
+      const owned = await prisma.entity.findMany({
+        where: { agencyId: agency.id, id: { in: entityIds } },
+        select: { id: true },
+      });
+      if (owned.length !== entityIds.length) {
+        return res.status(400).json({
+          error: "One or more selected entities are invalid or not in your catalog",
+        });
+      }
+    }
+
+    const group = await prisma.$transaction(async (tx) => {
+      if (entityIds) {
+        await tx.entityGroupItem.deleteMany({ where: { groupId: existing.id } });
+        await tx.entityGroupItem.createMany({
+          data: entityIds.map((entityId, idx) => ({
+            groupId: existing.id,
+            entityId,
+            sortOrder: idx,
+          })),
+        });
+      }
+
+      return tx.entityGroup.update({
+        where: { id: existing.id },
+        data: {
+          ...(body.name !== undefined ? { name: body.name.trim() } : {}),
+          ...(body.description !== undefined
+            ? { description: sanitizeOptionalRichText(body.description) ?? null }
+            : {}),
+        },
+        include: { items: { include: { entity: true }, orderBy: { sortOrder: "asc" } } },
+      });
+    });
+
+    res.json(serializeGroup(group));
+  } catch (e) {
+    next(e);
+  }
+});
+
+entitiesRouter.delete("/groups/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.entityGroup.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Group not found" });
+
+    await prisma.entityGroup.delete({ where: { id: existing.id } });
+    res.status(204).send();
   } catch (e) {
     next(e);
   }
@@ -191,14 +333,18 @@ entitiesRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, r
         ...(body.type !== undefined ? { type: body.type } : {}),
         ...(body.city !== undefined ? { city: body.city?.trim() || null } : {}),
         ...(body.district !== undefined ? { district: body.district?.trim() || null } : {}),
-        ...(body.description !== undefined ? { description: body.description?.trim() || null } : {}),
+        ...(body.description !== undefined
+          ? { description: sanitizeOptionalRichText(body.description) ?? null }
+          : {}),
         ...(body.durationMin !== undefined ? { durationMin: body.durationMin } : {}),
         ...(body.priceHint !== undefined ? { priceHint: body.priceHint } : {}),
         ...(body.contact !== undefined ? { contact: body.contact?.trim() || null } : {}),
         ...(body.lat !== undefined ? { lat: body.lat } : {}),
         ...(body.lng !== undefined ? { lng: body.lng } : {}),
         ...(body.media !== undefined ? { media: asJson(body.media) } : {}),
-        ...(body.metadata !== undefined ? { metadata: asJson(body.metadata) } : {}),
+        ...(body.metadata !== undefined
+          ? { metadata: asJson(sanitizeEntityMetadata(body.metadata)) }
+          : {}),
       },
     });
 
@@ -242,121 +388,6 @@ entitiesRouter.delete("/:id", authRequired, requireRoles("AGENCY"), async (req, 
       before: snapshotEntity(existing),
     });
     res.status(204).send();
-  } catch (e) {
-    next(e);
-  }
-});
-
-entitiesRouter.patch("/groups/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
-  try {
-    const agency = await getAgencyForUser(req.user!.id);
-    if (!agency) return res.status(404).json({ error: "Agency not found" });
-
-    const existing = await prisma.entityGroup.findFirst({
-      where: { id: req.params.id, agencyId: agency.id },
-    });
-    if (!existing) return res.status(404).json({ error: "Group not found" });
-
-    const body = z
-      .object({
-        name: z.string().min(2).optional(),
-        description: z.string().optional(),
-        entityIds: z.array(z.string()).min(1).optional(),
-      })
-      .parse(req.body);
-
-    if (body.entityIds) {
-      const ownedCount = await prisma.entity.count({
-        where: { agencyId: agency.id, id: { in: body.entityIds } },
-      });
-      if (ownedCount !== body.entityIds.length) {
-        return res.status(400).json({ error: "One or more selected entities are invalid" });
-      }
-    }
-
-    const group = await prisma.$transaction(async (tx) => {
-      if (body.entityIds) {
-        await tx.entityGroupItem.deleteMany({ where: { groupId: existing.id } });
-        await tx.entityGroupItem.createMany({
-          data: body.entityIds.map((entityId, idx) => ({
-            groupId: existing.id,
-            entityId,
-            sortOrder: idx,
-          })),
-        });
-      }
-
-      return tx.entityGroup.update({
-        where: { id: existing.id },
-        data: {
-          ...(body.name !== undefined ? { name: body.name.trim() } : {}),
-          ...(body.description !== undefined
-            ? { description: body.description?.trim() || null }
-            : {}),
-        },
-        include: { items: { include: { entity: true }, orderBy: { sortOrder: "asc" } } },
-      });
-    });
-
-    res.json(serializeGroup(group));
-  } catch (e) {
-    next(e);
-  }
-});
-
-entitiesRouter.delete("/groups/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
-  try {
-    const agency = await getAgencyForUser(req.user!.id);
-    if (!agency) return res.status(404).json({ error: "Agency not found" });
-
-    const existing = await prisma.entityGroup.findFirst({
-      where: { id: req.params.id, agencyId: agency.id },
-    });
-    if (!existing) return res.status(404).json({ error: "Group not found" });
-
-    await prisma.entityGroup.delete({ where: { id: existing.id } });
-    res.status(204).send();
-  } catch (e) {
-    next(e);
-  }
-});
-
-entitiesRouter.post("/groups", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
-  try {
-    const agency = await getAgencyForUser(req.user!.id);
-    if (!agency) return res.status(404).json({ error: "Agency not found" });
-
-    const body = z
-      .object({
-        name: z.string().min(2),
-        description: z.string().optional(),
-        entityIds: z.array(z.string()).min(1, "Select at least one entity"),
-      })
-      .parse(req.body);
-
-    const ownedCount = await prisma.entity.count({
-      where: { agencyId: agency.id, id: { in: body.entityIds } },
-    });
-    if (ownedCount !== body.entityIds.length) {
-      return res.status(400).json({ error: "One or more selected entities are invalid" });
-    }
-
-    const group = await prisma.entityGroup.create({
-      data: {
-        agencyId: agency.id,
-        name: body.name.trim(),
-        description: body.description?.trim() || undefined,
-        items: {
-          create: body.entityIds.map((entityId, idx) => ({
-            entityId,
-            sortOrder: idx,
-          })),
-        },
-      },
-      include: { items: { include: { entity: true }, orderBy: { sortOrder: "asc" } } },
-    });
-
-    res.status(201).json(serializeGroup(group));
   } catch (e) {
     next(e);
   }

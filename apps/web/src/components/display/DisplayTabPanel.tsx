@@ -2,15 +2,18 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   displayTourPrice,
   formatDisplayMoney,
+  isRichTextEmpty,
   isUsableImageUrl,
   MAX_AGENCY_HERO_SLIDES,
   MEDIA,
+  stripRichHtml,
 } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
+import { RichTextEditor } from "../richtext/RichTextEditor";
 import {
   DisplayCompactRow,
   DisplayFieldHint,
@@ -278,7 +281,9 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               heroImages,
               featuredImageUrl,
               whoWeAreTitle: nextConfig.content.whoWeAreTitle.trim() || "WHO WE ARE",
-              whoWeAreDescription: nextConfig.content.whoWeAreDescription.trim(),
+              whoWeAreDescription: isRichTextEmpty(nextConfig.content.whoWeAreDescription)
+                ? ""
+                : nextConfig.content.whoWeAreDescription,
               highlights: nextConfig.content.highlights.map((h) => h.trim()).filter(Boolean),
             },
             gallery,
@@ -414,7 +419,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       : [];
     const pkg: DisplayPackage = {
       title: tour.title,
-      location: districts[0] || tour.summary || `${tour.days} day tour`,
+      location: districts[0] || stripRichHtml(tour.summary) || `${tour.days} day tour`,
       priceLabel: `${formatDisplayMoney(displayTourPrice(tour), "USD")} / per person`,
       imageUrl: tour.coverUrl || "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
       tourId: tour.id,
@@ -782,7 +787,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
     const entry: DisplayOffer = {
       title: offerForm.title.trim(),
-      description: offerForm.description.trim(),
+      description: isRichTextEmpty(offerForm.description) ? "" : offerForm.description,
       priceLabel: offerForm.priceLabel.trim(),
       badge: offerForm.badge?.trim() || undefined,
       imageUrl: offerForm.imageUrl?.trim() || undefined,
@@ -933,7 +938,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       id: transportForm.id.trim(),
       name: transportForm.name.trim(),
       variant: transportForm.variant?.trim() || undefined,
-      description: transportForm.description.trim(),
+      description: isRichTextEmpty(transportForm.description) ? "" : transportForm.description,
       seating: transportForm.seating.trim(),
       luggage: transportForm.luggage.trim(),
     };
@@ -1192,12 +1197,13 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               </label>
               <label>
                 Description
-                <textarea
+                <RichTextEditor
                   rows={4}
                   value={content.whoWeAreDescription}
-                  onChange={(e) => updateContent({ whoWeAreDescription: e.target.value })}
+                  onChange={(whoWeAreDescription) => updateContent({ whoWeAreDescription })}
                   placeholder="A short introduction about your agency, team, and what makes your trips special."
                   maxLength={600}
+                  aria-label="Who we are description"
                 />
                 <DisplayFieldHint>
                   Keep it brief — 2–4 sentences works best. If left empty, your agency profile description may appear instead.
@@ -2156,10 +2162,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               />
             </ModalField>
             <ModalField label="Description" full>
-              <textarea
+              <RichTextEditor
                 rows={3}
                 value={offerForm.description}
-                onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })}
+                onChange={(description) => setOfferForm({ ...offerForm, description })}
+                aria-label="Offer description"
               />
             </ModalField>
             <ModalField label="Price / savings label">
@@ -2247,13 +2254,14 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
               />
             </ModalField>
             <ModalField label="Description" full>
-              <textarea
+              <RichTextEditor
                 rows={3}
                 value={transportForm.description}
-                onChange={(e) =>
-                  setTransportForm({ ...transportForm, description: e.target.value })
+                onChange={(description) =>
+                  setTransportForm({ ...transportForm, description })
                 }
                 placeholder="Comfortable for small groups with room for luggage."
+                aria-label="Vehicle description"
               />
             </ModalField>
             <ModalField label="Seating">

@@ -179,3 +179,10 @@ export {
   type SelectedPackageInput,
   type TrialStatusView,
 } from "./trial.js";
+
+export {
+  isRichTextEmpty,
+  normalizeRichHtml,
+  sanitizeRichHtml,
+  stripRichHtml,
+} from "./richText.js";

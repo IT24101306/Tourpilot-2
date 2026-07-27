@@ -6,6 +6,7 @@ import {
   validateOfferDates,
 } from "../lib/offers.js";
 import { prisma } from "../lib/prisma.js";
+import { sanitizeOptionalRichText } from "../lib/sanitizeRichText.js";
 
 export const tourOfferNewBodySchema = z.object({
   title: z.string().min(1),
@@ -170,7 +171,7 @@ export async function syncTourOfferLinksInTx(
       data: {
         agencyId,
         title: d.title.trim(),
-        description: d.description?.trim() || null,
+        description: sanitizeOptionalRichText(d.description) ?? null,
         imageUrl: d.imageUrl?.trim() || null,
         rewardText: d.rewardText.trim(),
         registrationCap: d.registrationCap,

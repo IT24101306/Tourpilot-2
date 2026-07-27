@@ -19,6 +19,7 @@ import { agencyHasFeature, requireAgencyFeature, serializeAgencyFeatures } from 
 import { asJson } from "../utils/json.js";
 
 import { storedImageUrlSchema, storedImageUrlWithFallback, optionalImageUrlSchema } from "../lib/imageUrlSchema.js";
+import { sanitizeOptionalRichText } from "../lib/sanitizeRichText.js";
 import {
   buildSectionsPayload,
   enrichGalleryWithEntities,
@@ -861,7 +862,7 @@ agenciesRouter.post("/mine/offers", authRequired, requireRoles("AGENCY"), requir
       data: {
         agencyId: agency.id,
         title: body.title,
-        description: body.description,
+        description: sanitizeOptionalRichText(body.description) ?? null,
         imageUrl: body.imageUrl,
         rewardText: body.rewardText,
         offerMonth: body.offerMonth ?? null,

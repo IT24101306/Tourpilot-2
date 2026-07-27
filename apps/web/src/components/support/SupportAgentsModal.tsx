@@ -4,6 +4,7 @@ import {
   type SupportContent,
 } from "@tourpilot/shared";
 import { DashboardModal } from "../DashboardModal";
+import { RichTextHtml } from "../richtext/RichTextHtml";
 import { api } from "../../api/client";
 
 type Props = {
@@ -48,7 +49,7 @@ export function SupportAgentsModal({ open, onClose }: Props) {
               <span className="support-agent-card__price">{agent.priceLabel}</span>
             </div>
             <p className="support-agent-card__service">{agent.service}</p>
-            <p className="support-agent-card__desc muted">{agent.description}</p>
+            <RichTextHtml html={agent.description} className="support-agent-card__desc muted" />
             <a href={`tel:${agent.phone}`} className="support-agent-card__phone">
               Call {agent.phoneDisplay}
             </a>

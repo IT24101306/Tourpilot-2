@@ -6,6 +6,7 @@ import type { InfluencerTour, ReferralCode } from "../../pages/influencer/types"
 import { shareLinkForCode } from "../../pages/influencer/types";
 import { CoverImage } from "../CoverImage";
 import { DashboardModal } from "../DashboardModal";
+import { RichTextHtml } from "../richtext/RichTextHtml";
 
 type AgencyPreview = {
   id: string;
@@ -111,7 +112,9 @@ export function InfluencerTourDetailModal({
               </div>
             )}
           </dl>
-          {tour.summary && <p className="influencer-tour-detail-summary">{tour.summary}</p>}
+          {tour.summary && (
+            <RichTextHtml html={tour.summary} className="influencer-tour-detail-summary" />
+          )}
         </section>
 
         <section className="influencer-tour-detail-agency">
@@ -148,7 +151,10 @@ export function InfluencerTourDetailModal({
                 </div>
               </div>
               {agency.description && (
-                <p className="influencer-tour-detail-agency-desc">{agency.description}</p>
+                <RichTextHtml
+                  html={agency.description}
+                  className="influencer-tour-detail-agency-desc"
+                />
               )}
             </>
           ) : (

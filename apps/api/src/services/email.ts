@@ -1,4 +1,5 @@
 import type { Transporter } from "nodemailer";
+import { sanitizeRichHtml, stripRichHtml } from "@tourpilot/shared";
 import { config } from "../lib/config.js";
 import {
   applyEmailTemplate,
@@ -619,7 +620,8 @@ export function promotionalEmail(params: {
   offerTitle?: string;
   offerUrl?: string;
 }) {
-  const lines = [`Hello ${params.recipientName},`, "", params.body];
+  const plainBody = stripRichHtml(params.body) || params.body;
+  const lines = [`Hello ${params.recipientName},`, "", plainBody];
   if (params.offerTitle && params.offerUrl) {
     lines.push("", `Featured offer: ${params.offerTitle}`, params.offerUrl);
   }
@@ -637,12 +639,17 @@ export function promotionalEmail(params: {
       ? `<p><a href="${escapeHtml(params.offerUrl)}" style="display:inline-block;padding:10px 18px;background:#0f766e;color:#fff;text-decoration:none;border-radius:6px">View ${escapeHtml(params.offerTitle)}</a></p>`
       : "";
 
+  const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(params.body);
+  const bodyHtml = looksLikeHtml
+    ? sanitizeRichHtml(params.body)
+    : params.body
+        .split(/\n+/)
+        .filter(Boolean)
+        .map((p) => `<p>${escapeHtml(p)}</p>`)
+        .join("\n");
+
   const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
-${params.body
-  .split(/\n+/)
-  .filter(Boolean)
-  .map((p) => `<p>${escapeHtml(p)}</p>`)
-  .join("\n")}
+${bodyHtml}
 ${posterHtml}
 ${offerHtml}
 <p>— TourPilot</p>`;

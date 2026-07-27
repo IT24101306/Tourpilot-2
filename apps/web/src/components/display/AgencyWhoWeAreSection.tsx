@@ -1,5 +1,7 @@
 import { SocialLineIcon } from "../icons/LineIcons";
+import { RichTextHtml } from "../richtext/RichTextHtml";
 import { SOCIAL_PLATFORMS, type DisplaySocialLink, type WhoWeAreImage } from "./displayTypes";
+import { isRichTextEmpty } from "@tourpilot/shared";
 
 type Props = {
   title: string;
@@ -21,7 +23,9 @@ export function AgencyWhoWeAreSection({
   images,
   fallbackDescription,
 }: Props) {
-  const body = description.trim() || fallbackDescription?.trim() || "";
+  const body = !isRichTextEmpty(description)
+    ? description
+    : fallbackDescription?.trim() || "";
   const links = socialLinks.filter((l) => l.platform.trim() && l.url.trim());
   const badges = images.filter((img) => img.url.trim());
 
@@ -36,7 +40,9 @@ export function AgencyWhoWeAreSection({
       </div>
 
       <div className="agency-who-we-are__body">
-        {body && <p className="agency-who-we-are__description">{body}</p>}
+        {body ? (
+          <RichTextHtml html={body} className="agency-who-we-are__description" />
+        ) : null}
       </div>
 
       {badges.length > 0 && (

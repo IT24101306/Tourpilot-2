@@ -35,6 +35,16 @@
       .replace(/"/g, "&quot;");
   }
 
+  /** Allow basic rich-text tags already sanitized by the API. */
+  function richTextHtml(s) {
+    var raw = String(s == null ? "" : s);
+    if (!/<\/?[a-z][\s\S]*>/i.test(raw)) return escapeHtml(raw);
+    return raw
+      .replace(/<\/?(script|style|iframe|object|embed|link|meta|base)[^>]*>/gi, "")
+      .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+      .replace(/javascript\s*:/gi, "");
+  }
+
   /** Normalize legacy string lines or `{ text, bold, underline }` objects. */
   function normalizeLine(line) {
     if (typeof line === "string") {
@@ -300,7 +310,9 @@
               "</h3>"
             : "") +
           (content.termsBody
-            ? '<p class="mt-2 text-sm text-ink-500">' + escapeHtml(content.termsBody) + "</p>"
+            ? '<div class="mt-2 text-sm text-ink-500 rich-text-html">' +
+              richTextHtml(content.termsBody) +
+              "</div>"
             : "") +
           "</div>"
         : "";

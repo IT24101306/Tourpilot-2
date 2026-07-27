@@ -223,7 +223,17 @@ export function AgencyDashboard() {
 
   async function createGroup(e: FormEvent) {
     e.preventDefault();
-    if (!token || selectedEntityIds.length === 0 || !groupName.trim()) return;
+    if (!token) return;
+    const name = groupName.trim();
+    const entityIds = [...new Set(selectedEntityIds.filter(Boolean))];
+    if (!name) {
+      setGroupStatus("Enter a group name.");
+      return;
+    }
+    if (entityIds.length === 0) {
+      setGroupStatus("Select at least one entity.");
+      return;
+    }
 
     setGroupSaving(true);
     setGroupStatus("");
@@ -232,8 +242,8 @@ export function AgencyDashboard() {
         method: "POST",
         token,
         body: JSON.stringify({
-          name: groupName.trim(),
-          entityIds: selectedEntityIds,
+          name,
+          entityIds,
         }),
       });
       await refresh(token);
@@ -334,6 +344,10 @@ export function AgencyDashboard() {
     const offerErr = validateTourOfferLink(offerLink, { isPublished: tourForm.isPublished });
     if (offerErr) {
       setTourStatus(offerErr);
+      document.getElementById("tour-offer-link-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       return;
     }
 

@@ -1,6 +1,7 @@
 import { transportLabelFor } from "../display/transportOptions";
 import { newId } from "../../lib/newId";
 import { resolveTourBasePriceLkr } from "../../lib/tourFormPricing";
+import { isRichTextEmpty, normalizeRichHtml } from "@tourpilot/shared";
 
 export type TourKind = "READY_MADE" | "CUSTOM";
 
@@ -358,9 +359,15 @@ export function buildTourPlanPayload(
     tourKind,
     basePriceLkr,
     influencerCommissionPct: form.influencerCommissionPct,
-    influencerInstructions: form.influencerInstructions.trim() || undefined,
-    summary: form.summary.trim() || undefined,
-    description: form.description.trim() || undefined,
+    influencerInstructions: isRichTextEmpty(form.influencerInstructions)
+      ? undefined
+      : normalizeRichHtml(form.influencerInstructions, undefined) ?? undefined,
+    summary: isRichTextEmpty(form.summary)
+      ? undefined
+      : normalizeRichHtml(form.summary, undefined) ?? undefined,
+    description: isRichTextEmpty(form.description)
+      ? undefined
+      : normalizeRichHtml(form.description, undefined) ?? undefined,
     coverUrl: form.coverUrl.trim() || undefined,
     isPublished: form.isPublished,
     dayPlans: form.days.map((day) => ({

@@ -8,6 +8,7 @@ import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { ClientBrand } from "../components/ClientBrand";
 import { NotificationBell } from "../components/NotificationBell";
 import { LineUserIcon } from "../components/icons/LineIcons";
+import { RichTextHtml } from "../components/richtext/RichTextHtml";
 import { useAuth } from "../context/AuthContext";
 import { currentPath, loginPath } from "../utils/authRedirect";
 import { navLinkLightClass } from "../utils/navLinkClass";
@@ -134,7 +135,10 @@ export function TourDetailPage() {
             </div>
             <h1 className="tour-detail-title">{tour.title}</h1>
             {(tour.description || tour.summary) && (
-              <p className="tour-detail-desc">{tour.description || tour.summary}</p>
+              <RichTextHtml
+                html={tour.description || tour.summary}
+                className="tour-detail-desc"
+              />
             )}
           </div>
           <div className="tour-detail-intro__aside">

@@ -5,7 +5,10 @@ import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { EntityTypeLineIcon } from "../../components/icons/LineIcons";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
+import { RichTextEditor } from "../../components/richtext/RichTextEditor";
+import { RichTextHtml } from "../../components/richtext/RichTextHtml";
 import { AgencyEntity, AgencyGroup } from "./types";
+import { isRichTextEmpty, stripRichHtml } from "@tourpilot/shared";
 
 function formatType(type: string) {
   return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, " ");
@@ -21,6 +24,7 @@ export function AgencyGroupsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [statusTone, setStatusTone] = useState<"ok" | "error">("ok");
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "", entityIds: [] as string[] });
 
@@ -34,7 +38,11 @@ export function AgencyGroupsPage() {
         setGroups(g);
         setEntities(e);
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        setStatusTone("error");
+        setStatus(err instanceof ApiError ? err.message : "Failed to load groups");
+      });
   }, [token]);
 
   const selectedGroup = useMemo(
@@ -71,19 +79,59 @@ export function AgencyGroupsPage() {
     }
   }
 
+  async function persistGroup(payload: {
+    name: string;
+    description?: string;
+    entityIds: string[];
+  }) {
+    if (!token) throw new Error("Sign in again, then retry.");
+    const body = JSON.stringify(payload);
+    if (editingGroupId) {
+      return api<AgencyGroup>(`/entities/groups/${editingGroupId}`, {
+        method: "PATCH",
+        token,
+        body,
+      });
+    }
+    return api<AgencyGroup>("/entities/groups", {
+      method: "POST",
+      token,
+      body,
+    });
+  }
+
   function saveGroup(e: FormEvent) {
     e.preventDefault();
-    if (!token || !groupForm.name.trim()) return;
-    if (groupForm.entityIds.length === 0) {
+    if (!token) {
+      setStatusTone("error");
+      setStatus("Sign in again, then retry.");
+      return;
+    }
+
+    const name = groupForm.name.trim();
+    const entityIds = [...new Set(groupForm.entityIds.filter(Boolean))];
+    if (!name) {
+      setStatusTone("error");
+      setStatus("Enter a group name above, then create the group.");
+      document.getElementById("group-name")?.focus();
+      return;
+    }
+    if (entityIds.length === 0) {
+      setStatusTone("error");
       setStatus("Select at least one entity for this group.");
       return;
     }
 
     const isEditing = editingGroupId !== null;
+    const description = isRichTextEmpty(groupForm.description)
+      ? undefined
+      : groupForm.description;
     const entityNames = entities
-      .filter((e) => groupForm.entityIds.includes(e.id))
-      .map((e) => e.name)
+      .filter((ent) => entityIds.includes(ent.id))
+      .map((ent) => ent.name)
       .join(", ");
+
+    const payload = { name, description, entityIds };
 
     requestConfirm({
       title: isEditing ? "Save changes to this group?" : "Create entity group?",
@@ -92,12 +140,12 @@ export function AgencyGroupsPage() {
         : "Reuse this bundle when building itineraries and tours.",
       confirmLabel: isEditing ? "Save changes" : "Create group",
       summary: [
-        { label: "Name", value: groupForm.name.trim() },
+        { label: "Name", value: name },
         {
           label: "Description",
-          value: groupForm.description.trim() || "—",
+          value: description ? stripRichHtml(description) || "—" : "—",
         },
-        { label: "Entities", value: `${groupForm.entityIds.length} selected` },
+        { label: "Entities", value: `${entityIds.length} selected` },
         {
           label: "Includes",
           value: entityNames.length > 120 ? `${entityNames.slice(0, 120)}…` : entityNames,
@@ -107,31 +155,24 @@ export function AgencyGroupsPage() {
         setSaving(true);
         setStatus("");
         try {
-          const body = JSON.stringify({
-            name: groupForm.name.trim(),
-            description: groupForm.description.trim() || undefined,
-            entityIds: groupForm.entityIds,
-          });
-          const saved = isEditing
-            ? await api<AgencyGroup>(`/entities/groups/${editingGroupId}`, {
-                method: "PATCH",
-                token,
-                body,
-              })
-            : await api<AgencyGroup>("/entities/groups", {
-                method: "POST",
-                token,
-                body,
-              });
+          const saved = await persistGroup(payload);
           setEditingGroupId(null);
           setGroupForm({ name: "", description: "", entityIds: [] });
           setEntitySearch("");
           await refresh();
           setSelectedGroupId(saved.id);
-          setStatus(isEditing ? "Group updated." : "Group created.");
-          setTimeout(() => setStatus(""), 2500);
+          setStatusTone("ok");
+          setStatus(
+            isEditing
+              ? `Group updated with ${saved.items.length} entities.`
+              : `Group created with ${saved.items.length} entities.`
+          );
+          setTimeout(() => setStatus(""), 3000);
         } catch (err) {
-          setStatus(err instanceof ApiError ? err.message : "Failed to save group");
+          const message = err instanceof ApiError ? err.message : "Failed to save group";
+          setStatusTone("error");
+          setStatus(message);
+          throw err;
         } finally {
           setSaving(false);
         }
@@ -148,6 +189,7 @@ export function AgencyGroupsPage() {
     });
     setEntitySearch("");
     setTypeFilter("all");
+    setStatusTone("ok");
     setStatus(`Editing "${group.name}" — add or remove entities, then save.`);
   }
 
@@ -161,6 +203,7 @@ export function AgencyGroupsPage() {
     });
     setEntitySearch("");
     setTypeFilter("all");
+    setStatusTone("ok");
     setStatus("Editing a copy — adjust entities and save it as a new group.");
   }
 
@@ -187,10 +230,13 @@ export function AgencyGroupsPage() {
           if (editingGroupId === group.id) cancelEdit();
           setSelectedGroupId(null);
           await refresh();
+          setStatusTone("ok");
           setStatus("Group deleted.");
           setTimeout(() => setStatus(""), 2500);
         } catch (err) {
+          setStatusTone("error");
           setStatus(err instanceof ApiError ? err.message : "Failed to delete group");
+          throw err;
         }
       },
     });
@@ -225,7 +271,11 @@ export function AgencyGroupsPage() {
         subtitle="Bundle hotels, stops, and experiences into reusable sets for itineraries and tour planning."
       />
 
-      {status && <p className="groups-toast">{status}</p>}
+      {status && (
+        <p className={`groups-toast${statusTone === "error" ? " groups-toast--error" : ""}`}>
+          {status}
+        </p>
+      )}
 
       <div className="groups-studio-layout">
         <form className="groups-form-card" onSubmit={saveGroup}>
@@ -246,18 +296,23 @@ export function AgencyGroupsPage() {
                 type="text"
                 placeholder="e.g. Cultural Triangle highlights"
                 value={groupForm.name}
-                onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                onChange={(e) =>
+                  setGroupForm((prev) => ({ ...prev, name: e.target.value }))
+                }
                 required
               />
             </div>
             <div className="field full">
               <label htmlFor="group-desc">Description</label>
-              <textarea
+              <RichTextEditor
                 id="group-desc"
                 rows={2}
                 placeholder="Optional — when to use this bundle"
                 value={groupForm.description}
-                onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
+                onChange={(description) =>
+                  setGroupForm((prev) => ({ ...prev, description }))
+                }
+                aria-label="Group description"
               />
             </div>
           </div>
@@ -364,11 +419,7 @@ export function AgencyGroupsPage() {
                 Cancel
               </button>
             )}
-            <button
-              type="submit"
-              className="btn btn-primary groups-submit"
-              disabled={saving || !groupForm.name.trim() || groupForm.entityIds.length === 0}
-            >
+            <button type="submit" className="btn btn-primary groups-submit" disabled={saving}>
               {saving
                 ? editingGroupId
                   ? "Saving…"
@@ -378,6 +429,13 @@ export function AgencyGroupsPage() {
                   : "Create group"}
             </button>
           </div>
+          {!groupForm.name.trim() || groupForm.entityIds.length === 0 ? (
+            <p className="muted" style={{ marginTop: 8, fontSize: "0.85rem" }}>
+              {!groupForm.name.trim()
+                ? "Enter a group name, then select entities and create."
+                : "Select at least one entity, then create."}
+            </p>
+          ) : null}
         </form>
 
         <aside className="groups-library">
@@ -401,8 +459,10 @@ export function AgencyGroupsPage() {
                   >
                     <strong>{g.name}</strong>
                     <span className="muted">{g.items.length} entities</span>
-                    {g.description && (
-                      <span className="groups-library-desc">{g.description}</span>
+                    {g.description && !isRichTextEmpty(g.description) && (
+                      <span className="groups-library-desc">
+                        {stripRichHtml(g.description)}
+                      </span>
                     )}
                   </button>
                 </li>
@@ -423,15 +483,14 @@ export function AgencyGroupsPage() {
                   Close
                 </button>
               </div>
-              {selectedGroup.description && (
-                <p className="muted groups-detail-desc">{selectedGroup.description}</p>
+              {selectedGroup.description && !isRichTextEmpty(selectedGroup.description) && (
+                <RichTextHtml
+                  html={selectedGroup.description}
+                  className="muted groups-detail-desc"
+                />
               )}
               <div className="groups-detail-actions">
-                <button
-                  type="button"
-                  className="mini-btn"
-                  onClick={() => startEdit(selectedGroup)}
-                >
+                <button type="button" className="mini-btn" onClick={() => startEdit(selectedGroup)}>
                   Edit
                 </button>
                 <button
@@ -443,7 +502,7 @@ export function AgencyGroupsPage() {
                 </button>
                 <button
                   type="button"
-                  className="mini-btn mini-btn--danger"
+                  className="mini-btn"
                   onClick={() => deleteGroup(selectedGroup)}
                 >
                   Delete
@@ -452,11 +511,9 @@ export function AgencyGroupsPage() {
               <ul className="groups-detail-entities">
                 {selectedGroup.items.map((item) => (
                   <li key={item.entity.id}>
-                    <span className="groups-entity-icon" aria-hidden="true">
-                      <EntityTypeLineIcon type={item.entity.type} size={16} />
-                    </span>
+                    <EntityTypeLineIcon type={item.entity.type} size={14} />
                     <span>
-                      <strong>{item.entity.name}</strong>
+                      {item.entity.name}
                       <span className="muted">
                         {" "}
                         · {formatType(item.entity.type)}

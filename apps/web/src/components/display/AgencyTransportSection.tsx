@@ -1,4 +1,5 @@
 import { TransportVehicleIcon } from "../icons/LineIcons";
+import { RichTextHtml } from "../richtext/RichTextHtml";
 import { AGENCY_TRANSPORT_OPTIONS, type TransportOption } from "./transportOptions";
 
 type Props = {
@@ -34,7 +35,7 @@ export function AgencyTransportSection({ agencyName, options = AGENCY_TRANSPORT_
                   <span className="agency-transport-card__variant">{option.variant}</span>
                 ) : null}
               </div>
-              <p className="agency-transport-card__desc">{option.description}</p>
+              <RichTextHtml html={option.description} className="agency-transport-card__desc" />
               <p className="agency-transport-card__meta">
                 Seats: {option.seating}
                 <span aria-hidden="true"> · </span>

@@ -5,7 +5,7 @@ import { FormatTourPrice } from "../components/currency/FormatLkr";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import { DEFAULT_TOUR_COVER_URL } from "@tourpilot/shared";
+import { DEFAULT_TOUR_COVER_URL, stripRichHtml } from "@tourpilot/shared";
 
 export type SavedTourItem = {
   id: string;
@@ -72,7 +72,9 @@ export function TouristSavedPage() {
               <p className="saved-tour-card-meta muted">
                 {tour.days} days · <FormatTourPrice amount={tour.publicPriceLkr} />
               </p>
-              {tour.summary && <p className="saved-tour-card-summary">{tour.summary}</p>}
+              {tour.summary && (
+                <p className="saved-tour-card-summary">{stripRichHtml(tour.summary)}</p>
+              )}
               <div className="saved-tour-card-actions">
                 <Link to={tour.tourPath} className="btn btn-teal">
                   View tour

@@ -3,7 +3,7 @@ import type { InfluencerTour, ReferralCode } from "../../pages/influencer/types"
 import { shareLinkForCode } from "../../pages/influencer/types";
 
 import { CoverImage } from "../CoverImage";
-import { MEDIA } from "@tourpilot/shared";
+import { MEDIA, stripRichHtml } from "@tourpilot/shared";
 
 type Props = {
   tour: InfluencerTour;
@@ -30,7 +30,9 @@ export function InfluencerTourCard({ tour, existingCode, onCreate, onCopy, onVie
               You earn <strong>LKR {tour.influencerCommissionLkr.toLocaleString()}</strong> per booking
             </p>
           )}
-          {tour.summary && <p className="partner-tour-summary">{tour.summary}</p>}
+          {tour.summary && (
+            <p className="partner-tour-summary">{stripRichHtml(tour.summary)}</p>
+          )}
           <span className="partner-tour-view-hint">View tour & agency →</span>
         </div>
       </button>

@@ -1,5 +1,7 @@
 /** TourPilot support agents modal — admin-editable copy. */
 
+import { isRichTextEmpty, sanitizeRichHtml } from "./richText.js";
+
 export type SupportAgent = {
   id: string;
   name: string;
@@ -88,7 +90,9 @@ export function parseSupportContent(raw: unknown): SupportContent {
       const name = typeof a.name === "string" ? a.name : "";
       const role = typeof a.role === "string" ? a.role : "";
       const service = typeof a.service === "string" ? a.service : "";
-      const description = typeof a.description === "string" ? a.description : "";
+      const descriptionRaw = typeof a.description === "string" ? a.description : "";
+      const descriptionClean = sanitizeRichHtml(descriptionRaw);
+      const description = isRichTextEmpty(descriptionClean) ? "" : descriptionClean;
       const priceUsd = Number(a.priceUsd);
       const priceLabel =
         typeof a.priceLabel === "string" && a.priceLabel.trim()

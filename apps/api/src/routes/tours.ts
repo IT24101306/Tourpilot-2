@@ -13,10 +13,17 @@ import {
 import { slugify } from "../utils/slug.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import { agencyHasFeature, serializeAgencyFeatures } from "../lib/agencyFeatures.js";
+import { sanitizeOptionalRichText } from "../lib/sanitizeRichText.js";
 import {
   recordAuditEvent,
   snapshotTour,
 } from "../services/auditLog.js";
+
+function defaultTourSummary(kindLabel: string, dayCount: number, summary?: string | null) {
+  const cleaned = sanitizeOptionalRichText(summary);
+  if (cleaned) return cleaned;
+  return `${kindLabel} ${dayCount} day tour`;
+}
 
 export const toursRouter = Router();
 
@@ -280,15 +287,18 @@ toursRouter.post("/with-plan", authRequired, requireRoles("AGENCY"), async (req,
           slug,
           days: dayCount,
           tourKind: body.tourKind,
-          summary: body.summary?.trim() || `${kindLabel} ${dayCount} day tour`,
-          description: body.description?.trim() || null,
+          summary: defaultTourSummary(kindLabel, dayCount, body.summary),
+          description: sanitizeOptionalRichText(body.description) ?? null,
           coverUrl: body.coverUrl?.trim() || null,
           basePriceLkr: body.basePriceLkr ?? 0,
           ...(body.influencerCommissionPct !== undefined
             ? { influencerCommissionPct: body.influencerCommissionPct }
             : {}),
           ...(body.influencerInstructions !== undefined
-            ? { influencerInstructions: body.influencerInstructions.trim() || null }
+            ? {
+                influencerInstructions:
+                  sanitizeOptionalRichText(body.influencerInstructions) ?? null,
+              }
             : {}),
           isPublished: willPublish,
         },
@@ -388,15 +398,18 @@ toursRouter.put("/:id/with-plan", authRequired, requireRoles("AGENCY"), async (r
           slug,
           days: dayCount,
           tourKind: body.tourKind,
-          summary: body.summary?.trim() || `${kindLabel} ${dayCount} day tour`,
-          description: body.description?.trim() || null,
+          summary: defaultTourSummary(kindLabel, dayCount, body.summary),
+          description: sanitizeOptionalRichText(body.description) ?? null,
           coverUrl: body.coverUrl?.trim() || null,
           basePriceLkr: body.basePriceLkr ?? Number(existing.basePriceLkr),
           ...(body.influencerCommissionPct !== undefined
             ? { influencerCommissionPct: body.influencerCommissionPct }
             : {}),
           ...(body.influencerInstructions !== undefined
-            ? { influencerInstructions: body.influencerInstructions.trim() || null }
+            ? {
+                influencerInstructions:
+                  sanitizeOptionalRichText(body.influencerInstructions) ?? null,
+              }
             : {}),
           ...(body.isPublished !== undefined ? { isPublished: body.isPublished } : {}),
         },
@@ -505,8 +518,12 @@ toursRouter.patch("/:id", authRequired, requireRoles("AGENCY"), async (req, res,
       where: { id: existing.id },
       data: {
         ...(body.title !== undefined ? { title: body.title.trim(), slug } : {}),
-        ...(body.summary !== undefined ? { summary: body.summary } : {}),
-        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.summary !== undefined
+          ? { summary: sanitizeOptionalRichText(body.summary) ?? null }
+          : {}),
+        ...(body.description !== undefined
+          ? { description: sanitizeOptionalRichText(body.description) ?? null }
+          : {}),
         ...(body.basePriceLkr !== undefined ? { basePriceLkr: body.basePriceLkr } : {}),
         ...(body.seasonTag !== undefined ? { seasonTag: body.seasonTag } : {}),
         ...(body.districtTags !== undefined ? { districtTags: body.districtTags } : {}),
@@ -612,8 +629,8 @@ toursRouter.post("/", authRequired, requireRoles("AGENCY"), async (req, res, nex
         agencyId: agency.id,
         title: body.title,
         slug,
-        summary: body.summary,
-        description: body.description,
+        summary: sanitizeOptionalRichText(body.summary) ?? null,
+        description: sanitizeOptionalRichText(body.description) ?? null,
         days: body.days,
         basePriceLkr: body.basePriceLkr,
         seasonTag: body.seasonTag,
