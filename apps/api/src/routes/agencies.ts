@@ -2,7 +2,6 @@ import { Router } from "express";
 
 import {
   DEFAULT_TOUR_COVER_URL,
-  formatDisplayMoney,
   MAX_AGENCY_HERO_SLIDES,
   MEDIA,
   resolveImageUrl,
@@ -1281,10 +1280,16 @@ function resolvePackages(
   if (custom.length > 0) {
     return custom.map((p) => {
       const tour = p.tourId ? tourById.get(p.tourId) : undefined;
+      const listedLkr = tour
+        ? attachTourPricing(tour, commissionPct).publicPriceLkr
+        : typeof p.priceLkr === "number"
+          ? p.priceLkr
+          : undefined;
       return {
         ...p,
         imageUrl: resolveImageUrl(p.imageUrl?.trim() || tour?.coverUrl, DEFAULT_TOUR_COVER_URL),
         tourId: p.tourId || tour?.id,
+        priceLkr: listedLkr,
       };
     });
   }
@@ -1293,10 +1298,13 @@ function resolvePackages(
     const districts = Array.isArray(t.districtTags)
       ? (t.districtTags as string[]).filter(Boolean)
       : [];
+    const listedLkr = attachTourPricing(t, commissionPct).publicPriceLkr;
     return {
       title: t.title,
       location: districts[0] || `${t.days} day tour`,
-      priceLabel: `${formatDisplayMoney(attachTourPricing(t, commissionPct).publicPriceLkr, "USD")} / per person`,
+      // Frontend converts priceLkr with the visitor's display currency.
+      priceLabel: "Contact for price",
+      priceLkr: listedLkr,
       imageUrl: resolveImageUrl(t.coverUrl, DEFAULT_TOUR_COVER_URL),
       tourId: t.id,
     };

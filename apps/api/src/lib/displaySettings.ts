@@ -51,6 +51,8 @@ export type DisplayPackage = {
   title: string;
   location: string;
   priceLabel: string;
+  /** LKR amount for live currency conversion on the public storefront. */
+  priceLkr?: number;
   imageUrl: string;
   tourId?: string;
 };
@@ -59,6 +61,7 @@ export type DisplayOffer = {
   title: string;
   description: string;
   priceLabel: string;
+  priceLkr?: number;
   badge?: string;
   imageUrl?: string;
 };
@@ -314,11 +317,14 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
       const location = String(row.location || "").trim();
       const priceLabel = String(row.priceLabel || "").trim();
       const imageUrl = String(row.imageUrl || "").trim();
+      const priceLkrRaw = Number(row.priceLkr);
+      const priceLkr = Number.isFinite(priceLkrRaw) && priceLkrRaw >= 0 ? priceLkrRaw : undefined;
       if (!title || !imageUrl) continue;
       packages.push({
         title,
         location,
         priceLabel: priceLabel || "Contact for price",
+        priceLkr,
         imageUrl,
         tourId: typeof row.tourId === "string" ? row.tourId : undefined,
       });
@@ -334,11 +340,14 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
       const title = String(row.title || "").trim();
       const description = String(row.description || "").trim();
       const priceLabel = String(row.priceLabel || "").trim();
+      const priceLkrRaw = Number(row.priceLkr);
+      const priceLkr = Number.isFinite(priceLkrRaw) && priceLkrRaw >= 0 ? priceLkrRaw : undefined;
       if (!title) continue;
       offers.push({
         title,
         description,
         priceLabel: priceLabel || "",
+        priceLkr,
         badge: typeof row.badge === "string" ? row.badge : undefined,
         imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : undefined,
       });

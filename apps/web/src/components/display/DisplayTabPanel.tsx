@@ -1,7 +1,6 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   displayTourPrice,
-  formatDisplayMoney,
   isRichTextEmpty,
   isUsableImageUrl,
   MAX_AGENCY_HERO_SLIDES,
@@ -13,6 +12,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
+import { DisplayPriceText } from "../currency/DisplayPriceText";
 import { ModuleHeader } from "../module/ModuleHeader";
 import { RichTextEditor } from "../richtext/RichTextEditor";
 import {
@@ -442,7 +442,8 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
     const pkg: DisplayPackage = {
       title: tour.title,
       location: districts[0] || stripRichHtml(tour.summary) || `${tour.days} day tour`,
-      priceLabel: `${formatDisplayMoney(displayTourPrice(tour), "USD")} / per person`,
+      priceLabel: "",
+      priceLkr: displayTourPrice(tour),
       imageUrl: tour.coverUrl || "https://images.unsplash.com/photo-1682687982501-1e58ab814714?auto=format&fit=crop&w=1200&q=80",
       tourId: tour.id,
     };
@@ -469,6 +470,10 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
       location: packageForm.location.trim(),
       priceLabel: packageForm.priceLabel.trim() || "Contact for price",
       imageUrl: packageForm.imageUrl.trim(),
+      priceLkr:
+        typeof packageForm.priceLkr === "number" && Number.isFinite(packageForm.priceLkr)
+          ? packageForm.priceLkr
+          : undefined,
     };
 
     const isNew = editPackageIndex === null;
@@ -1380,7 +1385,12 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                       title={p.title}
                       meta={
                         <span className="muted">
-                          {p.location} · {p.priceLabel}
+                          {p.location} ·{" "}
+                          <DisplayPriceText
+                            amountLkr={p.priceLkr}
+                            priceLabel={p.priceLabel}
+                            suffix=" / per person"
+                          />
                         </span>
                       }
                       onEdit={() => {
@@ -1626,7 +1636,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                       meta={
                         <span className="muted">
                           {o.badge && `${o.badge} · `}
-                          {o.priceLabel || o.description}
+                          <DisplayPriceText
+                            amountLkr={o.priceLkr}
+                            priceLabel={o.priceLabel || o.description}
+                            fallback={o.description || "—"}
+                          />
                         </span>
                       }
                       onEdit={() => {
@@ -1822,7 +1836,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
                 type="text"
                 value={packageForm.priceLabel}
                 onChange={(e) => setPackageForm({ ...packageForm, priceLabel: e.target.value })}
-                placeholder="LKR 49,000 / per person"
+                placeholder="e.g. Contact for price (live amount uses tour LKR)"
               />
             </ModalField>
             <ModalField label="Package image" full error={modalFieldErrors.imageUrl}>

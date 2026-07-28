@@ -96,6 +96,12 @@ export function AgencyInquirySection({
   }, [user?.email]);
 
   useEffect(() => {
+    if (BUDGET_CURRENCIES.includes(displayCurrency as BudgetCurrency)) {
+      setBudgetCurrency(displayCurrency as BudgetCurrency);
+    }
+  }, [displayCurrency]);
+
+  useEffect(() => {
     const preferred = user?.touristProfile?.displayCurrency as DisplayCurrency | undefined;
     if (preferred && BUDGET_CURRENCIES.includes(preferred as BudgetCurrency)) {
       setBudgetCurrency(preferred as BudgetCurrency);

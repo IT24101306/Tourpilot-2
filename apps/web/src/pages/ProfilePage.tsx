@@ -332,7 +332,7 @@ export function ProfilePage() {
           <TouristSavedPage />
         </section>
       )}
-      {user.role === "TOURIST" && <CurrencyPreferencePanel />}
+      <CurrencyPreferencePanel />
       {user.role === "AGENCY" && <AgencyLogoPanel />}
     </AccountProfileShell>
   );

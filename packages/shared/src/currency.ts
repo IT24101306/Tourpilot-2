@@ -150,3 +150,50 @@ export function formatFromLkr(
 ): string {
   return `From ${formatDisplayMoney(amountLkr, currency, rates)}`;
 }
+
+/** Convert a USD listing amount back to LKR using the rate table. */
+export function usdToLkr(
+  amountUsd: number,
+  rates?: Partial<LkrRateTable> | null
+): number {
+  const usd = Number(amountUsd);
+  if (!Number.isFinite(usd) || usd < 0) return 0;
+  const table = resolveLkrRates(rates);
+  return Math.round(usd * (table.USD || LKR_PER_USD));
+}
+
+/**
+ * Detect legacy baked labels like "$150.00 / per person" or "150 USD".
+ * Returns the USD numeric amount, or null if the label isn't a USD price.
+ */
+export function parseUsdAmountFromLabel(label: string): number | null {
+  const raw = String(label || "").trim();
+  if (!raw) return null;
+  const dollar = raw.match(/\$\s*([\d,]+(?:\.\d+)?)/);
+  const code = raw.match(/([\d,]+(?:\.\d+)?)\s*USD\b/i);
+  const match = dollar || code;
+  if (!match) return null;
+  const n = Number(match[1].replace(/,/g, ""));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** True when a freeform label looks like a hardcoded USD price. */
+export function isBakedUsdPriceLabel(label: string): boolean {
+  return parseUsdAmountFromLabel(label) != null;
+}
+
+/**
+ * Resolve an LKR amount for live display conversion.
+ * Prefers explicit LKR, then recovers LKR from legacy baked USD labels.
+ */
+export function resolveAmountLkrForDisplay(params: {
+  amountLkr?: number | null;
+  priceLabel?: string | null;
+  rates?: Partial<LkrRateTable> | null;
+}): number | null {
+  const direct = Number(params.amountLkr);
+  if (Number.isFinite(direct) && direct >= 0) return direct;
+  const usd = params.priceLabel ? parseUsdAmountFromLabel(params.priceLabel) : null;
+  if (usd == null) return null;
+  return usdToLkr(usd, params.rates);
+}

@@ -15,7 +15,8 @@ import { useAuth } from "../context/AuthContext";
 import { newId } from "../lib/newId";
 import { AgencyOfferFreeBanner } from "../components/discovery/AgencyOfferFreeBanner";
 import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
-import { FormatLkr, FormatTourPrice } from "../components/currency/FormatLkr";
+import { FormatLkr } from "../components/currency/FormatLkr";
+import { DisplayPriceText } from "../components/currency/DisplayPriceText";
 import { displayTourPrice } from "../lib/tourPricing";
 import { AgencyInquirySection } from "../components/inquiry/AgencyInquirySection";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
@@ -50,6 +51,7 @@ type Tour = {
   summary: string | null;
   days: number;
   basePriceLkr: number;
+  publicPriceLkr?: number;
   coverUrl: string | null;
 };
 
@@ -201,6 +203,7 @@ function PackageCard({
 }) {
   const image = resolveImageUrl(pkg.imageUrl?.trim() || tour?.coverUrl, DEFAULT_TOUR_COVER_URL);
   const href = tour ? `/tours/${agencySlug}/${tour.slug}` : null;
+  const amountLkr = tour != null ? displayTourPrice(tour) : pkg.priceLkr;
   const inner = (
     <>
       <CoverImage src={image} className="agency-package-card-bg" />
@@ -213,11 +216,11 @@ function PackageCard({
         <h3>{pkg.title}</h3>
         <p>{pkg.location}</p>
         <strong className="agency-package-price">
-          {tour ? (
-            <FormatTourPrice amount={displayTourPrice(tour)} />
-          ) : (
-            pkg.priceLabel
-          )}
+          <DisplayPriceText
+            amountLkr={amountLkr}
+            priceLabel={pkg.priceLabel}
+            suffix=" / per person"
+          />
         </strong>
         {href ? (
           <span className="agency-package-cta agency-package-cta--btn">View itinerary</span>
@@ -522,7 +525,12 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
                       <h3>{offer.title}</h3>
                       <RichTextHtml html={offer.description} />
                       {offer.priceLabel && (
-                        <p className="agency-offer-price">{offer.priceLabel}</p>
+                        <p className="agency-offer-price">
+                          <DisplayPriceText
+                            amountLkr={offer.priceLkr}
+                            priceLabel={offer.priceLabel}
+                          />
+                        </p>
                       )}
                     </div>
                   </article>

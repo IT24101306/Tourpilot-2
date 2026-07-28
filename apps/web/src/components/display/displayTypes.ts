@@ -73,6 +73,8 @@ export type DisplayPackage = {
   title: string;
   location: string;
   priceLabel: string;
+  /** LKR amount for live currency conversion (preferred over priceLabel). */
+  priceLkr?: number;
   imageUrl: string;
   tourId?: string;
 };
@@ -81,6 +83,8 @@ export type DisplayOffer = {
   title: string;
   description: string;
   priceLabel: string;
+  /** Optional LKR amount for live currency conversion. */
+  priceLkr?: number;
   badge?: string;
   imageUrl?: string;
 };

@@ -75,19 +75,14 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, [refreshRates]);
 
-  useEffect(() => {
-    if (!isTourist) return;
-    const preferred = user?.touristProfile?.displayCurrency;
-    if (preferred && isDisplayCurrency(preferred)) {
-      setCurrencyState(preferred);
-      localStorage.setItem(STORAGE_KEY, preferred);
-    }
-  }, [isTourist, user?.touristProfile?.displayCurrency]);
-
   const setCurrency = useCallback(
     async (next: DisplayCurrency) => {
       setCurrencyState(next);
-      localStorage.setItem(STORAGE_KEY, next);
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        /* ignore */
+      }
 
       if (!isTourist || !token) return;
 
@@ -98,6 +93,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
           token,
           body: JSON.stringify({ displayCurrency: next }),
         });
+        // Keep preference even if /auth/me is briefly stale.
         await refreshUser().catch(() => {});
       } catch (err) {
         console.error(err);
@@ -107,6 +103,28 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     },
     [isTourist, token, refreshUser]
   );
+
+  // Profile is source of truth when present, but never clobber a fresher local choice
+  // with a missing/default value during the save round-trip.
+  useEffect(() => {
+    if (!isTourist) return;
+    const preferred = user?.touristProfile?.displayCurrency;
+    if (!preferred || !isDisplayCurrency(preferred)) return;
+    setCurrencyState((current) => {
+      if (current === preferred) return current;
+      const stored = readStoredCurrency();
+      // If localStorage already matches what the user just picked, keep it until profile catches up.
+      if (stored === current && preferred === DEFAULT_CURRENCY && current !== DEFAULT_CURRENCY) {
+        return current;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY, preferred);
+      } catch {
+        /* ignore */
+      }
+      return preferred;
+    });
+  }, [isTourist, user?.touristProfile?.displayCurrency]);
 
   const rates = useMemo(() => resolveLkrRates(fx?.rates), [fx]);
 
@@ -120,10 +138,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       fx,
       ratesLoading,
       refreshRates,
-      canChange: isTourist,
+      canChange: true,
       saving,
     }),
-    [currency, setCurrency, rates, fx, ratesLoading, refreshRates, isTourist, saving]
+    [currency, setCurrency, rates, fx, ratesLoading, refreshRates, saving]
   );
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;

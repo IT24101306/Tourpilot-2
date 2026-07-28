@@ -25,8 +25,8 @@ export function CurrencyPreferencePanel() {
           Display currency
         </h2>
         <p className="account-currency-panel__lead">
-          Tours are charged in <strong>{LISTING_CURRENCY}</strong>. Choose another currency to
-          convert listed prices for browsing (approximate). {rateNote}
+          Listed prices convert to your selected currency for browsing (default{" "}
+          <strong>{LISTING_CURRENCY}</strong>). Charging remains in {LISTING_CURRENCY}. {rateNote}
         </p>
       </header>
       <div className="account-currency-panel__options" role="radiogroup" aria-label="Display currency">

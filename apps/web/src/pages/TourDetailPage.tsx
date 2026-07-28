@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useNavigate, useParams, useSearchParams } f
 import { api } from "../api/client";
 import { TourItineraryPreview } from "../components/itinerary/TourItineraryPreview";
 import { formatTourDaysNights } from "@tourpilot/shared";
-import { FormatTourPrice } from "../components/currency/FormatLkr";
+import { useFormatMoney } from "../context/CurrencyContext";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { ClientBrand } from "../components/ClientBrand";
 import { NotificationBell } from "../components/NotificationBell";
@@ -19,6 +19,7 @@ export function TourDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { format } = useFormatMoney();
   const refCode = searchParams.get("ref");
   const [tour, setTour] = useState<Awaited<ReturnType<typeof loadTour>> | null>(null);
   const [floatDocked, setFloatDocked] = useState(false);
@@ -182,7 +183,7 @@ export function TourDetailPage() {
             </div>
             <div className="tour-detail-topic__aside">
               <p className="tour-detail-topic__price">
-                <FormatTourPrice amount={tour.publicPriceLkr ?? tour.basePriceLkr} />
+                {format(tour.publicPriceLkr ?? tour.basePriceLkr)}
               </p>
               <p className="tour-detail-topic__meta">
                 {formatTourDaysNights(tour.days)}

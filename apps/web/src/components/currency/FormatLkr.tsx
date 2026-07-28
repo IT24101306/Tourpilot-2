@@ -24,6 +24,21 @@ export function FormatLkr({ amount, prefix, currency: currencyOverride, classNam
 }
 
 /** Tour listing price — converts using the visitor's display currency preference. */
-export function FormatTourPrice({ amount, className }: { amount: number; className?: string }) {
-  return <FormatLkr amount={amount} className={className} />;
+export function FormatTourPrice({
+  amount,
+  className,
+  suffix,
+}: {
+  amount: number;
+  className?: string;
+  /** Optional trailing text, e.g. " / per person". */
+  suffix?: string;
+}) {
+  const { format } = useFormatMoney();
+  return (
+    <span className={className}>
+      {format(amount)}
+      {suffix ?? null}
+    </span>
+  );
 }
