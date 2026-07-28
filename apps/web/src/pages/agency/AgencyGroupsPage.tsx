@@ -27,6 +27,7 @@ export function AgencyGroupsPage() {
   const [statusTone, setStatusTone] = useState<"ok" | "error">("ok");
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupForm, setGroupForm] = useState({ name: "", description: "", entityIds: [] as string[] });
+  const [activePane, setActivePane] = useState<"create" | "list">("create");
 
   useEffect(() => {
     if (!token) return;
@@ -161,6 +162,7 @@ export function AgencyGroupsPage() {
           setEntitySearch("");
           await refresh();
           setSelectedGroupId(saved.id);
+          setActivePane("list");
           setStatusTone("ok");
           setStatus(
             isEditing
@@ -189,6 +191,7 @@ export function AgencyGroupsPage() {
     });
     setEntitySearch("");
     setTypeFilter("all");
+    setActivePane("create");
     setStatusTone("ok");
     setStatus(`Editing "${group.name}" — add or remove entities, then save.`);
   }
@@ -196,6 +199,7 @@ export function AgencyGroupsPage() {
   function startDuplicate(group: AgencyGroup) {
     setEditingGroupId(null);
     setSelectedGroupId(null);
+    setActivePane("create");
     setGroupForm({
       name: `${group.name} (copy)`,
       description: group.description ?? "",
@@ -277,255 +281,294 @@ export function AgencyGroupsPage() {
         </p>
       )}
 
-      <div className="groups-studio-layout">
-        <form className="groups-form-card" onSubmit={saveGroup}>
-          <div className="groups-form-card-head">
-            <h3>{editingGroupId ? "Edit group" : "Create group"}</h3>
-            <p className="muted">
-              {editingGroupId
-                ? "Add or remove entities below, rename it, then save your changes."
-                : "Name your set, then pick entities from your catalog."}
-            </p>
-          </div>
-
-          <div className="entity-form-grid">
-            <div className="field full">
-              <label htmlFor="group-name">Group name</label>
-              <input
-                id="group-name"
-                type="text"
-                placeholder="e.g. Cultural Triangle highlights"
-                value={groupForm.name}
-                onChange={(e) =>
-                  setGroupForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-                required
-              />
+      <div className={`groups-studio-layout groups-studio-layout--${activePane}`}>
+        <aside
+          className={`groups-library groups-pane${activePane === "list" ? " is-active" : " is-collapsed"}`}
+          onClick={activePane !== "list" ? () => setActivePane("list") : undefined}
+          aria-expanded={activePane === "list"}
+        >
+          <button
+            type="button"
+            className="groups-pane-head"
+            onClick={() => setActivePane("list")}
+            aria-pressed={activePane === "list"}
+          >
+            <div>
+              <h3>Your groups</h3>
+              <p className="muted">
+                {activePane === "list"
+                  ? `${groups.length} group${groups.length === 1 ? "" : "s"}`
+                  : "Click to expand and browse your groups"}
+              </p>
             </div>
-            <div className="field full">
-              <label htmlFor="group-desc">Description</label>
-              <RichTextEditor
-                id="group-desc"
-                rows={2}
-                placeholder="Optional — when to use this bundle"
-                value={groupForm.description}
-                onChange={(description) =>
-                  setGroupForm((prev) => ({ ...prev, description }))
-                }
-                aria-label="Group description"
-              />
-            </div>
-          </div>
+            <span className="groups-pane-badge" aria-hidden="true">
+              {activePane === "list" ? "Working" : "Open"}
+            </span>
+          </button>
 
-          <div className="groups-picker-section">
-            <div className="groups-picker-head">
-              <div>
-                <h4>Entities in this group</h4>
-                <p className="muted">
-                  {groupForm.entityIds.length} selected
-                  {entities.length === 0 && " — add entities in Entities first"}
-                </p>
+          <div className="groups-pane-body">
+            {groups.length === 0 ? (
+              <div className="groups-library-empty">
+                <p className="muted">No groups yet. Create one to bundle entities for faster tour building.</p>
               </div>
-              {entities.length > 0 && (
-                <div className="groups-picker-tools">
-                  <button type="button" className="mini-btn" onClick={selectAllVisible}>
-                    Select visible
+            ) : (
+              <ul className="groups-library-list">
+                {groups.map((g) => (
+                  <li key={g.id}>
+                    <button
+                      type="button"
+                      className={`groups-library-card${selectedGroupId === g.id ? " active" : ""}`}
+                      onClick={() => setSelectedGroupId(g.id)}
+                    >
+                      <strong>{g.name}</strong>
+                      <span className="muted">{g.items.length} entities</span>
+                      {g.description && !isRichTextEmpty(g.description) && (
+                        <span className="groups-library-desc">
+                          {stripRichHtml(g.description)}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {selectedGroup && (
+              <div className="groups-detail">
+                <div className="groups-detail-head">
+                  <h4>{selectedGroup.name}</h4>
+                  <button
+                    type="button"
+                    className="mini-btn"
+                    onClick={() => setSelectedGroupId(null)}
+                    aria-label="Close detail"
+                  >
+                    Close
+                  </button>
+                </div>
+                {selectedGroup.description && !isRichTextEmpty(selectedGroup.description) && (
+                  <RichTextHtml
+                    html={selectedGroup.description}
+                    className="muted groups-detail-desc"
+                  />
+                )}
+                <div className="groups-detail-actions">
+                  <button type="button" className="mini-btn" onClick={() => startEdit(selectedGroup)}>
+                    Edit
                   </button>
                   <button
                     type="button"
                     className="mini-btn"
-                    onClick={clearSelection}
-                    disabled={groupForm.entityIds.length === 0}
+                    onClick={() => startDuplicate(selectedGroup)}
                   >
-                    Clear
+                    Duplicate
                   </button>
-                </div>
-              )}
-            </div>
-
-            {entities.length === 0 ? (
-              <div className="groups-picker-empty">
-                <p className="muted">No entities in your catalog yet.</p>
-                <Link to="/dashboard/agency/all" className="btn btn-ghost">
-                  Go to Entities → add entities
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="groups-picker-filters">
-                  <input
-                    type="search"
-                    className="groups-search"
-                    placeholder="Search by name, type, city…"
-                    value={entitySearch}
-                    onChange={(e) => setEntitySearch(e.target.value)}
-                    aria-label="Search entities"
-                  />
-                  <select
-                    className="table-filter"
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    aria-label="Filter by type"
-                  >
-                    <option value="all">All types</option>
-                    {entityTypes.map((t) => (
-                      <option key={t} value={t}>
-                        {formatType(t)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <ul className="groups-entity-list" role="listbox" aria-label="Select entities">
-                  {filteredEntities.length === 0 ? (
-                    <li className="groups-entity-empty muted">No entities match your filters.</li>
-                  ) : (
-                    filteredEntities.map((ent) => {
-                      const checked = groupForm.entityIds.includes(ent.id);
-                      return (
-                        <li key={ent.id}>
-                          <label
-                            className={`groups-entity-row${checked ? " groups-entity-row--selected" : ""}`}
-                          >
-                            <input
-                              type="checkbox"
-                              className="groups-entity-checkbox"
-                              checked={checked}
-                              onChange={() => toggleEntity(ent.id)}
-                            />
-                            <span className="groups-entity-icon" aria-hidden="true">
-                              <EntityTypeLineIcon type={ent.type} size={16} />
-                            </span>
-                            <span className="groups-entity-info">
-                              <span className="groups-entity-name">{ent.name}</span>
-                              <span className="groups-entity-meta">
-                                {formatType(ent.type)}
-                                {ent.city ? ` · ${ent.city}` : ""}
-                              </span>
-                            </span>
-                          </label>
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
-              </>
-            )}
-          </div>
-
-          <div className="groups-form-actions">
-            {editingGroupId && (
-              <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-                Cancel
-              </button>
-            )}
-            <button type="submit" className="btn btn-primary groups-submit" disabled={saving}>
-              {saving
-                ? editingGroupId
-                  ? "Saving…"
-                  : "Creating…"
-                : editingGroupId
-                  ? "Save changes"
-                  : "Create group"}
-            </button>
-          </div>
-          {!groupForm.name.trim() || groupForm.entityIds.length === 0 ? (
-            <p className="muted" style={{ marginTop: 8, fontSize: "0.85rem" }}>
-              {!groupForm.name.trim()
-                ? "Enter a group name, then select entities and create."
-                : "Select at least one entity, then create."}
-            </p>
-          ) : null}
-        </form>
-
-        <aside className="groups-library">
-          <div className="groups-library-head">
-            <h3>Your groups</h3>
-            <span className="groups-count-badge">{groups.length}</span>
-          </div>
-
-          {groups.length === 0 ? (
-            <div className="groups-library-empty">
-              <p className="muted">No groups yet. Create one to bundle entities for faster tour building.</p>
-            </div>
-          ) : (
-            <ul className="groups-library-list">
-              {groups.map((g) => (
-                <li key={g.id}>
                   <button
                     type="button"
-                    className={`groups-library-card${selectedGroupId === g.id ? " active" : ""}`}
-                    onClick={() => setSelectedGroupId(g.id)}
+                    className="mini-btn"
+                    onClick={() => deleteGroup(selectedGroup)}
                   >
-                    <strong>{g.name}</strong>
-                    <span className="muted">{g.items.length} entities</span>
-                    {g.description && !isRichTextEmpty(g.description) && (
-                      <span className="groups-library-desc">
-                        {stripRichHtml(g.description)}
-                      </span>
-                    )}
+                    Delete
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {selectedGroup && (
-            <div className="groups-detail">
-              <div className="groups-detail-head">
-                <h4>{selectedGroup.name}</h4>
-                <button
-                  type="button"
-                  className="mini-btn"
-                  onClick={() => setSelectedGroupId(null)}
-                  aria-label="Close detail"
-                >
-                  Close
-                </button>
-              </div>
-              {selectedGroup.description && !isRichTextEmpty(selectedGroup.description) && (
-                <RichTextHtml
-                  html={selectedGroup.description}
-                  className="muted groups-detail-desc"
-                />
-              )}
-              <div className="groups-detail-actions">
-                <button type="button" className="mini-btn" onClick={() => startEdit(selectedGroup)}>
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="mini-btn"
-                  onClick={() => startDuplicate(selectedGroup)}
-                >
-                  Duplicate
-                </button>
-                <button
-                  type="button"
-                  className="mini-btn"
-                  onClick={() => deleteGroup(selectedGroup)}
-                >
-                  Delete
-                </button>
-              </div>
-              <ul className="groups-detail-entities">
-                {selectedGroup.items.map((item) => (
-                  <li key={item.entity.id}>
-                    <EntityTypeLineIcon type={item.entity.type} size={14} />
-                    <span>
-                      {item.entity.name}
-                      <span className="muted">
-                        {" "}
-                        · {formatType(item.entity.type)}
-                        {item.entity.city ? ` · ${item.entity.city}` : ""}
+                </div>
+                <ul className="groups-detail-entities">
+                  {selectedGroup.items.map((item) => (
+                    <li key={item.entity.id}>
+                      <EntityTypeLineIcon type={item.entity.type} size={14} />
+                      <span>
+                        {item.entity.name}
+                        <span className="muted">
+                          {" "}
+                          · {formatType(item.entity.type)}
+                          {item.entity.city ? ` · ${item.entity.city}` : ""}
+                        </span>
                       </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </aside>
+
+        <form
+          className={`groups-form-card groups-pane${activePane === "create" ? " is-active" : " is-collapsed"}`}
+          onSubmit={saveGroup}
+          onClick={activePane !== "create" ? () => setActivePane("create") : undefined}
+          aria-expanded={activePane === "create"}
+        >
+          <button
+            type="button"
+            className="groups-pane-head"
+            onClick={() => setActivePane("create")}
+            aria-pressed={activePane === "create"}
+          >
+            <div>
+              <h3>{editingGroupId ? "Edit group" : "Create group"}</h3>
+              <p className="muted">
+                {activePane === "create"
+                  ? editingGroupId
+                    ? "Add or remove entities below, rename it, then save your changes."
+                    : "Name your set, then pick entities from your catalog."
+                  : "Click to expand and create or edit a group"}
+              </p>
+            </div>
+            <span className="groups-pane-badge" aria-hidden="true">
+              {activePane === "create" ? "Working" : "Open"}
+            </span>
+          </button>
+
+          <div className="groups-pane-body">
+            <div className="entity-form-grid">
+              <div className="field full">
+                <label htmlFor="group-name">Group name</label>
+                <input
+                  id="group-name"
+                  type="text"
+                  placeholder="e.g. Cultural Triangle highlights"
+                  value={groupForm.name}
+                  onChange={(e) =>
+                    setGroupForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div className="field full">
+                <label htmlFor="group-desc">Description</label>
+                <RichTextEditor
+                  id="group-desc"
+                  rows={2}
+                  placeholder="Optional — when to use this bundle"
+                  value={groupForm.description}
+                  onChange={(description) =>
+                    setGroupForm((prev) => ({ ...prev, description }))
+                  }
+                  aria-label="Group description"
+                />
+              </div>
+            </div>
+
+            <div className="groups-picker-section">
+              <div className="groups-picker-head">
+                <div>
+                  <h4>Entities in this group</h4>
+                  <p className="muted">
+                    {groupForm.entityIds.length} selected
+                    {entities.length === 0 && " — add entities in Entities first"}
+                  </p>
+                </div>
+                {entities.length > 0 && (
+                  <div className="groups-picker-tools">
+                    <button type="button" className="mini-btn" onClick={selectAllVisible}>
+                      Select visible
+                    </button>
+                    <button
+                      type="button"
+                      className="mini-btn"
+                      onClick={clearSelection}
+                      disabled={groupForm.entityIds.length === 0}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {entities.length === 0 ? (
+                <div className="groups-picker-empty">
+                  <p className="muted">No entities in your catalog yet.</p>
+                  <Link to="/dashboard/agency/all" className="btn btn-ghost">
+                    Go to Entities → add entities
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="groups-picker-filters">
+                    <input
+                      type="search"
+                      className="groups-search"
+                      placeholder="Search by name, type, city…"
+                      value={entitySearch}
+                      onChange={(e) => setEntitySearch(e.target.value)}
+                      aria-label="Search entities"
+                    />
+                    <select
+                      className="table-filter"
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value)}
+                      aria-label="Filter by type"
+                    >
+                      <option value="all">All types</option>
+                      {entityTypes.map((t) => (
+                        <option key={t} value={t}>
+                          {formatType(t)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <ul className="groups-entity-list" role="listbox" aria-label="Select entities">
+                    {filteredEntities.length === 0 ? (
+                      <li className="groups-entity-empty muted">No entities match your filters.</li>
+                    ) : (
+                      filteredEntities.map((ent) => {
+                        const checked = groupForm.entityIds.includes(ent.id);
+                        return (
+                          <li key={ent.id}>
+                            <label
+                              className={`groups-entity-row${checked ? " groups-entity-row--selected" : ""}`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="groups-entity-checkbox"
+                                checked={checked}
+                                onChange={() => toggleEntity(ent.id)}
+                              />
+                              <span className="groups-entity-icon" aria-hidden="true">
+                                <EntityTypeLineIcon type={ent.type} size={16} />
+                              </span>
+                              <span className="groups-entity-info">
+                                <span className="groups-entity-name">{ent.name}</span>
+                                <span className="groups-entity-meta">
+                                  {formatType(ent.type)}
+                                  {ent.city ? ` · ${ent.city}` : ""}
+                                </span>
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })
+                    )}
+                  </ul>
+                </>
+              )}
+            </div>
+
+            <div className="groups-form-actions">
+              {editingGroupId && (
+                <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
+                  Cancel
+                </button>
+              )}
+              <button type="submit" className="btn btn-primary groups-submit" disabled={saving}>
+                {saving
+                  ? editingGroupId
+                    ? "Saving…"
+                    : "Creating…"
+                  : editingGroupId
+                    ? "Save changes"
+                    : "Create group"}
+              </button>
+            </div>
+            {!groupForm.name.trim() || groupForm.entityIds.length === 0 ? (
+              <p className="muted" style={{ marginTop: 8, fontSize: "0.85rem" }}>
+                {!groupForm.name.trim()
+                  ? "Enter a group name, then select entities and create."
+                  : "Select at least one entity, then create."}
+              </p>
+            ) : null}
+          </div>
+        </form>
       </div>
     </div>
   );

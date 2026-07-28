@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { normalizeEntityMedia, type EntityMediaItem } from "@tourpilot/shared";
 import { FormatLkr } from "../currency/FormatLkr";
 import { CoverImage } from "../CoverImage";
@@ -35,6 +35,8 @@ type Props = {
   activeKey?: string | null;
   onActiveKeyChange?: (key: string | null) => void;
   kindLabels?: Record<string, string>;
+  /** When false, hide the built-in Expand all control (parent renders its own). */
+  showExpandAll?: boolean;
 };
 
 function itemName(item: ItineraryExploreItem) {
@@ -92,44 +94,59 @@ export function ItineraryExploreView({
   activeKey: activeKeyProp,
   onActiveKeyChange,
   kindLabels,
+  showExpandAll = true,
 }: Props) {
-  const [expanded, setExpanded] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [activeKeyLocal, setActiveKeyLocal] = useState<string | null>(null);
   const activeKey = activeKeyProp ?? activeKeyLocal;
+
+  const allItemKeys = useMemo(
+    () => days.flatMap((day) => day.items.map((item) => item.key)),
+    [days]
+  );
+  const allExpanded =
+    allItemKeys.length > 0 && allItemKeys.every((key) => expandedKeys[key]);
 
   function setActiveKey(key: string | null) {
     if (onActiveKeyChange) onActiveKeyChange(key);
     else setActiveKeyLocal(key);
   }
 
+  function toggleExpanded(key: string) {
+    setExpandedKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function toggleExpandAll() {
+    if (allExpanded) {
+      setExpandedKeys({});
+      setActiveKey(null);
+      return;
+    }
+    const next: Record<string, boolean> = {};
+    for (const key of allItemKeys) next[key] = true;
+    setExpandedKeys(next);
+  }
+
   if (!days.length) return null;
 
   return (
     <div className={`itin-explore${compact ? " itin-explore--compact" : ""}`}>
-      <div className="itin-explore-toolbar">
-        <p className="itin-explore-hint muted">
-          {expanded
-            ? "Photos and descriptions are shown beside each stop."
-            : "Stops listed by day — expand to see photos and details."}
-        </p>
-        <button
-          type="button"
-          className="btn btn-ghost itin-explore-toggle"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-        >
-          {expanded ? "Collapse" : "Expand"}
-        </button>
-      </div>
-
+      {showExpandAll && allItemKeys.length > 0 ? (
+        <div className="itin-explore-toolbar">
+          <button
+            type="button"
+            className="btn btn-ghost itin-explore-toggle"
+            onClick={toggleExpandAll}
+            aria-pressed={allExpanded}
+          >
+            {allExpanded ? "Collapse all" : "Expand all"}
+          </button>
+        </div>
+      ) : null}
       <div className="itin-explore-layout itin-explore-layout--solo">
         <div className="itin-timeline itin-timeline--compact">
           {days.map((day) => (
             <article key={day.dayNumber} className="itin-day">
-              <div className="itin-day-marker">
-                <span className="itin-day-dot" aria-hidden="true" />
-                <span className="itin-day-num">Day {day.dayNumber}</span>
-              </div>
               <div className="itin-day-content">
                 {day.title && <h3 className="itin-day-title">{day.title}</h3>}
                 <ul className="itin-moments">
@@ -140,28 +157,41 @@ export function ItineraryExploreView({
                       : { mainImageUrl: null, items: [] };
                     const kindLabel = kindLabels?.[item.kind];
                     const isActive = activeKey === item.key;
+                    const expanded = Boolean(expandedKeys[item.key]);
 
                     return (
                       <li
                         key={item.key}
                         className={`itin-moment itin-moment--${item.kind.toLowerCase()}${isActive ? " is-active" : ""}${expanded ? " itin-moment--expanded" : ""}`}
-                        onMouseEnter={() => {
-                          if (mediaBundle.mainImageUrl) setActiveKey(item.key);
-                        }}
-                        onMouseLeave={() => setActiveKey(null)}
                       >
-                        <span className="itin-moment-icon" aria-hidden="true">
-                          <EntityTypeLineIcon type={item.entity?.type ?? "OTHER"} size={16} />
-                        </span>
-                        <div className="itin-moment-body">
+                        <button
+                          type="button"
+                          className="itin-moment-trigger"
+                          aria-expanded={expanded}
+                          onClick={() => {
+                            toggleExpanded(item.key);
+                            setActiveKey(expanded ? null : item.key);
+                          }}
+                          onMouseEnter={() => {
+                            if (mediaBundle.mainImageUrl) setActiveKey(item.key);
+                          }}
+                          onMouseLeave={() => {
+                            if (!expanded) setActiveKey(null);
+                          }}
+                        >
+                          <span className="itin-moment-icon" aria-hidden="true">
+                            <EntityTypeLineIcon type={item.entity?.type ?? "OTHER"} size={16} />
+                          </span>
                           <div className="itin-moment-head">
                             <strong>{name}</strong>
                             {kindLabel && (
                               <span className="itin-moment-kind">{kindLabel}</span>
                             )}
                           </div>
+                        </button>
 
-                          {expanded && (
+                        {expanded && (
+                          <div className="itin-moment-body">
                             <div className="itin-moment-detail">
                               {item.label && item.entity?.name && (
                                 <p className="itin-moment-label">{item.label}</p>
@@ -184,20 +214,20 @@ export function ItineraryExploreView({
                               )}
                               <EntityExtraMedia items={mediaBundle.items} />
                             </div>
-                          )}
 
-                          {showPrices && expanded && (
-                            <p className="itin-moment-price">
-                              {item.priceLkr != null ? (
-                                <FormatLkr amount={item.priceLkr} />
-                              ) : item.priceOnRequest ? (
-                                "Price on request"
-                              ) : (
-                                "Included in package"
-                              )}
-                            </p>
-                          )}
-                        </div>
+                            {showPrices && (
+                              <p className="itin-moment-price">
+                                {item.priceLkr != null ? (
+                                  <FormatLkr amount={item.priceLkr} />
+                                ) : item.priceOnRequest ? (
+                                  "Price on request"
+                                ) : (
+                                  "Included in package"
+                                )}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </li>
                     );
                   })}
@@ -206,7 +236,6 @@ export function ItineraryExploreView({
             </article>
           ))}
         </div>
-
       </div>
     </div>
   );

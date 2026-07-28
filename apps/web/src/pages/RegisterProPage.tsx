@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  dashboardPathForRole,
   defaultAgencyKyc,
   isValidInternationalPhone,
   toStoredPhone,
@@ -11,19 +10,18 @@ import {
   type UserRole,
 } from "@tourpilot/shared";
 import { api } from "../api/client";
-import { useAuth, type AuthUser } from "../context/AuthContext";
-import { AuthLayout } from "../components/AuthLayout";
+import { AuthLayout, AuthSwitch } from "../components/AuthLayout";
 import { OtpStep } from "../components/OtpStep";
 import { PhoneInput } from "../components/PhoneInput";
 import { AgencyKycForm } from "../components/agency/AgencyKycForm";
 import { RegisterTermsConsent } from "../components/auth/RegisterTermsConsent";
+import { loginAfterRegisterPath } from "../utils/authRedirect";
 
 type Step = "details" | "kyc" | "otp";
 
 export function RegisterProPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setSession } = useAuth();
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -155,16 +153,11 @@ export function RegisterProPage() {
     setError("");
     setLoading(true);
     try {
-      const data = await api<{
-        token: string;
-        user: AuthUser;
-        redirectTo: string;
-      }>("/auth/verify-registration", {
+      await api("/auth/verify-registration", {
         method: "POST",
         body: JSON.stringify({ challengeId, phone, otp }),
       });
-      setSession(data.token, data.user);
-      navigate(data.redirectTo || dashboardPathForRole(data.user.role));
+      navigate(loginAfterRegisterPath({ phone }), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -174,29 +167,17 @@ export function RegisterProPage() {
 
   return (
     <AuthLayout
-      title="Professional registration"
-      subtitle={
-        selectedPackage
-          ? `${selectedPackage.packageName} · ${TRIAL_DAYS}-day free trial, then ${selectedPackage.priceLabel}. Existing account? Log in.`
-          : "For travel agencies, influencers, and drivers. Drivers invited by an agency should use Login with OTP instead — no signup here."
-      }
+      fullScreen
+      billboardLines={["Start", "Manage", "Automate", "Scale"]}
+      title="Create your pro account"
     >
-      <p className="muted auth-footnote" style={{ marginTop: 0 }}>
-        <Link to="/register" className="auth-switch-link">
-          ← Tourist sign up
-        </Link>
-        {" · "}
-        <Link to="/login" className="auth-switch-link">
-          Already have an account? Log in
-        </Link>
-      </p>
+      <AuthSwitch mode="register" />
 
       {selectedPackage && (
-        <div className="gov-form-card" style={{ marginBottom: 12, padding: 12 }}>
+        <div className="auth-package-chip">
           <strong>{selectedPackage.packageName}</strong>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.9rem" }}>
-            {TRIAL_DAYS}-day free trial — no login fees. Full feature access. After trial:{" "}
-            {selectedPackage.priceLabel}.
+          <p>
+            {TRIAL_DAYS}-day free trial — then {selectedPackage.priceLabel}.
           </p>
         </div>
       )}
@@ -216,7 +197,15 @@ export function RegisterProPage() {
       {step === "details" && (
         <form className="form-grid" onSubmit={handleDetailsSubmit}>
           <label htmlFor="name">Full name</label>
-          <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+            autoComplete="name"
+            minLength={2}
+            required
+          />
           <label htmlFor="email">Email</label>
           <input
             id="email"
@@ -248,6 +237,11 @@ export function RegisterProPage() {
                 placeholder="As travelers will see it"
               />
             </>
+          )}
+          {role === "DRIVER" && (
+            <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+              Drivers invited by an agency should use Login with OTP instead — no signup needed.
+            </p>
           )}
           <RegisterTermsConsent checked={termsAccepted} onChange={setTermsAccepted} />
           <button type="submit" className="btn btn-primary" disabled={loading || !termsAccepted}>
@@ -281,17 +275,34 @@ export function RegisterProPage() {
       )}
 
       {step === "otp" && (
-        <OtpStep
-          otp={otp}
-          onOtpChange={setOtp}
-          onSubmit={handleOtpSubmit}
-          loading={loading}
-          submitLabel="Verify & start trial"
-          demoOtp={demoOtp}
-          bypassCode={bypassCode}
-          onBack={() => setStep(role === "AGENCY" ? "kyc" : "details")}
-        />
+        <>
+          <p className="muted" style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>
+            Code sent to your email{email.trim() ? ` (${email.trim().toLowerCase()})` : ""}. Phone on
+            file: {phone}
+          </p>
+          <OtpStep
+            otp={otp}
+            onOtpChange={setOtp}
+            onSubmit={handleOtpSubmit}
+            loading={loading}
+            submitLabel="Verify & continue"
+            demoOtp={demoOtp}
+            bypassCode={bypassCode}
+            onBack={() => {
+              setStep(role === "AGENCY" ? "kyc" : "details");
+              setOtp("");
+              setError("");
+            }}
+          />
+        </>
       )}
+
+      <p className="muted auth-footnote">
+        Looking for a traveler account?{" "}
+        <Link to="/register" className="auth-switch-link">
+          Tourist sign up
+        </Link>
+      </p>
     </AuthLayout>
   );
 }

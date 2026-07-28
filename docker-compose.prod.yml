@@ -80,6 +80,8 @@ services:
       PAYHERE_SANDBOX: ${PAYHERE_SANDBOX:-true}
       BUILD_SHA: ${BUILD_SHA:-manual}
       BUILD_TIME: ${BUILD_TIME:-}
+      # Auto-apply Prisma schema on API start (set false to block destructive pushes).
+      PRISMA_ACCEPT_DATA_LOSS: ${PRISMA_ACCEPT_DATA_LOSS:-true}
     volumes:
       - tourpilot_uploads:/app/apps/api/uploads
     networks:
@@ -95,7 +97,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 40s
+      start_period: 90s
 
   web:
     image: ${WEB_IMAGE:-tourpilot-web:local}

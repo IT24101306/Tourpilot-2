@@ -41,6 +41,8 @@ export function LoginPage() {
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get(AUTH_RETURN_PARAM);
   const sessionInactive = searchParams.get("reason") === "session_inactive";
+  const justRegistered = searchParams.get("registered") === "1";
+  const phoneFromRegister = searchParams.get("phone")?.trim() || "";
   const { user, token, refreshUser, setSession } = useAuth();
 
   function afterLogin(authUser: AuthUser, apiRedirect?: string) {
@@ -53,7 +55,7 @@ export function LoginPage() {
   }
 
   const [step, setStep] = useState<Step>("phone");
-  const [phoneInput, setPhoneInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState(phoneFromRegister);
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
@@ -241,6 +243,12 @@ export function LoginPage() {
       {sessionInactive && (
         <p className="form-error" role="status">
           Your session expired due to inactivity. Log in again — the login fee applies.
+        </p>
+      )}
+
+      {justRegistered && (
+        <p className="form-success" role="status" style={{ marginBottom: 12 }}>
+          Account created. Log in with your phone to continue.
         </p>
       )}
 

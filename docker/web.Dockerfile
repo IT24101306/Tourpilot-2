@@ -12,6 +12,8 @@ COPY apps/mobile/package.json ./apps/mobile/
 RUN npm ci --workspace=@tourpilot/shared --workspace=@tourpilot/web --include-workspace-root --ignore-scripts
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
+ARG VITE_GA_MEASUREMENT_ID=
+ENV VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID
 RUN npm run build -w @tourpilot/shared && npm run build -w @tourpilot/web
 
 FROM nginx:1.27-alpine AS runner

@@ -538,9 +538,9 @@ model TourDayItem {
 model Inquiry {
   id                  String             @id @default(cuid()) @db.VarChar(25)
   touristId           String             @db.VarChar(25)
-  tourist             User               @relation("TouristInquiries", fields: [touristId], references: [id])
+  tourist             User               @relation("TouristInquiries", fields: [touristId], references: [id], onDelete: Cascade)
   agencyId            String             @db.VarChar(25)
-  agency              Agency             @relation(fields: [agencyId], references: [id])
+  agency              Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   tourId              String?            @db.VarChar(25)
   tour                Tour?              @relation(fields: [tourId], references: [id], onDelete: SetNull)
   type                InquiryType

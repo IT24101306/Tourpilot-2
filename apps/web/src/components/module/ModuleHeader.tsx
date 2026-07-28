@@ -12,33 +12,20 @@ type ModuleId =
   | "partner"
   | "companion";
 
-const MODULE_LABELS: Record<ModuleId, string> = {
-  operations: "Mission control",
-  negotiation: "Collaborative planning",
-  itinerary: "Dream itinerary",
-  tasks: "Organized execution",
-  guided: "Guided experience",
-  discovery: "Inspired exploration",
-  governance: "Platform oversight",
-  catalog: "Build your catalog",
-  partner: "Partner growth",
-  companion: "Travel companion",
-};
-
 type Props = {
-  module: ModuleId;
+  /** @deprecated Kept for call-site compatibility; badge is no longer shown. */
+  module?: ModuleId;
   title: string;
-  subtitle: string;
+  /** @deprecated Kept for call-site compatibility; not rendered. */
+  subtitle?: string;
   children?: ReactNode;
 };
 
-export function ModuleHeader({ module, title, subtitle, children }: Props) {
+export function ModuleHeader({ title, children }: Props) {
   return (
     <header className="module-header">
       <div className="module-header-text">
-        <span className={`module-badge module-badge--${module}`}>{MODULE_LABELS[module]}</span>
         <h2 className="module-title">{title}</h2>
-        <p className="module-subtitle">{subtitle}</p>
       </div>
       {children ? <div className="module-header-actions">{children}</div> : null}
     </header>

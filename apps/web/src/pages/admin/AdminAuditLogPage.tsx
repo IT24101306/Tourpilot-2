@@ -54,6 +54,7 @@ export function AdminAuditLogPage() {
   const { token } = useAuth();
   const [rows, setRows] = useState<AuditEventRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [entityType, setEntityType] = useState("");
   const [action, setAction] = useState("");
   const [q, setQ] = useState("");
@@ -67,12 +68,20 @@ export function AdminAuditLogPage() {
     if (q.trim()) params.set("q", q.trim());
     params.set("take", "300");
     setLoading(true);
+    setError("");
     api<AuditEventRow[]>(`/admin/audit-events?${params.toString()}`, { token })
       .then((data) => {
         setRows(data);
         setSelectedId((prev) => (prev && data.some((r) => r.id === prev) ? prev : data[0]?.id ?? null));
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        const message =
+          err instanceof Error ? err.message : "Failed to load audit events";
+        setError(message);
+        setRows([]);
+        setSelectedId(null);
+      })
       .finally(() => setLoading(false));
   }, [token, entityType, action, q]);
 
@@ -125,9 +134,18 @@ export function AdminAuditLogPage() {
         </label>
       </div>
 
+      {error ? (
+        <p className="muted" role="alert" style={{ color: "#b91c1c" }}>
+          Could not load audit trail: {error}
+          {/does not exist|P2021|Unknown table|AuditEvent/i.test(error)
+            ? " — the AuditEvent table is probably missing. Run prisma db push on the API (container entrypoint or manual)."
+            : ""}
+        </p>
+      ) : null}
+
       {loading ? (
         <p className="muted">Loading…</p>
-      ) : rows.length === 0 ? (
+      ) : error ? null : rows.length === 0 ? (
         <p className="muted">No audit events yet. Changes to tours, offers, entities, and settings will appear here.</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr)", gap: 16 }}>

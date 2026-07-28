@@ -12,18 +12,18 @@ type Props = {
 
 /** Renders an LKR-stored amount in the visitor's display currency (default USD). */
 export function FormatLkr({ amount, prefix, currency: currencyOverride, className }: Props) {
-  const { format, currency } = useFormatMoney();
+  const { format, currency, rates } = useFormatMoney();
   const resolved = currencyOverride ?? currency;
   const text =
     currencyOverride != null
-      ? formatDisplayMoney(amount, resolved)
+      ? formatDisplayMoney(amount, resolved, rates)
       : prefix && prefix !== "from"
         ? `${prefix}${format(amount)}`
         : format(amount);
   return <span className={className}>{text}</span>;
 }
 
-/** Tour listing price — always USD, exact amount (no "From"). */
+/** Tour listing / charge price — always USD (the main traveler currency). */
 export function FormatTourPrice({ amount, className }: { amount: number; className?: string }) {
   return <FormatLkr amount={amount} currency="USD" className={className} />;
 }

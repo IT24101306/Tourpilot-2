@@ -4,8 +4,6 @@ type Review = { authorName: string; rating: number; body: string | null };
 
 type Props = {
   reviews: Review[];
-  avgRating: number;
-  reviewCount: number;
 };
 
 const FLIP_MS = 700;
@@ -16,11 +14,7 @@ function starString(rating: number) {
   return "★".repeat(filled) + "☆".repeat(5 - filled);
 }
 
-export function AgencyReviewsFlipShowcase({
-  reviews,
-  avgRating,
-  reviewCount,
-}: Props) {
+export function AgencyReviewsFlipShowcase({ reviews }: Props) {
   const [index, setIndex] = useState(0);
   const [flipPhase, setFlipPhase] = useState<"idle" | "out" | "in">("idle");
   const [paused, setPaused] = useState(false);
@@ -59,24 +53,6 @@ export function AgencyReviewsFlipShowcase({
 
   return (
     <div className="agency-review-flip-wrap">
-      <div className="agency-review-flip__head agency-review-flip__head--score-only">
-        <div
-          className="agency-review-flip__score"
-          aria-label={`Average rating ${avgRating.toFixed(1)} out of 5 from ${reviewCount} reviews`}
-        >
-          <span className="agency-review-flip__score-num">{avgRating.toFixed(1)}</span>
-          <span className="agency-review-flip__score-out">/ 5</span>
-          <span className="agency-review-flip__score-stars" aria-hidden="true">
-            {starString(avgRating)}
-          </span>
-          <span className="agency-review-flip__score-count">
-            {reviewCount > 0
-              ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}`
-              : "Traveler reviews"}
-          </span>
-        </div>
-      </div>
-
       <div
         className="agency-review-flip"
         onMouseEnter={() => setPaused(true)}

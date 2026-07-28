@@ -1,6 +1,5 @@
 import {
   offerRewardTierDisplayLine,
-  offerRewardTierIcon,
   offerRewardTierMilestoneHeading,
   parseOfferRewardTiers,
   type OfferRewardTier,
@@ -32,9 +31,6 @@ export function OfferRewardLadder({ tiers, registeredCount, className = "" }: Pr
                 {offerRewardTierMilestoneHeading(tier)}
               </p>
               <p className="offer-reward-ladder__reward">
-                <span className="offer-reward-ladder__icon" aria-hidden="true">
-                  {offerRewardTierIcon(tier)}
-                </span>
                 <span className="offer-reward-ladder__reward-text">
                   {offerRewardTierDisplayLine(tier)}
                 </span>

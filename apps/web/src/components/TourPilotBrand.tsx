@@ -25,7 +25,7 @@ export function TourPilotBrand({
     .join(" ");
 
   return (
-    <Link to="/" className={classes}>
+    <Link to="/" className={classes} aria-label="TourPilot home">
       {showLogo ? (
         <img
           src="/images/tourpilot-logo.png"

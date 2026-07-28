@@ -104,7 +104,13 @@
           transform: none !important;
         }
 
-        .hero-plane {
+        .hero-plane,
+        .hero-plane::before {
+          animation: none !important;
+          transition: none !important;
+        }
+
+        .hero-plane::before {
           background-size: cover !important;
           background-position: center !important;
         }
@@ -115,21 +121,66 @@
         }
       }
 
+      /* Shared stage: one continuous forest→teal wash behind hero + messages */
+      .hero-stage {
+        position: relative;
+        isolation: isolate;
+        background: linear-gradient(
+          180deg,
+          #0d2b1d 0%,
+          #0d2b1d 38%,
+          #163d2e 58%,
+          #1a4a3a 72%,
+          #2a6f6a 88%,
+          #3e938e 100%
+        );
+      }
+
       .hero-plane {
+        position: relative;
+        background: none;
+        animation: none;
+      }
+
+      .hero-plane::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
         background:
           radial-gradient(ellipse 80% 60% at 88% 18%, rgba(0, 178, 0, 0.4), transparent 58%),
-          radial-gradient(ellipse 55% 50% at 12% 88%, rgba(62, 147, 142, 0.35), transparent 52%),
-          linear-gradient(155deg, #0D2B1D 0%, #0D2B1D 45%, #1a4a3a 70%, #3E938E 100%);
+          radial-gradient(ellipse 70% 55% at 8% 72%, rgba(0, 178, 0, 0.32), transparent 55%),
+          radial-gradient(ellipse 55% 50% at 12% 88%, rgba(62, 147, 142, 0.28), transparent 52%);
         background-size: 120% 120%;
         animation: hero-gradient-shift 14s ease-in-out infinite alternate;
+        -webkit-mask-image: linear-gradient(
+          180deg,
+          #000 0%,
+          #000 58%,
+          rgba(0, 0, 0, 0.55) 78%,
+          transparent 100%
+        );
+        mask-image: linear-gradient(
+          180deg,
+          #000 0%,
+          #000 58%,
+          rgba(0, 0, 0, 0.55) 78%,
+          transparent 100%
+        );
+      }
+
+      .hero-plane > * {
+        position: relative;
+        z-index: 1;
       }
 
       @keyframes hero-gradient-shift {
         0% {
-          background-position: 0% 40%;
+          background-position: 0% 40%, 20% 60%, 100% 60%;
         }
         100% {
-          background-position: 100% 60%;
+          background-position: 100% 60%, 80% 40%, 0% 40%;
         }
       }
 
@@ -568,6 +619,9 @@
       @media (max-width: 767px) {
         .hero-plane {
           min-height: auto;
+        }
+
+        .hero-plane::before {
           animation: none;
           background-size: cover;
         }
@@ -1049,62 +1103,99 @@
       }
 
       .trial-banner {
-        position: absolute;
-        left: 50%;
-        bottom: 1.5rem;
-        z-index: 30;
-        width: min(42rem, calc(100% - 1.75rem));
-        transform: translateX(-50%) translateY(-18%);
-        border-radius: 1.15rem;
-        background: linear-gradient(
-          145deg,
-          rgba(255, 255, 255, 0.22) 0%,
-          rgba(255, 255, 255, 0.1) 45%,
-          rgba(255, 255, 255, 0.16) 100%
-        );
-        backdrop-filter: blur(18px) saturate(1.45);
-        -webkit-backdrop-filter: blur(18px) saturate(1.45);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow:
-          0 18px 40px rgba(6, 18, 14, 0.28),
-          inset 0 1px 0 rgba(255, 255, 255, 0.45);
-        overflow: hidden;
+        position: relative;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 1rem 1.25rem;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        overflow: visible;
       }
 
       @media (min-width: 640px) {
         .trial-banner {
-          bottom: 2rem;
-          width: min(48rem, calc(100% - 2.5rem));
-          transform: translateX(-50%) translateY(-16%);
+          padding: 1.15rem 1.75rem;
         }
       }
 
       .trial-banner__link {
-        display: flex;
+        position: relative;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.65rem;
-        min-height: 52px;
-        padding: 0.9rem 1.35rem;
+        gap: 0.7rem;
+        width: min(100%, 34rem);
+        min-height: 3.35rem;
+        padding: 0.85rem 1.75rem;
+        border-radius: 999px;
         text-decoration: none;
-        color: #fff;
-        transition: background 0.2s ease, filter 0.2s ease;
+        color: #ffffff;
+        background: #36968d;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        box-shadow:
+          0 10px 28px rgba(54, 150, 141, 0.32),
+          0 1px 0 rgba(255, 255, 255, 0.45) inset,
+          0 -1px 0 rgba(30, 90, 84, 0.2) inset;
+        backdrop-filter: blur(18px) saturate(1.45);
+        -webkit-backdrop-filter: blur(18px) saturate(1.45);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease,
+          border-color 0.2s ease,
+          filter 0.2s ease;
+      }
+
+      .trial-banner__link::before {
+        content: "";
+        position: absolute;
+        inset: 1px;
+        border-radius: inherit;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.28) 0%,
+          rgba(255, 255, 255, 0) 45%
+        );
+        pointer-events: none;
+      }
+
+      @media (min-width: 640px) {
+        .trial-banner__link {
+          min-height: 3.65rem;
+          padding: 0.95rem 2.25rem;
+        }
       }
 
       .trial-banner__link:hover {
-        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-1px);
+        filter: brightness(1.06);
+        border-color: rgba(255, 255, 255, 0.5);
+        color: #ffffff;
+        background: #36968d;
+        box-shadow:
+          0 14px 32px rgba(54, 150, 141, 0.4),
+          0 1px 0 rgba(255, 255, 255, 0.5) inset;
+      }
+
+      .trial-banner__text,
+      .trial-banner__arrow {
+        position: relative;
+        z-index: 1;
       }
 
       .trial-banner__text {
-        font-size: clamp(0.95rem, 2.4vw, 1.15rem);
+        font-size: clamp(0.98rem, 2.4vw, 1.15rem);
         font-weight: 700;
         letter-spacing: 0.02em;
         text-align: center;
-        text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+        text-shadow: none;
       }
 
       .trial-banner__arrow {
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         font-weight: 600;
         line-height: 1;
         transition: transform 0.2s ease;
@@ -1118,18 +1209,11 @@
         position: relative;
         overflow: hidden;
         padding-top: 2.5rem;
-        background-color: #e5ddd5;
-        background-image:
-          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23c9bfb4' stroke-width='1.2' opacity='0.45'%3E%3Ccircle cx='28' cy='36' r='7'/%3E%3Cpath d='M58 30c8 0 12 6 12 12s-4 12-12 12-12-6-12-12 4-12 12-12z'/%3E%3Cpath d='M92 42h18M101 33v18'/%3E%3Cpath d='M130 28l10 18h-20z'/%3E%3Crect x='160' y='28' width='16' height='16' rx='2'/%3E%3Cpath d='M198 44c6-8 18-8 24 0'/%3E%3Cpath d='M30 90c10-2 18 6 16 16'/%3E%3Ccircle cx='78' cy='98' r='5'/%3E%3Cpath d='M108 88h22v14h-22z'/%3E%3Cpath d='M148 102c0-8 6-14 14-14s14 6 14 14'/%3E%3Cpath d='M198 88l12 20-12 4-12-4z'/%3E%3Cpath d='M24 150h20l-10 16z'/%3E%3Ccircle cx='72' cy='158' r='9'/%3E%3Cpath d='M108 148c8 0 14 6 14 14s-6 14-14 14'/%3E%3Cpath d='M152 152h24M164 140v24'/%3E%3Cpath d='M206 146c10 4 10 20 0 24'/%3E%3Cpath d='M36 210c0-8 8-12 14-8s6 14-2 16'/%3E%3Crect x='72' y='200' width='18' height='12' rx='6'/%3E%3Cpath d='M118 208l16 8-16 8z'/%3E%3Ccircle cx='168' cy='214' r='6'/%3E%3Cpath d='M200 204h22v16h-10l-4 6-4-6h-4z'/%3E%3C/g%3E%3C/svg%3E");
-        background-size: 260px 260px;
+        background: transparent;
       }
 
       .audience-chats::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(180deg, rgba(229, 221, 213, 0.35), rgba(229, 221, 213, 0.15));
-        pointer-events: none;
+        content: none;
       }
 
       .audience-chats__inner {
@@ -1419,6 +1503,25 @@
         color: #fff;
       }
 
+      .site-footer__nav .site-footer__link-btn {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0;
+        border: none;
+        background: none;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.88);
+        cursor: pointer;
+        transition: color 0.15s ease;
+      }
+
+      .site-footer__nav .site-footer__link-btn:hover {
+        color: #fff;
+      }
+
       .site-footer__meta {
         grid-area: meta;
         margin: 0;
@@ -1499,14 +1602,16 @@
         </a>
 
         <ul class="mkt-nav__links">
-          <li><a href="#pricing" class="mkt-nav__link">Pricing</a></li>
+          <li data-nav="pricing"><a href="#pricing" class="mkt-nav__link">Pricing</a></li>
           <li><a href="#modules" class="mkt-nav__link">Services</a></li>
           <li><a href="#contact" class="mkt-nav__link">Contact</a></li>
         </ul>
 
-        <div class="mkt-nav__actions">
-          <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop">Log in</a>
-          <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop">Sign up</a>
+        <div class="mkt-nav__actions" id="mkt-auth-desktop">
+          <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop" data-auth="guest">Log in</a>
+          <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop" data-auth="guest">Sign up</a>
+          <a href="/profile" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop" data-auth="user" hidden>Profile</a>
+          <button type="button" class="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop" data-auth="user" data-logout hidden>Log out</button>
           <button
             id="menu-toggle"
             type="button"
@@ -1526,21 +1631,24 @@
 
       <div id="mobile-menu" class="mkt-nav__mobile">
         <ul>
-          <li><a href="#pricing">Pricing</a></li>
+          <li data-nav="pricing"><a href="#pricing">Pricing</a></li>
           <li><a href="#modules">Services</a></li>
           <li><a href="#contact">Contact</a></li>
-          <li class="mkt-nav__mobile-ctas">
-            <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost">Log in</a>
-            <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid">Sign up</a>
+          <li class="mkt-nav__mobile-ctas" id="mkt-auth-mobile">
+            <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost" data-auth="guest">Log in</a>
+            <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid" data-auth="guest">Sign up</a>
+            <a href="/profile" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost" data-auth="user" hidden>Profile</a>
+            <button type="button" class="mkt-nav__btn mkt-nav__btn--solid" data-auth="user" data-logout hidden>Log out</button>
           </li>
         </ul>
       </div>
     </header>
 
     <main id="top">
+      <div class="hero-stage">
       <!-- Hero -->
       <section class="hero-plane relative overflow-visible md:min-h-[100svh]">
-        <div class="relative mx-auto flex max-w-6xl flex-col items-center justify-center gap-8 px-4 pb-28 pt-28 sm:px-5 sm:pb-32 sm:pt-32 md:min-h-[100svh] md:flex-row md:items-center md:justify-between md:gap-10 md:px-8 md:pb-36 md:pt-36">
+        <div class="relative mx-auto flex max-w-6xl flex-col items-center justify-center gap-8 px-4 pb-16 pt-28 sm:px-5 sm:pb-20 sm:pt-32 md:min-h-[100svh] md:flex-row md:items-center md:justify-between md:gap-10 md:px-8 md:pb-24 md:pt-36">
           <div class="order-2 w-full max-w-xl text-center md:order-1 md:max-w-2xl md:text-left">
             <p class="animate-fade-up text-[2.15rem] font-extrabold leading-relaxed tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[4.25rem]">
               Tour<span class="text-lime">Pilot</span>
@@ -1576,15 +1684,15 @@
             />
           </div>
         </div>
-
-        <!-- Free trial glass banner — floats at bottom of hero -->
-        <aside class="trial-banner" aria-label="Free trial">
-          <a href="#pricing" class="trial-banner__link">
-            <span class="trial-banner__text">Claim Your 7-Day Free Trial</span>
-            <span class="trial-banner__arrow" aria-hidden="true">→</span>
-          </a>
-        </aside>
       </section>
+
+      <!-- White stripe = free trial CTA -->
+      <aside class="trial-banner" aria-label="Free trial">
+        <a href="#pricing" class="trial-banner__link">
+          <span class="trial-banner__text">Claim Your 7-Day Free Trial</span>
+          <span class="trial-banner__arrow" aria-hidden="true">→</span>
+        </a>
+      </aside>
 
       <!-- Sellers reach -->
       <section class="audience-chats" aria-label="For agencies and creators">
@@ -1609,6 +1717,7 @@
           </article>
         </div>
       </section>
+      </div>
 
       <!-- Platform services — horizontal scroll cards -->
       <section id="modules" class="power-section pt-14 sm:pt-20 md:pt-28 pb-0">
@@ -1786,9 +1895,6 @@
             <h2 class="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl md:text-4xl">
               Choose the way you grow online
             </h2>
-            <p class="mt-3 text-sm text-ink-500 sm:mt-4 sm:text-base">
-              Flexible packages for websites, ERP, and pay-as-you-go growth.
-            </p>
           </div>
 
           <div class="reveal mt-8 text-center sm:mt-10">
@@ -2331,9 +2437,12 @@
           </a>
         </div>
 
-        <nav class="site-footer__nav" aria-label="Footer">
+        <nav class="site-footer__nav" aria-label="Footer" id="mkt-auth-footer">
           <a href="#pricing">Offers</a>
-          <a href="/login">Login</a>
+          <a href="/login" target="_top" data-auth="guest">Log in</a>
+          <a href="/profile" target="_top" data-auth="user" hidden>Profile</a>
+          <button type="button" class="site-footer__link-btn" data-auth="user" data-logout hidden>Log out</button>
+          <button type="button" class="site-footer__link-btn" id="mkt-cookie-settings">Cookies</button>
           <a href="https://iyyosolutions.com" target="_blank" rel="noopener noreferrer">IYYO</a>
         </nav>
 
@@ -2419,6 +2528,55 @@
         if (!data || data.type !== "tourpilot-scroll" || !data.section) return;
         scrollToSection(data.section);
       });
+
+      // Auth CTAs — home page is an iframe; sync with parent session / shared localStorage.
+      const TOKEN_KEY = "tourpilotAuthToken";
+      function setPricingNavVisible(show) {
+        document.querySelectorAll("[data-nav='pricing']").forEach((el) => {
+          el.hidden = !show;
+        });
+      }
+      function setAuthUi(loggedIn, role) {
+        document.querySelectorAll("[data-auth='guest']").forEach((el) => {
+          el.hidden = !!loggedIn;
+        });
+        document.querySelectorAll("[data-auth='user']").forEach((el) => {
+          el.hidden = !loggedIn;
+        });
+        // Agency SaaS pricing — hide for logged-in tourists.
+        setPricingNavVisible(!(loggedIn && role === "TOURIST"));
+      }
+      function applyAuthFromStorage() {
+        try {
+          setAuthUi(Boolean(localStorage.getItem(TOKEN_KEY)), null);
+        } catch (_) {
+          setAuthUi(false, null);
+        }
+      }
+      applyAuthFromStorage();
+      window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+        const data = event.data;
+        if (!data || data.type !== "tourpilot-auth") return;
+        setAuthUi(Boolean(data.loggedIn), data.role || null);
+      });
+      document.querySelectorAll("[data-logout]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          try {
+            localStorage.removeItem(TOKEN_KEY);
+          } catch (_) {}
+          setAuthUi(false, null);
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: "tourpilot-logout" }, window.location.origin);
+          } else {
+            window.location.href = "/";
+          }
+        });
+      });
+      // Ask parent for current auth (covers React session without reloading iframe).
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: "tourpilot-auth-request" }, window.location.origin);
+      }
 
       const reveals = document.querySelectorAll(".reveal, .reveal-scale, .reveal-left, .reveal-right, .chat-pop");
       const observer = new IntersectionObserver(
@@ -2696,5 +2854,7 @@
       updateBuildTotal();
     </script>
     <script src="/marketing-pricing.js?v=20260723-features"></script>
+    <link rel="stylesheet" href="/cookie-consent.css" />
+    <script src="/cookie-consent.js?v=1"></script>
   </body>
 </html>

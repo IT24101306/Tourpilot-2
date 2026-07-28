@@ -17,6 +17,7 @@ function ProfileTopBrand() {
         logoUrl={user.agency.logoUrl}
         to={`/agencies/${user.agency.slug}`}
         subtitle="My account"
+        onDark
       />
     );
   }
@@ -27,6 +28,7 @@ function ProfileTopBrand() {
         logoUrl={user.avatarUrl}
         to="/profile"
         subtitle="My account"
+        onDark
       />
     );
   }
@@ -36,13 +38,14 @@ function ProfileTopBrand() {
         name={user.agencyDriver.agencyName}
         to="/dashboard/driver"
         subtitle="My account"
+        onDark
       />
     );
   }
   if (user.role === "ADMIN") {
-    return <TourPilotBrand />;
+    return <TourPilotBrand onDark />;
   }
-  return <span className="topbar-context">My account</span>;
+  return <TourPilotBrand onDark />;
 }
 
 export function PublicLayout() {
@@ -60,21 +63,34 @@ export function PublicLayout() {
     pathname === "/" && !storefront.loading && !storefront.isCustomDomain;
 
   return (
-    <div className={`shell${onMarketingHome ? " shell--marketing-home" : ""}`}>
-      <header className="topbar topbar--site">
+    <div
+      className={`shell${onMarketingHome ? " shell--marketing-home" : ""}${
+        onProfile ? " shell--dash-profile" : ""
+      }`}
+    >
+      <header className={`topbar ${onProfile ? "topbar--agency-dash" : "topbar--site"}`}>
         {onProfile ? <ProfileTopBrand /> : <TourPilotBrand />}
-        <nav className="nav" aria-label="Primary">
+        <nav className={`nav${onProfile ? " nav--light" : ""}`} aria-label="Primary">
           <div className="nav-links">
             {user?.role === "TOURIST" && (
-              <NavLink to="/trips" className={() => navLinkClass({ isActive: onInquiries })}>
+              <NavLink
+                to="/trips"
+                className={() =>
+                  onProfile
+                    ? `nav-link-light${onInquiries ? " nav-link-light--active" : ""}`
+                    : navLinkClass({ isActive: onInquiries })
+                }
+              >
                 Inquiries
               </NavLink>
             )}
             {!onProfile && (
               <>
-                <NavLink to={{ pathname: "/", hash: "pricing" }} className={navLinkClass}>
-                  Pricing
-                </NavLink>
+                {user?.role !== "TOURIST" && (
+                  <NavLink to={{ pathname: "/", hash: "pricing" }} className={navLinkClass}>
+                    Pricing
+                  </NavLink>
+                )}
                 <NavLink to="/offers" className={navLinkClass}>
                   Offers
                 </NavLink>
@@ -84,57 +100,104 @@ export function PublicLayout() {
               <>
                 <NavLink
                   to="/trips?tab=bookings"
-                  className={() => navLinkClass({ isActive: onBookings })}
+                  className={() =>
+                    onProfile
+                      ? `nav-link-light${onBookings ? " nav-link-light--active" : ""}`
+                      : navLinkClass({ isActive: onBookings })
+                  }
                 >
                   Bookings
                 </NavLink>
                 <NavLink
                   to="/trips?tab=saved"
-                  className={() => navLinkClass({ isActive: onSaved })}
+                  className={() =>
+                    onProfile
+                      ? `nav-link-light${onSaved ? " nav-link-light--active" : ""}`
+                      : navLinkClass({ isActive: onSaved })
+                  }
                 >
                   Saved
                 </NavLink>
               </>
             )}
           </div>
-          <div className="nav-actions">
+          <div className={`nav-actions${onProfile ? " nav-actions--light" : ""}`}>
             {user ? (
               <>
                 <NotificationBell />
-                <NavLink to="/profile" className={navLinkClass}>
+                <NavLink
+                  to="/profile"
+                  className={({ isActive }) =>
+                    onProfile
+                      ? `nav-link-light${isActive ? " nav-link-light--active" : ""}`
+                      : navLinkClass({ isActive })
+                  }
+                >
                   Profile
                 </NavLink>
                 {user.role === "AGENCY" && (
-                  <NavLink to="/dashboard/agency" className={navLinkClass}>
+                  <NavLink
+                    to="/dashboard/agency"
+                    className={({ isActive }) =>
+                      onProfile
+                        ? `nav-link-light${isActive ? " nav-link-light--active" : ""}`
+                        : navLinkClass({ isActive })
+                    }
+                  >
                     Dashboard
                   </NavLink>
                 )}
                 {user.role === "DRIVER" && (
-                  <NavLink to="/dashboard/driver" className={navLinkClass}>
+                  <NavLink
+                    to="/dashboard/driver"
+                    className={({ isActive }) =>
+                      onProfile
+                        ? `nav-link-light${isActive ? " nav-link-light--active" : ""}`
+                        : navLinkClass({ isActive })
+                    }
+                  >
                     Dashboard
                   </NavLink>
                 )}
                 {user.role === "INFLUENCER" && (
-                  <NavLink to="/dashboard/i" className={navLinkClass}>
+                  <NavLink
+                    to="/dashboard/i"
+                    className={({ isActive }) =>
+                      onProfile
+                        ? `nav-link-light${isActive ? " nav-link-light--active" : ""}`
+                        : navLinkClass({ isActive })
+                    }
+                  >
                     Dashboard
                   </NavLink>
                 )}
                 {user.role === "ADMIN" && (
-                  <NavLink to="/dashboard/admin" className={navLinkClass}>
+                  <NavLink
+                    to="/dashboard/admin"
+                    className={({ isActive }) =>
+                      onProfile
+                        ? `nav-link-light${isActive ? " nav-link-light--active" : ""}`
+                        : navLinkClass({ isActive })
+                    }
+                  >
                     Admin
                   </NavLink>
                 )}
-                <button type="button" className="btn btn-ghost btn-nav" onClick={logout}>
+                <button
+                  type="button"
+                  className={onProfile ? "nav-link-light" : "btn btn-ghost btn-nav"}
+                  onClick={logout}
+                >
                   Log out
                 </button>
               </>
             ) : (
               <>
+                <NavLink to="/login" className="btn btn-teal btn-nav">
+                  Log in
+                </NavLink>
                 <NavLink to="/register" className={navLinkClass}>
                   Sign up
-                </NavLink>
-                <NavLink to="/login" className="btn btn-teal btn-nav">
-                  Login
                 </NavLink>
               </>
             )}

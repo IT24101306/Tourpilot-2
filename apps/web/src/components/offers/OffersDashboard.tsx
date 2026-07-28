@@ -162,6 +162,7 @@ export function OffersDashboard({
   const [regsMsg, setRegsMsg] = useState("");
   const [shareMsg, setShareMsg] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [activePane, setActivePane] = useState<"list" | "create">("create");
 
   const selected = useMemo(
     () => (selectedId ? offers.find((o) => o.id === selectedId) ?? null : null),
@@ -198,6 +199,7 @@ export function OffersDashboard({
     setMsg("");
     setFieldErrors({});
     setDraft(emptyDraft());
+    setActivePane("create");
   }
 
   function offerDraftSummary(mode: "create" | "update") {
@@ -261,6 +263,7 @@ export function OffersDashboard({
           setMsg("Offer created.");
           await refresh();
           resetNew();
+          setActivePane("list");
         } catch (e) {
           setMsg(e instanceof ApiError ? e.message : "Create failed");
         } finally {
@@ -374,48 +377,100 @@ export function OffersDashboard({
 
       {msg && <p className="gov-status-msg">{msg}</p>}
 
-      <div className="gov-offers-layout">
-        <aside className="gov-offers-sidebar">
-          <h3 className="gov-panel-title">All offers</h3>
-          {offers.length === 0 ? (
-            <p className="muted">No offers yet.</p>
-          ) : (
-            <ul className="gov-offer-pick-list">
-              {offers.map((o) => (
-                <li key={o.id}>
-                  <button
-                    type="button"
-                    className={`gov-offer-pick${selectedId === o.id ? " active" : ""}`}
-                    onClick={() => setSelectedId(o.id)}
-                    disabled={busy}
-                  >
-                    <span className="gov-offer-pick-main">
-                      <strong>{o.title}</strong>
-                      <span className="muted">
-                        {o.isActive ? "Active" : "Inactive"}
-                        {formatOfferMonthLabel(o.offerMonth)
-                          ? ` · ${formatOfferMonthLabel(o.offerMonth)}`
-                          : ""}
-                        {isFreeOffer(o.discountedLkr) ? " · Free tour" : ""} · {o.registeredCount}{" "}
-                        registered
-                        {(o.rewardTiers?.length ?? 0) > 0
-                          ? ` · ${o.rewardTiers!.length} reward tier${o.rewardTiers!.length === 1 ? "" : "s"}`
-                          : ""}
+      <div className={`gov-offers-layout gov-offers-layout--${activePane}`}>
+        <aside
+          className={`gov-offers-sidebar offers-pane${activePane === "list" ? " is-active" : " is-collapsed"}`}
+          onClick={activePane !== "list" ? () => setActivePane("list") : undefined}
+          aria-expanded={activePane === "list"}
+        >
+          <button
+            type="button"
+            className="offers-pane-head"
+            onClick={() => setActivePane("list")}
+            aria-pressed={activePane === "list"}
+          >
+            <div>
+              <h3 className="gov-panel-title">All offers</h3>
+              <p className="muted">
+                {activePane === "list"
+                  ? `${offers.length} offer${offers.length === 1 ? "" : "s"}`
+                  : "Click to expand and browse offers"}
+              </p>
+            </div>
+            <span className="offers-pane-badge" aria-hidden="true">
+              {activePane === "list" ? "Working" : "Open"}
+            </span>
+          </button>
+
+          <div className="offers-pane-body">
+            {offers.length === 0 ? (
+              <p className="muted">No offers yet.</p>
+            ) : (
+              <ul className="gov-offer-pick-list">
+                {offers.map((o) => (
+                  <li key={o.id}>
+                    <button
+                      type="button"
+                      className={`gov-offer-pick${selectedId === o.id ? " active" : ""}`}
+                      onClick={() => {
+                        setSelectedId(o.id);
+                        setActivePane("create");
+                      }}
+                      disabled={busy}
+                    >
+                      <span className="gov-offer-pick-main">
+                        <strong>{o.title}</strong>
+                        <span className="muted">
+                          {o.isActive ? "Active" : "Inactive"}
+                          {formatOfferMonthLabel(o.offerMonth)
+                            ? ` · ${formatOfferMonthLabel(o.offerMonth)}`
+                            : ""}
+                          {isFreeOffer(o.discountedLkr) ? " · Free tour" : ""} · {o.registeredCount}{" "}
+                          registered
+                          {(o.rewardTiers?.length ?? 0) > 0
+                            ? ` · ${o.rewardTiers!.length} reward tier${o.rewardTiers!.length === 1 ? "" : "s"}`
+                            : ""}
+                        </span>
                       </span>
-                    </span>
-                    <span className="gov-offer-pick-spots">{o.spotsLeft} left</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                      <span className="gov-offer-pick-spots">{o.spotsLeft} left</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </aside>
 
-        <div className="gov-offers-main">
+        <div
+          className={`gov-offers-main offers-pane${activePane === "create" ? " is-active" : " is-collapsed"}`}
+          onClick={activePane !== "create" ? () => setActivePane("create") : undefined}
+          aria-expanded={activePane === "create"}
+        >
+          <button
+            type="button"
+            className="offers-pane-head"
+            onClick={() => setActivePane("create")}
+            aria-pressed={activePane === "create"}
+          >
+            <div>
+              <h3 className="gov-panel-title">{selectedId ? "Edit offer" : "Create offer"}</h3>
+              <p className="muted">
+                {activePane === "create"
+                  ? selectedId
+                    ? "Update pricing, rewards, and availability."
+                    : "Build a new loyalty offer for travelers."
+                  : "Click to expand and create or edit an offer"}
+              </p>
+            </div>
+            <span className="offers-pane-badge" aria-hidden="true">
+              {activePane === "create" ? "Working" : "Open"}
+            </span>
+          </button>
+
+          <div className="offers-pane-body">
           <div className="gov-panel">
             <div className="gov-panel-head">
-              <h3 className="gov-panel-title">{selectedId ? "Edit offer" : "Create offer"}</h3>
-              {selectedId && (
+              {selectedId ? (
                 <div className="gov-panel-head-actions">
                   {draft.isActive && (
                     <button
@@ -459,7 +514,7 @@ export function OffersDashboard({
                     Delete
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
             {shareMsg && <p className="muted gov-share-hint">{shareMsg}</p>}
             <FormValidationMessages errors={fieldErrors} />
@@ -672,6 +727,7 @@ export function OffersDashboard({
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

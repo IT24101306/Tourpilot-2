@@ -9,9 +9,12 @@ import {
 } from "react";
 import {
   type DisplayCurrency,
+  type FxRatesPayload,
+  type LkrRateTable,
   formatDisplayMoney,
   formatFromLkr,
   isDisplayCurrency,
+  resolveLkrRates,
 } from "@tourpilot/shared";
 import { api } from "../api/client";
 import { useAuth } from "./AuthContext";
@@ -24,6 +27,10 @@ type CurrencyContextValue = {
   setCurrency: (next: DisplayCurrency) => void;
   format: (amountLkr: number) => string;
   formatFrom: (amountLkr: number) => string;
+  rates: LkrRateTable;
+  fx: FxRatesPayload | null;
+  ratesLoading: boolean;
+  refreshRates: () => Promise<void>;
   canChange: boolean;
   saving: boolean;
 };
@@ -44,8 +51,29 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const { user, token, refreshUser } = useAuth();
   const [currency, setCurrencyState] = useState<DisplayCurrency>(readStoredCurrency);
   const [saving, setSaving] = useState(false);
+  const [fx, setFx] = useState<FxRatesPayload | null>(null);
+  const [ratesLoading, setRatesLoading] = useState(true);
 
   const isTourist = user?.role === "TOURIST";
+
+  const refreshRates = useCallback(async () => {
+    setRatesLoading(true);
+    try {
+      const payload = await api<FxRatesPayload>("/fx/rates");
+      setFx(payload);
+    } catch (err) {
+      console.error(err);
+      // Keep previous / fall back via resolveLkrRates(null)
+    } finally {
+      setRatesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshRates();
+    const id = window.setInterval(() => void refreshRates(), 60 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, [refreshRates]);
 
   useEffect(() => {
     if (!isTourist) return;
@@ -80,16 +108,22 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     [isTourist, token, refreshUser]
   );
 
+  const rates = useMemo(() => resolveLkrRates(fx?.rates), [fx]);
+
   const value = useMemo<CurrencyContextValue>(
     () => ({
       currency,
       setCurrency,
-      format: (amountLkr: number) => formatDisplayMoney(amountLkr, currency),
-      formatFrom: (amountLkr: number) => formatFromLkr(amountLkr, currency),
+      format: (amountLkr: number) => formatDisplayMoney(amountLkr, currency, rates),
+      formatFrom: (amountLkr: number) => formatFromLkr(amountLkr, currency, rates),
+      rates,
+      fx,
+      ratesLoading,
+      refreshRates,
       canChange: isTourist,
       saving,
     }),
-    [currency, setCurrency, isTourist, saving]
+    [currency, setCurrency, rates, fx, ratesLoading, refreshRates, isTourist, saving]
   );
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
@@ -104,6 +138,6 @@ export function useCurrency() {
 }
 
 export function useFormatMoney() {
-  const { format, formatFrom, currency } = useCurrency();
-  return { format, formatFrom, currency };
+  const { format, formatFrom, currency, rates } = useCurrency();
+  return { format, formatFrom, currency, rates };
 }

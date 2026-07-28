@@ -14,6 +14,7 @@ import { CurrencyPreferencePanel } from "../components/account/CurrencyPreferenc
 import { WalletHistoryPanel } from "../components/account/WalletHistoryPanel";
 import { lkr, roleLabel } from "../components/account/accountProfileUtils";
 import { agencyFeaturesOf, useAuth } from "../context/AuthContext";
+import { TouristSavedPage } from "./TouristSavedPage";
 import type { InfluencerDashboardData } from "./influencer/types";
 
 type InquirySummary = {
@@ -160,7 +161,7 @@ export function ProfilePage() {
       actions.push(
         { label: "Inquiries", to: "/trips", variant: "teal" },
         { label: "Bookings", to: "/trips?tab=bookings" },
-        { label: "Saved", to: "/trips?tab=saved" }
+        { label: "Favourites", to: "#account-favourites-title" }
       );
       break;
     }
@@ -321,6 +322,15 @@ export function ProfilePage() {
       {loadError && <p className="form-error">{loadError}</p>}
       {loadingExtra && user.role === "TOURIST" && (
         <p className="muted">Refreshing your travel activity…</p>
+      )}
+      {user.role === "TOURIST" && (
+        <section className="account-profile-favourites" aria-labelledby="account-favourites-title">
+          <header className="account-block-head">
+            <h2 id="account-favourites-title">Favourites</h2>
+            <p className="muted">Tours you saved with Add to favourites.</p>
+          </header>
+          <TouristSavedPage />
+        </section>
       )}
       {user.role === "TOURIST" && <CurrencyPreferencePanel />}
       {user.role === "AGENCY" && <AgencyLogoPanel />}

@@ -6,7 +6,6 @@ import {
   StorefrontDomainProvider,
   useStorefrontDomain,
 } from "./context/StorefrontDomainContext";
-import { dashboardPathForRole } from "@tourpilot/shared";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
@@ -31,6 +30,9 @@ import {
 } from "./pages/account/BillingSubscriptionsPage";
 import { BillingPaymentHistoryPage } from "./pages/account/BillingPaymentHistoryPage";
 import { BillingPaymentMethodsPage } from "./pages/account/BillingPaymentMethodsPage";
+import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { initAnalyticsConsentListener } from "./lib/analytics";
+import { useEffect } from "react";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
 import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
@@ -100,7 +102,6 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
 }
 
 function HomeRoute() {
-  const { user, loading } = useAuth();
   const storefront = useStorefrontDomain();
   // On a custom domain, serve the matching agency or influencer storefront at the root.
   if (storefront.loading) return <div className="section">Loading…</div>;
@@ -109,10 +110,6 @@ function HomeRoute() {
   }
   if (storefront.isCustomDomain && storefront.agencySlug) {
     return <AgencyDetailPage slugOverride={storefront.agencySlug} />;
-  }
-  if (loading) return <div className="section">Loading…</div>;
-  if (user?.role === "AGENCY" || user?.role === "INFLUENCER") {
-    return <Navigate to={dashboardPathForRole(user.role)} replace />;
   }
   return <MarketingHomePage />;
 }
@@ -161,6 +158,8 @@ function AppShell() {
   const storefront = useStorefrontDomain();
   const onMarketingHome =
     pathname === "/" && !storefront.loading && !storefront.isCustomDomain;
+
+  useEffect(() => initAnalyticsConsentListener(), []);
 
   return (
         <div className={`app-root${onMarketingHome ? " app-root--marketing-home" : ""}`}>
@@ -351,6 +350,7 @@ function AppShell() {
             </Routes>
           </div>
           <SiteFooter />
+          <CookieConsentBanner />
         </div>
   );
 }

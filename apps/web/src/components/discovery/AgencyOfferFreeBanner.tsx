@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { OFFER_MONTH_ABBREVS, resolveImageUrl } from "@tourpilot/shared";
 import {
   offerRewardTierDisplayLine,
-  offerRewardTierIcon,
   parseOfferRewardTiers,
   type OfferRewardTier,
 } from "@tourpilot/shared";
@@ -189,10 +188,7 @@ function CongratsMilestoneBar({
               <span className="agency-offer-congrats-bar__dot" aria-hidden="true" />
               <div className="agency-offer-congrats-bar__copy">
                 <strong>{row.tier.registrationsRequired}</strong>
-                <span>
-                  <span aria-hidden="true">{offerRewardTierIcon(row.tier)} </span>
-                  {offerRewardTierDisplayLine(row.tier)}
-                </span>
+                <span>{offerRewardTierDisplayLine(row.tier)}</span>
               </div>
             </li>
           );

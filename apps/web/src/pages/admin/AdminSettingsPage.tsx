@@ -103,19 +103,10 @@ function blankAgent(): SupportAgent {
     service: "",
     description: "",
     priceUsd: 0,
-    priceLabel: "$0 USD",
+    priceLabel: "",
     phone: "",
     phoneDisplay: "",
   };
-}
-
-/** Keep the visible price label in sync when the USD amount changes. */
-function priceLabelFromUsd(priceUsd: number, previousLabel: string): string {
-  const rounded = Math.round(Number.isFinite(priceUsd) ? priceUsd : 0);
-  if (/\/\s*hour/i.test(previousLabel)) {
-    return `$${rounded} USD / hour`;
-  }
-  return `$${rounded} USD`;
 }
 
 export function AdminSettingsPage() {
@@ -244,23 +235,18 @@ export function AdminSettingsPage() {
       title: support.title.trim() || DEFAULT_SUPPORT_CONTENT.title,
       subtitle: support.subtitle.trim() || DEFAULT_SUPPORT_CONTENT.subtitle,
       footer: support.footer.trim() || DEFAULT_SUPPORT_CONTENT.footer,
-      agents: support.agents.map((a, i) => {
-        const priceUsd = Number.isFinite(Number(a.priceUsd)) ? Number(a.priceUsd) : 0;
-        const trimmedLabel = a.priceLabel.trim();
-        return {
-          ...a,
-          id: a.id.trim() || `agent-${i + 1}`,
-          name: a.name.trim(),
-          role: a.role.trim(),
-          service: a.service.trim(),
-          description: isRichTextEmpty(a.description) ? "" : a.description,
-          priceUsd,
-          // Always persist a visible label; prefer explicit label, else derive from USD.
-          priceLabel: trimmedLabel || priceLabelFromUsd(priceUsd, ""),
-          phone: a.phone.trim(),
-          phoneDisplay: a.phoneDisplay.trim() || a.phone.trim(),
-        };
-      }),
+      agents: support.agents.map((a, i) => ({
+        ...a,
+        id: a.id.trim() || `agent-${i + 1}`,
+        name: a.name.trim(),
+        role: a.role.trim(),
+        service: a.service.trim(),
+        description: isRichTextEmpty(a.description) ? "" : a.description,
+        priceUsd: Number.isFinite(Number(a.priceUsd)) ? Number(a.priceUsd) : 0,
+        priceLabel: a.priceLabel.trim(),
+        phone: a.phone.trim(),
+        phoneDisplay: a.phoneDisplay.trim() || a.phone.trim(),
+      })),
     };
 
     if (!supportContent.agents.length) {
@@ -305,13 +291,6 @@ export function AdminSettingsPage() {
             }),
           });
           setSettings(data);
-          setFees({
-            TOURIST: String(data.loginFees.TOURIST),
-            AGENCY: String(data.loginFees.AGENCY),
-            INFLUENCER: String(data.loginFees.INFLUENCER),
-            DRIVER: String(data.loginFees.DRIVER),
-            ADMIN: String(data.loginFees.ADMIN),
-          });
           setSupport(data.supportContent);
           const idle = splitSessionInactivityForEdit(data.sessionInactivityMinutes);
           setIdleAmount(String(idle.amount));
@@ -340,304 +319,338 @@ export function AdminSettingsPage() {
         <p className="muted">Loading…</p>
       ) : (
         <form className="gov-settings-stack" onSubmit={onSubmit}>
-          <section className="gov-form-card">
-            <h3 className="gov-form-card__title">Login fees (LKR)</h3>
-            <p className="muted">
-              Charged on OTP login. Per-user overrides live on Users. Set 0 to disable a role.
-            </p>
-            <div className="gov-fee-grid">
-              {FEE_ROLES.map((role) => (
-                <label key={role} className="gov-fee-field">
-                  <span>{role}</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={fees[role]}
-                    onChange={(e) => setFees((prev) => ({ ...prev, [role]: e.target.value }))}
-                  />
-                </label>
-              ))}
-            </div>
-          </section>
-
-          <section className="gov-form-card">
-            <h3 className="gov-form-card__title">Operations</h3>
-            <div className="gov-settings-fields">
-              <label>
-                Inquiry auto-expiry (days)
-                <input
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={inquiryExpiryDays}
-                  onChange={(e) => setInquiryExpiryDays(e.target.value)}
-                />
-              </label>
-              <label>
-                Public site URL
-                <input
-                  type="url"
-                  placeholder="https://srilankatourpilot.com"
-                  value={webAppUrl}
-                  onChange={(e) => setWebAppUrl(e.target.value)}
-                />
-              </label>
-              <label>
-                Email from
-                <input
-                  type="text"
-                  placeholder='TourPilot &lt;noreply@example.com&gt;'
-                  value={emailFrom}
-                  onChange={(e) => setEmailFrom(e.target.value)}
-                />
-              </label>
-              <label>
-                Wallet top-up min (Credits)
-                <input
-                  type="number"
-                  min={1}
-                  value={topupMin}
-                  onChange={(e) => setTopupMin(e.target.value)}
-                />
-              </label>
-              <label>
-                Wallet top-up max (Credits, blank = no max)
-                <input
-                  type="number"
-                  min={1}
-                  value={topupMax}
-                  onChange={(e) => setTopupMax(e.target.value)}
-                  placeholder="Optional"
-                />
-              </label>
-              <label>
-                Session inactivity default
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    type="number"
-                    min={SESSION_INACTIVITY_MIN_MINUTES}
-                    max={idleUnit === "hours" ? 168 : SESSION_INACTIVITY_MAX_MINUTES}
-                    value={idleAmount}
-                    onChange={(e) => setIdleAmount(e.target.value)}
-                  />
-                  <select
-                    className="agency-filter"
-                    value={idleUnit}
-                    onChange={(e) => setIdleUnit(e.target.value as SessionInactivityUnit)}
-                  >
-                    <option value="minutes">Minutes</option>
-                    <option value="hours">Hours</option>
-                  </select>
-                </div>
-              </label>
-            </div>
-            <p className="muted" style={{ marginTop: 8 }}>
-              Used when an agency has the session inactivity package enabled and no per-agency
-              override. Re-login after timeout charges the login fee again.
-              {Number.isFinite(Number(idleAmount))
-                ? ` Currently ${formatSessionInactivity(
-                    toSessionInactivityMinutes(Number(idleAmount), idleUnit)
-                  )}.`
-                : ""}
-            </p>
-          </section>
-
-          <section className="gov-form-card">
-            <h3 className="gov-form-card__title">Support modal</h3>
-            <p className="muted">
-              Shown when agencies/partners click Support. Edit every label, price, and phone number.
-            </p>
-            <div className="gov-settings-fields">
-              <label>
-                Title
-                <input
-                  value={support.title}
-                  onChange={(e) => setSupport((p) => ({ ...p, title: e.target.value }))}
-                />
-              </label>
-              <label>
-                Subtitle
-                <textarea
-                  rows={2}
-                  value={support.subtitle}
-                  onChange={(e) => setSupport((p) => ({ ...p, subtitle: e.target.value }))}
-                />
-              </label>
-              <label>
-                Footer note
-                <textarea
-                  rows={2}
-                  value={support.footer}
-                  onChange={(e) => setSupport((p) => ({ ...p, footer: e.target.value }))}
-                />
-              </label>
-            </div>
-
-            {support.agents.map((agent, index) => (
-              <div
-                key={agent.id}
-                className="gov-panel"
-                style={{ marginTop: 16, padding: 16, border: "1px solid var(--border, #e5e7eb)" }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                  <strong>Agent {index + 1}</strong>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-nav"
-                    disabled={support.agents.length <= 1}
-                    onClick={() =>
-                      setSupport((p) => ({
-                        ...p,
-                        agents: p.agents.filter((_, i) => i !== index),
-                      }))
-                    }
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div className="gov-settings-fields" style={{ marginTop: 8 }}>
-                  <label>
-                    Name
-                    <input
-                      value={agent.name}
-                      onChange={(e) => updateAgent(index, { name: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Role
-                    <input
-                      value={agent.role}
-                      onChange={(e) => updateAgent(index, { role: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Service
-                    <input
-                      value={agent.service}
-                      onChange={(e) => updateAgent(index, { service: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Description
-                    <RichTextEditor
-                      rows={3}
-                      value={agent.description}
-                      onChange={(description) => updateAgent(index, { description })}
-                      aria-label={`Agent ${index + 1} description`}
-                    />
-                  </label>
-                  <label>
-                    Price USD (number)
+          <details className="gov-settings-section" open>
+            <summary className="gov-settings-section__summary">
+              <span>Login fees</span>
+              <span className="gov-settings-section__hint">Credits per OTP login by role</span>
+            </summary>
+            <div className="gov-settings-section__body">
+              <p className="muted">
+                Charged on OTP login. Per-user overrides live on Users. Set 0 to disable a role.
+              </p>
+              <div className="gov-fee-grid">
+                {FEE_ROLES.map((role) => (
+                  <label key={role} className="gov-fee-field">
+                    <span>{role}</span>
                     <input
                       type="number"
                       min={0}
                       step={1}
-                      value={agent.priceUsd}
-                      onChange={(e) => {
-                        const priceUsd = Number(e.target.value) || 0;
-                        updateAgent(index, {
-                          priceUsd,
-                          priceLabel: priceLabelFromUsd(priceUsd, agent.priceLabel),
-                        });
-                      }}
+                      value={fees[role]}
+                      onChange={(e) => setFees((prev) => ({ ...prev, [role]: e.target.value }))}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
+
+          <details className="gov-settings-section">
+            <summary className="gov-settings-section__summary">
+              <span>Operations</span>
+              <span className="gov-settings-section__hint">Site URL, wallet, sessions, expiry</span>
+            </summary>
+            <div className="gov-settings-section__body gov-settings-section__body--nested">
+              <details className="gov-settings-subsection" open>
+                <summary>Site & inquiries</summary>
+                <div className="gov-settings-fields">
+                  <label>
+                    Inquiry auto-expiry (days)
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={inquiryExpiryDays}
+                      onChange={(e) => setInquiryExpiryDays(e.target.value)}
                     />
                   </label>
                   <label>
-                    Price label (shown in Support modal)
+                    Public site URL
                     <input
-                      value={agent.priceLabel}
-                      onChange={(e) => updateAgent(index, { priceLabel: e.target.value })}
-                      placeholder="$29 USD"
+                      type="url"
+                      placeholder="https://srilankatourpilot.com"
+                      value={webAppUrl}
+                      onChange={(e) => setWebAppUrl(e.target.value)}
                     />
                   </label>
                   <label>
-                    Phone (tel: link)
+                    Email from
                     <input
-                      value={agent.phone}
-                      onChange={(e) => updateAgent(index, { phone: e.target.value })}
-                      placeholder="+94771234567"
-                    />
-                  </label>
-                  <label>
-                    Phone display
-                    <input
-                      value={agent.phoneDisplay}
-                      onChange={(e) => updateAgent(index, { phoneDisplay: e.target.value })}
-                      placeholder="+94 77 123 4567"
+                      type="text"
+                      placeholder='TourPilot &lt;noreply@example.com&gt;'
+                      value={emailFrom}
+                      onChange={(e) => setEmailFrom(e.target.value)}
                     />
                   </label>
                 </div>
-              </div>
-            ))}
+              </details>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() =>
-                  setSupport((p) => ({ ...p, agents: [...p.agents, blankAgent()] }))
-                }
-              >
-                Add agent
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setSupport(structuredClone(DEFAULT_SUPPORT_CONTENT))}
-              >
-                Reset support copy
-              </button>
-            </div>
-          </section>
-
-          <section className="gov-form-card">
-            <h3 className="gov-form-card__title">Email templates (optional)</h3>
-            <p className="muted">
-              Leave blank to keep built-in copy. Use placeholders like {"{{tripUrl}}"}.
-            </p>
-            <div className="gov-template-list">
-              {TEMPLATE_META.map((meta) => (
-                <details key={meta.key} className="gov-template-item">
-                  <summary>{meta.label}</summary>
-                  <p className="muted gov-template-vars">{meta.vars}</p>
+              <details className="gov-settings-subsection">
+                <summary>Wallet top-up limits</summary>
+                <div className="gov-settings-fields">
                   <label>
-                    Subject
+                    Top-up min (Credits)
                     <input
-                      value={templates[meta.key]?.subject || ""}
-                      onChange={(e) =>
-                        setTemplates((prev) => ({
-                          ...prev,
-                          [meta.key]: { ...prev[meta.key], subject: e.target.value },
-                        }))
-                      }
+                      type="number"
+                      min={1}
+                      value={topupMin}
+                      onChange={(e) => setTopupMin(e.target.value)}
                     />
                   </label>
                   <label>
-                    Body
-                    <RichTextEditor
-                      rows={5}
-                      value={templates[meta.key]?.body || ""}
-                      onChange={(body) =>
-                        setTemplates((prev) => ({
-                          ...prev,
-                          [meta.key]: { ...prev[meta.key], body },
-                        }))
-                      }
-                      aria-label={`${meta.label} body`}
+                    Top-up max (Credits, blank = no max)
+                    <input
+                      type="number"
+                      min={1}
+                      value={topupMax}
+                      onChange={(e) => setTopupMax(e.target.value)}
+                      placeholder="Optional"
                     />
                   </label>
+                </div>
+              </details>
+
+              <details className="gov-settings-subsection">
+                <summary>Session inactivity</summary>
+                <div className="gov-settings-fields">
+                  <label>
+                    Default timeout
+                    <div className="gov-settings-inline">
+                      <input
+                        type="number"
+                        min={SESSION_INACTIVITY_MIN_MINUTES}
+                        max={idleUnit === "hours" ? 168 : SESSION_INACTIVITY_MAX_MINUTES}
+                        value={idleAmount}
+                        onChange={(e) => setIdleAmount(e.target.value)}
+                      />
+                      <select
+                        className="agency-filter"
+                        value={idleUnit}
+                        onChange={(e) => setIdleUnit(e.target.value as SessionInactivityUnit)}
+                      >
+                        <option value="minutes">Minutes</option>
+                        <option value="hours">Hours</option>
+                      </select>
+                    </div>
+                  </label>
+                </div>
+                <p className="muted" style={{ marginTop: 8 }}>
+                  Used when an agency has the session inactivity package enabled and no per-agency
+                  override. Re-login after timeout charges the login fee again.
+                  {Number.isFinite(Number(idleAmount))
+                    ? ` Currently ${formatSessionInactivity(
+                        toSessionInactivityMinutes(Number(idleAmount), idleUnit)
+                      )}.`
+                    : ""}
+                </p>
+              </details>
+            </div>
+          </details>
+
+          <details className="gov-settings-section">
+            <summary className="gov-settings-section__summary">
+              <span>Support modal</span>
+              <span className="gov-settings-section__hint">
+                {support.agents.length} agent{support.agents.length === 1 ? "" : "s"}
+              </span>
+            </summary>
+            <div className="gov-settings-section__body gov-settings-section__body--nested">
+              <details className="gov-settings-subsection" open>
+                <summary>Modal copy</summary>
+                <div className="gov-settings-fields">
+                  <label>
+                    Title
+                    <input
+                      value={support.title}
+                      onChange={(e) => setSupport((p) => ({ ...p, title: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Subtitle
+                    <textarea
+                      rows={2}
+                      value={support.subtitle}
+                      onChange={(e) => setSupport((p) => ({ ...p, subtitle: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Footer note
+                    <textarea
+                      rows={2}
+                      value={support.footer}
+                      onChange={(e) => setSupport((p) => ({ ...p, footer: e.target.value }))}
+                    />
+                  </label>
+                </div>
+              </details>
+
+              {support.agents.map((agent, index) => (
+                <details key={agent.id} className="gov-settings-subsection">
+                  <summary>
+                    Agent {index + 1}
+                    {agent.name.trim() ? ` — ${agent.name.trim()}` : ""}
+                  </summary>
+                  <div className="gov-settings-subsection__toolbar">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-nav"
+                      disabled={support.agents.length <= 1}
+                      onClick={() =>
+                        setSupport((p) => ({
+                          ...p,
+                          agents: p.agents.filter((_, i) => i !== index),
+                        }))
+                      }
+                    >
+                      Remove agent
+                    </button>
+                  </div>
+                  <div className="gov-settings-fields">
+                    <label>
+                      Name
+                      <input
+                        value={agent.name}
+                        onChange={(e) => updateAgent(index, { name: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Role
+                      <input
+                        value={agent.role}
+                        onChange={(e) => updateAgent(index, { role: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Service
+                      <input
+                        value={agent.service}
+                        onChange={(e) => updateAgent(index, { service: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Description
+                      <RichTextEditor
+                        rows={3}
+                        value={agent.description}
+                        onChange={(description) => updateAgent(index, { description })}
+                        aria-label={`Agent ${index + 1} description`}
+                      />
+                    </label>
+                    <label>
+                      Price label (shown)
+                      <input
+                        value={agent.priceLabel}
+                        onChange={(e) => updateAgent(index, { priceLabel: e.target.value })}
+                        placeholder="$29 USD"
+                      />
+                    </label>
+                    <label>
+                      Price USD (number)
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={agent.priceUsd}
+                        onChange={(e) =>
+                          updateAgent(index, { priceUsd: Number(e.target.value) || 0 })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Phone (tel: link)
+                      <input
+                        value={agent.phone}
+                        onChange={(e) => updateAgent(index, { phone: e.target.value })}
+                        placeholder="+94771234567"
+                      />
+                    </label>
+                    <label>
+                      Phone display
+                      <input
+                        value={agent.phoneDisplay}
+                        onChange={(e) => updateAgent(index, { phoneDisplay: e.target.value })}
+                        placeholder="+94 77 123 4567"
+                      />
+                    </label>
+                  </div>
                 </details>
               ))}
-            </div>
-          </section>
 
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "Saving…" : "Save platform settings"}
-          </button>
-          {settings.updatedAt && (
-            <p className="muted">Last saved {new Date(settings.updatedAt).toLocaleString()}.</p>
-          )}
+              <div className="gov-settings-section__actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() =>
+                    setSupport((p) => ({ ...p, agents: [...p.agents, blankAgent()] }))
+                  }
+                >
+                  Add agent
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setSupport(structuredClone(DEFAULT_SUPPORT_CONTENT))}
+                >
+                  Reset support copy
+                </button>
+              </div>
+            </div>
+          </details>
+
+          <details className="gov-settings-section">
+            <summary className="gov-settings-section__summary">
+              <span>Email templates</span>
+              <span className="gov-settings-section__hint">Optional overrides</span>
+            </summary>
+            <div className="gov-settings-section__body">
+              <p className="muted">
+                Leave blank to keep built-in copy. Use placeholders like {"{{tripUrl}}"}.
+              </p>
+              <div className="gov-template-list">
+                {TEMPLATE_META.map((meta) => (
+                  <details key={meta.key} className="gov-template-item">
+                    <summary>{meta.label}</summary>
+                    <p className="muted gov-template-vars">{meta.vars}</p>
+                    <label>
+                      Subject
+                      <input
+                        value={templates[meta.key]?.subject || ""}
+                        onChange={(e) =>
+                          setTemplates((prev) => ({
+                            ...prev,
+                            [meta.key]: { ...prev[meta.key], subject: e.target.value },
+                          }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      Body
+                      <RichTextEditor
+                        rows={5}
+                        value={templates[meta.key]?.body || ""}
+                        onChange={(body) =>
+                          setTemplates((prev) => ({
+                            ...prev,
+                            [meta.key]: { ...prev[meta.key], body },
+                          }))
+                        }
+                        aria-label={`${meta.label} body`}
+                      />
+                    </label>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </details>
+
+          <div className="gov-settings-sticky-save">
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? "Saving…" : "Save platform settings"}
+            </button>
+            {settings.updatedAt && (
+              <p className="muted">Last saved {new Date(settings.updatedAt).toLocaleString()}.</p>
+            )}
+          </div>
         </form>
       )}
     </div>

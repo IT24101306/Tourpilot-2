@@ -190,6 +190,8 @@ curl -fsS https://www.srilankatourpilot.com/api/health
 | `deploy.yml` | Push to `main` | Build Docker images → push GHCR (`latest`/`<sha>`) → SSH → prod compose |
 | `deploy-dev.yml` | Push to `development` | Build Docker images → push GHCR (`dev`/`dev-<sha>`) → SSH → `/var/www/tourpilot-dev` |
 
+**Database schema (automatic):** each API container start runs `prisma db push` via [`docker/api-entrypoint.sh`](../docker/api-entrypoint.sh). GitHub deploys force-recreate the API so the new schema always applies before health checks pass. Default is `PRISMA_ACCEPT_DATA_LOSS=true` (set `false` in `.env` to refuse destructive changes).
+
 ### 2.1 GitHub Container Registry
 
 Images will be:

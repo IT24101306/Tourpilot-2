@@ -133,6 +133,12 @@
   margin: 12px 0;
 }
 
+.tour-detail-topic__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
 .tour-detail-page .price {
   font-family: var(--font-heading);
   font-weight: 700;

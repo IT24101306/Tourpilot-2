@@ -13,11 +13,12 @@ type Metric = {
 
 type Props = {
   metrics: Metric[];
+  className?: string;
 };
 
-export function OpsMetricStrip({ metrics }: Props) {
+export function OpsMetricStrip({ metrics, className }: Props) {
   return (
-    <div className="ops-metric-strip" role="list">
+    <div className={`ops-metric-strip${className ? ` ${className}` : ""}`} role="list">
       {metrics.map((m) => {
         const className = `ops-metric-card${m.active ? " active" : ""}${
           m.href || m.onClick ? " ops-metric-card--interactive" : ""
