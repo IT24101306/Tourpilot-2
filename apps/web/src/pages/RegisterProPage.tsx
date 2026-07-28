@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  dashboardPathForRole,
   defaultAgencyKyc,
   isValidInternationalPhone,
   toStoredPhone,
@@ -11,19 +10,18 @@ import {
   type UserRole,
 } from "@tourpilot/shared";
 import { api } from "../api/client";
-import { useAuth, type AuthUser } from "../context/AuthContext";
 import { AuthLayout, AuthSwitch } from "../components/AuthLayout";
 import { OtpStep } from "../components/OtpStep";
 import { PhoneInput } from "../components/PhoneInput";
 import { AgencyKycForm } from "../components/agency/AgencyKycForm";
 import { RegisterTermsConsent } from "../components/auth/RegisterTermsConsent";
+import { loginAfterRegisterPath } from "../utils/authRedirect";
 
 type Step = "details" | "kyc" | "otp";
 
 export function RegisterProPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setSession } = useAuth();
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -155,16 +153,11 @@ export function RegisterProPage() {
     setError("");
     setLoading(true);
     try {
-      const data = await api<{
-        token: string;
-        user: AuthUser;
-        redirectTo: string;
-      }>("/auth/verify-registration", {
+      await api("/auth/verify-registration", {
         method: "POST",
         body: JSON.stringify({ challengeId, phone, otp }),
       });
-      setSession(data.token, data.user);
-      navigate(data.redirectTo || dashboardPathForRole(data.user.role));
+      navigate(loginAfterRegisterPath({ phone }), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -292,7 +285,7 @@ export function RegisterProPage() {
             onOtpChange={setOtp}
             onSubmit={handleOtpSubmit}
             loading={loading}
-            submitLabel="Verify & start trial"
+            submitLabel="Verify & continue"
             demoOtp={demoOtp}
             bypassCode={bypassCode}
             onBack={() => {

@@ -2,14 +2,21 @@ import type { DisplayCurrency } from "@tourpilot/shared";
 import {
   DISPLAY_CURRENCIES,
   DISPLAY_CURRENCY_LABELS,
-  LKR_PER_USD,
+  LISTING_CURRENCY,
 } from "@tourpilot/shared";
 import { useCurrency } from "../../context/CurrencyContext";
 
 export function CurrencyPreferencePanel() {
-  const { currency, setCurrency, saving, canChange } = useCurrency();
+  const { currency, setCurrency, saving, canChange, rates, fx, ratesLoading } = useCurrency();
 
   if (!canChange) return null;
+
+  const lkrPerUsd = Math.round(rates.USD);
+  const rateNote = ratesLoading
+    ? "Loading live exchange rates…"
+    : fx?.live
+      ? `Live FX ≈ ${lkrPerUsd.toLocaleString()} LKR per 1 USD (updated ${new Date(fx.asOf).toLocaleDateString()}).`
+      : `Approximate FX ≈ ${lkrPerUsd.toLocaleString()} LKR per 1 USD (live rates temporarily unavailable).`;
 
   return (
     <section className="account-currency-panel" aria-labelledby="currencyPrefTitle">
@@ -18,7 +25,8 @@ export function CurrencyPreferencePanel() {
           Display currency
         </h2>
         <p className="account-currency-panel__lead">
-          How prices are shown across TourPilot (approx. {LKR_PER_USD} LKR = 1 USD).
+          Tours are listed and charged in <strong>{LISTING_CURRENCY}</strong>. Other currencies are a
+          rough conversion for convenience. {rateNote}
         </p>
       </header>
       <div className="account-currency-panel__options" role="radiogroup" aria-label="Display currency">

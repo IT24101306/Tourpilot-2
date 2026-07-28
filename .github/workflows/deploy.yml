@@ -61,6 +61,8 @@ jobs:
           context: .
           file: docker/web.Dockerfile
           push: true
+          build-args: |
+            VITE_GA_MEASUREMENT_ID=${{ secrets.VITE_GA_MEASUREMENT_ID }}
           tags: |
             ${{ steps.meta.outputs.web }}:latest
             ${{ steps.meta.outputs.web }}:${{ steps.meta.outputs.sha }}
@@ -122,12 +124,29 @@ jobs:
             # If USE_CADDY_EDGE=true (set by wire-caddy.sh), keep the edge profile
             # so recreating api/web does not drop the Caddy container on 80/443.
             if grep -qE '^USE_CADDY_EDGE=true' .env 2>/dev/null; then
-              docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d
+              docker compose -f docker-compose.prod.yml --env-file .env --profile edge up -d --force-recreate api web
             else
-              docker compose -f docker-compose.prod.yml --env-file .env up -d
+              docker compose -f docker-compose.prod.yml --env-file .env up -d --force-recreate api web
             fi
-            docker image prune -f
 
-            sleep 8
+            # Entrypoint runs prisma db push; wait until API is healthy (schema applied).
+            echo "Waiting for API health (includes Prisma sync)..."
+            ok=0
+            for i in $(seq 1 60); do
+              if docker compose -f docker-compose.prod.yml --env-file .env exec -T api \
+                node -e "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" \
+                >/dev/null 2>&1; then
+                ok=1
+                break
+              fi
+              sleep 3
+            done
+            if [ "$ok" != "1" ]; then
+              echo "API did not become healthy — recent logs:" >&2
+              docker compose -f docker-compose.prod.yml --env-file .env logs --tail=80 api >&2 || true
+              exit 1
+            fi
+
+            docker image prune -f
             curl -fsS http://127.0.0.1/api/health || curl -fsS http://127.0.0.1:8080/api/health
-            echo "Deployed $BUILD_SHA"
+            echo "Deployed $BUILD_SHA (Prisma schema synced on API start)"

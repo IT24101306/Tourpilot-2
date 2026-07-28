@@ -63,6 +63,8 @@ jobs:
           context: .
           file: docker/web.Dockerfile
           push: true
+          build-args: |
+            VITE_GA_MEASUREMENT_ID=${{ secrets.VITE_GA_MEASUREMENT_ID }}
           tags: |
             ${{ steps.meta.outputs.web }}:dev
             ${{ steps.meta.outputs.web }}:dev-${{ steps.meta.outputs.sha }}
@@ -122,11 +124,27 @@ jobs:
             echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_PULL_USER }}" --password-stdin
 
             docker compose -f docker-compose.prod.yml --env-file .env pull api web
-            docker compose -f docker-compose.prod.yml --env-file .env up -d
-            docker image prune -f
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --force-recreate api web
 
-            sleep 8
+            echo "Waiting for API health (includes Prisma sync)..."
+            ok=0
+            for i in $(seq 1 60); do
+              if docker compose -f docker-compose.prod.yml --env-file .env exec -T api \
+                node -e "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" \
+                >/dev/null 2>&1; then
+                ok=1
+                break
+              fi
+              sleep 3
+            done
+            if [ "$ok" != "1" ]; then
+              echo "API did not become healthy — recent logs:" >&2
+              docker compose -f docker-compose.prod.yml --env-file .env logs --tail=80 api >&2 || true
+              exit 1
+            fi
+
+            docker image prune -f
             HTTP_PORT="$(grep -E '^HTTP_PORT=' .env | cut -d= -f2 | tr -d '[:space:]')"
             if [ -z "$HTTP_PORT" ]; then HTTP_PORT=8081; fi
             curl -fsS "http://127.0.0.1:${HTTP_PORT}/api/health"
-            echo "Deployed dev-${{ needs.build-and-push.outputs.sha }}"
+            echo "Deployed dev-${{ needs.build-and-push.outputs.sha }} (Prisma schema synced on API start)"

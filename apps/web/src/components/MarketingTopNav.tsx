@@ -1,17 +1,25 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * Shared forest-green marketing nav (home, login, register).
  */
 export function MarketingTopNav() {
   const { pathname } = useLocation();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const onLogin = pathname === "/login";
   const onRegister = pathname.startsWith("/register");
+  const onProfile = pathname === "/profile";
 
   function closeMenu() {
     setMenuOpen(false);
+  }
+
+  function handleLogout() {
+    closeMenu();
+    logout();
   }
 
   return (
@@ -32,11 +40,13 @@ export function MarketingTopNav() {
         </Link>
 
         <ul className="mkt-nav__links">
-          <li>
-            <Link to="/#pricing" className="mkt-nav__link" onClick={closeMenu}>
-              Pricing
-            </Link>
-          </li>
+          {user?.role !== "TOURIST" ? (
+            <li>
+              <Link to="/#pricing" className="mkt-nav__link" onClick={closeMenu}>
+                Pricing
+              </Link>
+            </li>
+          ) : null}
           <li>
             <Link to="/#modules" className="mkt-nav__link" onClick={closeMenu}>
               Services
@@ -50,22 +60,44 @@ export function MarketingTopNav() {
         </ul>
 
         <div className="mkt-nav__actions">
-          <Link
-            to="/login"
-            className={`mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop${onLogin ? " is-active" : ""}`}
-            onClick={closeMenu}
-            aria-current={onLogin ? "page" : undefined}
-          >
-            Log in
-          </Link>
-          <Link
-            to="/register"
-            className={`mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop${onRegister ? " is-active" : ""}`}
-            onClick={closeMenu}
-            aria-current={onRegister ? "page" : undefined}
-          >
-            Sign up
-          </Link>
+          {user ? (
+            <>
+              <Link
+                to="/profile"
+                className={`mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop${onProfile ? " is-active" : ""}`}
+                onClick={closeMenu}
+                aria-current={onProfile ? "page" : undefined}
+              >
+                Profile
+              </Link>
+              <button
+                type="button"
+                className="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop"
+                onClick={handleLogout}
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className={`mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop${onLogin ? " is-active" : ""}`}
+                onClick={closeMenu}
+                aria-current={onLogin ? "page" : undefined}
+              >
+                Log in
+              </Link>
+              <Link
+                to="/register"
+                className={`mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop${onRegister ? " is-active" : ""}`}
+                onClick={closeMenu}
+                aria-current={onRegister ? "page" : undefined}
+              >
+                Sign up
+              </Link>
+            </>
+          )}
           <button
             type="button"
             className="mkt-nav__menu-toggle"
@@ -89,11 +121,13 @@ export function MarketingTopNav() {
       {menuOpen ? (
         <div className="mkt-nav__mobile is-open" id="mkt-mobile-menu">
           <ul>
-            <li>
-              <Link to="/#pricing" onClick={closeMenu}>
-                Pricing
-              </Link>
-            </li>
+            {user?.role !== "TOURIST" ? (
+              <li>
+                <Link to="/#pricing" onClick={closeMenu}>
+                  Pricing
+                </Link>
+              </li>
+            ) : null}
             <li>
               <Link to="/#modules" onClick={closeMenu}>
                 Services
@@ -105,12 +139,25 @@ export function MarketingTopNav() {
               </Link>
             </li>
             <li className="mkt-nav__mobile-ctas">
-              <Link to="/login" className="mkt-nav__btn mkt-nav__btn--ghost" onClick={closeMenu}>
-                Log in
-              </Link>
-              <Link to="/register" className="mkt-nav__btn mkt-nav__btn--solid" onClick={closeMenu}>
-                Sign up
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/profile" className="mkt-nav__btn mkt-nav__btn--ghost" onClick={closeMenu}>
+                    Profile
+                  </Link>
+                  <button type="button" className="mkt-nav__btn mkt-nav__btn--solid" onClick={handleLogout}>
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="mkt-nav__btn mkt-nav__btn--ghost" onClick={closeMenu}>
+                    Log in
+                  </Link>
+                  <Link to="/register" className="mkt-nav__btn mkt-nav__btn--solid" onClick={closeMenu}>
+                    Sign up
+                  </Link>
+                </>
+              )}
             </li>
           </ul>
         </div>

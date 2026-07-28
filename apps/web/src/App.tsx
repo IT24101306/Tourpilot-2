@@ -30,6 +30,9 @@ import {
 } from "./pages/account/BillingSubscriptionsPage";
 import { BillingPaymentHistoryPage } from "./pages/account/BillingPaymentHistoryPage";
 import { BillingPaymentMethodsPage } from "./pages/account/BillingPaymentMethodsPage";
+import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { initAnalyticsConsentListener } from "./lib/analytics";
+import { useEffect } from "react";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
 import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
@@ -155,6 +158,8 @@ function AppShell() {
   const storefront = useStorefrontDomain();
   const onMarketingHome =
     pathname === "/" && !storefront.loading && !storefront.isCustomDomain;
+
+  useEffect(() => initAnalyticsConsentListener(), []);
 
   return (
         <div className={`app-root${onMarketingHome ? " app-root--marketing-home" : ""}`}>
@@ -345,6 +350,7 @@ function AppShell() {
             </Routes>
           </div>
           <SiteFooter />
+          <CookieConsentBanner />
         </div>
   );
 }

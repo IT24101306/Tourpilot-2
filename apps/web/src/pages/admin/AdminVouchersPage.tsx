@@ -279,8 +279,8 @@ export function AdminVouchersPage() {
               </label>
               <input
                 type="number"
-                min={0.01}
-                step={form.discountType === "PERCENT" ? 0.5 : 100}
+                min={form.discountType === "PERCENT" ? 0.01 : 1}
+                step={form.discountType === "PERCENT" ? 0.01 : 1}
                 max={form.discountType === "PERCENT" ? 100 : undefined}
                 value={form.discountValue}
                 onChange={(e) => setForm({ ...form, discountValue: e.target.value })}

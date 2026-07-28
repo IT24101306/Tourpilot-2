@@ -64,7 +64,6 @@ export function AccountProfileShell({
   const hasShortcuts = actions.length > 0;
   const hasStats = stats.length > 0;
   const hasDetails = infoFields.length > 0;
-  const hasOverview = hasShortcuts || featured || hasStats || hasDetails;
   const eyebrow =
     contextLabel?.trim() ||
     (role === "AGENCY" ? "Agency account" : role === "TOURIST" ? "Traveler account" : "My account");
@@ -140,38 +139,39 @@ export function AccountProfileShell({
       </header>
 
       <div className="account-profile-body">
+        {hasShortcuts ? (
+          <section className="account-profile-band account-profile-band--surface">
+            <div className="account-profile-inner">
+              <div className="account-profile-block">
+                <header className="account-block-head">
+                  <h2>Shortcuts</h2>
+                  <p>Jump to your most-used tools.</p>
+                </header>
+                <nav className="account-shortcuts" aria-label="Account shortcuts">
+                  {actions.map((a) => (
+                    <Link
+                      key={a.to}
+                      to={a.to}
+                      className={`account-shortcut account-shortcut--${a.variant ?? "ghost"}`}
+                    >
+                      <span className="account-shortcut-label">{a.label}</span>
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {leading ? (
           <section className="account-profile-band account-profile-band--wallet">
             <div className="account-profile-inner">{leading}</div>
           </section>
         ) : null}
 
-        {hasOverview && (
+        {(featured || hasStats || hasDetails) && (
           <section className="account-profile-band account-profile-band--surface">
             <div className="account-profile-inner">
-              {hasShortcuts && (
-                <div className="account-profile-block">
-                  <header className="account-block-head">
-                    <h2>Shortcuts</h2>
-                    <p>Jump to your most-used tools.</p>
-                  </header>
-                  <nav className="account-shortcuts" aria-label="Account shortcuts">
-                    {actions.map((a) => (
-                      <Link
-                        key={a.to}
-                        to={a.to}
-                        className={`account-shortcut account-shortcut--${a.variant ?? "ghost"}`}
-                      >
-                        <span className="account-shortcut-label">{a.label}</span>
-                        <span className="account-shortcut-arrow" aria-hidden="true">
-                          →
-                        </span>
-                      </Link>
-                    ))}
-                  </nav>
-                </div>
-              )}
-
               {featured && (
                 <div className="account-profile-block">
                   <header className="account-block-head">

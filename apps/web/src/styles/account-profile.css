@@ -391,7 +391,6 @@ a.account-profile-partners__chip:hover {
 .account-shortcut {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   min-height: 58px;
   padding: 14px 16px;
@@ -420,18 +419,6 @@ a.account-profile-partners__chip:hover {
   line-height: 1.25;
 }
 
-.account-shortcut-arrow {
-  flex-shrink: 0;
-  font-size: 0.9rem;
-  color: var(--ap-muted);
-  transition: transform 0.15s ease;
-}
-
-.account-shortcut:hover .account-shortcut-arrow {
-  transform: translateX(2px);
-  color: var(--green-dark, #008c02);
-}
-
 .account-shortcut--primary,
 .account-shortcut--teal {
   background: var(--green, #00af02);
@@ -439,11 +426,6 @@ a.account-profile-partners__chip:hover {
   border-left-color: var(--green-dark, #008c02);
   color: #fff;
   box-shadow: 0 10px 24px rgba(0, 140, 2, 0.22);
-}
-
-.account-shortcut--primary .account-shortcut-arrow,
-.account-shortcut--teal .account-shortcut-arrow {
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .account-shortcut--primary:hover,

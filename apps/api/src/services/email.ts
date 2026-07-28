@@ -307,6 +307,137 @@ export function absolutePublicUrl(pathOrUrl: string, baseUrl: string) {
   return `${base}${path}`;
 }
 
+/** Brand tokens for transactional HTML (table-based for email clients). */
+const EMAIL_BRAND = {
+  green: "#00af02",
+  greenDark: "#008c02",
+  ink: "#142018",
+  muted: "#5b6b60",
+  line: "#dce6df",
+  soft: "#f3f7f4",
+  white: "#ffffff",
+  font: "'Segoe UI', Helvetica, Arial, sans-serif",
+} as const;
+
+type BrandedEmailCta = { label: string; url: string };
+
+type BrandedEmailOptions = {
+  /** Inbox preview snippet (hidden in most clients). */
+  preheader?: string;
+  /** Small label above the title, e.g. "Welcome". */
+  eyebrow?: string;
+  title?: string;
+  /** Already-safe HTML for the message body. */
+  bodyHtml: string;
+  cta?: BrandedEmailCta;
+  footerNote?: string;
+};
+
+function emailText(...parts: Array<string | false | null | undefined>) {
+  return parts.filter((p): p is string => Boolean(p)).join("\n");
+}
+
+function emailP(html: string) {
+  return `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${EMAIL_BRAND.ink};">${html}</p>`;
+}
+
+function emailStrong(text: string) {
+  return `<strong style="font-weight:700;color:${EMAIL_BRAND.ink};">${escapeHtml(text)}</strong>`;
+}
+
+function emailQuote(text: string) {
+  return `<blockquote style="margin:0 0 16px;padding:12px 14px;border-left:3px solid ${EMAIL_BRAND.green};background:${EMAIL_BRAND.soft};border-radius:0 8px 8px 0;font-size:14px;line-height:1.55;color:${EMAIL_BRAND.ink};">${escapeHtml(text)}</blockquote>`;
+}
+
+function emailDetailRows(rows: Array<{ label: string; value: string }>) {
+  if (!rows.length) return "";
+  const cells = rows
+    .map(
+      (r) => `<tr>
+  <td style="padding:10px 0;border-bottom:1px solid ${EMAIL_BRAND.line};font-size:13px;color:${EMAIL_BRAND.muted};width:38%;vertical-align:top;">${escapeHtml(r.label)}</td>
+  <td style="padding:10px 0;border-bottom:1px solid ${EMAIL_BRAND.line};font-size:14px;font-weight:600;color:${EMAIL_BRAND.ink};vertical-align:top;">${escapeHtml(r.value)}</td>
+</tr>`
+    )
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border-collapse:collapse;">${cells}</table>`;
+}
+
+/**
+ * Professional branded shell for welcome, booking/inquiry, and account emails.
+ * Do not use for OTP — keep codes minimal and easy to scan.
+ */
+export function renderBrandedEmail(opts: BrandedEmailOptions): string {
+  const preheader = opts.preheader
+    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">${escapeHtml(opts.preheader)}</div>`
+    : "";
+  const eyebrow = opts.eyebrow
+    ? `<p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${EMAIL_BRAND.greenDark};">${escapeHtml(opts.eyebrow)}</p>`
+    : "";
+  const title = opts.title
+    ? `<h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;font-weight:700;color:${EMAIL_BRAND.ink};">${escapeHtml(opts.title)}</h1>`
+    : "";
+  const cta = opts.cta
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;border-collapse:collapse;">
+  <tr>
+    <td style="border-radius:8px;background:${EMAIL_BRAND.green};">
+      <a href="${escapeHtml(opts.cta.url)}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:700;color:${EMAIL_BRAND.white};text-decoration:none;border-radius:8px;">${escapeHtml(opts.cta.label)}</a>
+    </td>
+  </tr>
+</table>`
+    : "";
+  const footerNote = opts.footerNote
+    ? `<p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:${EMAIL_BRAND.muted};">${escapeHtml(opts.footerNote)}</p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>TourPilot</title>
+</head>
+<body style="margin:0;padding:0;background:${EMAIL_BRAND.soft};font-family:${EMAIL_BRAND.font};-webkit-text-size-adjust:100%;">
+  ${preheader}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${EMAIL_BRAND.soft};border-collapse:collapse;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;border-collapse:collapse;">
+          <tr>
+            <td style="padding:0 0 14px;text-align:left;">
+              <span style="font-size:18px;font-weight:800;letter-spacing:-0.02em;color:${EMAIL_BRAND.greenDark};">Tour<span style="color:${EMAIL_BRAND.green};">Pilot</span></span>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:${EMAIL_BRAND.white};border:1px solid ${EMAIL_BRAND.line};border-radius:14px;overflow:hidden;box-shadow:0 8px 28px rgba(0,140,2,0.08);">
+              <div style="height:4px;background:${EMAIL_BRAND.green};line-height:4px;font-size:0;">&nbsp;</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td style="padding:28px 28px 8px;">
+                    ${eyebrow}
+                    ${title}
+                    ${opts.bodyHtml}
+                    ${cta}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 8px 0;text-align:center;">
+              ${footerNote}
+              <p style="margin:0;font-size:12px;line-height:1.5;color:${EMAIL_BRAND.muted};">TourPilot · Sri Lanka travel, made simpler</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/** Minimal OTP mail — no branded chrome so the code stays obvious. */
 export function otpEmail(params: {
   recipientName?: string;
   otp: string;
@@ -320,20 +451,21 @@ export function otpEmail(params: {
         : "verify your request";
   const greeting = params.recipientName ? `Hello ${params.recipientName},` : "Hello,";
   const subject = `Your TourPilot code: ${params.otp}`;
-  const text = [
+  const text = emailText(
     greeting,
     "",
     `Your one-time code to ${action} is: ${params.otp}`,
     "",
-    "This code expires in 5 minutes. If you did not request it, you can ignore this email.",
+    "This code expires in 5 minutes. If you did not request it, ignore this email.",
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>${escapeHtml(greeting)}</p>
-<p>Your one-time code to ${escapeHtml(action)} is:</p>
-<p style="font-size:28px;letter-spacing:4px;font-weight:700">${escapeHtml(params.otp)}</p>
-<p>This code expires in 5 minutes. If you did not request it, you can ignore this email.</p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = `<div style="font-family:${EMAIL_BRAND.font};font-size:15px;line-height:1.5;color:${EMAIL_BRAND.ink};">
+<p style="margin:0 0 12px;">${escapeHtml(greeting)}</p>
+<p style="margin:0 0 8px;">Your one-time code to ${escapeHtml(action)}:</p>
+<p style="margin:0 0 16px;font-size:28px;letter-spacing:0.28em;font-weight:700;font-family:ui-monospace,Consolas,monospace;">${escapeHtml(params.otp)}</p>
+<p style="margin:0;font-size:13px;color:${EMAIL_BRAND.muted};">Expires in 5 minutes. If you did not request this, ignore the email.</p>
+</div>`;
   return { subject, text, html };
 }
 
@@ -342,25 +474,32 @@ export function welcomeEmail(params: {
   role: string;
   appUrl: string;
 }) {
+  const roleLabel = params.role.toLowerCase();
   const subject = "Welcome to TourPilot";
-  const text = [
+  const text = emailText(
     `Hello ${params.name},`,
     "",
     "Welcome to TourPilot — we're glad you're here.",
     "",
-    `Your account (${params.role.toLowerCase()}) is ready. Explore tours, offers, and trip planning anytime:`,
+    `Your account (${roleLabel}) is ready. Explore tours, offers, and trip planning anytime:`,
     params.appUrl,
     "",
     "We'll also email you important trip updates and occasional offers.",
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.name)},</p>
-<p>Welcome to TourPilot — we're glad you're here.</p>
-<p>Your <strong>${escapeHtml(params.role.toLowerCase())}</strong> account is ready.</p>
-<p><a href="${escapeHtml(params.appUrl)}">Open TourPilot</a></p>
-<p>We'll also email you important trip updates and occasional offers.</p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: "Your TourPilot account is ready.",
+    eyebrow: "Welcome",
+    title: `Hello ${params.name}`,
+    bodyHtml: [
+      emailP("Welcome to TourPilot — we're glad you're here."),
+      emailP(`Your ${emailStrong(roleLabel)} account is ready. Explore tours, offers, and trip planning anytime.`),
+      emailP("We'll also email you important trip updates and occasional offers."),
+    ].join(""),
+    cta: { label: "Open TourPilot", url: params.appUrl },
+    footerNote: "You're receiving this because you created a TourPilot account.",
+  });
   return { subject, text, html };
 }
 
@@ -372,7 +511,7 @@ export function trialEndingEmail(params: {
   activateUrl: string;
 }) {
   const subject = `Your TourPilot free trial ends soon (${params.packageName})`;
-  const text = [
+  const text = emailText(
     `Hello ${params.name},`,
     "",
     `Your 7-day free trial for ${params.packageName} ends on ${params.endsAtLabel}.`,
@@ -381,13 +520,23 @@ export function trialEndingEmail(params: {
     "",
     `Activate / top up: ${params.activateUrl}`,
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.name)},</p>
-<p>Your <strong>7-day free trial</strong> for <strong>${escapeHtml(params.packageName)}</strong> ends on <strong>${escapeHtml(params.endsAtLabel)}</strong>.</p>
-<p>After that, access pauses until you activate your package (<strong>${escapeHtml(params.priceLabel)}</strong>).</p>
-<p><a href="${escapeHtml(params.activateUrl)}">Activate your package</a></p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: `Trial for ${params.packageName} ends ${params.endsAtLabel}.`,
+    eyebrow: "Trial reminder",
+    title: "Your free trial ends soon",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.name)},`),
+      emailP(
+        `Your 7-day free trial for ${emailStrong(params.packageName)} ends on ${emailStrong(params.endsAtLabel)}.`
+      ),
+      emailP(
+        `After that, access pauses until you activate your package (${emailStrong(params.priceLabel)}).`
+      ),
+    ].join(""),
+    cta: { label: "Activate your package", url: params.activateUrl },
+  });
   return { subject, text, html };
 }
 
@@ -397,7 +546,7 @@ export function tripMessageEmail(params: {
   tripUrl: string;
 }) {
   const subject = "New message in your TourPilot trip room";
-  const text = [
+  const text = emailText(
     `Hello ${params.recipientName},`,
     "",
     "You have a new message in your trip room:",
@@ -406,13 +555,19 @@ export function tripMessageEmail(params: {
     "",
     `Open trip room: ${params.tripUrl}`,
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
-<p>You have a new message in your trip room:</p>
-<blockquote>${escapeHtml(params.preview)}</blockquote>
-<p><a href="${escapeHtml(params.tripUrl)}">Open trip room</a></p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: params.preview.slice(0, 120),
+    eyebrow: "Trip room",
+    title: "You have a new message",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.recipientName)},`),
+      emailP("Someone just messaged you in your trip room:"),
+      emailQuote(params.preview),
+    ].join(""),
+    cta: { label: "Open trip room", url: params.tripUrl },
+  });
   return { subject, text, html };
 }
 
@@ -422,7 +577,7 @@ export function agencyApprovedEmail(params: {
   dashboardUrl: string;
 }) {
   const subject = `TourPilot — ${params.agencyName} is approved`;
-  const text = [
+  const text = emailText(
     `Hello ${params.ownerName},`,
     "",
     `Great news — ${params.agencyName} has been approved on TourPilot.`,
@@ -431,13 +586,19 @@ export function agencyApprovedEmail(params: {
     "",
     `Open your dashboard: ${params.dashboardUrl}`,
     "",
-    "— TourPilot Platform Team",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.ownerName)},</p>
-<p>Great news — <strong>${escapeHtml(params.agencyName)}</strong> has been approved on TourPilot.</p>
-<p>You can now publish tours, manage inquiries, and appear in discovery.</p>
-<p><a href="${escapeHtml(params.dashboardUrl)}">Open your dashboard</a></p>
-<p>— TourPilot Platform Team</p>`;
+    "— TourPilot Platform Team"
+  );
+  const html = renderBrandedEmail({
+    preheader: `${params.agencyName} is approved on TourPilot.`,
+    eyebrow: "Agency approved",
+    title: "You're live on TourPilot",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.ownerName)},`),
+      emailP(`Great news — ${emailStrong(params.agencyName)} has been approved.`),
+      emailP("You can now publish tours, manage inquiries, and appear in discovery."),
+    ].join(""),
+    cta: { label: "Open your dashboard", url: params.dashboardUrl },
+  });
   return { subject, text, html };
 }
 
@@ -447,7 +608,7 @@ export function agencyRejectionEmail(params: {
   reason: string;
 }) {
   const subject = `TourPilot — application update for ${params.agencyName}`;
-  const text = [
+  const text = emailText(
     `Hello ${params.ownerName},`,
     "",
     `Thank you for applying to list ${params.agencyName} on TourPilot.`,
@@ -459,16 +620,20 @@ export function agencyRejectionEmail(params: {
     "",
     "You may update your application and contact support if you have questions.",
     "",
-    "— TourPilot Platform Team",
-  ].join("\n");
-
-  const html = `<p>Hello ${escapeHtml(params.ownerName)},</p>
-<p>Thank you for applying to list <strong>${escapeHtml(params.agencyName)}</strong> on TourPilot.</p>
-<p>After review, we are unable to approve your agency at this time.</p>
-<p><strong>Reason:</strong><br>${escapeHtml(params.reason)}</p>
-<p>You may update your application and contact support if you have questions.</p>
-<p>— TourPilot Platform Team</p>`;
-
+    "— TourPilot Platform Team"
+  );
+  const html = renderBrandedEmail({
+    preheader: `Update on your ${params.agencyName} application.`,
+    eyebrow: "Application update",
+    title: "We reviewed your agency application",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.ownerName)},`),
+      emailP(`Thank you for applying to list ${emailStrong(params.agencyName)} on TourPilot.`),
+      emailP("After review, we are unable to approve your agency at this time."),
+      emailDetailRows([{ label: "Reason", value: params.reason }]),
+      emailP("You may update your application and contact support if you have questions."),
+    ].join(""),
+  });
   return { subject, text, html };
 }
 
@@ -479,24 +644,35 @@ export function walletReceiptEmail(params: {
   balanceLkr: number;
 }) {
   const isFee = params.kind === "LOGIN_FEE";
+  const amount = params.amountLkr.toLocaleString();
+  const balance = params.balanceLkr.toLocaleString();
   const subject = isFee
-    ? `Login fee receipt — ${params.amountLkr.toLocaleString()} Credits`
-    : `Wallet top-up receipt — ${params.amountLkr.toLocaleString()} Credits`;
+    ? `Login fee receipt — ${amount} Credits`
+    : `Wallet top-up receipt — ${amount} Credits`;
   const action = isFee
-    ? `A login fee of ${params.amountLkr.toLocaleString()} Credits was charged.`
-    : `${params.amountLkr.toLocaleString()} Credits was added to your wallet.`;
-  const text = [
+    ? `A login fee of ${amount} Credits was charged.`
+    : `${amount} Credits was added to your wallet.`;
+  const text = emailText(
     `Hello ${params.recipientName},`,
     "",
     action,
-    `Wallet balance: ${params.balanceLkr.toLocaleString()} Credits.`,
+    `Wallet balance: ${balance} Credits.`,
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
-<p>${escapeHtml(action)}</p>
-<p>Wallet balance: <strong>${params.balanceLkr.toLocaleString()} Credits</strong>.</p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: action,
+    eyebrow: "Wallet receipt",
+    title: isFee ? "Login fee receipt" : "Top-up receipt",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.recipientName)},`),
+      emailP(escapeHtml(action)),
+      emailDetailRows([
+        { label: "Amount", value: `${amount} Credits` },
+        { label: "Wallet balance", value: `${balance} Credits` },
+      ]),
+    ].join(""),
+  });
   return { subject, text, html };
 }
 
@@ -506,19 +682,26 @@ export function inquiryCreatedEmail(params: {
   tripUrl: string;
 }) {
   const subject = `New trip inquiry for ${params.agencyName}`;
-  const text = [
+  const text = emailText(
     `Hello ${params.agencyName} team,`,
     "",
     `${params.touristName} submitted a new trip inquiry.`,
     "",
     `Open the trip room: ${params.tripUrl}`,
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello <strong>${escapeHtml(params.agencyName)}</strong> team,</p>
-<p><strong>${escapeHtml(params.touristName)}</strong> submitted a new trip inquiry.</p>
-<p><a href="${escapeHtml(params.tripUrl)}">Open trip room</a></p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: `${params.touristName} submitted a new trip inquiry.`,
+    eyebrow: "New inquiry",
+    title: "A traveler wants to book with you",
+    bodyHtml: [
+      emailP(`Hello ${emailStrong(params.agencyName)} team,`),
+      emailP(`${emailStrong(params.touristName)} submitted a new trip inquiry.`),
+      emailP("Open the trip room to review details and send a proposal."),
+    ].join(""),
+    cta: { label: "Open trip room", url: params.tripUrl },
+  });
   return { subject, text, html };
 }
 
@@ -528,19 +711,26 @@ export function proposalSentEmail(params: {
   tripUrl: string;
 }) {
   const subject = `${params.agencyName} sent you a tour proposal`;
-  const text = [
+  const text = emailText(
     `Hello ${params.touristName},`,
     "",
     `${params.agencyName} has sent you a tour proposal on TourPilot.`,
     "",
     `Review it here: ${params.tripUrl}`,
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.touristName)},</p>
-<p><strong>${escapeHtml(params.agencyName)}</strong> has sent you a tour proposal.</p>
-<p><a href="${escapeHtml(params.tripUrl)}">Review proposal</a></p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: `${params.agencyName} sent you a tour proposal.`,
+    eyebrow: "Tour proposal",
+    title: "Your itinerary proposal is ready",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.touristName)},`),
+      emailP(`${emailStrong(params.agencyName)} has sent you a tour proposal on TourPilot.`),
+      emailP("Review the plan, ask questions, or accept when you're ready."),
+    ].join(""),
+    cta: { label: "Review proposal", url: params.tripUrl },
+  });
   return { subject, text, html };
 }
 
@@ -552,20 +742,33 @@ export function inquiryStatusEmail(params: {
   tripUrl: string;
   note?: string;
 }) {
-  const subject = `Trip inquiry update — ${params.status.replace(/_/g, " ")}`;
-  const lines = [
+  const statusLabel = params.status.replace(/_/g, " ");
+  const subject = `Trip inquiry update — ${statusLabel}`;
+  const text = emailText(
     `Hello ${params.recipientName},`,
     "",
     `Trip inquiry between ${params.touristName} and ${params.agencyName} is now: ${params.status}.`,
-  ];
-  if (params.note) lines.push("", params.note);
-  lines.push("", `View: ${params.tripUrl}`, "", "— TourPilot");
-  const text = lines.join("\n");
-  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
-<p>Trip inquiry between <strong>${escapeHtml(params.touristName)}</strong> and <strong>${escapeHtml(params.agencyName)}</strong> is now: <strong>${escapeHtml(params.status)}</strong>.</p>
-${params.note ? `<p>${escapeHtml(params.note)}</p>` : ""}
-<p><a href="${escapeHtml(params.tripUrl)}">Open trip room</a></p>
-<p>— TourPilot</p>`;
+    params.note ? "" : null,
+    params.note || null,
+    "",
+    `View: ${params.tripUrl}`,
+    "",
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: `Inquiry status: ${statusLabel}`,
+    eyebrow: "Booking update",
+    title: "Your trip inquiry was updated",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.recipientName)},`),
+      emailP(
+        `Trip inquiry between ${emailStrong(params.touristName)} and ${emailStrong(params.agencyName)} is now ${emailStrong(statusLabel)}.`
+      ),
+      params.note ? emailP(escapeHtml(params.note)) : "",
+      emailDetailRows([{ label: "Status", value: statusLabel }]),
+    ].join(""),
+    cta: { label: "Open trip room", url: params.tripUrl },
+  });
   return { subject, text, html };
 }
 
@@ -575,19 +778,28 @@ export function inquiryExpiredEmail(params: {
   tripUrl: string;
 }) {
   const subject = `Trip inquiry expired — ${params.agencyName}`;
-  const text = [
+  const text = emailText(
     `Hello ${params.recipientName},`,
     "",
     `A trip inquiry with ${params.agencyName} has expired due to inactivity.`,
     "",
     `Details: ${params.tripUrl}`,
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
-<p>A trip inquiry with <strong>${escapeHtml(params.agencyName)}</strong> has expired due to inactivity.</p>
-<p><a href="${escapeHtml(params.tripUrl)}">View inquiry</a></p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: `Inquiry with ${params.agencyName} expired.`,
+    eyebrow: "Inquiry expired",
+    title: "This trip inquiry has closed",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.recipientName)},`),
+      emailP(
+        `A trip inquiry with ${emailStrong(params.agencyName)} has expired due to inactivity.`
+      ),
+      emailP("You can still open the trip room for details, or start a new inquiry anytime."),
+    ].join(""),
+    cta: { label: "View inquiry", url: params.tripUrl },
+  });
   return { subject, text, html };
 }
 
@@ -596,19 +808,30 @@ export function commissionPaidEmail(params: {
   amountLkr: number;
   walletBalance: number;
 }) {
-  const subject = `Commission paid — ${params.amountLkr.toLocaleString()} Credits`;
-  const text = [
+  const amount = params.amountLkr.toLocaleString();
+  const balance = params.walletBalance.toLocaleString();
+  const subject = `Commission paid — ${amount} Credits`;
+  const text = emailText(
     `Hello ${params.influencerName},`,
     "",
-    `${params.amountLkr.toLocaleString()} Credits has been credited to your TourPilot wallet.`,
-    `New wallet balance: ${params.walletBalance.toLocaleString()} Credits.`,
+    `${amount} Credits has been credited to your TourPilot wallet.`,
+    `New wallet balance: ${balance} Credits.`,
     "",
-    "— TourPilot",
-  ].join("\n");
-  const html = `<p>Hello ${escapeHtml(params.influencerName)},</p>
-<p><strong>${params.amountLkr.toLocaleString()} Credits</strong> has been credited to your TourPilot wallet.</p>
-<p>New balance: <strong>${params.walletBalance.toLocaleString()} Credits</strong>.</p>
-<p>— TourPilot</p>`;
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: `${amount} Credits credited to your wallet.`,
+    eyebrow: "Commission paid",
+    title: "Your commission is in",
+    bodyHtml: [
+      emailP(`Hello ${escapeHtml(params.influencerName)},`),
+      emailP(`${emailStrong(`${amount} Credits`)} has been credited to your TourPilot wallet.`),
+      emailDetailRows([
+        { label: "Credited", value: `${amount} Credits` },
+        { label: "New balance", value: `${balance} Credits` },
+      ]),
+    ].join(""),
+  });
   return { subject, text, html };
 }
 
@@ -621,23 +844,22 @@ export function promotionalEmail(params: {
   offerUrl?: string;
 }) {
   const plainBody = stripRichHtml(params.body) || params.body;
-  const lines = [`Hello ${params.recipientName},`, "", plainBody];
-  if (params.offerTitle && params.offerUrl) {
-    lines.push("", `Featured offer: ${params.offerTitle}`, params.offerUrl);
-  }
-  if (params.posterUrl) {
-    lines.push("", `Poster: ${params.posterUrl}`);
-  }
-  lines.push("", "— TourPilot");
-  const text = lines.join("\n");
+  const text = emailText(
+    `Hello ${params.recipientName},`,
+    "",
+    plainBody,
+    params.offerTitle && params.offerUrl ? "" : null,
+    params.offerTitle && params.offerUrl ? `Featured offer: ${params.offerTitle}` : null,
+    params.offerUrl || null,
+    params.posterUrl ? "" : null,
+    params.posterUrl ? `Poster: ${params.posterUrl}` : null,
+    "",
+    "— TourPilot"
+  );
 
   const posterHtml = params.posterUrl
-    ? `<p><img src="${escapeHtml(params.posterUrl)}" alt="TourPilot offer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
+    ? `<p style="margin:0 0 16px;"><img src="${escapeHtml(params.posterUrl)}" alt="TourPilot offer" style="max-width:100%;height:auto;border-radius:10px;display:block;" /></p>`
     : "";
-  const offerHtml =
-    params.offerTitle && params.offerUrl
-      ? `<p><a href="${escapeHtml(params.offerUrl)}" style="display:inline-block;padding:10px 18px;background:#0f766e;color:#fff;text-decoration:none;border-radius:6px">View ${escapeHtml(params.offerTitle)}</a></p>`
-      : "";
 
   const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(params.body);
   const bodyHtml = looksLikeHtml
@@ -645,14 +867,20 @@ export function promotionalEmail(params: {
     : params.body
         .split(/\n+/)
         .filter(Boolean)
-        .map((p) => `<p>${escapeHtml(p)}</p>`)
-        .join("\n");
+        .map((p) => emailP(escapeHtml(p)))
+        .join("");
 
-  const html = `<p>Hello ${escapeHtml(params.recipientName)},</p>
-${bodyHtml}
-${posterHtml}
-${offerHtml}
-<p>— TourPilot</p>`;
+  const html = renderBrandedEmail({
+    preheader: plainBody.slice(0, 120),
+    eyebrow: "Offer",
+    title: `Hello ${params.recipientName}`,
+    bodyHtml: `${bodyHtml}${posterHtml}`,
+    cta:
+      params.offerTitle && params.offerUrl
+        ? { label: `View ${params.offerTitle}`, url: params.offerUrl }
+        : undefined,
+    footerNote: "You're receiving this because you opted in to TourPilot offers.",
+  });
 
   return { subject: params.subject, text, html };
 }

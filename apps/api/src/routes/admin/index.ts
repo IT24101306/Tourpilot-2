@@ -37,6 +37,7 @@ import {
 import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
 import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
 import { recordAuditEvent } from "../../services/auditLog.js";
+import { ensureDriverUserAccount } from "../../services/agencyDriverLink.js";
 
 export const adminRouter = Router();
 
@@ -933,6 +934,21 @@ adminRouter.post("/users", async (req, res, next) => {
       });
     }
 
+    if (body.role === "DRIVER") {
+      await prisma.driverProfile.create({
+        data: {
+          userId: user.id,
+          status: "available",
+          blockedDates: [],
+          metadata: {},
+        },
+      });
+    }
+
+    if (body.role === "TOURIST") {
+      await prisma.touristProfile.create({ data: { userId: user.id } });
+    }
+
     const loginFeeOverride =
       user.loginFeeLkr != null ? Math.round(Number(user.loginFeeLkr)) : null;
 
@@ -1044,9 +1060,45 @@ adminRouter.delete("/users/:id", async (req, res, next) => {
       }
 
       if (target.influencerProfile) {
-        await tx.commission.deleteMany({
-          where: { influencerId: target.influencerProfile.id },
+        const influencerId = target.influencerProfile.id;
+        await tx.commission.deleteMany({ where: { influencerId } });
+        await tx.influencerCommissionRequest.deleteMany({ where: { influencerId } });
+        await tx.inquiry.updateMany({
+          where: { handlerInfluencerId: influencerId },
+          data: { handlerInfluencerId: null },
         });
+        const codes = await tx.referralCode.findMany({
+          where: { influencerId },
+          select: { id: true },
+        });
+        const codeIds = codes.map((c) => c.id);
+        if (codeIds.length) {
+          await tx.referralAttribution.deleteMany({ where: { referralCodeId: { in: codeIds } } });
+          await tx.referralCode.deleteMany({ where: { id: { in: codeIds } } });
+        }
+        await tx.influencerProfile.delete({ where: { id: influencerId } });
+      }
+
+      // MyISAM has no FK cascades — delete dependents explicitly before the user row.
+      await tx.walletLedger.deleteMany({ where: { userId: id } });
+      await tx.subscriptionPayment.deleteMany({ where: { userId: id } });
+      await tx.notification.deleteMany({ where: { userId: id } });
+      await tx.refreshToken.deleteMany({ where: { userId: id } });
+      await tx.referralAttribution.deleteMany({ where: { userId: id } });
+      await tx.offerRegistration.deleteMany({ where: { userId: id } });
+      await tx.savedTour.deleteMany({ where: { userId: id } });
+      await tx.savedTripPlan.deleteMany({ where: { userId: id } });
+      await tx.inquiryMessage.deleteMany({ where: { authorId: id } });
+      await tx.inquiryChatPresence.deleteMany({ where: { userId: id } });
+      await tx.inquiryResponse.deleteMany({ where: { authorId: id } });
+      await tx.auditEvent.updateMany({ where: { actorId: id }, data: { actorId: null } });
+      await tx.agencyStaff.deleteMany({ where: { userId: id } });
+      await tx.agencyDriver.updateMany({ where: { userId: id }, data: { userId: null } });
+      await tx.touristProfile.deleteMany({ where: { userId: id } });
+      await tx.driverProfile.deleteMany({ where: { userId: id } });
+
+      if (target.agency) {
+        await tx.agency.delete({ where: { id: target.agency.id } });
       }
 
       await tx.user.delete({ where: { id } });
@@ -1382,6 +1434,7 @@ adminRouter.patch("/commissions/:id", async (req, res, next) => {
 adminRouter.get("/influencers", async (_req, res, next) => {
   try {
     const profiles = await prisma.influencerProfile.findMany({
+      where: { user: { id: { not: "" } } },
       include: {
         user: { select: { id: true, name: true, phone: true, email: true, walletBalance: true } },
         _count: { select: { codes: true, commissions: true } },
@@ -1406,7 +1459,10 @@ adminRouter.get("/ledger", async (req, res, next) => {
   try {
     const userId = typeof req.query.userId === "string" ? req.query.userId : undefined;
     const rows = await prisma.walletLedger.findMany({
-      where: userId ? { userId } : undefined,
+      where: {
+        ...(userId ? { userId } : {}),
+        user: { id: { not: "" } },
+      },
       orderBy: { createdAt: "desc" },
       take: 300,
       include: { user: { select: { id: true, name: true, phone: true, role: true } } },
@@ -1612,9 +1668,163 @@ adminRouter.get("/drivers", async (_req, res, next) => {
   }
 });
 
+const ADMIN_DRIVER_STATUSES = ["Available", "On Tour", "Off Duty"] as const;
+
+adminRouter.post("/drivers", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        name: z.string().min(1, "Driver name is required").max(120),
+        phone: z.string().min(8, "Phone is required"),
+        email: z.string().email().nullable().optional(),
+        licenseNo: z.string().max(64).optional(),
+        vehicle: z.string().max(120).optional(),
+        status: z.enum(ADMIN_DRIVER_STATUSES).default("Available"),
+        agencyId: z.string().min(1).nullable().optional(),
+        isActive: z.boolean().optional(),
+      })
+      .parse(req.body);
+
+    const phone = toStoredPhone(body.phone);
+    if (!isValidInternationalPhone(phone)) {
+      return res.status(400).json({
+        error: "Invalid phone number. Include country code (e.g. +94771234567).",
+      });
+    }
+
+    const licenseNo = body.licenseNo?.trim() || undefined;
+    const vehicle = body.vehicle?.trim() || undefined;
+    const agencyId = body.agencyId?.trim() || null;
+
+    if (agencyId) {
+      const agency = await prisma.agency.findUnique({ where: { id: agencyId } });
+      if (!agency) return res.status(400).json({ error: "Agency not found" });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const existingUser = await tx.user.findUnique({
+        where: { phone },
+        include: { driverProfile: true, agencyDriver: true },
+      });
+
+      if (existingUser?.role && existingUser.role !== "DRIVER") {
+        throw Object.assign(
+          new Error("This phone is already used by another account type. Use a different number."),
+          { status: 409 }
+        );
+      }
+
+      if (
+        agencyId &&
+        existingUser?.agencyDriver &&
+        existingUser.agencyDriver.agencyId !== agencyId
+      ) {
+        throw Object.assign(new Error("This driver is already linked to another agency"), {
+          status: 409,
+        });
+      }
+
+      if (agencyId) {
+        const onRoster = await tx.agencyDriver.findFirst({
+          where: { agencyId, phone },
+        });
+        if (onRoster) {
+          throw Object.assign(new Error("This driver is already on that agency roster"), {
+            status: 409,
+          });
+        }
+      }
+
+      const { userId, created } = await ensureDriverUserAccount(tx, {
+        name: existingUser?.name ?? body.name,
+        phone: body.phone,
+        licenseNo: existingUser?.driverProfile?.licenseNo ?? licenseNo,
+        vehicle: existingUser?.driverProfile?.vehicle ?? vehicle,
+        status: body.status,
+      });
+
+      const userUpdate: Prisma.UserUpdateInput = {};
+      if (body.email !== undefined) userUpdate.email = body.email;
+      if (body.isActive !== undefined) userUpdate.isActive = body.isActive;
+      if (body.name.trim() && (!existingUser || created)) {
+        userUpdate.name = body.name.trim();
+      } else if (body.name.trim() && !existingUser?.name) {
+        userUpdate.name = body.name.trim();
+      }
+
+      if (Object.keys(userUpdate).length > 0) {
+        await tx.user.update({ where: { id: userId }, data: userUpdate });
+      }
+
+      if (licenseNo || vehicle) {
+        await tx.driverProfile.update({
+          where: { userId },
+          data: {
+            ...(licenseNo ? { licenseNo } : {}),
+            ...(vehicle ? { vehicle } : {}),
+          },
+        });
+      }
+
+      let agencyDriver = null as Awaited<ReturnType<typeof tx.agencyDriver.create>> | null;
+      if (agencyId) {
+        const userWithProfile = await tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          include: { driverProfile: true },
+        });
+        agencyDriver = await tx.agencyDriver.create({
+          data: {
+            agencyId,
+            userId,
+            name: userWithProfile.name,
+            phone,
+            licenseNo: userWithProfile.driverProfile?.licenseNo ?? licenseNo ?? null,
+            vehicle: userWithProfile.driverProfile?.vehicle ?? vehicle ?? null,
+            status: body.status,
+          },
+        });
+      }
+
+      const profile = await tx.driverProfile.findUniqueOrThrow({
+        where: { userId },
+        include: {
+          user: { select: { id: true, name: true, phone: true, email: true, isActive: true } },
+        },
+      });
+
+      return { created, userId, profile, agencyDriver };
+    });
+
+    res.status(201).json({
+      created: result.created,
+      userId: result.userId,
+      driverProfile: {
+        id: result.profile.id,
+        licenseNo: result.profile.licenseNo,
+        vehicle: result.profile.vehicle,
+        status: result.profile.status,
+        user: result.profile.user,
+      },
+      agencyDriver: result.agencyDriver
+        ? {
+            id: result.agencyDriver.id,
+            agencyId: result.agencyDriver.agencyId,
+            name: result.agencyDriver.name,
+            status: result.agencyDriver.status,
+          }
+        : null,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 adminRouter.get("/itineraries", async (_req, res, next) => {
   try {
     const rows = await prisma.itinerary.findMany({
+      where: {
+        inquiry: { tourist: { id: { not: "" } } },
+      },
       orderBy: { createdAt: "desc" },
       take: 100,
       select: {

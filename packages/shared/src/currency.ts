@@ -21,12 +21,19 @@ export const DISPLAY_CURRENCIES: DisplayCurrency[] = [
   "LKR",
 ];
 
-/** Fixed display rate — amounts are stored in LKR in the database. */
+/**
+ * Traveler listing / charging currency is USD.
+ * DB fields are still named *Lkr and hold LKR amounts for local ops;
+ * we convert LKR → USD for the listed price, then roughly to other display currencies.
+ */
+export const LISTING_CURRENCY: DisplayCurrency = "USD";
+
+/** Fallback LKR per 1 USD when live FX is unavailable. */
 export const LKR_PER_USD = 300;
 
 /**
- * Approximate LKR per 1 unit of display currency (fixed for UI conversion).
- * Anchored on LKR_PER_USD; not live FX.
+ * Approximate LKR per 1 unit of display currency (fallback only).
+ * Live rates from GET /api/fx/rates override these in the UI.
  */
 export const LKR_PER_DISPLAY_UNIT: Record<DisplayCurrency, number> = {
   USD: LKR_PER_USD,
@@ -40,15 +47,28 @@ export const LKR_PER_DISPLAY_UNIT: Record<DisplayCurrency, number> = {
   LKR: 1,
 };
 
+/** LKR needed to buy 1 unit of each display currency. */
+export type LkrRateTable = Record<DisplayCurrency, number>;
+
+export type FxRatesPayload = {
+  /** LKR per 1 unit of each currency */
+  rates: LkrRateTable;
+  /** ISO timestamp of the rate snapshot */
+  asOf: string;
+  /** Whether rates came from a live provider or static fallback */
+  live: boolean;
+  source?: string;
+};
+
 export const DISPLAY_CURRENCY_LABELS: Record<DisplayCurrency, string> = {
-  USD: "US dollars",
-  EUR: "Euros",
-  GBP: "British pounds",
-  AUD: "Australian dollars",
-  CAD: "Canadian dollars",
-  INR: "Indian rupees",
-  AED: "UAE dirhams",
-  SGD: "Singapore dollars",
+  USD: "US dollars — listing currency",
+  EUR: "Euros (approx.)",
+  GBP: "British pounds (approx.)",
+  AUD: "Australian dollars (approx.)",
+  CAD: "Canadian dollars (approx.)",
+  INR: "Indian rupees (approx.)",
+  AED: "UAE dirhams (approx.)",
+  SGD: "Singapore dollars (approx.)",
   LKR: "Sri Lankan rupees",
 };
 
@@ -58,17 +78,49 @@ export function isDisplayCurrency(value: string): value is DisplayCurrency {
   return DISPLAY_CURRENCY_SET.has(value);
 }
 
-export function convertLkrToDisplay(amountLkr: number, currency: DisplayCurrency): number {
-  const lkr = Number(amountLkr);
-  if (!Number.isFinite(lkr) || lkr < 0) return 0;
-  const rate = LKR_PER_DISPLAY_UNIT[currency] || LKR_PER_USD;
-  if (currency === "LKR") return Math.round(lkr);
-  if (currency === "INR") return Math.round(lkr / rate);
-  return Math.round((lkr / rate) * 100) / 100;
+export function resolveLkrRates(rates?: Partial<LkrRateTable> | null): LkrRateTable {
+  const out = { ...LKR_PER_DISPLAY_UNIT };
+  if (!rates) return out;
+  for (const code of DISPLAY_CURRENCIES) {
+    const n = Number(rates[code]);
+    if (Number.isFinite(n) && n > 0) out[code] = n;
+  }
+  out.LKR = 1;
+  return out;
 }
 
-export function formatDisplayMoney(amountLkr: number, currency: DisplayCurrency): string {
-  const value = convertLkrToDisplay(amountLkr, currency);
+/**
+ * Convert a stored LKR amount for display.
+ * Path: LKR → USD (listing) → optional other currency via cross-rate.
+ */
+export function convertLkrToDisplay(
+  amountLkr: number,
+  currency: DisplayCurrency,
+  rates?: Partial<LkrRateTable> | null
+): number {
+  const lkr = Number(amountLkr);
+  if (!Number.isFinite(lkr) || lkr < 0) return 0;
+  const table = resolveLkrRates(rates);
+  const lkrPerUsd = table.USD || LKR_PER_USD;
+
+  if (currency === "LKR") return Math.round(lkr);
+
+  // Canonical traveler amount is USD.
+  const usd = lkr / lkrPerUsd;
+  if (currency === "USD") return Math.round(usd * 100) / 100;
+
+  const lkrPerUnit = table[currency] || lkrPerUsd;
+  const inCurrency = usd * (lkrPerUsd / lkrPerUnit);
+  if (currency === "INR") return Math.round(inCurrency);
+  return Math.round(inCurrency * 100) / 100;
+}
+
+export function formatDisplayMoney(
+  amountLkr: number,
+  currency: DisplayCurrency,
+  rates?: Partial<LkrRateTable> | null
+): string {
+  const value = convertLkrToDisplay(amountLkr, currency, rates);
   if (currency === "LKR") {
     return `LKR ${value.toLocaleString("en-LK")}`;
   }
@@ -91,6 +143,10 @@ export function formatDisplayMoney(amountLkr: number, currency: DisplayCurrency)
   }
 }
 
-export function formatFromLkr(amountLkr: number, currency: DisplayCurrency): string {
-  return `From ${formatDisplayMoney(amountLkr, currency)}`;
+export function formatFromLkr(
+  amountLkr: number,
+  currency: DisplayCurrency,
+  rates?: Partial<LkrRateTable> | null
+): string {
+  return `From ${formatDisplayMoney(amountLkr, currency, rates)}`;
 }

@@ -37,6 +37,21 @@ export function registerPath(returnTo?: string): string {
   return `/register?${AUTH_RETURN_PARAM}=${encodeURIComponent(returnTo)}`;
 }
 
+/** After successful signup — send the user to login (do not auto-start a session). */
+export function loginAfterRegisterPath(options?: {
+  phone?: string;
+  redirect?: string | null;
+}): string {
+  const params = new URLSearchParams();
+  params.set("registered", "1");
+  if (options?.phone?.trim()) params.set("phone", options.phone.trim());
+  const redirect = options?.redirect?.trim();
+  if (redirect && isSafeInternalPath(redirect)) {
+    params.set(AUTH_RETURN_PARAM, redirect);
+  }
+  return `/login?${params.toString()}`;
+}
+
 export function authSwitchPath(
   target: "login" | "register",
   redirectParam: string | null

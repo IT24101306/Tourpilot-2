@@ -1503,6 +1503,25 @@
         color: #fff;
       }
 
+      .site-footer__nav .site-footer__link-btn {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0;
+        border: none;
+        background: none;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.88);
+        cursor: pointer;
+        transition: color 0.15s ease;
+      }
+
+      .site-footer__nav .site-footer__link-btn:hover {
+        color: #fff;
+      }
+
       .site-footer__meta {
         grid-area: meta;
         margin: 0;
@@ -1583,14 +1602,16 @@
         </a>
 
         <ul class="mkt-nav__links">
-          <li><a href="#pricing" class="mkt-nav__link">Pricing</a></li>
+          <li data-nav="pricing"><a href="#pricing" class="mkt-nav__link">Pricing</a></li>
           <li><a href="#modules" class="mkt-nav__link">Services</a></li>
           <li><a href="#contact" class="mkt-nav__link">Contact</a></li>
         </ul>
 
-        <div class="mkt-nav__actions">
-          <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop">Log in</a>
-          <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop">Sign up</a>
+        <div class="mkt-nav__actions" id="mkt-auth-desktop">
+          <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop" data-auth="guest">Log in</a>
+          <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop" data-auth="guest">Sign up</a>
+          <a href="/profile" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost mkt-nav__btn--desktop" data-auth="user" hidden>Profile</a>
+          <button type="button" class="mkt-nav__btn mkt-nav__btn--solid mkt-nav__btn--desktop" data-auth="user" data-logout hidden>Log out</button>
           <button
             id="menu-toggle"
             type="button"
@@ -1610,12 +1631,14 @@
 
       <div id="mobile-menu" class="mkt-nav__mobile">
         <ul>
-          <li><a href="#pricing">Pricing</a></li>
+          <li data-nav="pricing"><a href="#pricing">Pricing</a></li>
           <li><a href="#modules">Services</a></li>
           <li><a href="#contact">Contact</a></li>
-          <li class="mkt-nav__mobile-ctas">
-            <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost">Log in</a>
-            <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid">Sign up</a>
+          <li class="mkt-nav__mobile-ctas" id="mkt-auth-mobile">
+            <a href="/login" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost" data-auth="guest">Log in</a>
+            <a href="/register" target="_top" class="mkt-nav__btn mkt-nav__btn--solid" data-auth="guest">Sign up</a>
+            <a href="/profile" target="_top" class="mkt-nav__btn mkt-nav__btn--ghost" data-auth="user" hidden>Profile</a>
+            <button type="button" class="mkt-nav__btn mkt-nav__btn--solid" data-auth="user" data-logout hidden>Log out</button>
           </li>
         </ul>
       </div>
@@ -2414,9 +2437,12 @@
           </a>
         </div>
 
-        <nav class="site-footer__nav" aria-label="Footer">
+        <nav class="site-footer__nav" aria-label="Footer" id="mkt-auth-footer">
           <a href="#pricing">Offers</a>
-          <a href="/login">Login</a>
+          <a href="/login" target="_top" data-auth="guest">Log in</a>
+          <a href="/profile" target="_top" data-auth="user" hidden>Profile</a>
+          <button type="button" class="site-footer__link-btn" data-auth="user" data-logout hidden>Log out</button>
+          <button type="button" class="site-footer__link-btn" id="mkt-cookie-settings">Cookies</button>
           <a href="https://iyyosolutions.com" target="_blank" rel="noopener noreferrer">IYYO</a>
         </nav>
 
@@ -2502,6 +2528,55 @@
         if (!data || data.type !== "tourpilot-scroll" || !data.section) return;
         scrollToSection(data.section);
       });
+
+      // Auth CTAs — home page is an iframe; sync with parent session / shared localStorage.
+      const TOKEN_KEY = "tourpilotAuthToken";
+      function setPricingNavVisible(show) {
+        document.querySelectorAll("[data-nav='pricing']").forEach((el) => {
+          el.hidden = !show;
+        });
+      }
+      function setAuthUi(loggedIn, role) {
+        document.querySelectorAll("[data-auth='guest']").forEach((el) => {
+          el.hidden = !!loggedIn;
+        });
+        document.querySelectorAll("[data-auth='user']").forEach((el) => {
+          el.hidden = !loggedIn;
+        });
+        // Agency SaaS pricing — hide for logged-in tourists.
+        setPricingNavVisible(!(loggedIn && role === "TOURIST"));
+      }
+      function applyAuthFromStorage() {
+        try {
+          setAuthUi(Boolean(localStorage.getItem(TOKEN_KEY)), null);
+        } catch (_) {
+          setAuthUi(false, null);
+        }
+      }
+      applyAuthFromStorage();
+      window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+        const data = event.data;
+        if (!data || data.type !== "tourpilot-auth") return;
+        setAuthUi(Boolean(data.loggedIn), data.role || null);
+      });
+      document.querySelectorAll("[data-logout]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          try {
+            localStorage.removeItem(TOKEN_KEY);
+          } catch (_) {}
+          setAuthUi(false, null);
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: "tourpilot-logout" }, window.location.origin);
+          } else {
+            window.location.href = "/";
+          }
+        });
+      });
+      // Ask parent for current auth (covers React session without reloading iframe).
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: "tourpilot-auth-request" }, window.location.origin);
+      }
 
       const reveals = document.querySelectorAll(".reveal, .reveal-scale, .reveal-left, .reveal-right, .chat-pop");
       const observer = new IntersectionObserver(
@@ -2779,5 +2854,7 @@
       updateBuildTotal();
     </script>
     <script src="/marketing-pricing.js?v=20260723-features"></script>
+    <link rel="stylesheet" href="/cookie-consent.css" />
+    <script src="/cookie-consent.js?v=1"></script>
   </body>
 </html>

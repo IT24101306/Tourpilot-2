@@ -86,9 +86,11 @@ export function PublicLayout() {
             )}
             {!onProfile && (
               <>
-                <NavLink to={{ pathname: "/", hash: "pricing" }} className={navLinkClass}>
-                  Pricing
-                </NavLink>
+                {user?.role !== "TOURIST" && (
+                  <NavLink to={{ pathname: "/", hash: "pricing" }} className={navLinkClass}>
+                    Pricing
+                  </NavLink>
+                )}
                 <NavLink to="/offers" className={navLinkClass}>
                   Offers
                 </NavLink>
@@ -191,11 +193,11 @@ export function PublicLayout() {
               </>
             ) : (
               <>
+                <NavLink to="/login" className="btn btn-teal btn-nav">
+                  Log in
+                </NavLink>
                 <NavLink to="/register" className={navLinkClass}>
                   Sign up
-                </NavLink>
-                <NavLink to="/login" className="btn btn-teal btn-nav">
-                  Login
                 </NavLink>
               </>
             )}

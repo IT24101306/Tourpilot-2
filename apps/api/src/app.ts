@@ -26,6 +26,7 @@ import { supportRouter } from "./routes/support.js";
 import { domainsRouter } from "./routes/domains.js";
 import { invoicesRouter } from "./routes/invoices.js";
 import { subscriptionRouter } from "./routes/subscription.js";
+import { fxRouter } from "./routes/fx.js";
 
 export function createApp() {
   const app = express();
@@ -87,6 +88,7 @@ export function createApp() {
   app.use("/api/support", supportRouter);
   app.use("/api/invoices", invoicesRouter);
   app.use("/api/subscription", subscriptionRouter);
+  app.use("/api/fx", fxRouter);
   app.use("/api", domainsRouter);
 
   app.use(
