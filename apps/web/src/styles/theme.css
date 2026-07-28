@@ -1576,9 +1576,13 @@ textarea {
 }
 
 .auth-glass .login-wallet-panel__label,
-.auth-glass .login-wallet-panel__fee,
-.auth-glass .otp-hint {
+.auth-glass .login-wallet-panel__fee {
   color: rgba(255, 255, 255, 0.88);
+}
+
+.auth-glass .otp-hint {
+  color: #111;
+  background: #e8f8e9;
 }
 
 .auth-glass .phone-input-hint,
@@ -1776,6 +1780,7 @@ textarea {
   padding: 10px 12px;
   font-size: 0.85rem;
   margin-top: 8px;
+  color: #111;
 }
 
 .auth-switch {
