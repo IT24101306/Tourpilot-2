@@ -967,3 +967,35 @@ a.account-profile-partners__chip:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.account-profile-favourites {
+  margin-top: 1.75rem;
+  padding-top: 0.25rem;
+}
+
+.account-profile-favourites .account-block-head {
+  margin-bottom: 1rem;
+}
+
+.account-profile-favourites .guided-empty-panel {
+  margin: 0;
+  padding: 1.25rem 1.35rem;
+  border: 1px dashed var(--border-subtle, #d8e0dc);
+  border-radius: 12px;
+  background: #fafcfb;
+}
+
+.account-profile-favourites .guided-empty-panel h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.account-profile-favourites .guided-empty-panel p {
+  margin: 0;
+}
+
+.save-tour-btn.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}

@@ -19,9 +19,11 @@ export function SaveTourButton({ tourId, className = "", showLabel = false, onCh
   const [loading, setLoading] = useState(false);
   const [known, setKnown] = useState(false);
   const canSave = Boolean(token && user?.role === "TOURIST");
+  const returnTo = currentPath(location);
 
   const refresh = useCallback(async () => {
     if (!canSave) {
+      setSaved(false);
       setKnown(true);
       return;
     }
@@ -54,19 +56,18 @@ export function SaveTourButton({ tourId, className = "", showLabel = false, onCh
     }
   }
 
-  function stopNav(e: React.MouseEvent) {
-    e.preventDefault();
+  function stopBubble(e: React.MouseEvent) {
     e.stopPropagation();
   }
 
-  if (!canSave) {
+  if (!token) {
     return (
       <Link
-        to={loginPath(currentPath(location))}
+        to={loginPath(returnTo)}
         className={`save-tour-btn save-tour-btn--guest${className ? ` ${className}` : ""}`}
         title="Log in to add to favourites"
         aria-label="Add to favourites"
-        onClick={stopNav}
+        onClick={stopBubble}
       >
         <span className="save-tour-btn-icon" aria-hidden="true">
           ♡
@@ -76,12 +77,27 @@ export function SaveTourButton({ tourId, className = "", showLabel = false, onCh
     );
   }
 
+  if (!canSave) {
+    return (
+      <span
+        className={`save-tour-btn save-tour-btn--guest is-disabled${className ? ` ${className}` : ""}`}
+        title="Favourites are available on traveler accounts"
+        aria-label="Favourites unavailable for this account"
+      >
+        <span className="save-tour-btn-icon" aria-hidden="true">
+          ♡
+        </span>
+        {showLabel ? <span>Add to favourites</span> : null}
+      </span>
+    );
+  }
+
   return (
     <button
       type="button"
       className={`save-tour-btn${saved ? " save-tour-btn--saved" : ""}${className ? ` ${className}` : ""}`}
       onClick={(e) => {
-        stopNav(e);
+        stopBubble(e);
         void toggle();
       }}
       disabled={loading || !known}
