@@ -6,7 +6,6 @@ import {
   StorefrontDomainProvider,
   useStorefrontDomain,
 } from "./context/StorefrontDomainContext";
-import { dashboardPathForRole } from "@tourpilot/shared";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
@@ -100,7 +99,6 @@ function Protected({ children, roles }: { children: ReactNode; roles?: UserRole[
 }
 
 function HomeRoute() {
-  const { user, loading } = useAuth();
   const storefront = useStorefrontDomain();
   // On a custom domain, serve the matching agency or influencer storefront at the root.
   if (storefront.loading) return <div className="section">Loading…</div>;
@@ -109,10 +107,6 @@ function HomeRoute() {
   }
   if (storefront.isCustomDomain && storefront.agencySlug) {
     return <AgencyDetailPage slugOverride={storefront.agencySlug} />;
-  }
-  if (loading) return <div className="section">Loading…</div>;
-  if (user?.role === "AGENCY" || user?.role === "INFLUENCER") {
-    return <Navigate to={dashboardPathForRole(user.role)} replace />;
   }
   return <MarketingHomePage />;
 }

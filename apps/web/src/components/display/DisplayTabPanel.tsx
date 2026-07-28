@@ -13,6 +13,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ImageUrlField } from "../ImageUrlField";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
+import { ModuleHeader } from "../module/ModuleHeader";
 import { RichTextEditor } from "../richtext/RichTextEditor";
 import {
   DisplayCompactRow,
@@ -164,6 +165,7 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   const [editWhoWeAreImageIndex, setEditWhoWeAreImageIndex] = useState<number | null>(null);
   const [editTransportIndex, setEditTransportIndex] = useState<number | null>(null);
   const [modalFieldErrors, setModalFieldErrors] = useState<Record<string, string>>({});
+  const [saveBarDocked, setSaveBarDocked] = useState(false);
   const displayHydratedRef = useRef(false);
   const skipNextAutoSaveRef = useRef(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -208,6 +210,26 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
   useEffect(() => {
     loadDisplay();
   }, [loadDisplay]);
+
+  // Keep the save bar floating, but dock it above the site footer when that enters view.
+  useEffect(() => {
+    if (loading) return;
+    const footer = document.querySelector(".site-footer");
+    if (!footer) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setSaveBarDocked(entry.isIntersecting);
+      },
+      {
+        root: null,
+        threshold: 0,
+        rootMargin: "0px 0px 96px 0px",
+      }
+    );
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, [loading]);
 
   useEffect(() => {
     if (agencySlug) setSlug(agencySlug);
@@ -1026,38 +1048,31 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
 
   return (
     <article className="agent-tab-panel display-editor">
-      <div className="display-editor-chrome">
-        <div className="display-editor-toolbar">
-          <div>
-            <h2>Display page</h2>
-            <p className="muted">Edit your public agency page one section at a time.</p>
-          </div>
-          <div className="display-editor-toolbar-actions">
-            {displayPageUrl && (
-              <a
-                href={displayPageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-ghost"
-              >
-                Preview page ↗
-              </a>
-            )}
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={saving}
-              onClick={saveSettings}
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </div>
+      <ModuleHeader module="discovery" title="Display page">
+        {displayPageUrl && (
+          <a
+            href={displayPageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-ghost"
+          >
+            Preview page ↗
+          </a>
+        )}
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={saving}
+          onClick={saveSettings}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </ModuleHeader>
 
+      <div className="display-editor-body">
         <DisplayStepNav active={activeStep} onChange={setActiveStep} />
-      </div>
 
-      <div className="display-step-content">
+        <div className="display-step-content">
         {activeStep === "hero" && (
           <DisplayStepPanel
             title="Hero banner"
@@ -1756,12 +1771,11 @@ export function DisplayTabPanel({ token, agencySlug, onGoToTours }: Props) {
           </DisplayStepPanel>
         )}
       </div>
+      </div>
 
-      <div className="display-save-bar">
-        <div className="display-save-bar-copy">
-          <strong>Ready to publish?</strong>
-          <p className="muted">Save to update your public agency page.</p>
-        </div>
+      <div
+        className={`display-save-bar${saveBarDocked ? " is-docked" : ""}`}
+      >
         <button
           type="button"
           className="btn btn-primary display-save-btn"

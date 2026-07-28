@@ -2,7 +2,6 @@ import { useState, type MouseEvent } from "react";
 import {
   offerRewardTierDisplayLine,
   offerRewardTierHeadline,
-  offerRewardTierIcon,
   offerRewardTierMilestoneHeading,
   parseOfferRewardTiers,
   summarizeOfferRewardTiers,
@@ -142,9 +141,6 @@ export function OfferRewardRoadmap({
                 {offerRewardTierMilestoneHeading(tier)}
               </p>
               <p className="offer-reward-roadmap__detail-reward">
-                <span className="offer-reward-roadmap__detail-icon" aria-hidden="true">
-                  {offerRewardTierIcon(tier)}
-                </span>
                 <span>{offerRewardTierDisplayLine(tier)}</span>
               </p>
             </li>

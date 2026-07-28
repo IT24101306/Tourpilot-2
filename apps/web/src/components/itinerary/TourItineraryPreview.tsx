@@ -49,7 +49,7 @@ export function TourItineraryPreview({ days, title = "Itinerary" }: Props) {
   return (
     <div className="tour-itinerary-layout">
       <section className="tour-itinerary-section">
-        <header className="tour-itinerary-section__head">
+        <header className="agency-display-section-head tour-itinerary-section__head">
           <h2 className="tour-itinerary-section__title">{title}</h2>
           <p className="tour-itinerary-section__sub">Day by day — expand to see each stop.</p>
         </header>

@@ -81,6 +81,7 @@ export function AgencyAllEntitiesPage() {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "type" | "location">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [activePane, setActivePane] = useState<"add" | "list">("add");
 
   const filterTabs = useMemo(() => {
     const tabs: { value: string; label: string }[] = [
@@ -198,6 +199,7 @@ export function AgencyAllEntitiesPage() {
             return;
           }
           setToast(`${savedName || "Entity"} saved to your library.`);
+          setActivePane("list");
           setTimeout(() => setToast(""), 3200);
         } catch {
           setToast("Could not save entity. Check required fields and try again.");
@@ -333,159 +335,198 @@ export function AgencyAllEntitiesPage() {
         })}
       </div>
 
-      <div className="entities-studio-layout">
-        <form className="entities-form-card" onSubmit={addEntity}>
-          <div className="entities-form-card-head">
+      <div
+        className={`entities-studio-layout entities-studio-layout--${activePane}`}
+      >
+        <section
+          className={`entities-list-card entities-pane${activePane === "list" ? " is-active" : " is-collapsed"}`}
+          onClick={activePane !== "list" ? () => setActivePane("list") : undefined}
+          aria-expanded={activePane === "list"}
+        >
+          <button
+            type="button"
+            className="entities-pane-head"
+            onClick={() => setActivePane("list")}
+            aria-pressed={activePane === "list"}
+          >
+            <div>
+              <h3>Your entities</h3>
+              <p className="muted">
+                {activePane === "list"
+                  ? search.trim()
+                    ? `${visibleEntities.length} of ${entities.length} shown`
+                    : `${entities.length} shown`
+                  : "Click to expand and browse your library"}
+              </p>
+            </div>
+            <span className="entities-pane-badge" aria-hidden="true">
+              {activePane === "list" ? "Working" : "Open"}
+            </span>
+          </button>
+
+          <div className="entities-pane-body">
+            {entities.length > 0 && (
+              <div className="entities-list-tools" role="search">
+                <input
+                  type="search"
+                  className="groups-search"
+                  placeholder="Search name, type, or location…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Search entities"
+                />
+              </div>
+            )}
+
+            {entities.length === 0 ? (
+              <div className="entities-empty">
+                <span className="entities-empty-icon" aria-hidden="true">
+                  <EntityTypeLineIcon type="OTHER" size={28} />
+                </span>
+                <p>
+                  <strong>No entities yet</strong>
+                </p>
+                <p className="muted">Add your first hotel, viewpoint, or activity using the form.</p>
+              </div>
+            ) : (
+              <div className="entities-table-wrap">
+                <table className="entities-table">
+                  <thead>
+                    <tr>
+                      <th aria-sort={sortKey === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                        <button type="button" className="entities-sort-btn" onClick={() => toggleSort("name")}>
+                          Name{sortIndicator("name")}
+                        </button>
+                      </th>
+                      <th aria-sort={sortKey === "type" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                        <button type="button" className="entities-sort-btn" onClick={() => toggleSort("type")}>
+                          Type{sortIndicator("type")}
+                        </button>
+                      </th>
+                      <th aria-sort={sortKey === "location" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                        <button type="button" className="entities-sort-btn" onClick={() => toggleSort("location")}>
+                          Location{sortIndicator("location")}
+                        </button>
+                      </th>
+                      <th>Details</th>
+                      <th>Price</th>
+                      <th aria-label="Actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleEntities.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="muted entities-no-match">
+                          No entities match “{search.trim()}”.
+                        </td>
+                      </tr>
+                    ) : (
+                      visibleEntities.map((ent) => (
+                      <tr key={ent.id}>
+                        <td>
+                          <strong className="entities-row-name">{ent.name}</strong>
+                          {ent.description && (
+                            <span className="entities-row-desc muted">{ent.description}</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`entities-type-badge type-${ent.type.toLowerCase()}`}>
+                            <span aria-hidden="true">
+                              <EntityTypeLineIcon type={ent.type} size={14} />
+                            </span>
+                            {entityTypeLabel(ent.type)}
+                          </span>
+                        </td>
+                        <td>{entityLocationLabel(ent)}</td>
+                        <td className="muted entities-details-cell">{entityDetailsSummary(ent)}</td>
+                        <td className="entities-price">
+                          {ent.priceHint != null ? `LKR ${ent.priceHint.toLocaleString()}` : "—"}
+                        </td>
+                        <td className="entities-row-actions">
+                          <button
+                            type="button"
+                            className="mini-btn"
+                            onClick={() => openEdit(ent)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="mini-btn mini-btn--danger"
+                            onClick={() => deleteEntity(ent)}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <form
+          className={`entities-form-card entities-pane${activePane === "add" ? " is-active" : " is-collapsed"}`}
+          onSubmit={addEntity}
+          onClick={activePane !== "add" ? () => setActivePane("add") : undefined}
+          aria-expanded={activePane === "add"}
+        >
+          <button
+            type="button"
+            className="entities-pane-head"
+            onClick={() => setActivePane("add")}
+            aria-pressed={activePane === "add"}
+          >
             <div>
               <h3>Add new entity</h3>
-              <p className="muted">Choose a type — the form updates with the right fields.</p>
+              <p className="muted">
+                {activePane === "add"
+                  ? "Choose a type — the form updates with the right fields."
+                  : "Click to expand and add an entity"}
+              </p>
             </div>
-          </div>
+            <span className="entities-pane-badge" aria-hidden="true">
+              {activePane === "add" ? "Working" : "Open"}
+            </span>
+          </button>
 
-          <div className="entities-form-section">
-            <h4>Details</h4>
-            <div className="entity-form-grid">
-              <FormValidationMessages errors={entityFieldErrors} />
-              <EntityFormFields
-                form={entityForm}
-                onChange={setEntityForm}
-                typePicker="chips"
-                fieldErrors={entityFieldErrors}
-              />
+          <div className="entities-pane-body">
+            <div className="entities-form-section">
+              <h4>Details</h4>
+              <div className="entity-form-grid">
+                <FormValidationMessages errors={entityFieldErrors} />
+                <EntityFormFields
+                  form={entityForm}
+                  onChange={setEntityForm}
+                  typePicker="chips"
+                  fieldErrors={entityFieldErrors}
+                />
+              </div>
             </div>
-          </div>
 
-          <EntityMediaFields
-            mainImageUrl={mainImageUrl}
-            onMainImageChange={setMainImageUrl}
-            gallery={gallery}
-            onGalleryChange={setGallery}
-            token={token}
-          />
+            <EntityMediaFields
+              mainImageUrl={mainImageUrl}
+              onMainImageChange={setMainImageUrl}
+              gallery={gallery}
+              onGalleryChange={setGallery}
+              token={token}
+            />
 
-          <div className="entities-form-footer">
-            {toast && <p className="entities-toast">{toast}</p>}
-            <button
-              type="submit"
-              className="btn btn-primary entities-submit-btn"
-              disabled={saving}
-            >
-              {saving ? "Saving…" : "Save entity"}
-            </button>
+            <div className="entities-form-footer">
+              {toast && <p className="entities-toast">{toast}</p>}
+              <button
+                type="submit"
+                className="btn btn-primary entities-submit-btn"
+                disabled={saving}
+              >
+                {saving ? "Saving…" : "Save entity"}
+              </button>
+            </div>
           </div>
         </form>
-
-        <section className="entities-list-card">
-          <div className="entities-list-head">
-            <h3>Your entities</h3>
-            <span className="muted">
-              {search.trim()
-                ? `${visibleEntities.length} of ${entities.length} shown`
-                : `${entities.length} shown`}
-            </span>
-          </div>
-
-          {entities.length > 0 && (
-            <div className="entities-list-tools" role="search">
-              <input
-                type="search"
-                className="groups-search"
-                placeholder="Search name, type, or location…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Search entities"
-              />
-            </div>
-          )}
-
-          {entities.length === 0 ? (
-            <div className="entities-empty">
-              <span className="entities-empty-icon" aria-hidden="true">
-                <EntityTypeLineIcon type="OTHER" size={28} />
-              </span>
-              <p>
-                <strong>No entities yet</strong>
-              </p>
-              <p className="muted">Add your first hotel, viewpoint, or activity using the form.</p>
-            </div>
-          ) : (
-            <div className="entities-table-wrap">
-              <table className="entities-table">
-                <thead>
-                  <tr>
-                    <th aria-sort={sortKey === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
-                      <button type="button" className="entities-sort-btn" onClick={() => toggleSort("name")}>
-                        Name{sortIndicator("name")}
-                      </button>
-                    </th>
-                    <th aria-sort={sortKey === "type" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
-                      <button type="button" className="entities-sort-btn" onClick={() => toggleSort("type")}>
-                        Type{sortIndicator("type")}
-                      </button>
-                    </th>
-                    <th aria-sort={sortKey === "location" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
-                      <button type="button" className="entities-sort-btn" onClick={() => toggleSort("location")}>
-                        Location{sortIndicator("location")}
-                      </button>
-                    </th>
-                    <th>Details</th>
-                    <th>Price</th>
-                    <th aria-label="Actions"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleEntities.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="muted entities-no-match">
-                        No entities match “{search.trim()}”.
-                      </td>
-                    </tr>
-                  ) : (
-                    visibleEntities.map((ent) => (
-                    <tr key={ent.id}>
-                      <td>
-                        <strong className="entities-row-name">{ent.name}</strong>
-                        {ent.description && (
-                          <span className="entities-row-desc muted">{ent.description}</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className={`entities-type-badge type-${ent.type.toLowerCase()}`}>
-                          <span aria-hidden="true">
-                            <EntityTypeLineIcon type={ent.type} size={14} />
-                          </span>
-                          {entityTypeLabel(ent.type)}
-                        </span>
-                      </td>
-                      <td>{entityLocationLabel(ent)}</td>
-                      <td className="muted entities-details-cell">{entityDetailsSummary(ent)}</td>
-                      <td className="entities-price">
-                        {ent.priceHint != null ? `LKR ${ent.priceHint.toLocaleString()}` : "—"}
-                      </td>
-                      <td className="entities-row-actions">
-                        <button
-                          type="button"
-                          className="mini-btn"
-                          onClick={() => openEdit(ent)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="mini-btn mini-btn--danger"
-                          onClick={() => deleteEntity(ent)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
       </div>
 
       <EntityFormModal

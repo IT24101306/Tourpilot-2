@@ -567,11 +567,7 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
 
             <div className="agency-showcase-visual">
               {showReviews && visibleReviews.length > 0 ? (
-                <AgencyReviewsFlipShowcase
-                  reviews={visibleReviews}
-                  avgRating={agency.avgRating}
-                  reviewCount={agency.reviewCount}
-                />
+                <AgencyReviewsFlipShowcase reviews={visibleReviews} />
               ) : (
                 <blockquote className="agency-showcase-featured-quote agency-showcase-featured-quote--plain">
                   &ldquo;{content.featuredQuote}&rdquo;

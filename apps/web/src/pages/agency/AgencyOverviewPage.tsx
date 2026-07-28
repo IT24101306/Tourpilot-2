@@ -55,6 +55,7 @@ export function AgencyOverviewPage() {
       </ModuleHeader>
 
       <OpsMetricStrip
+        className="ops-metric-strip--overview"
         metrics={[
           {
             id: "action",

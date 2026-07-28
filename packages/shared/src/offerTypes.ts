@@ -110,10 +110,8 @@ export function offerRewardTierDisplayLine(tier: OfferRewardTier): string {
   return `${tier.winnersCount} Lucky Winners Get ${core}`;
 }
 
-/** Emoji shown beside the reward line on offer cards. */
-export function offerRewardTierIcon(tier: OfferRewardTier): string {
-  if (offerRewardTierForEveryone(tier)) return "🍽️";
-  return "🎁";
+export function offerRewardTierIcon(_tier: OfferRewardTier): string {
+  return "";
 }
 
 export function describeOfferRewardTier(tier: OfferRewardTier): string {
