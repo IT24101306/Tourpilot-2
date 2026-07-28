@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { formatDisplayMoney } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
+import { useFormatMoney } from "../../context/CurrencyContext";
 import { DashboardModal, ModalActions, ModalField } from "../DashboardModal";
 import { InquiryThread, type ThreadMessage } from "./InquiryThread";
 import { InquiryTourChip } from "./InquiryTourChip";
@@ -96,6 +96,7 @@ export function InquiryReplyModal({
   onSent,
 }: Props) {
   const { user } = useAuth();
+  const { format } = useFormatMoney();
   const { requestConfirm } = useConfirmAction();
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
   const [tours, setTours] = useState<TourOption[]>([]);
@@ -421,7 +422,7 @@ export function InquiryReplyModal({
                                 {" "}
                                 · {t.days} days
                                 {t.basePriceLkr != null
-                                  ? ` · ${formatDisplayMoney(t.publicPriceLkr ?? t.basePriceLkr, "USD")}`
+                                  ? ` · ${format(t.publicPriceLkr ?? t.basePriceLkr)}`
                                   : ""}
                               </span>
                             </span>

@@ -1,8 +1,9 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { formatDisplayMoney, resolveImageUrl } from "@tourpilot/shared";
+import { resolveImageUrl } from "@tourpilot/shared";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useFormatMoney } from "../context/CurrencyContext";
 import { CoverImage } from "../components/CoverImage";
 import { FormFieldError } from "../components/FormFieldError";
 import { ImageUrlField } from "../components/ImageUrlField";
@@ -77,6 +78,7 @@ export function OfferBookPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { token, loading: authLoading } = useAuth();
+  const { format } = useFormatMoney();
 
   const returnTo = searchParams.get("returnTo") ?? "/offers";
   const step = (searchParams.get("step") as BookStep | null) ?? "tour";
@@ -305,7 +307,7 @@ export function OfferBookPage() {
                       />
                       <div className="offer-book-tour__copy">
                         <strong>{tour.title}</strong>
-                        <span className="muted">{formatDisplayMoney(tour.basePriceLkr, "USD")}</span>
+                        <span className="muted">{format(tour.basePriceLkr)}</span>
                         <div className="offer-book-tour__actions">
                           <button
                             type="button"

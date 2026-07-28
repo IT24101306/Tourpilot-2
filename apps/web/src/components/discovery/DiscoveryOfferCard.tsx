@@ -5,7 +5,8 @@ import { CoverImage } from "../CoverImage";
 import { isFreeOffer } from "../../lib/offerPricing";
 import { OfferCountdown } from "./OfferCountdown";
 import { OfferRegistrantsModal } from "./OfferRegistrantsModal";
-import { formatOfferMonthLabel, formatDisplayMoney, MEDIA } from "@tourpilot/shared";
+import { formatOfferMonthLabel, MEDIA } from "@tourpilot/shared";
+import { useFormatMoney } from "../../context/CurrencyContext";
 import { OfferRewardRoadmap } from "./OfferRewardRoadmap";
 import { OfferShareButton } from "./OfferShareButton";
 import { RichTextHtml } from "../richtext/RichTextHtml";
@@ -61,7 +62,7 @@ function OfferPrice({
 }: {
   offer: DiscoveryOffer;
 }) {
-  const price = (amountLkr: number) => formatDisplayMoney(amountLkr, "USD");
+  const { format: price } = useFormatMoney();
 
   if (isFreeOffer(offer.discountedLkr)) {
     return (

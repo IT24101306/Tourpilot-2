@@ -5,12 +5,12 @@ type Props = {
   amount: number;
   /** @deprecated Prefer exact amounts — "from" is ignored for tour pricing. */
   prefix?: string;
-  /** Force a currency; tour prices should pass "USD". */
+  /** Force a currency; omit to use the visitor's display preference. */
   currency?: DisplayCurrency;
   className?: string;
 };
 
-/** Renders an LKR-stored amount in the visitor's display currency (default USD). */
+/** Renders an LKR-stored amount in the visitor's display currency. */
 export function FormatLkr({ amount, prefix, currency: currencyOverride, className }: Props) {
   const { format, currency, rates } = useFormatMoney();
   const resolved = currencyOverride ?? currency;
@@ -23,7 +23,7 @@ export function FormatLkr({ amount, prefix, currency: currencyOverride, classNam
   return <span className={className}>{text}</span>;
 }
 
-/** Tour listing / charge price — always USD (the main traveler currency). */
+/** Tour listing price — converts using the visitor's display currency preference. */
 export function FormatTourPrice({ amount, className }: { amount: number; className?: string }) {
-  return <FormatLkr amount={amount} currency="USD" className={className} />;
+  return <FormatLkr amount={amount} className={className} />;
 }
