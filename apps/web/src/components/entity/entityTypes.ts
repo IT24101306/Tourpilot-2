@@ -1,4 +1,5 @@
 import { newId } from "../../lib/newId";
+import { isRichTextEmpty, normalizeRichHtml, stripRichHtml } from "@tourpilot/shared";
 
 export type EntityTypeKey = "HOTEL" | "ACTIVITY" | "VIEWPOINT" | "RESTAURANT" | "OTHER";
 
@@ -289,7 +290,9 @@ function boolFromForm(v: string) {
 export function buildEntityPayload(form: EntityFormState) {
   const metadata: Record<string, unknown> = {};
   if (trim(form.location)) metadata.location = trim(form.location);
-  if (trim(form.otherInfo)) metadata.otherInfo = trim(form.otherInfo);
+  if (!isRichTextEmpty(form.otherInfo)) {
+    metadata.otherInfo = normalizeRichHtml(form.otherInfo, undefined);
+  }
   if (trim(form.openHoursDays)) metadata.openHoursDays = trim(form.openHoursDays);
 
   const payload: Record<string, unknown> = {
@@ -297,12 +300,16 @@ export function buildEntityPayload(form: EntityFormState) {
     type: form.type,
   };
 
-  if (trim(form.description)) payload.description = trim(form.description);
+  if (!isRichTextEmpty(form.description)) {
+    payload.description = normalizeRichHtml(form.description, undefined);
+  }
 
   if (form.type === "HOTEL") {
     if (num(form.rooms) != null) metadata.rooms = num(form.rooms)!;
     if (num(form.starRating) != null) metadata.starRating = num(form.starRating)!;
-    if (trim(form.amenities)) metadata.amenities = trim(form.amenities);
+    if (!isRichTextEmpty(form.amenities)) {
+      metadata.amenities = normalizeRichHtml(form.amenities, undefined);
+    }
     if (num(form.priceHint) != null) payload.priceHint = num(form.priceHint);
     if (trim(form.contact)) payload.contact = trim(form.contact);
   }
@@ -411,8 +418,11 @@ export function entityDetailsSummary(entity: {
     if (m.location) parts.push(String(m.location));
   }
   if (m.otherInfo && parts.length < 2) {
-    parts.push(String(m.otherInfo).slice(0, 40) + (String(m.otherInfo).length > 40 ? "…" : ""));
+    const other = stripRichHtml(String(m.otherInfo));
+    parts.push(other.slice(0, 40) + (other.length > 40 ? "…" : ""));
   }
 
-  return parts.length ? parts.join(" · ") : entity.description?.slice(0, 50) || "—";
+  if (parts.length) return parts.join(" · ");
+  const desc = stripRichHtml(entity.description);
+  return desc ? desc.slice(0, 50) : "—";
 }

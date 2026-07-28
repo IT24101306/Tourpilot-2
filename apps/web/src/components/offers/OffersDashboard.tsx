@@ -11,6 +11,7 @@ import { validateOfferDraft } from "../../lib/offerForm";
 import { FormValidationMessages } from "../FormFieldError";
 import { offerShareFeedback, offerShareUrl, shareOffer } from "../../lib/offerShare";
 import { OfferRewardTiersEditor } from "./OfferRewardTiersEditor";
+import { RichTextEditor } from "../richtext/RichTextEditor";
 
 export type ManagedOffer = {
   id: string;
@@ -493,11 +494,12 @@ export function OffersDashboard({
 
               <label className="field" style={{ gridColumn: "1 / -1" }}>
                 <span>Description</span>
-                <textarea
+                <RichTextEditor
                   value={draft.description}
-                  onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+                  onChange={(description) => setDraft((d) => ({ ...d, description }))}
                   placeholder={descriptionPlaceholder}
                   rows={3}
+                  aria-label="Offer description"
                 />
               </label>
 

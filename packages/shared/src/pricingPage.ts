@@ -1,5 +1,7 @@
 /** CMS-backed pricing / revenue landing page content. */
 
+import { isRichTextEmpty, sanitizeRichHtml } from "./richText.js";
+
 export type PricingFilterOption = {
   value: string;
   label: string;
@@ -342,6 +344,11 @@ export function parsePricingPageContent(blocks: unknown): PricingPageContent {
     ...base,
     ...block,
     type: "pricing",
+    termsBody: (() => {
+      const raw = typeof block.termsBody === "string" ? block.termsBody : base.termsBody;
+      const cleaned = sanitizeRichHtml(raw);
+      return isRichTextEmpty(cleaned) ? base.termsBody : cleaned;
+    })(),
     filterOptions: block.filterOptions?.length ? block.filterOptions : base.filterOptions,
     packages,
     buildYourselfFeatures: block.buildYourselfFeatures?.length

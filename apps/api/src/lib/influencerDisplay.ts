@@ -1,5 +1,10 @@
 import type { Prisma } from "@prisma/client";
-import { MAX_AGENCY_HERO_SLIDES } from "@tourpilot/shared";
+import {
+  MAX_AGENCY_HERO_SLIDES,
+  isRichTextEmpty,
+  sanitizeRichHtml,
+  stripRichHtml,
+} from "@tourpilot/shared";
 import { asJson } from "../utils/json.js";
 
 export type InfluencerHeroSlide = {
@@ -174,7 +179,14 @@ export function parseInfluencerDisplay(raw: unknown, name: string): InfluencerDi
     base.aboutTitle = obj.aboutTitle.trim().slice(0, 80);
   }
   if (typeof obj.aboutDescription === "string") {
-    base.aboutDescription = obj.aboutDescription.trim().slice(0, 1200);
+    const cleaned = sanitizeRichHtml(obj.aboutDescription);
+    const plain = stripRichHtml(cleaned).slice(0, 1200);
+    // Re-sanitize after length clamp on plain text only when within limit
+    base.aboutDescription = isRichTextEmpty(cleaned)
+      ? ""
+      : stripRichHtml(cleaned).length <= 1200
+        ? cleaned
+        : sanitizeRichHtml(`<p>${plain}</p>`);
   }
   base.socialLinks = parseSocialLinks(obj.socialLinks);
   if (typeof obj.socialTagHandle === "string") {

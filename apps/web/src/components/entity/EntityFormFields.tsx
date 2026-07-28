@@ -1,5 +1,6 @@
 import { EntityTypeLineIcon } from "../icons/LineIcons";
 import { FormFieldError } from "../FormFieldError";
+import { RichTextEditor } from "../richtext/RichTextEditor";
 import { SiteGuidesField } from "./SiteGuidesField";
 import {
   ENTITY_TYPE_OPTIONS,
@@ -143,12 +144,13 @@ function FieldInput({
     return (
       <div className={className}>
         <label htmlFor={id}>{field.label}</label>
-        <textarea
+        <RichTextEditor
           id={id}
           rows={3}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder={field.placeholder}
+          aria-label={field.label}
         />
       </div>
     );

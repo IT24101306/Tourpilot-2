@@ -1,4 +1,5 @@
 import { ImageUrlField } from "../ImageUrlField";
+import { RichTextEditor } from "../richtext/RichTextEditor";
 import type { ManagedOffer } from "../offers/OffersDashboard";
 import type { TourOfferLinkState } from "../../lib/tourOfferLink";
 
@@ -14,6 +15,8 @@ type Props = {
     basePriceLkr: number;
     isPublished: boolean;
   };
+  /** Offer links require a published tour — parent should flip Publish on. */
+  onEnsurePublished?: () => void;
 };
 
 export function TourOfferLinkSection({
@@ -22,6 +25,7 @@ export function TourOfferLinkSection({
   onChange,
   uploadToken,
   tourDefaults,
+  onEnsurePublished,
 }: Props) {
   function patch(partial: Partial<TourOfferLinkState>) {
     onChange({ ...link, ...partial });
@@ -31,20 +35,49 @@ export function TourOfferLinkSection({
     onChange({ ...link, newOffer: { ...link.newOffer, ...partial } });
   }
 
-  function toggleExistingOffer(offerId: string, checked: boolean) {
-    const next = checked
-      ? [...link.existingOfferIds, offerId]
-      : link.existingOfferIds.filter((id) => id !== offerId);
-    patch({ existingOfferIds: next });
+  function enableLinking(enabled: boolean) {
+    if (!enabled) {
+      patch({ enabled: false });
+      return;
+    }
+
+    onEnsurePublished?.();
+
+    const defaults = tourDefaults;
+    const shouldCreateNew =
+      link.createNew || link.existingOfferIds.length === 0 || offers.length === 0;
+
+    onChange({
+      ...link,
+      enabled: true,
+      createNew: shouldCreateNew,
+      newOffer: {
+        ...link.newOffer,
+        title:
+          link.newOffer.title.trim() ||
+          (defaults?.title ? `${defaults.title} offer` : "Loyalty offer"),
+        description: link.newOffer.description || defaults?.summary || "",
+        imageUrl: link.newOffer.imageUrl || defaults?.coverUrl || "",
+        tourPriceLkr:
+          link.newOffer.tourPriceLkr > 0
+            ? link.newOffer.tourPriceLkr
+            : defaults?.basePriceLkr ?? 0,
+        rewardText:
+          link.newOffer.rewardText.trim() || "Loyalty reward for registered travelers",
+      },
+    });
   }
 
+  const linkIncomplete =
+    link.enabled && !link.createNew && link.existingOfferIds.length === 0;
+
   return (
-    <section className="tour-offer-link">
+    <section className="tour-offer-link" id="tour-offer-link-section">
       <label className="tour-offer-link-toggle">
         <input
           type="checkbox"
           checked={link.enabled}
-          onChange={(e) => patch({ enabled: e.target.checked })}
+          onChange={(e) => enableLinking(e.target.checked)}
         />
         <span>Link to loyalty offer(s)</span>
       </label>
@@ -55,7 +88,13 @@ export function TourOfferLinkSection({
 
       {link.enabled && tourDefaults && !tourDefaults.isPublished && (
         <p className="tour-offer-link-warn">
-          Publish this tour before saving — offer links only apply to published tours.
+          This tour will be published so it can be linked to a loyalty offer.
+        </p>
+      )}
+
+      {linkIncomplete && (
+        <p className="tour-offer-link-warn" role="alert">
+          Select an existing offer below, or keep “Create new offer with this tour” checked.
         </p>
       )}
 
@@ -71,7 +110,19 @@ export function TourOfferLinkSection({
                       <input
                         type="checkbox"
                         checked={link.existingOfferIds.includes(offer.id)}
-                        onChange={(e) => toggleExistingOffer(offer.id, e.target.checked)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          const existingOfferIds = checked
+                            ? [...link.existingOfferIds, offer.id]
+                            : link.existingOfferIds.filter((id) => id !== offer.id);
+                          onChange({
+                            ...link,
+                            existingOfferIds,
+                            // Keep a valid link state: either an existing offer or create-new.
+                            createNew:
+                              existingOfferIds.length > 0 ? false : true,
+                          });
+                        }}
                       />
                       <span>
                         {offer.title}
@@ -102,9 +153,17 @@ export function TourOfferLinkSection({
                       description: link.newOffer.description || tourDefaults.summary,
                       imageUrl: link.newOffer.imageUrl || tourDefaults.coverUrl,
                       tourPriceLkr: link.newOffer.tourPriceLkr || tourDefaults.basePriceLkr,
+                      rewardText:
+                        link.newOffer.rewardText.trim() ||
+                        "Loyalty reward for registered travelers",
                     },
                   });
                 } else {
+                  if (!createNew && link.existingOfferIds.length === 0 && offers.length > 0) {
+                    // Turning off create-new with no existing selection leaves an invalid state.
+                    patch({ createNew: false });
+                    return;
+                  }
                   patch({ createNew });
                 }
               }}
@@ -138,10 +197,11 @@ export function TourOfferLinkSection({
 
               <label className="field full">
                 <span>Description (optional)</span>
-                <textarea
+                <RichTextEditor
                   rows={2}
                   value={link.newOffer.description}
-                  onChange={(e) => patchNewOffer({ description: e.target.value })}
+                  onChange={(description) => patchNewOffer({ description })}
+                  aria-label="Offer description"
                 />
               </label>
 

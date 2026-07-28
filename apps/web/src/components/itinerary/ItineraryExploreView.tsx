@@ -3,6 +3,7 @@ import { normalizeEntityMedia, type EntityMediaItem } from "@tourpilot/shared";
 import { FormatLkr } from "../currency/FormatLkr";
 import { CoverImage } from "../CoverImage";
 import { EntityTypeLineIcon } from "../icons/LineIcons";
+import { RichTextHtml } from "../richtext/RichTextHtml";
 
 export type ItineraryExploreEntity = {
   name: string;
@@ -166,7 +167,10 @@ export function ItineraryExploreView({
                                 <p className="itin-moment-label">{item.label}</p>
                               )}
                               {item.entity?.description && (
-                                <p className="itin-moment-desc">{item.entity.description}</p>
+                                <RichTextHtml
+                                  html={item.entity.description}
+                                  className="itin-moment-desc"
+                                />
                               )}
                               {item.notes && (
                                 <p className="itin-moment-notes">{item.notes}</p>

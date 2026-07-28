@@ -1,4 +1,4 @@
-import { MAX_AGENCY_HERO_SLIDES, MEDIA } from "@tourpilot/shared";
+import { MAX_AGENCY_HERO_SLIDES, MEDIA, sanitizeRichHtml, isRichTextEmpty } from "@tourpilot/shared";
 
 export type DisplaySectionFlags = {
   branding: boolean;
@@ -257,7 +257,8 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
 
   if (typeof content.whoWeAreTitle === "string") base.whoWeAreTitle = content.whoWeAreTitle;
   if (typeof content.whoWeAreDescription === "string") {
-    base.whoWeAreDescription = content.whoWeAreDescription;
+    const cleaned = sanitizeRichHtml(content.whoWeAreDescription);
+    base.whoWeAreDescription = isRichTextEmpty(cleaned) ? "" : cleaned;
   }
 
   if (Array.isArray(content.whoWeAreSocialLinks)) {
@@ -357,7 +358,10 @@ export function parseDisplayContent(raw: unknown): DisplayContent {
         id,
         name,
         variant: typeof row.variant === "string" ? row.variant.trim() || undefined : undefined,
-        description: String(row.description || "").trim(),
+        description: (() => {
+          const cleaned = sanitizeRichHtml(String(row.description || ""));
+          return isRichTextEmpty(cleaned) ? "" : cleaned;
+        })(),
         seating: String(row.seating || "").trim(),
         luggage: String(row.luggage || "").trim(),
       });
