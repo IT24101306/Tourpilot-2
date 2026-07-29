@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { TourItineraryPreview } from "../components/itinerary/TourItineraryPreview";
 import { formatTourDaysNights } from "@tourpilot/shared";
 import { useFormatMoney } from "../context/CurrencyContext";
+import { CurrencyDisclaimerBanner } from "../components/currency/CurrencyDisclaimerBanner";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { ClientBrand } from "../components/ClientBrand";
 import { NotificationBell } from "../components/NotificationBell";
@@ -168,6 +169,7 @@ export function TourDetailPage() {
         </nav>
       </header>
 
+      <CurrencyDisclaimerBanner />
       <div className="agency-display-body">
         <header className="tour-detail-topic">
           <div className="tour-detail-topic__inner">

@@ -3,12 +3,15 @@ import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { TaskBoard } from "../../components/tasks/TaskBoard";
 import { buildDriverTasks } from "./taskUtils";
+import { useDriverAssignments } from "./useDriverAssignments";
 
 export function DriverTasksPage() {
   const { user } = useAuth();
-  const tasks = useMemo(() => buildDriverTasks(), []);
+  const { assignments, loading } = useDriverAssignments();
+  const tasks = useMemo(() => buildDriverTasks(assignments), [assignments]);
 
   if (!user) return null;
+  if (loading) return <p className="muted">Loading tasks…</p>;
 
   return (
     <div className="module-shell module-tasks">

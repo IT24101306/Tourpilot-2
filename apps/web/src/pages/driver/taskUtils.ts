@@ -1,31 +1,33 @@
 import type { TaskItem } from "../../types/tasks";
-import { DEMO_ASSIGNMENTS, DEMO_SCHEDULE } from "./types";
+import type { DriverAssignmentRow } from "../agency/driverTypes";
 
-export function buildDriverTasks(): TaskItem[] {
+export function buildDriverTasks(assignments: DriverAssignmentRow[]): TaskItem[] {
   const tasks: TaskItem[] = [];
+  const today = new Date().toISOString().slice(0, 10);
 
-  for (const item of DEMO_SCHEDULE.filter((s) => !s.done)) {
-    tasks.push({
-      id: `schedule-${item.time}`,
-      title: item.title,
-      hint: "Today's schedule — mark complete when done",
-      priority: "high",
-      dueLabel: item.time,
-      dueToday: true,
-      category: "Today",
-      link: "/dashboard/driver",
-    });
-  }
+  for (const a of assignments) {
+    if (a.status === "Completed" || a.status === "Cancelled") continue;
 
-  for (const tour of DEMO_ASSIGNMENTS.filter((t) => t.status !== "Completed")) {
+    const start = a.startDate?.slice(0, 10);
+    const end = a.endDate?.slice(0, 10) ?? start;
+    const isToday = start != null && start <= today && end != null && end >= today;
+
+    const time = a.startDate
+      ? new Date(a.startDate).toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "—";
+    const guests = a.inquiry?.pax != null ? ` · ${a.inquiry.pax} pax` : "";
+
     tasks.push({
-      id: `assign-${tour.code}`,
-      title: `${tour.code} · ${tour.route}`,
-      hint: `${tour.time} · ${tour.guests} guests · ${tour.status}`,
-      priority: tour.status === "On Route" ? "high" : "medium",
-      dueLabel: tour.time,
-      dueToday: true,
-      category: "Assignment",
+      id: `assign-${a.id}`,
+      title: `${a.title}${guests}`,
+      hint: a.status === "On Route" ? "In progress — complete when done" : "Upcoming trip",
+      priority: a.status === "On Route" ? "high" : isToday ? "high" : "medium",
+      dueLabel: time,
+      dueToday: isToday,
+      category: isToday ? "Today" : "Upcoming",
       link: "/dashboard/driver/assigned",
     });
   }

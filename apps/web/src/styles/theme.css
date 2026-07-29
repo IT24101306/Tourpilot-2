@@ -10881,3 +10881,43 @@ a.agency-icon-btn {
   gap: 10px;
   justify-content: flex-end;
 }
+
+/* Currency disclaimer banner */
+.currency-disclaimer-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 0 0 16px;
+  border-radius: var(--radius-md);
+  background: #f0f7ff;
+  border: 1px solid #c6ddf7;
+  font-size: 0.82rem;
+  color: #1e3a5f;
+  line-height: 1.4;
+}
+
+.currency-disclaimer-banner p {
+  margin: 0;
+}
+
+.currency-disclaimer-banner strong {
+  font-weight: 700;
+}
+
+.currency-disclaimer-banner__close {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #1e3a5f;
+  opacity: 0.6;
+  padding: 4px;
+}
+
+.currency-disclaimer-banner__close:hover {
+  opacity: 1;
+}

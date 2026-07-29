@@ -25,8 +25,8 @@ export function CurrencyPreferencePanel() {
           Display currency
         </h2>
         <p className="account-currency-panel__lead">
-          Listed prices convert to your selected currency for browsing (default{" "}
-          <strong>{LISTING_CURRENCY}</strong>). Charging remains in {LISTING_CURRENCY}. {rateNote}
+          All listed prices are in <strong>{LISTING_CURRENCY}</strong>. Other currencies are
+          approximate conversions at today&apos;s rate. {rateNote}
         </p>
       </header>
       <div className="account-currency-panel__options" role="radiogroup" aria-label="Display currency">

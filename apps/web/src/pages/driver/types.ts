@@ -19,44 +19,6 @@ export type DriverMe = {
   driverProfile: DriverProfile | null;
 };
 
-export type AssignedTour = {
-  code: string;
-  route: string;
-  time: string;
-  guests: number;
-  status: "Scheduled" | "On Route" | "Completed";
-};
-
-export const DEMO_ASSIGNMENTS: AssignedTour[] = [
-  {
-    code: "DRV-2401",
-    route: "Ella City Hotel → Little Adam's Peak",
-    time: "09:30 AM",
-    guests: 2,
-    status: "Scheduled",
-  },
-  {
-    code: "DRV-2402",
-    route: "Nine Arch Bridge → Ravana Falls",
-    time: "02:00 PM",
-    guests: 4,
-    status: "Scheduled",
-  },
-  {
-    code: "DRV-2398",
-    route: "Bandarawela → Horton Plains",
-    time: "05:30 AM",
-    guests: 3,
-    status: "Completed",
-  },
-];
-
-export const DEMO_SCHEDULE = [
-  { time: "05:30 AM", title: "Pickup — Bandarawela Station", done: true },
-  { time: "09:30 AM", title: "Pickup — Ella City Hotel", done: false },
-  { time: "11:00 AM", title: "Drop — Little Adam's Peak trailhead", done: false },
-  { time: "02:00 PM", title: "Pickup — Nine Arch Bridge", done: false },
-];
 
 export function formatDriverStatus(status: string): string {
   const map: Record<string, string> = {
