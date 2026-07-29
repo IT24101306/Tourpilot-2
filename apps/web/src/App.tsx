@@ -92,6 +92,7 @@ import { AgencyTripRoomPage } from "./pages/agency/AgencyTripRoomPage";
 import { TouristTravelHub } from "./components/tourist/TouristTravelHub";
 import { AgencyTasksPage } from "./pages/agency/AgencyTasksPage";
 import { DriverTasksPage } from "./pages/driver/DriverTasksPage";
+import { TouristTripRoomPage } from "./pages/TouristTripRoomPage";
 import { SiteFooter } from "./components/SiteFooter";
 import { CheckoutPage, CheckoutReturnPage } from "./pages/CheckoutPage";
 
@@ -137,10 +138,6 @@ function BuildMyTripLegacyRedirect() {
   return <Navigate to={slug ? `/agencies/${slug}` : "/"} replace />;
 }
 
-function TouristTripRoomRedirect() {
-  const { inquiryId } = useParams<{ inquiryId: string }>();
-  return <Navigate to={inquiryId ? `/trips?room=${inquiryId}` : "/trips"} replace />;
-}
 
 export default function App() {
   return (
@@ -243,7 +240,7 @@ function AppShell() {
             />
             <Route
               path="trips/:inquiryId"
-              element={<TouristTripRoomRedirect />}
+              element={<TouristTripRoomPage />}
             />
           </Route>
 
