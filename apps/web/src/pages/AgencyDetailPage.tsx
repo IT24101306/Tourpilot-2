@@ -79,7 +79,7 @@ type Agency = {
   avgRating: number;
   reviewCount: number;
   tours: Tour[];
-  reviews: { authorName: string; rating: number; body: string | null }[];
+  reviews: { authorName: string; rating: number; body: string | null; verified?: boolean }[];
   display?: {
     enabled: DisplaySectionFlags;
     content: DisplayContent;

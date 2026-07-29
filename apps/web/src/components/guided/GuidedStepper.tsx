@@ -10,7 +10,7 @@ export function GuidedStepper({ status }: Props) {
     <div className="guided-stepper-wrap">
       <ol className="guided-stepper" aria-label="Your trip progress">
       {GUIDED_STEPS.map((step, i) => {
-        const done = i < active || (i === 4 && status === "ACCEPTED");
+        const done = i < active || (i === 6 && status === "COMPLETED");
         const current = i === active;
         return (
           <li

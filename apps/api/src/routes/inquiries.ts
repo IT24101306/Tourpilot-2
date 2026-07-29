@@ -1055,6 +1055,57 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
   }
 });
 
+/** Agency transitions a booked inquiry through the trip lifecycle. */
+inquiriesRouter.patch("/:id/lifecycle", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const { action } = z
+      .object({ action: z.enum(["start", "complete"]) })
+      .parse(req.body);
+
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const inquiry = await prisma.inquiry.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
+
+    const transitions: Record<string, { from: string; to: string }> = {
+      start: { from: "ACCEPTED", to: "IN_PROGRESS" },
+      complete: { from: "IN_PROGRESS", to: "COMPLETED" },
+    };
+    const transition = transitions[action];
+    if (inquiry.status !== transition.from) {
+      return res.status(400).json({
+        error: `Cannot ${action} — inquiry is ${inquiry.status}, expected ${transition.from}.`,
+      });
+    }
+
+    const updated = await prisma.inquiry.update({
+      where: { id: inquiry.id },
+      data: {
+        status: transition.to as "IN_PROGRESS" | "COMPLETED",
+        statusHistory: {
+          create: { status: transition.to as "IN_PROGRESS" | "COMPLETED", actorId: req.user!.id },
+        },
+      },
+    });
+
+    await createInquiryMessage(
+      inquiry.id,
+      req.user!.id,
+      InquiryMessageKind.AGENCY,
+      action === "start" ? "Trip has started." : "Trip completed. Thank you for traveling with us!"
+    );
+
+    void notifyInquiryStatusChange(inquiry.id, transition.to, undefined).catch(console.error);
+
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
 function serializeInquiryForClient(
   inquiry: {
   id: string;

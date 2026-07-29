@@ -76,7 +76,8 @@ export type AgencyGroup = {
 };
 
 export function inquiryStatusClass(status: string): string {
-  if (status === "ACCEPTED" || status === "SENT_TO_TOURIST") return "ok";
+  if (status === "COMPLETED") return "ok";
+  if (status === "ACCEPTED" || status === "SENT_TO_TOURIST" || status === "IN_PROGRESS") return "ok";
   if (status === "NEW" || status === "AGENCY_REVIEWING") return "warn";
   if (status === "REVISION_REQUESTED" || status === "DECLINED") return "late";
   return "warn";

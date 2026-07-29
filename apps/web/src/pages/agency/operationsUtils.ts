@@ -7,7 +7,7 @@ export type OpsQueueKey = "action" | "waiting" | "confirmed" | "closed";
 
 const ACTION_STATUSES = new Set(["NEW", "AGENCY_REVIEWING", "REVISION_REQUESTED", "ITINERARY_DRAFT"]);
 const WAITING_STATUSES = new Set(["SENT_TO_TOURIST", "TOURIST_VIEWED"]);
-const CONFIRMED_STATUSES = new Set(["ACCEPTED"]);
+const CONFIRMED_STATUSES = new Set(["ACCEPTED", "IN_PROGRESS", "COMPLETED"]);
 const CLOSED_STATUSES = new Set(["DECLINED", "EXPIRED"]);
 
 export function queueForStatus(status: string): OpsQueueKey {

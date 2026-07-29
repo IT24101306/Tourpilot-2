@@ -15,7 +15,7 @@ import { DEFAULT_TOUR_COVER_URL, stripRichHtml } from "@tourpilot/shared";
 
 type TravelTab = "inquiries" | "bookings" | "saved";
 
-const BOOKING_STATUSES = new Set(["ACCEPTED"]);
+const BOOKING_STATUSES = new Set(["ACCEPTED", "IN_PROGRESS", "COMPLETED"]);
 
 function tabFromParam(raw: string | null): TravelTab {
   if (raw === "bookings" || raw === "saved" || raw === "inquiries") return raw;
@@ -173,16 +173,51 @@ export function TouristTravelHub() {
             ) : null}
             {!loading && bookings.length > 0 ? (
               <>
-                <p className="guided-list-summary muted">
-                  {bookings.length} confirmed trip{bookings.length === 1 ? "" : "s"}
-                </p>
-                <ul className="guided-trip-list">
-                  {bookings.map((inq) => (
-                    <li key={inq.id}>
-                      <GuidedTripCard inquiry={inq} onOpen={() => openRoom(inq.id)} />
-                    </li>
-                  ))}
-                </ul>
+                {bookings.filter((b) => b.status === "IN_PROGRESS").length > 0 && (
+                  <>
+                    <p className="guided-list-summary">
+                      {bookings.filter((b) => b.status === "IN_PROGRESS").length} trip
+                      {bookings.filter((b) => b.status === "IN_PROGRESS").length === 1 ? "" : "s"} in progress
+                    </p>
+                    <ul className="guided-trip-list">
+                      {bookings.filter((b) => b.status === "IN_PROGRESS").map((inq) => (
+                        <li key={inq.id}>
+                          <GuidedTripCard inquiry={inq} onOpen={() => openRoom(inq.id)} />
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {bookings.filter((b) => b.status === "ACCEPTED").length > 0 && (
+                  <>
+                    <p className="guided-list-summary muted">
+                      {bookings.filter((b) => b.status === "ACCEPTED").length} upcoming trip
+                      {bookings.filter((b) => b.status === "ACCEPTED").length === 1 ? "" : "s"}
+                    </p>
+                    <ul className="guided-trip-list">
+                      {bookings.filter((b) => b.status === "ACCEPTED").map((inq) => (
+                        <li key={inq.id}>
+                          <GuidedTripCard inquiry={inq} onOpen={() => openRoom(inq.id)} />
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {bookings.filter((b) => b.status === "COMPLETED").length > 0 && (
+                  <>
+                    <p className="guided-list-summary muted">
+                      {bookings.filter((b) => b.status === "COMPLETED").length} completed trip
+                      {bookings.filter((b) => b.status === "COMPLETED").length === 1 ? "" : "s"}
+                    </p>
+                    <ul className="guided-trip-list">
+                      {bookings.filter((b) => b.status === "COMPLETED").map((inq) => (
+                        <li key={inq.id}>
+                          <GuidedTripCard inquiry={inq} onOpen={() => openRoom(inq.id)} />
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </>
             ) : null}
           </>

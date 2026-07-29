@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-type Review = { authorName: string; rating: number; body: string | null };
+type Review = { authorName: string; rating: number; body: string | null; verified?: boolean };
 
 type Props = {
   reviews: Review[];
@@ -88,7 +88,12 @@ export function AgencyReviewsFlipShowcase({ reviews }: Props) {
               </span>
             </div>
             {review.body && <p className="agency-review-flip__body">&ldquo;{review.body}&rdquo;</p>}
-            <footer className="agency-review-flip__author">— {review.authorName}</footer>
+            <footer className="agency-review-flip__author">
+              — {review.authorName}
+              {review.verified && (
+                <span className="agency-review-flip__verified"> ✓ Verified trip</span>
+              )}
+            </footer>
           </article>
         </div>
 

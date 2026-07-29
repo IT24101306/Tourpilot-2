@@ -67,6 +67,10 @@ export function TripRoomView({
   const [chatSending, setChatSending] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [actionsDocked, setActionsDocked] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewBody, setReviewBody] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const autoOpenedInvoiceRef = useRef<string | null>(null);
   const actionsBarRef = useRef<HTMLDivElement | null>(null);
 
@@ -207,6 +211,41 @@ export function TripRoomView({
       setActionStatus(err instanceof ApiError ? err.message : "Action failed");
     } finally {
       setActing(false);
+    }
+  }
+
+  async function lifecycleTransition(action: "start" | "complete") {
+    setActing(true);
+    setActionStatus("");
+    try {
+      await api(`/inquiries/${inquiryId}/lifecycle`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ action }),
+      });
+      setActionStatus(action === "start" ? "Trip started." : "Trip completed.");
+      await load();
+    } catch (err) {
+      setActionStatus(err instanceof ApiError ? err.message : "Action failed");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function submitReview() {
+    if (reviewRating < 1 || reviewRating > 5) return;
+    setReviewSubmitting(true);
+    try {
+      await api(`/reviews/trip/${inquiryId}`, {
+        method: "POST",
+        token,
+        body: JSON.stringify({ rating: reviewRating, body: reviewBody.trim() || undefined }),
+      });
+      setReviewSubmitted(true);
+    } catch (err) {
+      setActionStatus(err instanceof ApiError ? err.message : "Failed to submit review");
+    } finally {
+      setReviewSubmitting(false);
     }
   }
 
@@ -447,6 +486,50 @@ export function TripRoomView({
             </div>
           )}
 
+        {role === "TOURIST" && inquiry.status === "COMPLETED" && !reviewSubmitted && (
+          <div className="neg-review-prompt" role="region" aria-label="Leave a review">
+            <h3>How was your trip?</h3>
+            <p className="muted">Your review helps other travelers and the agency.</p>
+            <div className="neg-review-stars" role="radiogroup" aria-label="Rating">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  className={`neg-review-star${reviewRating >= star ? " is-active" : ""}`}
+                  onClick={() => setReviewRating(star)}
+                  aria-label={`${star} star${star === 1 ? "" : "s"}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="neg-review-body"
+              placeholder="Tell us about your experience (optional)"
+              value={reviewBody}
+              onChange={(e) => setReviewBody(e.target.value)}
+              maxLength={2000}
+              rows={3}
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={reviewRating === 0 || reviewSubmitting}
+              onClick={submitReview}
+            >
+              {reviewSubmitting ? "Submitting…" : "Submit review"}
+            </button>
+          </div>
+        )}
+        {role === "TOURIST" && reviewSubmitted && (
+          <div className="neg-review-prompt neg-review-prompt--done">
+            <h3>Thank you for your review!</h3>
+            <p className="muted">
+              Your feedback is pending agency approval before appearing publicly.
+            </p>
+          </div>
+        )}
+
         <div className="neg-trip-room-grid">
         <section className="neg-panel neg-panel--chat">
           <h3 className="neg-panel-title">Conversation</h3>
@@ -600,9 +683,29 @@ export function TripRoomView({
             {inquiry.proposal ? "Update proposal" : "Send proposal"}
           </button>
         )}
-        {role === "AGENCY" && inquiry.status === "ACCEPTED" && (
+        {role === "AGENCY" && (inquiry.status === "ACCEPTED" || inquiry.status === "IN_PROGRESS") && (
           <button type="button" className="btn btn-teal" onClick={() => setInvoiceModalOpen(true)}>
             {inquiry.invoice ? "Edit / send invoice" : "Generate invoice"}
+          </button>
+        )}
+        {role === "AGENCY" && inquiry.status === "ACCEPTED" && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={acting}
+            onClick={() => lifecycleTransition("start")}
+          >
+            Start trip
+          </button>
+        )}
+        {role === "AGENCY" && inquiry.status === "IN_PROGRESS" && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={acting}
+            onClick={() => lifecycleTransition("complete")}
+          >
+            Complete trip
           </button>
         )}
         {role === "TOURIST" &&

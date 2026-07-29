@@ -1434,6 +1434,13 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
       orderBy: { validUntil: "asc" },
     });
 
+    const touristReviewsPublic = await prisma.touristReview.findMany({
+      where: { agencyId: agency.id, isPublic: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { tourist: { select: { name: true } } },
+    });
+
     res.json({
 
       id: agency.id,
@@ -1464,7 +1471,18 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
         serializeTourCard(t, Number(agency.influencerCommissionPct))
       ),
 
-      reviews: agency.reviews,
+      reviews: [
+        ...agency.reviews.map((r) => ({ ...r, verified: false })),
+        ...touristReviewsPublic.map((r) => ({
+          id: r.id,
+          authorName: r.tourist.name,
+          rating: r.rating,
+          body: r.body,
+          isVisible: true,
+          createdAt: r.createdAt,
+          verified: true,
+        })),
+      ],
 
       display: { enabled: display.enabled, content: { ...display.content, packages } },
 

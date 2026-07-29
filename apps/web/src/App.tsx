@@ -40,6 +40,7 @@ import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
 import { AgencyDriversPage } from "./pages/agency/AgencyDriversPage";
 import { AgencyTravelersPage } from "./pages/agency/AgencyTravelersPage";
+import { AgencyReviewsPage } from "./pages/agency/AgencyReviewsPage";
 import { AgencyTeamPage } from "./pages/agency/AgencyTeamPage";
 import { AgencyAllEntitiesPage } from "./pages/agency/AgencyAllEntitiesPage";
 import { AgencyGroupsPage } from "./pages/agency/AgencyGroupsPage";
@@ -273,6 +274,7 @@ function AppShell() {
             <Route path="tours" element={<AgencyToursPage />} />
             <Route path="drivers" element={<AgencyDriversPage />} />
             <Route path="travelers" element={<AgencyTravelersPage />} />
+            <Route path="reviews" element={<AgencyReviewsPage />} />
             <Route path="team" element={<AgencyTeamPage />} />
             <Route path="all" element={<AgencyAllEntitiesPage />} />
             <Route path="groups" element={<AgencyGroupsPage />} />

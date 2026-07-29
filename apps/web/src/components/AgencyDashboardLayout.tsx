@@ -25,6 +25,7 @@ const AGENCY_TABS: {
   { to: "/dashboard/agency/negotiations", label: "Negotiations", feature: "negotiationsBookings" },
   { to: "/dashboard/agency/tasks", label: "Tasks" },
   { to: "/dashboard/agency/travelers", label: "Travelers" },
+  { to: "/dashboard/agency/reviews", label: "Reviews" },
   { to: "/dashboard/agency/team", label: "Team", ownerOnly: true },
   { to: "/dashboard/agency/display", label: "Display", feature: "display" },
   { to: "/dashboard/agency/offers", label: "Offers", feature: "offers" },
