@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { EmptyState } from "../components/feedback/EmptyState";
 import { GuidedTripCard } from "../components/guided/GuidedTripCard";
 import { useAuth } from "../context/AuthContext";
 import type { NegotiationListItem } from "../types/negotiation";
@@ -31,13 +31,11 @@ export function TouristBookingsPage() {
 
   if (bookings.length === 0) {
     return (
-      <div className="guided-empty-panel">
-        <h3>No confirmed bookings yet</h3>
-        <p>When you accept a proposal from an agency, your trip appears here.</p>
-        <Link to="/trips" className="btn btn-primary">
-          View inquiries
-        </Link>
-      </div>
+      <EmptyState
+        title="No confirmed bookings yet"
+        description="When you accept a proposal from an agency, your trip appears here."
+        action={{ label: "View inquiries", to: "/trips" }}
+      />
     );
   }
 

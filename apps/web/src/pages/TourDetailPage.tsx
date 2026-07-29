@@ -220,9 +220,14 @@ export function TourDetailPage() {
             <span className="tour-detail-float__action">Inquire this tour</span>
           </Link>
         ) : (
-          <Link to={agencyHref} className="tour-detail-float__btn tour-detail-float__btn--ghost">
-            <span className="tour-detail-float__action">View agency page</span>
-          </Link>
+          <div className="tour-detail-float__blocked">
+            <p className="tour-detail-float__blocked-note">
+              Online inquiries are paused for this agency right now.
+            </p>
+            <Link to={agencyHref} className="tour-detail-float__btn tour-detail-float__btn--ghost">
+              <span className="tour-detail-float__action">View agency page</span>
+            </Link>
+          </div>
         )}
       </div>
     </div>

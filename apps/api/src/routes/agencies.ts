@@ -1452,6 +1452,10 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
       district: agency.district,
 
+      contactEmail: agency.contactEmail,
+
+      contactPhone: agency.contactPhone,
+
       avgRating: Number(agency.avgRating),
 
       reviewCount: agency.reviewCount,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CoverImage } from "../CoverImage";
 import { FormatTourPrice } from "../currency/FormatLkr";
+import { EmptyState } from "../feedback/EmptyState";
 import { GuidedTripCard } from "../guided/GuidedTripCard";
 import { ModuleHeader } from "../module/ModuleHeader";
 import { SaveTourButton } from "./SaveTourButton";
@@ -134,10 +135,12 @@ export function TouristTravelHub() {
             {loading ? <p className="muted">Loading your inquiries…</p> : null}
             {error ? <p className="form-error">{error}</p> : null}
             {!loading && !error && inquiries.length === 0 ? (
-              <div className="guided-empty-panel">
-                <h3>No inquiries yet</h3>
-                <p>Visit an agency or tour page and send an inquiry to track proposals here.</p>
-              </div>
+              <EmptyState
+                title="No inquiries yet"
+                description="Visit an agency or tour page and send an inquiry to track proposals here."
+                action={{ label: "Browse offers", to: "/offers" }}
+                secondaryAction={{ label: "Find agencies", to: "/" }}
+              />
             ) : null}
             {!loading && inquiries.length > 0 ? (
               <>
@@ -162,13 +165,11 @@ export function TouristTravelHub() {
           <>
             {loading ? <p className="muted">Loading your bookings…</p> : null}
             {!loading && bookings.length === 0 ? (
-              <div className="guided-empty-panel">
-                <h3>No confirmed bookings yet</h3>
-                <p>When you accept a proposal, your trip appears here.</p>
-                <Link to="/trips" className="btn btn-primary">
-                  View inquiries
-                </Link>
-              </div>
+              <EmptyState
+                title="No confirmed bookings yet"
+                description="When you accept a proposal, your trip appears here."
+                action={{ label: "View inquiries", to: "/trips?tab=inquiries" }}
+              />
             ) : null}
             {!loading && bookings.length > 0 ? (
               <>
@@ -191,10 +192,11 @@ export function TouristTravelHub() {
           <>
             {savedLoading ? <p className="muted">Loading saved items…</p> : null}
             {!savedLoading && savedItems.length === 0 ? (
-              <div className="guided-empty-panel">
-                <h3>No saved tours yet</h3>
-                <p>Tap the heart on any tour to build your wishlist.</p>
-              </div>
+              <EmptyState
+                title="No saved tours yet"
+                description="Tap the heart on any tour to build your wishlist."
+                action={{ label: "Browse offers", to: "/offers" }}
+              />
             ) : null}
             {!savedLoading && savedItems.length > 0 ? (
               <ul className="saved-tour-grid">

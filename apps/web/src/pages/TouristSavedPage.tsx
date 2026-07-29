@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CoverImage } from "../components/CoverImage";
 import { FormatTourPrice } from "../components/currency/FormatLkr";
+import { EmptyState } from "../components/feedback/EmptyState";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -46,10 +47,11 @@ export function TouristSavedPage() {
 
   if (tourItems.length === 0) {
     return (
-      <div className="guided-empty-panel">
-        <h3>No saved tours yet</h3>
-        <p>Tap the heart on any tour to build your wishlist.</p>
-      </div>
+      <EmptyState
+        title="No saved tours yet"
+        description="Tap the heart on any tour to build your wishlist."
+        action={{ label: "Browse offers", to: "/offers" }}
+      />
     );
   }
 

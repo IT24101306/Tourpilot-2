@@ -7263,6 +7263,80 @@ a.agency-icon-btn {
   max-width: 40rem;
 }
 
+.feature-unavailable-note strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink, #0f1a16);
+  margin-bottom: 6px;
+}
+
+.feature-unavailable-note p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.feature-unavailable-note p + p,
+.feature-unavailable-note__contact {
+  margin-top: 10px;
+}
+
+.feature-unavailable-note__contact a {
+  color: var(--green-dark, #1a5c3a);
+  font-weight: 600;
+}
+
+.tp-empty-state {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  background: linear-gradient(165deg, #f8fbf9 0%, var(--white, #fff) 55%);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.tp-empty-state--blocked {
+  background: linear-gradient(165deg, #fbf8f4 0%, var(--white, #fff) 55%);
+  border-color: rgba(138, 109, 29, 0.28);
+}
+
+.tp-empty-state--agency-blocked {
+  margin: 2rem auto;
+  max-width: 28rem;
+}
+
+.tp-empty-state__title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  margin: 0 0 8px;
+  color: var(--ink, #0f1a16);
+}
+
+.tp-empty-state__desc {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.tp-empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.tp-empty-state.ops-empty-panel,
+.tp-empty-state.offers-empty {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: none;
+}
+
 .gov-approval-actions {
   display: flex;
   flex-wrap: wrap;
@@ -9516,6 +9590,26 @@ a.agency-icon-btn {
   font-weight: 700;
   letter-spacing: 0.01em;
   white-space: nowrap;
+}
+
+.tour-detail-float__blocked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-width: min(100%, 22rem);
+}
+
+.tour-detail-float__blocked-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 26, 22, 0.12);
+  color: #334155;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: center;
 }
 
 .tour-itinerary-layout {

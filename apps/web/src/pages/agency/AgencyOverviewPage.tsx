@@ -5,6 +5,7 @@ import { agencyFeaturesOf, useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { OpsMetricStrip } from "../../components/module/OpsMetricStrip";
 import { OperationsQueue } from "../../components/module/OperationsQueue";
+import { EmptyState } from "../../components/feedback/EmptyState";
 import { groupByQueue, opsMetrics } from "./operationsUtils";
 import { AgencyInquiry, AgencyTour } from "./types";
 
@@ -113,14 +114,16 @@ export function AgencyOverviewPage() {
         {loading ? (
           <p className="muted">Loading operations…</p>
         ) : inquiries.length === 0 ? (
-          <div className="ops-empty-panel">
-            <p>No inquiries yet. When travelers request trips, they will appear here.</p>
-            {features.readyMadeTours && (
-              <Link to="/dashboard/agency/tours" className="btn btn-ghost">
-                Manage tours
-              </Link>
-            )}
-          </div>
+          <EmptyState
+            title="No inquiries yet"
+            description="When travelers request trips, they will appear here on your live board."
+            action={
+              features.readyMadeTours
+                ? { label: "Manage tours", to: "/dashboard/agency/tours" }
+                : undefined
+            }
+            className="ops-empty-panel"
+          />
         ) : (
           <OperationsQueue groups={queues} compact />
         )}

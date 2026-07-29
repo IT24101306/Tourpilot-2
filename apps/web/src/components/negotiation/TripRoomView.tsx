@@ -434,6 +434,19 @@ export function TripRoomView({
 
         {actionStatus && <p className="neg-action-status">{actionStatus}</p>}
 
+        {role === "TOURIST" &&
+          !bookingsEnabled &&
+          RESPONDABLE.has(inquiry.status) &&
+          Boolean(inquiry.proposal) && (
+            <div className="feature-unavailable-note" role="status">
+              <strong>Online booking paused</strong>
+              <p>
+                This agency is not accepting online confirmations right now. You can still
+                request changes or decline the proposal.
+              </p>
+            </div>
+          )}
+
         <div className="neg-trip-room-grid">
         <section className="neg-panel neg-panel--chat">
           <h3 className="neg-panel-title">Conversation</h3>

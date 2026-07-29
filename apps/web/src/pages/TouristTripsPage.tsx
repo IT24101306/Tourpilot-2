@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { EmptyState } from "../components/feedback/EmptyState";
 import { GuidedTripCard } from "../components/guided/GuidedTripCard";
 import type { NegotiationListItem } from "../types/negotiation";
 
@@ -37,10 +38,12 @@ export function TouristTripsPage() {
 
   if (inquiries.length === 0) {
     return (
-      <div className="guided-empty-panel">
-        <h3>No inquiries yet</h3>
-        <p>Visit an agency or tour page and send an inquiry to track proposals here.</p>
-      </div>
+      <EmptyState
+        title="No inquiries yet"
+        description="Visit an agency or tour page and send an inquiry — proposals and trip rooms will show up here."
+        action={{ label: "Browse offers", to: "/offers" }}
+        secondaryAction={{ label: "Find agencies", to: "/" }}
+      />
     );
   }
 
