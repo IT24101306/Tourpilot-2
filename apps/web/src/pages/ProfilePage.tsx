@@ -100,7 +100,9 @@ export function ProfilePage() {
     case "TOURIST": {
       const loyalty = user.touristProfile?.loyaltyPoints ?? 0;
       const inquiryCount = inquiries.length;
-      const bookingCount = inquiries.filter((i) => i.status === "ACCEPTED").length;
+      const bookingCount = inquiries.filter((i) =>
+        ["ACCEPTED", "IN_PROGRESS", "COMPLETED"].includes(i.status)
+      ).length;
 
       const partnerMap = new Map<string, { name: string; slug?: string | null; logoUrl?: string | null; href?: string }>();
       for (const inquiry of inquiries) {

@@ -83,7 +83,7 @@ export function TouristBookingsPage() {
             {past.map((inq) => (
               <li key={inq.id}>
                 <GuidedTripCard inquiry={inq} />
-                {!(inq as NegotiationListItem & { hasReview?: boolean }).hasReview && (
+                {!(inq.hasReview || inq.touristReview) && (
                   <Link
                     to={`/trips/${inq.id}`}
                     className="btn btn-ghost btn-sm"

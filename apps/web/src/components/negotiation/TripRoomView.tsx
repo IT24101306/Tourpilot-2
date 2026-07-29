@@ -101,6 +101,7 @@ export function TripRoomView({
   const { typing, onComposeChange, stopTyping } = useChatLive({
     inquiryId,
     token,
+    viewerUserId: user?.id,
     enabled: Boolean(inquiryId && token && !loading && inquiry),
     onThread: (thread: ThreadMessage[]) => {
       setInquiry((prev) => (prev ? { ...prev, thread } : prev));
@@ -141,6 +142,12 @@ export function TripRoomView({
       setInvoiceModalOpen(true);
     }
   }, [role, inquiry?.invoice?.id, inquiry?.invoice?.status]);
+
+  useEffect(() => {
+    if (inquiry?.touristReview || inquiry?.hasReview) {
+      setReviewSubmitted(true);
+    }
+  }, [inquiry?.touristReview, inquiry?.hasReview]);
 
   // Keep the action bar floating, but dock it above the site footer when that enters view.
   useEffect(() => {
@@ -486,7 +493,7 @@ export function TripRoomView({
             </div>
           )}
 
-        {role === "TOURIST" && inquiry.status === "COMPLETED" && !reviewSubmitted && (
+        {role === "TOURIST" && inquiry.status === "COMPLETED" && !reviewSubmitted && !inquiry.hasReview && !inquiry.touristReview && (
           <div className="neg-review-prompt" role="region" aria-label="Leave a review">
             <h3>How was your trip?</h3>
             <p className="muted">Your review helps other travelers and the agency.</p>
@@ -521,11 +528,15 @@ export function TripRoomView({
             </button>
           </div>
         )}
-        {role === "TOURIST" && reviewSubmitted && (
+        {role === "TOURIST" &&
+          inquiry.status === "COMPLETED" &&
+          (reviewSubmitted || inquiry.hasReview || inquiry.touristReview) && (
           <div className="neg-review-prompt neg-review-prompt--done">
             <h3>Thank you for your review!</h3>
             <p className="muted">
-              Your feedback is pending agency approval before appearing publicly.
+              {inquiry.touristReview?.isPublic
+                ? "Your feedback is visible on the agency page."
+                : "Your feedback is pending agency approval before appearing publicly."}
             </p>
           </div>
         )}

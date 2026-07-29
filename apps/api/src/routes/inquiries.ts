@@ -38,6 +38,7 @@ import {
   markInquiryRead,
   touchTyping,
 } from "../services/chatPresence.js";
+import { emitChatMessage, emitChatPresence } from "../services/chatRealtime.js";
 import {
   notifyCommissionApproved,
   notifyInquiryChatMessage,
@@ -164,6 +165,9 @@ const inquiryIncludeForAgency = {
       paidAt: true,
     },
   },
+  touristReview: {
+    select: { id: true, rating: true, body: true, isPublic: true, createdAt: true },
+  },
 };
 
 const inquiryIncludeForTourist = {
@@ -218,6 +222,9 @@ const inquiryIncludeForTourist = {
       sentAt: true,
       paidAt: true,
     },
+  },
+  touristReview: {
+    select: { id: true, rating: true, body: true, isPublic: true, createdAt: true },
   },
 };
 
@@ -574,6 +581,7 @@ inquiriesRouter.post("/:id/read", authRequired, async (req, res, next) => {
     if (!access.ok) return res.status(access.status).json({ error: access.error });
     await markInquiryRead(inquiryId, req.user!.id);
     const presence = await getChatPresence(inquiryId, req.user!.id);
+    void emitChatPresence(inquiryId, req.user!.id).catch(console.error);
     res.json({ ok: true, counterpartyLastReadAt: presence.counterpartyLastReadAt });
   } catch (e) {
     next(e);
@@ -587,6 +595,7 @@ inquiriesRouter.post("/:id/typing", authRequired, async (req, res, next) => {
     const access = await assertChatAccess(inquiryId, req.user!.id, req.user!.role);
     if (!access.ok) return res.status(access.status).json({ error: access.error });
     await touchTyping(inquiryId, req.user!.id, body.typing);
+    void emitChatPresence(inquiryId, req.user!.id).catch(console.error);
     res.json({ ok: true });
   } catch (e) {
     next(e);
@@ -645,12 +654,14 @@ inquiriesRouter.post("/:id/messages", authRequired, async (req, res, next) => {
     void notifyInquiryChatMessage(inquiry.id, req.user!.id, body.message, kind).catch(console.error);
 
     const presence = await getChatPresence(inquiry.id, req.user!.id);
-    res.status(201).json(
-      serializeInquiryMessage(message, {
-        viewerId: req.user!.id,
-        counterpartyLastReadAt: presence.counterpartyLastReadAt,
-      })
-    );
+    const serialized = serializeInquiryMessage(message, {
+      viewerId: req.user!.id,
+      counterpartyLastReadAt: presence.counterpartyLastReadAt,
+    });
+    emitChatMessage(inquiry.id, serialized);
+    void emitChatPresence(inquiry.id, req.user!.id).catch(console.error);
+
+    res.status(201).json(serialized);
   } catch (e) {
     next(e);
   }
@@ -1179,6 +1190,13 @@ function serializeInquiryForClient(
     sentAt: Date | null;
     paidAt: Date | null;
   } | null;
+  touristReview?: {
+    id: string;
+    rating: number;
+    body: string | null;
+    isPublic: boolean;
+    createdAt: Date;
+  } | null;
 },
   chat?: {
     viewerId: string;
@@ -1249,6 +1267,16 @@ function serializeInquiryForClient(
           paidAt: inquiry.invoice.paidAt?.toISOString() ?? null,
         }
       : null,
+    touristReview: inquiry.touristReview
+      ? {
+          id: inquiry.touristReview.id,
+          rating: inquiry.touristReview.rating,
+          body: inquiry.touristReview.body,
+          isPublic: inquiry.touristReview.isPublic,
+          createdAt: inquiry.touristReview.createdAt.toISOString(),
+        }
+      : null,
+    hasReview: Boolean(inquiry.touristReview),
   };
 }
 

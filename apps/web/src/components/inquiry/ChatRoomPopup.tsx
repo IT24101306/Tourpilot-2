@@ -88,6 +88,7 @@ export function ChatRoomPopup({
   const { typing, onComposeChange, stopTyping } = useChatLive({
     inquiryId: inquiryId ?? "",
     token: token ?? "",
+    viewerUserId: user?.id,
     enabled: Boolean(open && inquiryId && token && inquiry),
     onThread: (thread: ThreadMessage[]) => {
       setInquiry((prev) => (prev ? { ...prev, thread } : prev));
