@@ -7387,7 +7387,47 @@ a.agency-icon-btn {
 
 .tp-empty-state--agency-blocked {
   margin: 2rem auto;
-  max-width: 28rem;
+  max-width: 32rem;
+}
+
+.tp-feature-pricing-path {
+  display: block;
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(26, 92, 58, 0.22);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(26, 92, 58, 0.06) 0%, rgba(255, 255, 255, 0.9) 55%);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tp-feature-pricing-path:hover {
+  border-color: rgba(26, 92, 58, 0.45);
+  transform: translateY(-1px);
+}
+
+.tp-feature-pricing-path__eyebrow {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green-dark, #1a5c3a);
+  margin-bottom: 4px;
+}
+
+.tp-feature-pricing-path__title {
+  display: block;
+  font-size: 0.98rem;
+  margin-bottom: 2px;
+}
+
+.tp-feature-pricing-path__hint {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--muted);
 }
 
 .tp-empty-state__title {
