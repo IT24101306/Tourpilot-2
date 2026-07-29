@@ -45,7 +45,12 @@ export type AuthUser = {
     status: string;
     logoUrl?: string | null;
     features?: AgencyFeatures;
+    /** Agency idle override in minutes; null = platform default. */
+    sessionInactivityMinutes?: number | null;
   } | null;
+  /** How this AGENCY user relates to `agency` (owner vs invited staff). */
+  agencyMembership?: "owner" | "staff" | null;
+  staffTitle?: string | null;
   agencyDriver?: {
     id: string;
     agencyId: string;

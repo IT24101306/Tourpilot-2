@@ -14,12 +14,14 @@ const AGENCY_TABS: {
   label: string;
   end?: boolean;
   feature?: "offers" | "display" | "negotiationsBookings" | "customDomain";
+  ownerOnly?: boolean;
 }[] = [
   { to: "/dashboard/agency", label: "Overview", end: true },
   { to: "/dashboard/agency/bookings", label: "Bookings", feature: "negotiationsBookings" },
   { to: "/dashboard/agency/negotiations", label: "Negotiations", feature: "negotiationsBookings" },
   { to: "/dashboard/agency/tasks", label: "Tasks" },
   { to: "/dashboard/agency/travelers", label: "Travelers" },
+  { to: "/dashboard/agency/team", label: "Team", ownerOnly: true },
   { to: "/dashboard/agency/display", label: "Display", feature: "display" },
   { to: "/dashboard/agency/offers", label: "Offers", feature: "offers" },
   { to: "/dashboard/agency/domain", label: "Domain", feature: "customDomain" },
@@ -142,6 +144,7 @@ function AgencyDashboardLayoutInner() {
   const visibleTabs = useMemo(
     () =>
       AGENCY_TABS.filter((tab) => {
+        if (tab.ownerOnly && user?.agencyMembership !== "owner") return false;
         if (tab.feature === "offers") return features.offers;
         if (tab.feature === "display") return features.display;
         if (tab.feature === "negotiationsBookings") return features.negotiationsBookings;
@@ -153,6 +156,7 @@ function AgencyDashboardLayoutInner() {
       features.display,
       features.negotiationsBookings,
       features.customDomain,
+      user?.agencyMembership,
     ]
   );
 
@@ -186,7 +190,9 @@ function AgencyDashboardLayoutInner() {
       (location.pathname.startsWith("/dashboard/agency/drivers") ||
         location.pathname.startsWith("/dashboard/agency/partners"))) ||
     (!features.customDomain &&
-      location.pathname.startsWith("/dashboard/agency/domain"));
+      location.pathname.startsWith("/dashboard/agency/domain")) ||
+    (user?.agencyMembership !== "owner" &&
+      location.pathname.startsWith("/dashboard/agency/team"));
 
   useEffect(() => {
     if (!stepsMenuOpen && !networkMenuOpen) return;

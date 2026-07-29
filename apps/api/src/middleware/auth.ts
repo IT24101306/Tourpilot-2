@@ -34,6 +34,21 @@ export function signAccessToken(user: AuthUser) {
 
 const ACTIVITY_TOUCH_MS = 60_000;
 
+/**
+ * Background polls that must not refresh lastActiveAt — otherwise idle timeout
+ * never fires while a tab is open. Chat sync/typing are intentionally NOT
+ * passive: they only run while the user is in a chat room, and that counts as
+ * active use. Closing chat (confirmed exit) stops those polls so idle can apply.
+ */
+function isPassiveActivityPath(req: Request): boolean {
+  const raw = `${req.originalUrl || ""}${req.path || ""}`.toLowerCase();
+  const pathOnly = raw.split("?")[0] || "";
+  if (pathOnly.includes("/notifications/")) return true;
+  if (pathOnly.endsWith("/auth/me") || pathOnly.includes("/auth/me")) return true;
+  if (pathOnly.includes("/fx/rates")) return true;
+  return false;
+}
+
 export async function authRequired(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -91,8 +106,12 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
 
     req.user = { id: user.id, phone: user.phone, role: user.role };
 
+    const passive = isPassiveActivityPath(req);
+    // Always stamp a missing lastActiveAt (even on passive polls) so the idle
+    // clock can start; thereafter only real user requests refresh it.
     const shouldTouch =
-      !user.lastActiveAt || Date.now() - user.lastActiveAt.getTime() > ACTIVITY_TOUCH_MS;
+      !user.lastActiveAt ||
+      (!passive && Date.now() - user.lastActiveAt.getTime() > ACTIVITY_TOUCH_MS);
     if (shouldTouch) {
       void prisma.user
         .update({ where: { id: user.id }, data: { lastActiveAt: new Date() } })
@@ -148,6 +167,11 @@ export async function getAgencyForUser(userId: string) {
     include: { agency: true },
   });
   return staff?.agency ?? null;
+}
+
+/** Agency owned by this user (not staff membership). */
+export async function getOwnedAgency(userId: string) {
+  return prisma.agency.findUnique({ where: { ownerId: userId } });
 }
 
 /** Call after a successful login so the inactivity window starts fresh. */

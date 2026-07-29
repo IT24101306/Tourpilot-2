@@ -1,7 +1,8 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { FormEvent, useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useChatExitGuard } from "../../context/ChatSessionContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ModuleHeader } from "../module/ModuleHeader";
 import { InquiryThread, TypingIndicator } from "../inquiry/InquiryThread";
@@ -33,6 +34,8 @@ type Props = {
   /** Render inside a drawer/panel without leaving the parent page. */
   embedded?: boolean;
   onClose?: () => void;
+  /** Lets a parent (drawer backdrop / Escape) trigger the same exit confirm. */
+  exitHandlerRef?: MutableRefObject<(() => void) | null>;
 };
 
 export function TripRoomView({
@@ -43,8 +46,10 @@ export function TripRoomView({
   backLabel = "Back",
   embedded = false,
   onClose,
+  exitHandlerRef,
 }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { requestConfirm } = useConfirmAction();
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,6 +100,31 @@ export function TripRoomView({
     enabled: Boolean(inquiryId && token && !loading && inquiry),
     onThread: (thread: ThreadMessage[]) => {
       setInquiry((prev) => (prev ? { ...prev, thread } : prev));
+    },
+  });
+
+  const partnerForExit =
+    role === "AGENCY"
+      ? inquiry?.tourist?.name
+      : role === "ADMIN"
+        ? undefined
+        : role === "INFLUENCER"
+          ? inquiry?.tourist?.name
+          : inquiry?.whiteLabel && inquiry.handlerInfluencer?.name
+            ? inquiry.handlerInfluencer.name
+            : inquiry?.agency?.name;
+
+  const { requestExit } = useChatExitGuard({
+    active: Boolean(inquiryId && token),
+    inquiryId,
+    partnerLabel: partnerForExit ?? "this chat",
+    exitHandlerRef,
+    onLeave: () => {
+      if (embedded && onClose) {
+        onClose();
+        return;
+      }
+      navigate(backTo);
     },
   });
 
@@ -266,7 +296,7 @@ export function TripRoomView({
             <p className="muted" style={{ margin: 0 }}>
               Opening trip room…
             </p>
-            <button type="button" className="btn btn-ghost" onClick={onClose}>
+            <button type="button" className="btn btn-ghost" onClick={requestExit}>
               Close
             </button>
           </header>
@@ -281,13 +311,13 @@ export function TripRoomView({
       <section className={shellClass}>
         <p className="form-error">{error || "Trip not found"}</p>
         {embedded && onClose ? (
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             Close
           </button>
         ) : (
-          <Link to={backTo} className="btn btn-ghost">
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             {backLabel}
-          </Link>
+          </button>
         )}
       </section>
     );
@@ -544,13 +574,13 @@ export function TripRoomView({
         aria-label="Trip room actions"
       >
         {embedded && onClose ? (
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             Back to list
           </button>
         ) : (
-          <Link to={backTo} className="btn btn-ghost">
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             {backLabel}
-          </Link>
+          </button>
         )}
         {role === "AGENCY" && (
           <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>

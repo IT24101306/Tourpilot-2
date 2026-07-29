@@ -1,20 +1,8 @@
 import type { ReactNode } from "react";
+import type { HubIconId } from "./adminHubConfig";
 
-type IconId =
-  | "agency"
-  | "users"
-  | "inquiry"
-  | "tour"
-  | "commission"
-  | "ledger"
-  | "offer"
-  | "review"
-  | "driver"
-  | "cms"
-  | "settings";
-
-export function AdminHubIcon({ icon }: { icon: IconId }) {
-  const paths: Record<IconId, ReactNode> = {
+export function AdminHubIcon({ icon }: { icon: HubIconId }) {
+  const paths: Record<HubIconId, ReactNode> = {
     agency: (
       <path
         d="M4 20V10l8-6 8 6v10M9 20v-6h6v6"
@@ -119,6 +107,16 @@ export function AdminHubIcon({ icon }: { icon: IconId }) {
         strokeWidth="1.75"
         fill="none"
         strokeLinecap="round"
+      />
+    ),
+    audit: (
+      <path
+        d="M8 6h11v14H8zM5 9h3M5 13h3M5 17h3M11 10h5M11 14h4"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     ),
   };

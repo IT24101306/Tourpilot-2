@@ -104,7 +104,7 @@ export function AdminOverviewPage() {
         <ModuleHeader
           module="governance"
           title="Platform command center"
-          subtitle="Oversight across agencies, trips, partners, money, and content."
+          subtitle="Five hubs — People, Trips, Money, Content, and Platform."
         />
       </div>
 

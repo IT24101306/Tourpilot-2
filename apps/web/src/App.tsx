@@ -6,6 +6,8 @@ import {
   StorefrontDomainProvider,
   useStorefrontDomain,
 } from "./context/StorefrontDomainContext";
+import { SessionIdleGuard } from "./components/SessionIdleGuard";
+import { ChatSessionProvider } from "./context/ChatSessionContext";
 import { AgencyDashboardLayout } from "./components/AgencyDashboardLayout";
 import { DriverDashboardLayout } from "./components/DriverDashboardLayout";
 import { InfluencerDashboardLayout } from "./components/InfluencerDashboardLayout";
@@ -38,6 +40,7 @@ import { AgencyBookingsPage } from "./pages/agency/AgencyBookingsPage";
 import { AgencyToursPage } from "./pages/agency/AgencyToursPage";
 import { AgencyDriversPage } from "./pages/agency/AgencyDriversPage";
 import { AgencyTravelersPage } from "./pages/agency/AgencyTravelersPage";
+import { AgencyTeamPage } from "./pages/agency/AgencyTeamPage";
 import { AgencyAllEntitiesPage } from "./pages/agency/AgencyAllEntitiesPage";
 import { AgencyGroupsPage } from "./pages/agency/AgencyGroupsPage";
 import { AgencyDisplayPage } from "./pages/agency/AgencyDisplayPage";
@@ -145,7 +148,10 @@ export default function App() {
       <CurrencyProvider>
       <StorefrontDomainProvider>
       <BrowserRouter>
-        <AppShell />
+        <ChatSessionProvider>
+          <SessionIdleGuard />
+          <AppShell />
+        </ChatSessionProvider>
       </BrowserRouter>
       </StorefrontDomainProvider>
       </CurrencyProvider>
@@ -270,6 +276,7 @@ function AppShell() {
             <Route path="tours" element={<AgencyToursPage />} />
             <Route path="drivers" element={<AgencyDriversPage />} />
             <Route path="travelers" element={<AgencyTravelersPage />} />
+            <Route path="team" element={<AgencyTeamPage />} />
             <Route path="all" element={<AgencyAllEntitiesPage />} />
             <Route path="groups" element={<AgencyGroupsPage />} />
             <Route path="offers" element={<AgencyOffersPage />} />
