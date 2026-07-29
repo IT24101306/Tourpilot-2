@@ -45,7 +45,7 @@ export function TaskBoard({ userId, generated, emptyMessage }: Props) {
       if (filter === "done") return t.done;
       if (filter === "today") return t.dueToday && !t.done;
       if (filter === "priority") return t.priority === "high" && !t.done;
-      return !t.done;
+      return true;
     });
   }, [withStatus, filter]);
 
@@ -87,18 +87,15 @@ export function TaskBoard({ userId, generated, emptyMessage }: Props) {
     setNewTitle("");
   }
 
-  const groups = useMemo(() => {
-    const open = filtered.filter((t) => !t.done);
-    const done = filtered.filter((t) => t.done);
-    return { open, done };
-  }, [filtered]);
+  const openTasks = filtered.filter((t) => !t.done);
+  const doneTasks = filtered.filter((t) => t.done);
 
   return (
     <div className="task-board">
       <div className="task-filter-strip">
         {(
           [
-            ["all", `Open (${counts.open})`],
+            ["all", `All (${counts.open + counts.done})`],
             ["today", `Today (${counts.today})`],
             ["priority", `Priority (${counts.high})`],
             ["done", `Done (${counts.done})`],
@@ -127,25 +124,36 @@ export function TaskBoard({ userId, generated, emptyMessage }: Props) {
         </button>
       </form>
 
-      {groups.open.length === 0 && groups.done.length === 0 ? (
+      {openTasks.length === 0 && doneTasks.length === 0 ? (
         <p className="muted">{emptyMessage ?? "No tasks match this filter."}</p>
       ) : (
-        <>
-          {groups.open.length > 0 && (
-            <ul className="task-list">
-              {groups.open.map((task) => (
-                <TaskRow key={task.id} task={task} onToggle={() => toggleDone(task.id)} />
-              ))}
-            </ul>
-          )}
-          {filter === "done" && groups.done.length > 0 && (
-            <ul className="task-list task-list--done">
-              {groups.done.map((task) => (
-                <TaskRow key={task.id} task={task} onToggle={() => toggleDone(task.id)} />
-              ))}
-            </ul>
-          )}
-        </>
+        <div className="task-split-layout">
+          <section className="task-split-col">
+            <h3>Open ({openTasks.length})</h3>
+            {openTasks.length === 0 ? (
+              <p className="muted">All caught up — nothing pending.</p>
+            ) : (
+              <ul className="task-list">
+                {openTasks.map((task) => (
+                  <TaskRow key={task.id} task={task} onToggle={() => toggleDone(task.id)} />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="task-split-col task-split-col--done">
+            <h3>Done ({doneTasks.length})</h3>
+            {doneTasks.length === 0 ? (
+              <p className="muted">Completed tasks appear here.</p>
+            ) : (
+              <ul className="task-list task-list--done">
+                {doneTasks.map((task) => (
+                  <TaskRow key={task.id} task={task} onToggle={() => toggleDone(task.id)} />
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       )}
     </div>
   );

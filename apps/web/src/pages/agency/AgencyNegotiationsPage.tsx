@@ -56,8 +56,8 @@ export function AgencyNegotiationsPage() {
       {loading ? (
         <p className="muted">Loading negotiations…</p>
       ) : (
-        <>
-          <section className="neg-list-section">
+        <div className="neg-split-layout">
+          <section className="neg-list-section neg-split-col">
             <h3>Active planning ({active.length})</h3>
             {active.length === 0 ? (
               <p className="muted">No active negotiations. New inquiries appear here automatically.</p>
@@ -107,9 +107,11 @@ export function AgencyNegotiationsPage() {
             )}
           </section>
 
-          {closed.length > 0 && (
-            <section className="neg-list-section">
-              <h3>Closed ({closed.length})</h3>
+          <section className="neg-list-section neg-split-col neg-split-col--closed">
+            <h3>Closed ({closed.length})</h3>
+            {closed.length === 0 ? (
+              <p className="muted">No closed negotiations yet.</p>
+            ) : (
               <ul className="neg-inquiry-list">
                 {closed.map((inq) => (
                   <li key={inq.id}>
@@ -141,9 +143,9 @@ export function AgencyNegotiationsPage() {
                   </li>
                 ))}
               </ul>
-            </section>
-          )}
-        </>
+            )}
+          </section>
+        </div>
       )}
 
       <ChatRoomPopup
