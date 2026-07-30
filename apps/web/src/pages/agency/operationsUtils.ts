@@ -7,7 +7,7 @@ export type OpsQueueKey = "action" | "waiting" | "confirmed" | "closed";
 
 const ACTION_STATUSES = new Set(["NEW", "AGENCY_REVIEWING", "REVISION_REQUESTED", "ITINERARY_DRAFT"]);
 const WAITING_STATUSES = new Set(["SENT_TO_TOURIST", "TOURIST_VIEWED"]);
-const CONFIRMED_STATUSES = new Set(["ACCEPTED"]);
+const CONFIRMED_STATUSES = new Set(["ACCEPTED", "IN_PROGRESS", "COMPLETED"]);
 const CLOSED_STATUSES = new Set(["DECLINED", "EXPIRED"]);
 
 export function queueForStatus(status: string): OpsQueueKey {
@@ -74,7 +74,11 @@ export function nextActionLabel(status: string): string {
     case "TOURIST_VIEWED":
       return "Follow up with traveler";
     case "ACCEPTED":
-      return "Confirm operations";
+      return "Start trip when ready";
+    case "IN_PROGRESS":
+      return "Complete trip when finished";
+    case "COMPLETED":
+      return "Trip done — check reviews";
     default:
       return "View details";
   }

@@ -9,7 +9,9 @@ export const GUIDED_STEPS: GuidedStep[] = [
   { key: "PLAN", label: "Planning", touristLabel: "Crafting your plan" },
   { key: "REVIEW", label: "Proposal", touristLabel: "Review options" },
   { key: "DECIDE", label: "Decision", touristLabel: "Your decision" },
-  { key: "DONE", label: "Confirmed", touristLabel: "Trip confirmed" },
+  { key: "CONFIRMED", label: "Confirmed", touristLabel: "Trip confirmed" },
+  { key: "ACTIVE", label: "Active", touristLabel: "Trip in progress" },
+  { key: "DONE", label: "Completed", touristLabel: "Trip completed" },
 ];
 
 export function guidedStepIndex(status: string): number {
@@ -21,12 +23,13 @@ export function guidedStepIndex(status: string): number {
   )
     return 3;
   if (status === "ACCEPTED") return 4;
+  if (status === "IN_PROGRESS") return 5;
+  if (status === "COMPLETED") return 6;
   if (status === "DECLINED" || status === "EXPIRED") return 2;
   return 0;
 }
 
 type GuidedCopyOptions = {
-  /** Agency or creator name for personalized tourist messaging. */
   partnerName?: string | null;
 };
 
@@ -70,6 +73,17 @@ export function guidedStatusCopy(
         title: "You are all set",
         hint: `Your trip is confirmed. ${partner} will share final details before departure.`,
       };
+    case "IN_PROGRESS":
+      return {
+        title: "Your trip is underway",
+        hint: `Enjoy your trip! Use the chat room if you need anything from ${partner}.`,
+      };
+    case "COMPLETED":
+      return {
+        title: "Trip completed",
+        hint: "We hope you had a wonderful experience. Leave a review to help other travelers.",
+        cta: "Leave a review",
+      };
     case "DECLINED":
       return {
         title: "Proposal declined",
@@ -91,6 +105,8 @@ export function guidedStatusCopy(
 export function guidedListCta(status: string): string {
   if (status === "SENT_TO_TOURIST" || status === "TOURIST_VIEWED") return "Review proposals";
   if (status === "ACCEPTED") return "View trip details";
+  if (status === "IN_PROGRESS") return "Open trip room";
+  if (status === "COMPLETED") return "View trip & review";
   if (status === "REVISION_REQUESTED") return "View updates";
   return "Visit the chat room";
 }

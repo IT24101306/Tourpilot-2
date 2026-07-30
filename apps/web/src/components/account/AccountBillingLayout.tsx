@@ -17,6 +17,9 @@ export function AccountBillingLayout() {
   if (user.role !== "AGENCY") {
     return <Navigate to="/profile" replace />;
   }
+  if (user.agencyMembership === "staff") {
+    return <Navigate to="/profile" replace />;
+  }
 
   return (
     <div className="account-billing section">

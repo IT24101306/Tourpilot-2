@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { EmptyState } from "../components/feedback/EmptyState";
 import { GuidedTripCard } from "../components/guided/GuidedTripCard";
 import { useAuth } from "../context/AuthContext";
 import type { NegotiationListItem } from "../types/negotiation";
 
-const BOOKING_STATUSES = new Set(["ACCEPTED"]);
+const BOOKING_STATUSES = new Set(["ACCEPTED", "IN_PROGRESS", "COMPLETED"]);
 
 export function TouristBookingsPage() {
   const { token } = useAuth();
@@ -25,34 +26,77 @@ export function TouristBookingsPage() {
     [inquiries]
   );
 
+  const upcoming = bookings.filter((b) => b.status === "ACCEPTED");
+  const active = bookings.filter((b) => b.status === "IN_PROGRESS");
+  const past = bookings.filter((b) => b.status === "COMPLETED");
+
   if (loading) {
     return <p className="muted">Loading your bookings…</p>;
   }
 
   if (bookings.length === 0) {
     return (
-      <div className="guided-empty-panel">
-        <h3>No confirmed bookings yet</h3>
-        <p>When you accept a proposal from an agency, your trip appears here.</p>
-        <Link to="/trips" className="btn btn-primary">
-          View inquiries
-        </Link>
-      </div>
+      <EmptyState
+        title="No confirmed bookings yet"
+        description="When you accept a proposal from an agency, your trip appears here."
+        action={{ label: "View inquiries", to: "/trips" }}
+      />
     );
   }
 
   return (
     <>
-      <p className="guided-list-summary muted">
-        {bookings.length} confirmed trip{bookings.length === 1 ? "" : "s"}
-      </p>
-      <ul className="guided-trip-list">
-        {bookings.map((inq) => (
-          <li key={inq.id}>
-            <GuidedTripCard inquiry={inq} />
-          </li>
-        ))}
-      </ul>
+      {active.length > 0 && (
+        <section>
+          <p className="guided-list-summary">
+            {active.length} trip{active.length === 1 ? "" : "s"} in progress
+          </p>
+          <ul className="guided-trip-list">
+            {active.map((inq) => (
+              <li key={inq.id}>
+                <GuidedTripCard inquiry={inq} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {upcoming.length > 0 && (
+        <section>
+          <p className="guided-list-summary muted">
+            {upcoming.length} upcoming trip{upcoming.length === 1 ? "" : "s"}
+          </p>
+          <ul className="guided-trip-list">
+            {upcoming.map((inq) => (
+              <li key={inq.id}>
+                <GuidedTripCard inquiry={inq} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {past.length > 0 && (
+        <section>
+          <p className="guided-list-summary muted">
+            {past.length} completed trip{past.length === 1 ? "" : "s"}
+          </p>
+          <ul className="guided-trip-list">
+            {past.map((inq) => (
+              <li key={inq.id}>
+                <GuidedTripCard inquiry={inq} />
+                {!(inq.hasReview || inq.touristReview) && (
+                  <Link
+                    to={`/trips/${inq.id}`}
+                    className="btn btn-ghost btn-sm"
+                    style={{ marginTop: 8 }}
+                  >
+                    Leave a review
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useChatExitGuard } from "../../context/ChatSessionContext";
 import { lockBodyScroll, unlockBodyScroll } from "../../lib/scrollLock";
 import type { InquiryDetail } from "../../types/negotiation";
 import { InquiryThread, TypingIndicator } from "./InquiryThread";
@@ -35,6 +36,23 @@ export function ChatRoomPopup({
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+
+  const isAgencyViewer = user?.role === "AGENCY";
+  const partner =
+    partnerName?.trim() ||
+    (isAgencyViewer
+      ? inquiry?.tourist?.name
+      : inquiry?.whiteLabel && inquiry.handlerInfluencer?.name
+        ? inquiry.handlerInfluencer.name
+        : inquiry?.agency?.name) ||
+    (isAgencyViewer ? "traveler" : "your travel partner");
+
+  const { requestExit, leaveWithoutConfirm } = useChatExitGuard({
+    active: Boolean(open && inquiryId),
+    inquiryId,
+    partnerLabel: partner,
+    onLeave: onClose,
+  });
 
   const load = useCallback(
     async (opts?: { quiet?: boolean }) => {
@@ -70,6 +88,7 @@ export function ChatRoomPopup({
   const { typing, onComposeChange, stopTyping } = useChatLive({
     inquiryId: inquiryId ?? "",
     token: token ?? "",
+    viewerUserId: user?.id,
     enabled: Boolean(open && inquiryId && token && inquiry),
     onThread: (thread: ThreadMessage[]) => {
       setInquiry((prev) => (prev ? { ...prev, thread } : prev));
@@ -80,14 +99,14 @@ export function ChatRoomPopup({
     if (!open) return;
     lockBodyScroll();
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestExit();
     }
     window.addEventListener("keydown", onKey);
     return () => {
       unlockBodyScroll();
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open, requestExit]);
 
   useEffect(() => {
     if (!open || !inquiry?.thread?.length) return;
@@ -119,20 +138,10 @@ export function ChatRoomPopup({
 
   if (!open || !inquiryId) return null;
 
-  const isAgencyViewer = user?.role === "AGENCY";
-  const partner =
-    partnerName?.trim() ||
-    (isAgencyViewer
-      ? inquiry?.tourist?.name
-      : inquiry?.whiteLabel && inquiry.handlerInfluencer?.name
-        ? inquiry.handlerInfluencer.name
-        : inquiry?.agency?.name) ||
-    (isAgencyViewer ? "traveler" : "your travel partner");
-
   const roomLink = fullRoomTo ?? (isAgencyViewer ? `/dashboard/agency/trip-room/${inquiryId}` : `/trips?room=${inquiryId}`);
 
   return createPortal(
-    <div className="chat-room-popup" role="presentation" onClick={onClose}>
+    <div className="chat-room-popup" role="presentation" onClick={requestExit}>
       <aside
         className="chat-room-popup__panel"
         role="dialog"
@@ -150,7 +159,12 @@ export function ChatRoomPopup({
                 : "Ask questions or add notes without leaving this page."}
             </p>
           </div>
-          <button type="button" className="chat-room-popup__close" onClick={onClose} aria-label="Close chat">
+          <button
+            type="button"
+            className="chat-room-popup__close"
+            onClick={requestExit}
+            aria-label="Close chat"
+          >
             ×
           </button>
         </header>
@@ -201,7 +215,12 @@ export function ChatRoomPopup({
               required
             />
             <div className="chat-room-popup__actions">
-              <Link to={roomLink} className="chat-room-popup__full" onClick={onClose}>
+              <Link
+                to={roomLink}
+                className="chat-room-popup__full"
+                data-chat-nav-allow
+                onClick={leaveWithoutConfirm}
+              >
                 Open full trip room
               </Link>
               <button type="submit" className="btn btn-primary" disabled={sending || !draft.trim()}>

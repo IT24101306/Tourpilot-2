@@ -1,17 +1,22 @@
+import { createServer } from "node:http";
 import { createApp } from "./app.js";
 import { config } from "./lib/config.js";
 import { prisma } from "./lib/prisma.js";
+import { attachChatRealtime } from "./services/chatRealtime.js";
 import { startInquiryExpiryScheduler } from "./services/inquiryExpiry.js";
 import { startTrialReminderScheduler } from "./services/trial.js";
 
 const app = createApp();
+const httpServer = createServer(app);
 
 async function main() {
   await prisma.$connect();
+  attachChatRealtime(httpServer);
   startInquiryExpiryScheduler();
   startTrialReminderScheduler();
-  app.listen(config.port, () => {
+  httpServer.listen(config.port, () => {
     console.log(`TourPilot API running on http://localhost:${config.port}`);
+    console.log(`Realtime chat: socket.io on /socket.io`);
     console.log(`Email mode: ${config.email.mode}`);
     if (config.email.mode === "smtp") {
       const { host, port, user, pass, secure } = config.email.smtp;

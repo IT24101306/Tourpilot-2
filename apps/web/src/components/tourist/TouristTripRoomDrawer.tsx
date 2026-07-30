@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../../context/AuthContext";
 import { lockBodyScroll, unlockBodyScroll } from "../../lib/scrollLock";
@@ -13,12 +13,15 @@ type Props = {
 /** Full trip room (chat + proposals) as an in-page drawer for tourists. */
 export function TouristTripRoomDrawer({ open, inquiryId, onClose }: Props) {
   const { token } = useAuth();
+  const exitHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!open) return;
     lockBodyScroll();
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        (exitHandlerRef.current ?? onClose)();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => {
@@ -30,7 +33,11 @@ export function TouristTripRoomDrawer({ open, inquiryId, onClose }: Props) {
   if (!open || !inquiryId || !token) return null;
 
   return createPortal(
-    <div className="tourist-trip-drawer" role="presentation" onClick={onClose}>
+    <div
+      className="tourist-trip-drawer"
+      role="presentation"
+      onClick={() => (exitHandlerRef.current ?? onClose)()}
+    >
       <div
         className="tourist-trip-drawer__panel"
         role="dialog"
@@ -46,6 +53,7 @@ export function TouristTripRoomDrawer({ open, inquiryId, onClose }: Props) {
           backLabel="My travel"
           embedded
           onClose={onClose}
+          exitHandlerRef={exitHandlerRef}
         />
       </div>
     </div>,

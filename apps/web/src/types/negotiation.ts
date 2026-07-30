@@ -79,6 +79,14 @@ export type InquiryDetail = {
     sentAt: string | null;
     paidAt: string | null;
   } | null;
+  touristReview?: {
+    id: string;
+    rating: number;
+    body: string | null;
+    isPublic: boolean;
+    createdAt: string;
+  } | null;
+  hasReview?: boolean;
 };
 
 export type NegotiationListItem = {
@@ -95,4 +103,12 @@ export type NegotiationListItem = {
   tour?: { title: string } | null;
   proposal?: { items: Array<{ id: string }> } | null;
   thread?: ThreadMessage[];
+  hasReview?: boolean;
+  touristReview?: {
+    id: string;
+    rating: number;
+    body: string | null;
+    isPublic: boolean;
+    createdAt: string;
+  } | null;
 };

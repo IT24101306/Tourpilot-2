@@ -4,6 +4,8 @@ import { currentPath, loginPath } from "../utils/authRedirect";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { ModuleHeader } from "../components/module/ModuleHeader";
+import { CurrencyDisclaimerBanner } from "../components/currency/CurrencyDisclaimerBanner";
+import { EmptyState } from "../components/feedback/EmptyState";
 import {
   DiscoveryOfferCard,
   type DiscoveryOffer,
@@ -53,6 +55,7 @@ export function OffersPage() {
 
   return (
     <section className="section module-shell module-discovery offers-page">
+      <CurrencyDisclaimerBanner />
       <ModuleHeader
         module="discovery"
         title="Limited offers"
@@ -86,9 +89,12 @@ export function OffersPage() {
       {loading ? (
         <p className="muted offers-loading">Loading offers…</p>
       ) : offers.length === 0 ? (
-        <div className="disc-empty offers-empty">
-          <p>No active offers right now. Check back soon.</p>
-        </div>
+        <EmptyState
+          title="No active offers right now"
+          description="Limited campaigns rotate through the season. Browse agency storefronts meanwhile, or check back soon."
+          action={{ label: "Back to home", to: "/" }}
+          className="offers-empty"
+        />
       ) : (
         <div className="disc-offer-grid disc-offer-grid--page">
           {offers.map((o) => (

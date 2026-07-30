@@ -1,7 +1,7 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import type { UserRole } from "@prisma/client";
-import { dashboardPathForRole } from "@tourpilot/shared";
+import { dashboardPathForRole, resolveSessionInactivityMinutes, TRIAL_DAYS } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, signAccessToken, touchUserActivity } from "../middleware/auth.js";
 import { assertLoginTopupChallenge, createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
@@ -9,7 +9,7 @@ import { topUpWallet } from "../services/wallet.js";
 import { verifyPassword } from "../services/password.js";
 import { linkAgencyDriverOnDriverSignup } from "../services/agencyDriverLink.js";
 import { chargeLoginFee } from "../services/wallet.js";
-import { resolveLoginFeeForUser } from "../services/platformSettings.js";
+import { getPlatformSettings, resolveLoginFeeForUser } from "../services/platformSettings.js";
 import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 import { slugify } from "../utils/slug.js";
 import { buildDisplayPayload, defaultInfluencerDisplay } from "../lib/influencerDisplay.js";
@@ -24,7 +24,6 @@ import {
   trialUserUpdateData,
   buildTrialStatus,
 } from "../services/trial.js";
-import { TRIAL_DAYS } from "@tourpilot/shared";
 
 export const authRouter = Router();
 
@@ -504,6 +503,8 @@ async function serializeUser(user: {
     featureCustomDomain?: boolean;
     featureExternalStorefront?: boolean;
     featureSessionInactivityTimeout?: boolean;
+    sessionInactivityMinutes?: number | null;
+    sessionInactivityHours?: number | null;
   } | null;
   agencyDriver?: {
     id: string;
@@ -515,6 +516,43 @@ async function serializeUser(user: {
   const loginFee = await resolveLoginFeeForUser(user);
   const loginFeeOverride =
     user.loginFeeLkr != null ? Number(user.loginFeeLkr) : null;
+
+  let agency = user.agency ?? null;
+  let agencyMembership: "owner" | "staff" | null = null;
+  let staffTitle: string | null = null;
+
+  if (user.role === "AGENCY") {
+    if (agency) {
+      agencyMembership = "owner";
+    } else {
+      const staff = await prisma.agencyStaff.findFirst({
+        where: { userId: user.id },
+        include: { agency: true },
+      });
+      if (staff?.agency) {
+        agency = staff.agency;
+        agencyMembership = "staff";
+        staffTitle = staff.title ?? null;
+      }
+    }
+  }
+
+  let sessionInactivityMinutes: number | null = null;
+  if (agency?.featureSessionInactivityTimeout) {
+    const settings = await getPlatformSettings().catch(() => null);
+    sessionInactivityMinutes = resolveSessionInactivityMinutes({
+      agencyMinutes:
+        agency.sessionInactivityMinutes != null
+          ? Number(agency.sessionInactivityMinutes)
+          : null,
+      agencyHours:
+        agency.sessionInactivityHours != null
+          ? Number(agency.sessionInactivityHours)
+          : null,
+      platformMinutes: settings?.sessionInactivityMinutes,
+      platformHours: settings?.sessionInactivityHours,
+    });
+  }
 
   return {
     id: user.id,
@@ -542,16 +580,19 @@ async function serializeUser(user: {
           displayCurrency: user.touristProfile.displayCurrency ?? "USD",
         }
       : null,
-    agency: user.agency
+    agency: agency
       ? {
-          id: user.agency.id,
-          name: user.agency.name,
-          slug: user.agency.slug,
-          status: user.agency.status,
-          logoUrl: user.agency.logoUrl ?? null,
-          features: serializeAgencyFeatures(user.agency),
+          id: agency.id,
+          name: agency.name,
+          slug: agency.slug,
+          status: agency.status,
+          logoUrl: agency.logoUrl ?? null,
+          features: serializeAgencyFeatures(agency),
+          sessionInactivityMinutes,
         }
       : null,
+    agencyMembership,
+    staffTitle,
     agencyDriver: user.agencyDriver
       ? {
           id: user.agencyDriver.id,

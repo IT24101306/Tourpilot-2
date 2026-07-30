@@ -1,7 +1,8 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { FormEvent, useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { useChatExitGuard } from "../../context/ChatSessionContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { ModuleHeader } from "../module/ModuleHeader";
 import { InquiryThread, TypingIndicator } from "../inquiry/InquiryThread";
@@ -33,6 +34,8 @@ type Props = {
   /** Render inside a drawer/panel without leaving the parent page. */
   embedded?: boolean;
   onClose?: () => void;
+  /** Lets a parent (drawer backdrop / Escape) trigger the same exit confirm. */
+  exitHandlerRef?: MutableRefObject<(() => void) | null>;
 };
 
 export function TripRoomView({
@@ -43,8 +46,10 @@ export function TripRoomView({
   backLabel = "Back",
   embedded = false,
   onClose,
+  exitHandlerRef,
 }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { requestConfirm } = useConfirmAction();
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +67,10 @@ export function TripRoomView({
   const [chatSending, setChatSending] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [actionsDocked, setActionsDocked] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewBody, setReviewBody] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const autoOpenedInvoiceRef = useRef<string | null>(null);
   const actionsBarRef = useRef<HTMLDivElement | null>(null);
 
@@ -92,9 +101,35 @@ export function TripRoomView({
   const { typing, onComposeChange, stopTyping } = useChatLive({
     inquiryId,
     token,
+    viewerUserId: user?.id,
     enabled: Boolean(inquiryId && token && !loading && inquiry),
     onThread: (thread: ThreadMessage[]) => {
       setInquiry((prev) => (prev ? { ...prev, thread } : prev));
+    },
+  });
+
+  const partnerForExit =
+    role === "AGENCY"
+      ? inquiry?.tourist?.name
+      : role === "ADMIN"
+        ? undefined
+        : role === "INFLUENCER"
+          ? inquiry?.tourist?.name
+          : inquiry?.whiteLabel && inquiry.handlerInfluencer?.name
+            ? inquiry.handlerInfluencer.name
+            : inquiry?.agency?.name;
+
+  const { requestExit } = useChatExitGuard({
+    active: Boolean(inquiryId && token),
+    inquiryId,
+    partnerLabel: partnerForExit ?? "this chat",
+    exitHandlerRef,
+    onLeave: () => {
+      if (embedded && onClose) {
+        onClose();
+        return;
+      }
+      navigate(backTo);
     },
   });
 
@@ -107,6 +142,12 @@ export function TripRoomView({
       setInvoiceModalOpen(true);
     }
   }, [role, inquiry?.invoice?.id, inquiry?.invoice?.status]);
+
+  useEffect(() => {
+    if (inquiry?.touristReview || inquiry?.hasReview) {
+      setReviewSubmitted(true);
+    }
+  }, [inquiry?.touristReview, inquiry?.hasReview]);
 
   // Keep the action bar floating, but dock it above the site footer when that enters view.
   useEffect(() => {
@@ -177,6 +218,41 @@ export function TripRoomView({
       setActionStatus(err instanceof ApiError ? err.message : "Action failed");
     } finally {
       setActing(false);
+    }
+  }
+
+  async function lifecycleTransition(action: "start" | "complete") {
+    setActing(true);
+    setActionStatus("");
+    try {
+      await api(`/inquiries/${inquiryId}/lifecycle`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ action }),
+      });
+      setActionStatus(action === "start" ? "Trip started." : "Trip completed.");
+      await load();
+    } catch (err) {
+      setActionStatus(err instanceof ApiError ? err.message : "Action failed");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function submitReview() {
+    if (reviewRating < 1 || reviewRating > 5) return;
+    setReviewSubmitting(true);
+    try {
+      await api(`/reviews/trip/${inquiryId}`, {
+        method: "POST",
+        token,
+        body: JSON.stringify({ rating: reviewRating, body: reviewBody.trim() || undefined }),
+      });
+      setReviewSubmitted(true);
+    } catch (err) {
+      setActionStatus(err instanceof ApiError ? err.message : "Failed to submit review");
+    } finally {
+      setReviewSubmitting(false);
     }
   }
 
@@ -266,7 +342,7 @@ export function TripRoomView({
             <p className="muted" style={{ margin: 0 }}>
               Opening trip room…
             </p>
-            <button type="button" className="btn btn-ghost" onClick={onClose}>
+            <button type="button" className="btn btn-ghost" onClick={requestExit}>
               Close
             </button>
           </header>
@@ -281,13 +357,13 @@ export function TripRoomView({
       <section className={shellClass}>
         <p className="form-error">{error || "Trip not found"}</p>
         {embedded && onClose ? (
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             Close
           </button>
         ) : (
-          <Link to={backTo} className="btn btn-ghost">
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             {backLabel}
-          </Link>
+          </button>
         )}
       </section>
     );
@@ -403,6 +479,67 @@ export function TripRoomView({
         </div>
 
         {actionStatus && <p className="neg-action-status">{actionStatus}</p>}
+
+        {role === "TOURIST" &&
+          !bookingsEnabled &&
+          RESPONDABLE.has(inquiry.status) &&
+          Boolean(inquiry.proposal) && (
+            <div className="feature-unavailable-note" role="status">
+              <strong>Online booking paused</strong>
+              <p>
+                This agency is not accepting online confirmations right now. You can still
+                request changes or decline the proposal.
+              </p>
+            </div>
+          )}
+
+        {role === "TOURIST" && inquiry.status === "COMPLETED" && !reviewSubmitted && !inquiry.hasReview && !inquiry.touristReview && (
+          <div className="neg-review-prompt" role="region" aria-label="Leave a review">
+            <h3>How was your trip?</h3>
+            <p className="muted">Your review helps other travelers and the agency.</p>
+            <div className="neg-review-stars" role="radiogroup" aria-label="Rating">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  className={`neg-review-star${reviewRating >= star ? " is-active" : ""}`}
+                  onClick={() => setReviewRating(star)}
+                  aria-label={`${star} star${star === 1 ? "" : "s"}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="neg-review-body"
+              placeholder="Tell us about your experience (optional)"
+              value={reviewBody}
+              onChange={(e) => setReviewBody(e.target.value)}
+              maxLength={2000}
+              rows={3}
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={reviewRating === 0 || reviewSubmitting}
+              onClick={submitReview}
+            >
+              {reviewSubmitting ? "Submitting…" : "Submit review"}
+            </button>
+          </div>
+        )}
+        {role === "TOURIST" &&
+          inquiry.status === "COMPLETED" &&
+          (reviewSubmitted || inquiry.hasReview || inquiry.touristReview) && (
+          <div className="neg-review-prompt neg-review-prompt--done">
+            <h3>Thank you for your review!</h3>
+            <p className="muted">
+              {inquiry.touristReview?.isPublic
+                ? "Your feedback is visible on the agency page."
+                : "Your feedback is pending agency approval before appearing publicly."}
+            </p>
+          </div>
+        )}
 
         <div className="neg-trip-room-grid">
         <section className="neg-panel neg-panel--chat">
@@ -544,22 +681,42 @@ export function TripRoomView({
         aria-label="Trip room actions"
       >
         {embedded && onClose ? (
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             Back to list
           </button>
         ) : (
-          <Link to={backTo} className="btn btn-ghost">
+          <button type="button" className="btn btn-ghost" onClick={requestExit}>
             {backLabel}
-          </Link>
+          </button>
         )}
         {role === "AGENCY" && (
           <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
             {inquiry.proposal ? "Update proposal" : "Send proposal"}
           </button>
         )}
-        {role === "AGENCY" && inquiry.status === "ACCEPTED" && (
+        {role === "AGENCY" && (inquiry.status === "ACCEPTED" || inquiry.status === "IN_PROGRESS") && (
           <button type="button" className="btn btn-teal" onClick={() => setInvoiceModalOpen(true)}>
             {inquiry.invoice ? "Edit / send invoice" : "Generate invoice"}
+          </button>
+        )}
+        {role === "AGENCY" && inquiry.status === "ACCEPTED" && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={acting}
+            onClick={() => lifecycleTransition("start")}
+          >
+            Start trip
+          </button>
+        )}
+        {role === "AGENCY" && inquiry.status === "IN_PROGRESS" && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={acting}
+            onClick={() => lifecycleTransition("complete")}
+          >
+            Complete trip
           </button>
         )}
         {role === "TOURIST" &&

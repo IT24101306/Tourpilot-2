@@ -37,6 +37,8 @@ enum InquiryStatus {
   TOURIST_VIEWED
   REVISION_REQUESTED
   ACCEPTED
+  IN_PROGRESS
+  COMPLETED
   DECLINED
   EXPIRED
 }
@@ -188,6 +190,7 @@ model User {
   authoredInquiryResponses  InquiryResponse[] @relation("InquiryResponseAuthor")
   notifications             Notification[]
   auditEvents               AuditEvent[]
+  touristReviews            TouristReview[]
 }
 
 model SubscriptionPayment {
@@ -363,6 +366,7 @@ model Agency {
   entityGroups    EntityGroup[]
   tours           Tour[]
   reviews         Review[]
+  touristReviews  TouristReview[]
   inquiries       Inquiry[]
   displaySettings DisplaySettings?
   drivers                AgencyDriver[]
@@ -567,6 +571,7 @@ model Inquiry {
   commission          Commission?
   driverAssignments   DriverAssignment[]
   invoice             Invoice?
+  touristReview       TouristReview?
 
   @@index([handlerInfluencerId])
 }
@@ -706,6 +711,20 @@ model Review {
   rating     Int
   body       String?  @db.Text
   isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model TouristReview {
+  id         String   @id @default(cuid()) @db.VarChar(25)
+  inquiryId  String   @unique @db.VarChar(25)
+  inquiry    Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  touristId  String   @db.VarChar(25)
+  tourist    User     @relation(fields: [touristId], references: [id], onDelete: Cascade)
+  agencyId   String   @db.VarChar(25)
+  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  rating     Int
+  body       String?  @db.Text
+  isPublic   Boolean  @default(false)
   createdAt  DateTime @default(now())
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { loginPath } from "../utils/authRedirect";
+import { CurrencyDisclaimerBanner } from "../components/currency/CurrencyDisclaimerBanner";
 import { CoverImage } from "../components/CoverImage";
 import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "../components/NotificationBell";
@@ -72,11 +73,13 @@ type Agency = {
   coverUrl: string | null;
   logoUrl: string | null;
   district: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
   gallery: GalleryItem[];
   avgRating: number;
   reviewCount: number;
   tours: Tour[];
-  reviews: { authorName: string; rating: number; body: string | null }[];
+  reviews: { authorName: string; rating: number; body: string | null; verified?: boolean }[];
   display?: {
     enabled: DisplaySectionFlags;
     content: DisplayContent;
@@ -489,6 +492,7 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
         )}
       </section>
 
+      <CurrencyDisclaimerBanner />
       <div className="agency-display-body">
         <div className="agency-display-band agency-display-band--white">
           <div className="agency-display-inner agency-display-inner--who">
@@ -676,11 +680,34 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
         {displayInquiryOn && !inquiryEnabled && (
           <div className="agency-display-band agency-display-band--green">
             <div className="agency-display-inner">
-              <p className="feature-unavailable-note" id="request-custom-tour">
-                Online inquiries are not available for this agency right now. Packages or custom
-                trip requests may be disabled — please check back later or contact the agency
-                directly if you already have their details.
-              </p>
+              <div className="feature-unavailable-note" id="request-custom-tour">
+                <strong>Online inquiries unavailable</strong>
+                <p>
+                  {!customInquiriesEnabled && !readyMadeInquireEnabled
+                    ? "This agency is not accepting package or custom trip requests online right now."
+                    : !customInquiriesEnabled
+                      ? "Custom trip requests are paused. Browse published packages above if available."
+                      : "Ready-made tour inquiries are paused. You may still request a custom trip if that option appears elsewhere."}
+                </p>
+                {(agency.contactEmail || agency.contactPhone) && (
+                  <p className="feature-unavailable-note__contact">
+                    Contact the agency directly
+                    {agency.contactEmail ? (
+                      <>
+                        :{" "}
+                        <a href={`mailto:${agency.contactEmail}`}>{agency.contactEmail}</a>
+                      </>
+                    ) : null}
+                    {agency.contactPhone ? (
+                      <>
+                        {agency.contactEmail ? " · " : ": "}
+                        <a href={`tel:${agency.contactPhone}`}>{agency.contactPhone}</a>
+                      </>
+                    ) : null}
+                    .
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}

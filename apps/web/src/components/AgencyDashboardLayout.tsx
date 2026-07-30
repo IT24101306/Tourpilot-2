@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { agencyFeaturesOf, useAuth } from "../context/AuthContext";
 import { navLinkLightClass } from "../utils/navLinkClass";
@@ -7,6 +7,10 @@ import { NotificationBell } from "./NotificationBell";
 import { ConfirmActionProvider, useConfirmAction } from "./confirm/ConfirmActionContext";
 import { TourPilotBrand } from "./TourPilotBrand";
 import { DashboardSupportButton } from "./support/SupportAgentsModal";
+import {
+  FeatureBlockedPanel,
+  resolveAgencyBlockedFeature,
+} from "./feedback/FeatureBlockedPanel";
 import "../styles/dashboard.css";
 
 const AGENCY_TABS: {
@@ -14,12 +18,15 @@ const AGENCY_TABS: {
   label: string;
   end?: boolean;
   feature?: "offers" | "display" | "negotiationsBookings" | "customDomain";
+  ownerOnly?: boolean;
 }[] = [
   { to: "/dashboard/agency", label: "Overview", end: true },
   { to: "/dashboard/agency/bookings", label: "Bookings", feature: "negotiationsBookings" },
   { to: "/dashboard/agency/negotiations", label: "Negotiations", feature: "negotiationsBookings" },
   { to: "/dashboard/agency/tasks", label: "Tasks" },
   { to: "/dashboard/agency/travelers", label: "Travelers" },
+  { to: "/dashboard/agency/reviews", label: "Reviews" },
+  { to: "/dashboard/agency/team", label: "Team", ownerOnly: true },
   { to: "/dashboard/agency/display", label: "Display", feature: "display" },
   { to: "/dashboard/agency/offers", label: "Offers", feature: "offers" },
   { to: "/dashboard/agency/domain", label: "Domain", feature: "customDomain" },
@@ -142,6 +149,7 @@ function AgencyDashboardLayoutInner() {
   const visibleTabs = useMemo(
     () =>
       AGENCY_TABS.filter((tab) => {
+        if (tab.ownerOnly && user?.agencyMembership !== "owner") return false;
         if (tab.feature === "offers") return features.offers;
         if (tab.feature === "display") return features.display;
         if (tab.feature === "negotiationsBookings") return features.negotiationsBookings;
@@ -153,6 +161,7 @@ function AgencyDashboardLayoutInner() {
       features.display,
       features.negotiationsBookings,
       features.customDomain,
+      user?.agencyMembership,
     ]
   );
 
@@ -174,19 +183,11 @@ function AgencyDashboardLayoutInner() {
       location.pathname === link.to || location.pathname.startsWith(`${link.to}/`)
   );
 
-  const blockedByFeature =
-    (!features.offers && location.pathname.startsWith("/dashboard/agency/offers")) ||
-    (!features.display && location.pathname.startsWith("/dashboard/agency/display")) ||
-    (!features.negotiationsBookings &&
-      (location.pathname.startsWith("/dashboard/agency/negotiations") ||
-        location.pathname.startsWith("/dashboard/agency/bookings") ||
-        location.pathname.startsWith("/dashboard/agency/trip-room"))) ||
-    (!features.readyMadeTours && location.pathname.startsWith("/dashboard/agency/tours")) ||
-    (!features.driversAndPartners &&
-      (location.pathname.startsWith("/dashboard/agency/drivers") ||
-        location.pathname.startsWith("/dashboard/agency/partners"))) ||
-    (!features.customDomain &&
-      location.pathname.startsWith("/dashboard/agency/domain"));
+  const blockedFeature = resolveAgencyBlockedFeature(
+    location.pathname,
+    features,
+    user?.agencyMembership
+  );
 
   useEffect(() => {
     if (!stepsMenuOpen && !networkMenuOpen) return;
@@ -212,10 +213,6 @@ function AgencyDashboardLayoutInner() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [stepsMenuOpen, networkMenuOpen]);
-
-  if (blockedByFeature) {
-    return <Navigate to="/dashboard/agency" replace />;
-  }
 
   async function executeTopup(value: number) {
     if (!token) return;
@@ -428,7 +425,7 @@ function AgencyDashboardLayoutInner() {
             <p>Your agency is not visible to travelers. Please contact TourPilot support.</p>
           </div>
         )}
-        <Outlet />
+        {blockedFeature ? <FeatureBlockedPanel feature={blockedFeature} /> : <Outlet />}
       </section>
 
       {topupOpen && (

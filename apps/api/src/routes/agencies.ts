@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import { prisma } from "../lib/prisma.js";
 
-import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
+import { authRequired, getAgencyForUser, getOwnedAgency, requireRoles } from "../middleware/auth.js";
 
 import { agencyHasFeature, requireAgencyFeature, serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 
@@ -56,8 +56,7 @@ import {
   applyCommissionRequestAction,
   getAgencyCommissionRequests,
 } from "../services/commissionNegotiation.js";
-
-
+import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 
 export const agenciesRouter = Router();
 
@@ -468,6 +467,228 @@ agenciesRouter.delete(
 );
 
 
+function serializeStaffMember(row: {
+  id: string;
+  title: string | null;
+  createdAt: Date;
+  user: { id: string; name: string; phone: string; email: string | null; isActive: boolean };
+}) {
+  return {
+    id: row.id,
+    title: row.title,
+    createdAt: row.createdAt,
+    user: {
+      id: row.user.id,
+      name: row.user.name,
+      phone: row.user.phone,
+      email: row.user.email,
+      isActive: row.user.isActive,
+    },
+  };
+}
+
+/** List owner + staff. Any agency member can view; writes are owner-only. */
+agenciesRouter.get("/mine/staff", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const owned = await getOwnedAgency(req.user!.id);
+    const isOwner = Boolean(owned && owned.id === agency.id);
+
+    const owner = await prisma.user.findUnique({
+      where: { id: agency.ownerId },
+      select: { id: true, name: true, phone: true, email: true, isActive: true },
+    });
+
+    const staff = await prisma.agencyStaff.findMany({
+      where: { agencyId: agency.id },
+      include: {
+        user: { select: { id: true, name: true, phone: true, email: true, isActive: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    res.json({
+      isOwner,
+      owner: owner
+        ? {
+            id: owner.id,
+            name: owner.name,
+            phone: owner.phone,
+            email: owner.email,
+            isActive: owner.isActive,
+            role: "owner" as const,
+          }
+        : null,
+      staff: staff.map((s) => ({ ...serializeStaffMember(s), role: "staff" as const })),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+agenciesRouter.post("/mine/staff", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getOwnedAgency(req.user!.id);
+    if (!agency) {
+      return res.status(403).json({ error: "Only the agency owner can invite staff" });
+    }
+
+    const body = z
+      .object({
+        name: z.string().min(2, "Name is required"),
+        phone: z.string().min(1, "Phone is required"),
+        title: z.string().max(120).optional(),
+      })
+      .parse(req.body);
+
+    const phone = toStoredPhone(body.phone);
+    if (!isValidInternationalPhone(phone)) {
+      return res.status(400).json({
+        error: "Invalid phone number. Include country code (e.g. +94771234567).",
+      });
+    }
+
+    if (phone === (await prisma.user.findUnique({ where: { id: agency.ownerId } }))?.phone) {
+      return res.status(400).json({ error: "That phone belongs to the agency owner" });
+    }
+
+    const title = body.title?.trim() || null;
+    const name = body.name.trim();
+
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.user.findUnique({
+        where: { phone },
+        include: {
+          agency: true,
+          agencyStaff: true,
+        },
+      });
+
+      if (existing) {
+        if (existing.role !== "AGENCY") {
+          throw Object.assign(
+            new Error("This phone is already used by another account type. Use a different number."),
+            { status: 409 }
+          );
+        }
+        if (existing.agency) {
+          throw Object.assign(
+            new Error("This phone already owns an agency account."),
+            { status: 409 }
+          );
+        }
+        const otherStaff = existing.agencyStaff.find((s) => s.agencyId !== agency.id);
+        if (otherStaff) {
+          throw Object.assign(
+            new Error("This person is already staff at another agency."),
+            { status: 409 }
+          );
+        }
+        const alreadyHere = existing.agencyStaff.find((s) => s.agencyId === agency.id);
+        if (alreadyHere) {
+          throw Object.assign(new Error("This person is already on your team."), { status: 409 });
+        }
+
+        if (existing.name !== name) {
+          await tx.user.update({ where: { id: existing.id }, data: { name } });
+        }
+
+        const row = await tx.agencyStaff.create({
+          data: { agencyId: agency.id, userId: existing.id, title },
+          include: {
+            user: { select: { id: true, name: true, phone: true, email: true, isActive: true } },
+          },
+        });
+        return row;
+      }
+
+      const created = await tx.user.create({
+        data: {
+          phone,
+          name,
+          role: "AGENCY",
+          country: "LK",
+        },
+      });
+
+      return tx.agencyStaff.create({
+        data: { agencyId: agency.id, userId: created.id, title },
+        include: {
+          user: { select: { id: true, name: true, phone: true, email: true, isActive: true } },
+        },
+      });
+    });
+
+    res.status(201).json({ ...serializeStaffMember(result), role: "staff" as const });
+  } catch (e) {
+    const err = e as Error & { status?: number };
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    next(e);
+  }
+});
+
+agenciesRouter.patch("/mine/staff/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getOwnedAgency(req.user!.id);
+    if (!agency) {
+      return res.status(403).json({ error: "Only the agency owner can update staff" });
+    }
+
+    const body = z
+      .object({
+        title: z.string().max(120).nullable().optional(),
+        name: z.string().min(2).optional(),
+      })
+      .parse(req.body);
+
+    const row = await prisma.agencyStaff.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!row) return res.status(404).json({ error: "Staff member not found" });
+
+    if (body.name !== undefined) {
+      await prisma.user.update({
+        where: { id: row.userId },
+        data: { name: body.name.trim() },
+      });
+    }
+
+    const updated = await prisma.agencyStaff.update({
+      where: { id: row.id },
+      data: {
+        title: body.title === undefined ? undefined : body.title?.trim() || null,
+      },
+      include: {
+        user: { select: { id: true, name: true, phone: true, email: true, isActive: true } },
+      },
+    });
+
+    res.json({ ...serializeStaffMember(updated), role: "staff" as const });
+  } catch (e) {
+    next(e);
+  }
+});
+
+agenciesRouter.delete("/mine/staff/:id", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getOwnedAgency(req.user!.id);
+    if (!agency) {
+      return res.status(403).json({ error: "Only the agency owner can remove staff" });
+    }
+
+    const row = await prisma.agencyStaff.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+    });
+    if (!row) return res.status(404).json({ error: "Staff member not found" });
+
+    await prisma.agencyStaff.delete({ where: { id: row.id } });
+    res.json({ ok: true, deletedId: row.id });
+  } catch (e) {
+    next(e);
+  }
+});
 
 agenciesRouter.get("/mine/display", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
 
@@ -761,7 +982,9 @@ agenciesRouter.put(
 
     });
 
-
+    // Include public tourist reviews in stored agency rating.
+    const { recalculateAgencyRatings } = await import("../services/agencyRatings.js");
+    await recalculateAgencyRatings(agency.id);
 
     const updated = await prisma.agency.findUniqueOrThrow({
 
@@ -1213,6 +1436,13 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
       orderBy: { validUntil: "asc" },
     });
 
+    const touristReviewsPublic = await prisma.touristReview.findMany({
+      where: { agencyId: agency.id, isPublic: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { tourist: { select: { name: true } } },
+    });
+
     res.json({
 
       id: agency.id,
@@ -1231,6 +1461,10 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
 
       district: agency.district,
 
+      contactEmail: agency.contactEmail,
+
+      contactPhone: agency.contactPhone,
+
       avgRating: Number(agency.avgRating),
 
       reviewCount: agency.reviewCount,
@@ -1239,7 +1473,18 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
         serializeTourCard(t, Number(agency.influencerCommissionPct))
       ),
 
-      reviews: agency.reviews,
+      reviews: [
+        ...agency.reviews.map((r) => ({ ...r, verified: false })),
+        ...touristReviewsPublic.map((r) => ({
+          id: r.id,
+          authorName: r.tourist.name,
+          rating: r.rating,
+          body: r.body,
+          isVisible: true,
+          createdAt: r.createdAt,
+          verified: true,
+        })),
+      ],
 
       display: { enabled: display.enabled, content: { ...display.content, packages } },
 

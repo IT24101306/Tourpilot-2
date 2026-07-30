@@ -155,6 +155,54 @@ export function InfluencerDomainPage() {
             {info?.domain && <code className="domain-current">{info.domain}</code>}
           </div>
 
+          <div className="domain-dns-guide">
+            <h3>DNS setup instructions</h3>
+            <p className="muted">
+              Log in to your domain registrar (GoDaddy, Namecheap, Cloudflare, etc.) and add the
+              following DNS record. This tells browsers where to find your page.
+            </p>
+            <table className="domain-dns-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Name / Host</th>
+                  <th>Value / Points to</th>
+                  <th>TTL</th>
+                  <th aria-label="Copy" />
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>A</td>
+                  <td><code>@</code></td>
+                  <td><code>200.97.168.95</code></td>
+                  <td>3600</td>
+                  <td>
+                    <button type="button" className="mini-btn" onClick={() => copy("200.97.168.95")}>
+                      {copied === "200.97.168.95" ? "Copied" : "Copy"}
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>A</td>
+                  <td><code>www</code></td>
+                  <td><code>200.97.168.95</code></td>
+                  <td>3600</td>
+                  <td>
+                    <button type="button" className="mini-btn" onClick={() => copy("200.97.168.95")}>
+                      {copied === "200.97.168.95" ? "Copied" : "Copy"}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="muted" style={{ marginTop: 8, fontSize: "0.85rem" }}>
+              If you are using a subdomain like <code>travel.yourdomain.com</code>, set the Name/Host
+              to <code>travel</code> instead of <code>@</code>. DNS changes can take a few minutes to
+              a few hours to propagate.
+            </p>
+          </div>
+
           <form className="domain-form" onSubmit={saveDomain}>
             <label htmlFor="influencer-domain-input">Your domain</label>
             <div className="domain-form-row">

@@ -33,6 +33,21 @@ export async function markInquiryRead(inquiryId: string, userId: string, at = ne
   });
 }
 
+export async function getTypingUsers(inquiryId: string, now = new Date()) {
+  const rows = await prisma.inquiryChatPresence.findMany({
+    where: { inquiryId },
+    include: { user: { select: { id: true, name: true, role: true } } },
+  });
+  return rows
+    .filter((r) => r.typingUntil && r.typingUntil > now)
+    .map((r) => ({
+      userId: r.user.id,
+      name: r.user.name,
+      role: r.user.role,
+      until: r.typingUntil!.toISOString(),
+    }));
+}
+
 export async function getChatPresence(inquiryId: string, viewerId: string, now = new Date()) {
   const rows = await prisma.inquiryChatPresence.findMany({
     where: { inquiryId },

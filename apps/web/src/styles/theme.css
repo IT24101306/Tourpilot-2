@@ -3597,6 +3597,61 @@ a.agency-icon-btn {
   margin: 0 0 16px;
 }
 
+.module-negotiation .neg-review-prompt {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  background: linear-gradient(165deg, #f8fbf9 0%, var(--white) 55%);
+  margin: 0 0 20px;
+  max-width: 32rem;
+}
+
+.module-negotiation .neg-review-prompt h3 {
+  font-family: var(--font-heading);
+  margin: 0 0 6px;
+}
+
+.module-negotiation .neg-review-prompt--done {
+  background: var(--green-soft);
+  border-color: rgba(26, 92, 58, 0.18);
+}
+
+.neg-review-stars {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0;
+}
+
+.neg-review-star {
+  border: none;
+  background: none;
+  font-size: 1.6rem;
+  color: #ccc;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+
+.neg-review-star.is-active {
+  color: #f5a623;
+}
+
+.neg-review-star:hover {
+  color: #f5a623;
+}
+
+.neg-review-body {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.92rem;
+  resize: vertical;
+  margin: 0 0 12px;
+}
+
 .module-negotiation .neg-trip-room-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
@@ -3946,6 +4001,33 @@ a.agency-icon-btn {
 
 .module-negotiation .neg-step.current .neg-step-label {
   color: var(--green-dark);
+}
+
+.module-negotiation .neg-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .module-negotiation .neg-split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.module-negotiation .neg-split-col--closed {
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+}
+
+@media (max-width: 860px) {
+  .module-negotiation .neg-split-col--closed {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
 }
 
 .module-negotiation .neg-list-section {
@@ -6603,6 +6685,92 @@ a.agency-icon-btn {
   padding-bottom: 0;
 }
 
+.admin-tabs__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+}
+
+.admin-tabs__hub {
+  position: relative;
+}
+
+.admin-tabs__hub-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+  border: none;
+  background: transparent;
+}
+
+.admin-tabs__hub-btn.is-open {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.admin-tabs__chevron {
+  font-size: 0.65rem;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+
+.admin-tabs__hub-btn.is-open .admin-tabs__chevron {
+  transform: rotate(180deg);
+}
+
+.admin-tabs__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 260px;
+  max-width: min(340px, 92vw);
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--white);
+  box-shadow: 0 16px 40px rgba(18, 40, 29, 0.14);
+  display: grid;
+  gap: 4px;
+}
+
+.admin-tabs__menu-blurb {
+  margin: 0 8px 6px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.admin-tabs__menu-link {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.admin-tabs__menu-link:hover,
+.admin-tabs__menu-link.is-active {
+  background: #f3f8f5;
+}
+
+.admin-tabs__menu-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.admin-tabs__menu-desc {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 /* —— Admin command center (overview) —— */
 
 .gov-command {
@@ -6623,21 +6791,36 @@ a.agency-icon-btn {
   border-radius: var(--radius-lg);
   border: 1px solid rgba(219, 230, 224, 0.95);
   background: var(--gov-surface);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 8px 24px rgba(18, 40, 29, 0.04);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.gov-kpi-card--link {
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.gov-kpi-card--link:hover {
+  border-color: rgba(31, 143, 88, 0.32);
+  box-shadow: 0 10px 28px rgba(18, 40, 29, 0.08);
+  transform: translateY(-2px);
 }
 
 .gov-kpi-card--accent {
-  border-color: rgba(26, 168, 160, 0.28);
-  background: linear-gradient(160deg, #ffffff 0%, #f0faf8 100%);
+  border-color: rgba(31, 143, 88, 0.28);
+  background: linear-gradient(165deg, #f3faf6 0%, #ffffff 60%);
 }
 
 .gov-kpi-card--accent .gov-kpi-value {
-  color: var(--teal-dark);
+  color: var(--teal-dark, #0f766e);
 }
 
 .gov-kpi-card--warn {
   border-color: rgba(184, 134, 11, 0.35);
-  background: linear-gradient(160deg, #ffffff 0%, #fffbf0 100%);
+  background: linear-gradient(165deg, #fffef7 0%, #ffffff 60%);
 }
 
 .gov-kpi-card--warn .gov-kpi-value {
@@ -6671,30 +6854,72 @@ a.agency-icon-btn {
   line-height: 1.35;
 }
 
+.gov-hubs {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
 .gov-hub-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 18px 18px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(219, 230, 224, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(247, 251, 248, 0.65) 100%);
+}
+
+.gov-hub-section__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(219, 230, 224, 0.85);
 }
 
 .gov-hub-section-title {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.gov-hub-section-blurb {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   color: var(--gov-ink-muted);
+}
+
+.gov-hub-section--people {
+  border-top: 3px solid #2f8f5b;
+}
+
+.gov-hub-section--trips {
+  border-top: 3px solid #2a7a8c;
+}
+
+.gov-hub-section--money {
+  border-top: 3px solid #b8860b;
+}
+
+.gov-hub-section--content {
+  border-top: 3px solid #5b6bcf;
+}
+
+.gov-hub-section--platform {
+  border-top: 3px solid #64748b;
 }
 
 .gov-hub-module-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--hub-cols, 4), minmax(0, 1fr));
   gap: 12px;
-}
-
-.gov-hub-section:nth-child(3) .gov-hub-module-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .gov-module-card {
@@ -6763,16 +6988,6 @@ a.agency-icon-btn {
 .gov-module-card-body {
   flex: 1;
   min-width: 0;
-}
-
-.gov-module-category {
-  display: block;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--gov-ink-muted);
-  margin-bottom: 4px;
 }
 
 .gov-module-title {
@@ -6851,16 +7066,21 @@ a.agency-icon-btn {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .gov-hub-module-grid,
-  .gov-hub-section:nth-child(3) .gov-hub-module-grid {
+  .gov-hub-module-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-tabs__menu {
+    left: auto;
+    right: 0;
   }
 }
 
 @media (max-width: 560px) {
   .gov-kpi-row,
-  .gov-hub-module-grid,
-  .gov-hub-section:nth-child(3) .gov-hub-module-grid {
+  .gov-hub-module-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -7123,6 +7343,120 @@ a.agency-icon-btn {
   background: #f7faf8;
   color: #334155;
   max-width: 40rem;
+}
+
+.feature-unavailable-note strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink, #0f1a16);
+  margin-bottom: 6px;
+}
+
+.feature-unavailable-note p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.feature-unavailable-note p + p,
+.feature-unavailable-note__contact {
+  margin-top: 10px;
+}
+
+.feature-unavailable-note__contact a {
+  color: var(--green-dark, #1a5c3a);
+  font-weight: 600;
+}
+
+.tp-empty-state {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  background: linear-gradient(165deg, #f8fbf9 0%, var(--white, #fff) 55%);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.tp-empty-state--blocked {
+  background: linear-gradient(165deg, #fbf8f4 0%, var(--white, #fff) 55%);
+  border-color: rgba(138, 109, 29, 0.28);
+}
+
+.tp-empty-state--agency-blocked {
+  margin: 2rem auto;
+  max-width: 32rem;
+}
+
+.tp-feature-pricing-path {
+  display: block;
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(26, 92, 58, 0.22);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(26, 92, 58, 0.06) 0%, rgba(255, 255, 255, 0.9) 55%);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tp-feature-pricing-path:hover {
+  border-color: rgba(26, 92, 58, 0.45);
+  transform: translateY(-1px);
+}
+
+.tp-feature-pricing-path__eyebrow {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green-dark, #1a5c3a);
+  margin-bottom: 4px;
+}
+
+.tp-feature-pricing-path__title {
+  display: block;
+  font-size: 0.98rem;
+  margin-bottom: 2px;
+}
+
+.tp-feature-pricing-path__hint {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.tp-empty-state__title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  margin: 0 0 8px;
+  color: var(--ink, #0f1a16);
+}
+
+.tp-empty-state__desc {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.tp-empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.tp-empty-state.ops-empty-panel,
+.tp-empty-state.offers-empty {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: none;
 }
 
 .gov-approval-actions {
@@ -9380,6 +9714,26 @@ a.agency-icon-btn {
   white-space: nowrap;
 }
 
+.tour-detail-float__blocked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-width: min(100%, 22rem);
+}
+
+.tour-detail-float__blocked-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 26, 22, 0.12);
+  color: #334155;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .tour-itinerary-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
@@ -9844,6 +10198,38 @@ a.agency-icon-btn {
   background: var(--white);
   padding: 18px;
   box-shadow: var(--shadow-sm);
+}
+
+.module-tasks .task-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .module-tasks .task-split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.module-tasks .task-split-col h3 {
+  font-family: var(--font-heading);
+  margin: 0 0 12px;
+}
+
+.module-tasks .task-split-col--done {
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+}
+
+@media (max-width: 860px) {
+  .module-tasks .task-split-col--done {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
 }
 
 .module-tasks .task-filter-strip {
@@ -10608,4 +10994,132 @@ a.agency-icon-btn {
   background: #fdecea;
   border-color: #e8a8a0;
   color: #6b2218;
+}
+
+/* Leave chat / trip room confirm — global (dashboard + storefront) */
+.chat-exit-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(12, 24, 20, 0.45);
+}
+
+.chat-exit-dialog__panel {
+  width: min(420px, 100%);
+  padding: 22px 22px 18px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 40, 15, 0.12);
+  box-shadow: 0 18px 48px rgba(12, 24, 20, 0.22);
+}
+
+.chat-exit-dialog__panel h2 {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  color: var(--ink, #0f1714);
+}
+
+.chat-exit-dialog__panel p {
+  margin: 0 0 18px;
+  line-height: 1.5;
+  color: var(--muted, #56635f);
+  font-size: 0.95rem;
+}
+
+.chat-exit-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Agency reviews list */
+.agency-reviews-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.agency-review-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  background: var(--white);
+}
+
+.agency-review-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.agency-review-card__stars {
+  font-size: 1.1rem;
+  color: #f5a623;
+  white-space: nowrap;
+}
+
+.agency-review-card__body {
+  margin: 0 0 12px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.agency-review-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.agency-review-toggle input {
+  accent-color: var(--green-dark);
+}
+
+/* Currency disclaimer banner */
+.currency-disclaimer-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 0 0 16px;
+  border-radius: var(--radius-md);
+  background: #f0f7ff;
+  border: 1px solid #c6ddf7;
+  font-size: 0.82rem;
+  color: #1e3a5f;
+  line-height: 1.4;
+}
+
+.currency-disclaimer-banner p {
+  margin: 0;
+}
+
+.currency-disclaimer-banner strong {
+  font-weight: 700;
+}
+
+.currency-disclaimer-banner__close {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #1e3a5f;
+  opacity: 0.6;
+  padding: 4px;
+}
+
+.currency-disclaimer-banner__close:hover {
+  opacity: 1;
 }

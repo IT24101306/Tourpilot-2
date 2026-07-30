@@ -2,8 +2,10 @@ const STEPS = [
   { key: "NEW", label: "Requested" },
   { key: "PLANNING", label: "Planning" },
   { key: "PROPOSAL", label: "Proposal" },
-  { key: "DECISION", label: "Your decision" },
+  { key: "DECISION", label: "Decision" },
   { key: "CONFIRMED", label: "Confirmed" },
+  { key: "ACTIVE", label: "Active" },
+  { key: "DONE", label: "Completed" },
 ] as const;
 
 function stepIndex(status: string): number {
@@ -11,6 +13,8 @@ function stepIndex(status: string): number {
   if (status === "SENT_TO_TOURIST" || status === "TOURIST_VIEWED" || status === "REVISION_REQUESTED")
     return 3;
   if (status === "ACCEPTED") return 4;
+  if (status === "IN_PROGRESS") return 5;
+  if (status === "COMPLETED") return 6;
   if (status === "DECLINED" || status === "EXPIRED") return 2;
   return 0;
 }
@@ -25,7 +29,7 @@ export function NegotiationStepper({ status }: Props) {
     <div className="neg-stepper-wrap">
       <ol className="neg-stepper" aria-label="Trip planning progress">
       {STEPS.map((step, i) => {
-        const done = i < active || (i === 4 && status === "ACCEPTED");
+        const done = i < active || (i === 6 && status === "COMPLETED");
         const current = i === active;
         return (
           <li
