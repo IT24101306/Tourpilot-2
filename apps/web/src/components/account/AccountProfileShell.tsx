@@ -34,6 +34,10 @@ type Props = {
   contextPartners?: AccountContextPartner[];
   /** High-priority content shown directly under the hero (e.g. wallet). */
   leading?: ReactNode;
+  /** Green step rail; when set, shortcuts/leading/featured bands are omitted and children fill the main column. */
+  sideNav?: ReactNode;
+  /** Replaces the hero Top up hash link (e.g. switch to wallet panel). */
+  onWalletCta?: () => void;
   variant?: "page" | "embedded";
   children?: ReactNode;
 };
@@ -52,6 +56,8 @@ export function AccountProfileShell({
   contextLabel,
   contextPartners = [],
   leading,
+  sideNav,
+  onWalletCta,
   variant = "page",
   children,
 }: Props) {
@@ -61,9 +67,10 @@ export function AccountProfileShell({
 
   const featured = highlights[0] ?? null;
   const walletDisplay = formatCredits(walletBalance);
-  const hasShortcuts = actions.length > 0;
+  const hasShortcuts = !sideNav && actions.length > 0;
   const hasStats = stats.length > 0;
   const hasDetails = infoFields.length > 0;
+  const useWorkspace = Boolean(sideNav);
   const eyebrow =
     contextLabel?.trim() ||
     (role === "AGENCY" ? "Agency account" : role === "TOURIST" ? "Traveler account" : "My account");
@@ -130,108 +137,129 @@ export function AccountProfileShell({
             <aside className="account-profile-wallet" aria-label="Wallet balance">
               <span className="account-profile-wallet__label">Wallet</span>
               <strong className="account-profile-wallet__value">{walletDisplay}</strong>
-              <a href="#account-wallet" className="account-profile-wallet__cta">
-                Top up
-              </a>
+              {onWalletCta ? (
+                <button type="button" className="account-profile-wallet__cta" onClick={onWalletCta}>
+                  Top up
+                </button>
+              ) : (
+                <a href="#account-wallet" className="account-profile-wallet__cta">
+                  Top up
+                </a>
+              )}
             </aside>
           </div>
         </div>
       </header>
 
       <div className="account-profile-body">
-        {hasShortcuts ? (
+        {useWorkspace ? (
           <section className="account-profile-band account-profile-band--surface">
-            <div className="account-profile-inner">
-              <div className="account-profile-block">
-                <header className="account-block-head">
-                  <h2>Shortcuts</h2>
-                  <p>Jump to your most-used tools.</p>
-                </header>
-                <nav className="account-shortcuts" aria-label="Account shortcuts">
-                  {actions.map((a) => (
-                    <Link
-                      key={a.to}
-                      to={a.to}
-                      className={`account-shortcut account-shortcut--${a.variant ?? "ghost"}`}
-                    >
-                      <span className="account-shortcut-label">{a.label}</span>
-                    </Link>
-                  ))}
-                </nav>
-              </div>
+            <div className="account-profile-inner account-profile-workspace">
+              {sideNav}
+              <div className="account-profile-workspace__main">{children}</div>
             </div>
           </section>
-        ) : null}
+        ) : (
+          <>
+            {hasShortcuts ? (
+              <section className="account-profile-band account-profile-band--surface">
+                <div className="account-profile-inner">
+                  <div className="account-profile-block">
+                    <header className="account-block-head">
+                      <h2>Shortcuts</h2>
+                      <p>Jump to your most-used tools.</p>
+                    </header>
+                    <nav className="account-shortcuts" aria-label="Account shortcuts">
+                      {actions.map((a) => (
+                        <Link
+                          key={a.to}
+                          to={a.to}
+                          className={`account-shortcut account-shortcut--${a.variant ?? "ghost"}`}
+                        >
+                          <span className="account-shortcut-label">{a.label}</span>
+                        </Link>
+                      ))}
+                    </nav>
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
-        {leading ? (
-          <section className="account-profile-band account-profile-band--wallet">
-            <div className="account-profile-inner">{leading}</div>
-          </section>
-        ) : null}
+            {leading ? (
+              <section className="account-profile-band account-profile-band--wallet">
+                <div className="account-profile-inner">{leading}</div>
+              </section>
+            ) : null}
 
-        {(featured || hasStats || hasDetails) && (
-          <section className="account-profile-band account-profile-band--surface">
-            <div className="account-profile-inner">
-              {featured && (
-                <div className="account-profile-block">
-                  <header className="account-block-head">
-                    <h2>Featured</h2>
-                  </header>
-                  <Link to={featured.to} className="account-featured-card">
-                    <div className="account-featured-card-body">
-                      <span className="account-featured-kicker">{featured.label}</span>
-                      <strong className="account-featured-value">{featured.value}</strong>
-                      {featured.description ? (
-                        <p className="account-featured-desc">{featured.description}</p>
-                      ) : null}
+            {(featured || hasStats || hasDetails) && (
+              <section className="account-profile-band account-profile-band--surface">
+                <div className="account-profile-inner">
+                  {featured && (
+                    <div className="account-profile-block">
+                      <header className="account-block-head">
+                        <h2>Featured</h2>
+                      </header>
+                      <Link to={featured.to} className="account-featured-card">
+                        <div className="account-featured-card-body">
+                          <span className="account-featured-kicker">{featured.label}</span>
+                          <strong className="account-featured-value">{featured.value}</strong>
+                          {featured.description ? (
+                            <p className="account-featured-desc">{featured.description}</p>
+                          ) : null}
+                        </div>
+                        <span className="account-featured-cta">Open</span>
+                      </Link>
                     </div>
-                    <span className="account-featured-cta">Open</span>
-                  </Link>
-                </div>
-              )}
+                  )}
 
-              {hasStats && (
-                <div className="account-profile-block">
-                  <header className="account-block-head">
-                    <h2>At a glance</h2>
-                  </header>
-                  <dl className="account-stat-row">
-                    {stats.map((s) => (
-                      <div
-                        key={s.label}
-                        className={`account-stat-item account-stat-item--${s.tone ?? "default"}`}
-                      >
-                        <dt>{s.label}</dt>
-                        <dd>{s.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              )}
+                  {hasStats && (
+                    <div className="account-profile-block">
+                      <header className="account-block-head">
+                        <h2>At a glance</h2>
+                      </header>
+                      <dl className="account-stat-row">
+                        {stats.map((s) => (
+                          <div
+                            key={s.label}
+                            className={`account-stat-item account-stat-item--${s.tone ?? "default"}`}
+                          >
+                            <dt>{s.label}</dt>
+                            <dd>{s.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
 
-              {hasDetails && (
-                <div className="account-profile-block account-profile-block--meta">
-                  <p className="account-meta-note">
-                    <span className="account-meta-note__label">Account details</span>
-                    {infoFields.map((f, i) => (
-                      <span key={f.label} className="account-meta-note__item">
-                        {i > 0 ? <span className="account-meta-note__sep" aria-hidden="true">·</span> : null}
-                        <span className="account-meta-note__key">{f.label}</span> {f.value}
-                      </span>
-                    ))}
-                    <span className="account-meta-note__hint">Read-only</span>
-                  </p>
+                  {hasDetails && (
+                    <div className="account-profile-block account-profile-block--meta">
+                      <p className="account-meta-note">
+                        <span className="account-meta-note__label">Account details</span>
+                        {infoFields.map((f, i) => (
+                          <span key={f.label} className="account-meta-note__item">
+                            {i > 0 ? (
+                              <span className="account-meta-note__sep" aria-hidden="true">
+                                ·
+                              </span>
+                            ) : null}
+                            <span className="account-meta-note__key">{f.label}</span> {f.value}
+                          </span>
+                        ))}
+                        <span className="account-meta-note__hint">Read-only</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </section>
+              </section>
+            )}
+
+            {children ? (
+              <section className="account-profile-band account-profile-band--white">
+                <div className="account-profile-inner account-profile-inner--panels">{children}</div>
+              </section>
+            ) : null}
+          </>
         )}
-
-        {children ? (
-          <section className="account-profile-band account-profile-band--white">
-            <div className="account-profile-inner account-profile-inner--panels">{children}</div>
-          </section>
-        ) : null}
       </div>
     </>
   );

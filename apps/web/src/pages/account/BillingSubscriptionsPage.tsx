@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
+import { agencyFeaturesOf, useAuth } from "../../context/AuthContext";
 import { PaymentGatewayPendingNotice } from "../../components/billing/PaymentGatewayPendingNotice";
+import { WalletTopupPanel } from "../../components/wallet/WalletTopupPanel";
 import { formatCredits } from "../../lib/walletLedger";
 
 type SubscriptionPayload = {
@@ -24,7 +25,8 @@ type SubscriptionPayload = {
 };
 
 export function BillingSubscriptionsPage() {
-  const { token, refreshUser } = useAuth();
+  const { token, user, refreshUser } = useAuth();
+  const features = agencyFeaturesOf(user);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [data, setData] = useState<SubscriptionPayload | null>(null);
@@ -33,6 +35,7 @@ export function BillingSubscriptionsPage() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
+  const [walletBalance, setWalletBalance] = useState(user?.walletBalance ?? 0);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -41,6 +44,7 @@ export function BillingSubscriptionsPage() {
     try {
       const res = await api<SubscriptionPayload>("/subscription", { token });
       setData(res);
+      setWalletBalance(res.walletBalance);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load subscription");
     } finally {
@@ -51,6 +55,10 @@ export function BillingSubscriptionsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setWalletBalance(user?.walletBalance ?? 0);
+  }, [user?.walletBalance]);
 
   useEffect(() => {
     if (searchParams.get("cancelled") === "1") {
@@ -75,6 +83,19 @@ export function BillingSubscriptionsPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleTopup(amount: number) {
+    if (!token) throw new Error("Not signed in");
+    const result = await api<{ balance: number }>("/wallet/topup", {
+      method: "POST",
+      token,
+      body: JSON.stringify({ amount }),
+    });
+    setWalletBalance(result.balance);
+    setData((prev) => (prev ? { ...prev, walletBalance: result.balance } : prev));
+    await refreshUser();
+    return result.balance;
   }
 
   function openActivationCheckout() {
@@ -109,6 +130,7 @@ export function BillingSubscriptionsPage() {
       : "Pay as you go");
 
   const ctaLabel = trial.activatedAt && !trial.active ? "Renew" : "Activate";
+  const showWalletBox = user?.role === "AGENCY" ? features.walletTopup : true;
 
   return (
     <div className="account-billing-page">
@@ -119,10 +141,28 @@ export function BillingSubscriptionsPage() {
         <span aria-hidden="true">/</span>
         <span>Subscriptions</span>
       </nav>
-      <h1 className="account-billing-title">Subscriptions</h1>
+
+      <div className="account-billing-title-row">
+        <h1 className="account-billing-title">Subscriptions</h1>
+        <div className="account-billing-balance-pill" title="Platform wallet credits">
+          Credits balance: <strong>{formatCredits(walletBalance)}</strong>
+        </div>
+      </div>
 
       {status ? <p className="entity-status">{status}</p> : null}
       {error ? <p className="form-error">{error}</p> : null}
+
+      {showWalletBox && token ? (
+        <div className="account-billing-card account-billing-wallet-box">
+          <h2 className="account-billing-card__heading">Wallet</h2>
+          <WalletTopupPanel
+            balance={walletBalance}
+            onTopup={handleTopup}
+            feeHint={user?.loginFee}
+            emphasize
+          />
+        </div>
+      ) : null}
 
       <div className="account-billing-card">
         <label className="account-billing-search">
@@ -225,7 +265,6 @@ export function BillingSubscriptionsPage() {
     </div>
   );
 }
-
 export function BillingSubscriptionCheckoutPage() {
   const { token } = useAuth();
   const [data, setData] = useState<SubscriptionPayload | null>(null);

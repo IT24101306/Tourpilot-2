@@ -647,6 +647,25 @@ button.nav-link-light:hover {
   color: rgba(255, 255, 255, 0.82);
 }
 
+.topbar--agency-dash .nav-link-light--icon,
+.agency-dashboard > .topbar .nav-link-light--icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  line-height: 0;
+}
+
+.topbar--agency-dash .nav-link-light--icon:hover,
+.agency-dashboard > .topbar .nav-link-light--icon:hover,
+.topbar--agency-dash .nav-link-light--icon.nav-link-light--active,
+.agency-dashboard > .topbar .nav-link-light--icon.nav-link-light--active {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+
 .topbar--agency-dash .nav-link-light,
 .topbar--agency-dash .nav a.nav-link-light,
 .topbar--agency-dash button.nav-link-light,

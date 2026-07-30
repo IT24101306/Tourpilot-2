@@ -141,6 +141,14 @@
   font-weight: 650;
 }
 
+.account-billing-wallet-box .login-wallet-panel {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .account-billing-search input {
   width: 100%;
   padding: 0.7rem 0.9rem;
