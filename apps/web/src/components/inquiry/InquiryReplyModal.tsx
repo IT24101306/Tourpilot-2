@@ -60,6 +60,8 @@ type InquiryDetail = {
   endDate: string | null;
   createdAt: string;
   proposalEditable?: boolean;
+  pendingRevisionItemId?: string | null;
+  pendingRevisionLabel?: string | null;
   tourist?: { name: string; phone: string };
   tour?: { id: string; title: string; slug: string; days?: number; basePriceLkr?: number } | null;
   proposal?: {
@@ -335,7 +337,9 @@ export function InquiryReplyModal({
           inquiry
             ? `${inquiry.tourist?.name || "Guest"} · ${
                 inquiry.status === "REVISION_REQUESTED"
-                  ? "Tourist requested changes — review the thread, edit tours below, then resend"
+                  ? inquiry.pendingRevisionLabel
+                    ? `Traveler asked changes on ${inquiry.pendingRevisionLabel} — update that option and resend`
+                    : "Tourist requested changes — review the thread, edit tours below, then resend"
                   : canEdit
                     ? "Tourist has not accepted yet — you can change tours anytime"
                     : "Locked after tourist response"
@@ -354,6 +358,15 @@ export function InquiryReplyModal({
 
         {inquiry && !loading && (
           <>
+            {inquiry.status === "REVISION_REQUESTED" && inquiry.pendingRevisionLabel && (
+              <div className="neg-revision-target" role="status">
+                <strong>Revision target</strong>
+                <p>
+                  Update <span>{inquiry.pendingRevisionLabel}</span> based on the traveler&apos;s
+                  notes in the chat, then resend the proposal.
+                </p>
+              </div>
+            )}
             <div className="inquiry-request-box">
               {inquiry.tour && user?.agency?.slug && (
                 <InquiryTourChip

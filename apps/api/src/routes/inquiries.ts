@@ -38,7 +38,7 @@ import {
   markInquiryRead,
   touchTyping,
 } from "../services/chatPresence.js";
-import { emitChatMessage, emitChatPresence } from "../services/chatRealtime.js";
+import { emitChatMessage, emitChatPresence, emitInquiryUpdated } from "../services/chatRealtime.js";
 import {
   notifyCommissionApproved,
   notifyInquiryChatMessage,
@@ -988,10 +988,11 @@ inquiriesRouter.post("/:id/itinerary", authRequired, requireRoles("AGENCY"), asy
 
 inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), async (req, res, next) => {
   try {
-    const { action, note } = z
+    const { action, note, proposalItemId } = z
       .object({
         action: z.enum(["accept", "revision", "decline"]),
         note: z.string().optional(),
+        proposalItemId: z.string().optional(),
       })
       .parse(req.body);
 
@@ -999,17 +1000,50 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
       return res.status(400).json({ error: "Please describe what you would like changed." });
     }
 
+    const existing = await prisma.inquiry.findFirst({
+      where: { id: req.params.id, touristId: req.user!.id },
+      include: {
+        agency: true,
+        proposal: {
+          include: {
+            items: {
+              include: {
+                tour: { select: { id: true, title: true } },
+                itinerary: { select: { id: true, title: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!existing) return res.status(404).json({ error: "Inquiry not found" });
+
     if (action === "accept") {
-      const existing = await prisma.inquiry.findFirst({
-        where: { id: req.params.id, touristId: req.user!.id },
-        include: { agency: true },
-      });
-      if (!existing) return res.status(404).json({ error: "Inquiry not found" });
       if (!agencyHasFeature(existing.agency, "negotiationsBookings")) {
         return res.status(403).json({
           error: "Bookings are currently disabled for this agency.",
         });
       }
+    }
+
+    let revisionItemId: string | null = null;
+    let revisionLabel: string | null = null;
+    if (action === "revision") {
+      if (!proposalItemId) {
+        return res.status(400).json({ error: "Select which tour or option you want changed." });
+      }
+      const items = existing.proposal?.items ?? [];
+      const itemIndex = items.findIndex((i) => i.id === proposalItemId);
+      if (itemIndex < 0) {
+        return res.status(400).json({ error: "Selected option is not part of this proposal." });
+      }
+      const item = items[itemIndex];
+      const title =
+        item.tour?.title ||
+        item.itinerary?.title ||
+        (item.kind === "CUSTOM" ? "Custom itinerary" : "Tour option");
+      revisionItemId = item.id;
+      revisionLabel = `Option ${itemIndex + 1} · ${title}`;
     }
 
     const statusMap = {
@@ -1024,30 +1058,43 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
       decline: "DECLINED",
     } as const;
 
+    const historyNote =
+      action === "revision" && revisionLabel
+        ? `${revisionLabel}: ${note!.trim()}`
+        : note;
+
     const inquiry = await prisma.inquiry.update({
       where: { id: req.params.id, touristId: req.user!.id },
       data: {
         status: statusMap[action],
-        statusHistory: { create: { status: statusMap[action], note, actorId: req.user!.id } },
+        pendingRevisionItemId: action === "revision" ? revisionItemId : null,
+        pendingRevisionLabel: action === "revision" ? revisionLabel : null,
+        statusHistory: {
+          create: { status: statusMap[action], note: historyNote, actorId: req.user!.id },
+        },
       },
     });
 
     const messageBody =
-      note?.trim() ||
-      (action === "accept"
-        ? "I accept this proposal."
-        : action === "decline"
-          ? "I decline this proposal."
-          : "");
+      action === "revision" && revisionLabel
+        ? `Change request for ${revisionLabel}:\n${note!.trim()}`
+        : note?.trim() ||
+          (action === "accept"
+            ? "I accept this proposal."
+            : action === "decline"
+              ? "I decline this proposal."
+              : "");
 
     if (messageBody) {
-      await createInquiryMessage(
+      const msg = await createInquiryMessage(
         inquiry.id,
         req.user!.id,
         "TOURIST",
         messageBody,
         actionLabel[action]
       );
+      const { serializeInquiryMessage } = await import("../services/inquiryMessages.js");
+      emitChatMessage(inquiry.id, serializeInquiryMessage(msg));
     }
 
     if (action === "accept" && inquiry.referralCodeId) {
@@ -1058,7 +1105,10 @@ inquiriesRouter.post("/:id/respond", authRequired, requireRoles("TOURIST"), asyn
       void notifyCommissionApproved(inquiry.id).catch(console.error);
     }
 
-    void notifyInquiryStatusChange(inquiry.id, statusMap[action], note).catch(console.error);
+    void notifyInquiryStatusChange(inquiry.id, statusMap[action], historyNote ?? undefined).catch(
+      console.error
+    );
+    emitInquiryUpdated(inquiry.id, `respond_${action}`);
 
     res.json(inquiry);
   } catch (e) {
@@ -1110,6 +1160,7 @@ inquiriesRouter.patch("/:id/lifecycle", authRequired, requireRoles("AGENCY"), as
     );
 
     void notifyInquiryStatusChange(inquiry.id, transition.to, undefined).catch(console.error);
+    emitInquiryUpdated(inquiry.id, `lifecycle_${action}`);
 
     res.json(updated);
   } catch (e) {
@@ -1197,6 +1248,8 @@ function serializeInquiryForClient(
     isPublic: boolean;
     createdAt: Date;
   } | null;
+  pendingRevisionItemId?: string | null;
+  pendingRevisionLabel?: string | null;
 },
   chat?: {
     viewerId: string;
@@ -1277,6 +1330,8 @@ function serializeInquiryForClient(
         }
       : null,
     hasReview: Boolean(inquiry.touristReview),
+    pendingRevisionItemId: inquiry.pendingRevisionItemId ?? null,
+    pendingRevisionLabel: inquiry.pendingRevisionLabel ?? null,
   };
 }
 

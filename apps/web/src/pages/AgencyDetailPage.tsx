@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { loginPath } from "../utils/authRedirect";
-import { CurrencyDisclaimerBanner } from "../components/currency/CurrencyDisclaimerBanner";
 import { CoverImage } from "../components/CoverImage";
 import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "../components/NotificationBell";
@@ -492,7 +491,6 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
         )}
       </section>
 
-      <CurrencyDisclaimerBanner />
       <div className="agency-display-body">
         <div className="agency-display-band agency-display-band--white">
           <div className="agency-display-inner agency-display-inner--who">

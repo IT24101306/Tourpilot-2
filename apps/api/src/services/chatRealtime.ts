@@ -197,6 +197,12 @@ export function emitChatMessage(inquiryId: string, message: unknown) {
   io.to(roomName(inquiryId)).emit("message", { inquiryId, message });
 }
 
+/** Broadcast inquiry/proposal refresh so trip rooms stay in sync. */
+export function emitInquiryUpdated(inquiryId: string, reason: string = "updated") {
+  if (!io) return;
+  io.to(roomName(inquiryId)).emit("inquiry", { inquiryId, reason, at: new Date().toISOString() });
+}
+
 /** Broadcast typing list (all typers) to the inquiry room. */
 export async function emitChatPresence(inquiryId: string, _viewerId?: string) {
   if (!io) return;

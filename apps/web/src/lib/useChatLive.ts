@@ -26,6 +26,8 @@ type Options = {
   /** Fallback poll interval when socket is disconnected (ms). */
   intervalMs?: number;
   onThread?: (thread: ThreadMessage[]) => void;
+  /** Called when proposal/status changes so the trip room can reload. */
+  onInquiryUpdate?: (reason?: string) => void;
 };
 
 /**
@@ -38,11 +40,14 @@ export function useChatLive({
   enabled = true,
   intervalMs = 8000,
   onThread,
+  onInquiryUpdate,
 }: Options) {
   const [typing, setTyping] = useState<TypingUser[]>([]);
   const [live, setLive] = useState(false);
   const onThreadRef = useRef(onThread);
   onThreadRef.current = onThread;
+  const onInquiryUpdateRef = useRef(onInquiryUpdate);
+  onInquiryUpdateRef.current = onInquiryUpdate;
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSentTyping = useRef(false);
@@ -110,6 +115,12 @@ export function useChatLive({
     socket.on("read", (payload: { inquiryId?: string }) => {
       if (payload?.inquiryId !== inquiryId) return;
       void sync();
+    });
+
+    socket.on("inquiry", (payload: { inquiryId?: string; reason?: string }) => {
+      if (payload?.inquiryId !== inquiryId) return;
+      void sync();
+      onInquiryUpdateRef.current?.(payload.reason);
     });
 
     return () => {

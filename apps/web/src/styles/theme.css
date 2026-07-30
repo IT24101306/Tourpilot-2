@@ -3931,12 +3931,60 @@ a.agency-icon-btn {
   gap: 8px;
 }
 
+.module-negotiation .neg-revision-form select,
 .module-negotiation .neg-revision-form textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   font-family: inherit;
+  font-size: 0.92rem;
+  background: var(--white);
+}
+
+.module-negotiation .neg-revision-form textarea {
   resize: vertical;
+}
+
+.module-negotiation .neg-revision-target {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(180, 120, 20, 0.35);
+  background: linear-gradient(165deg, #fff8e8 0%, #fff 70%);
+}
+
+.module-negotiation .neg-revision-target strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.module-negotiation .neg-revision-target p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.module-negotiation .neg-revision-target span {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.module-negotiation .neg-proposal-card.is-revision-target {
+  border-color: rgba(180, 120, 20, 0.55);
+  box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.25);
+}
+
+.module-negotiation .neg-proposal-revision-badge {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #8a5a00;
+  background: rgba(245, 166, 35, 0.2);
 }
 
 .module-negotiation .neg-stepper {
@@ -7457,6 +7505,30 @@ a.agency-icon-btn {
   margin-left: 0;
   margin-right: 0;
   max-width: none;
+}
+
+.inquiry-reply-dialog .neg-revision-target {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(180, 120, 20, 0.35);
+  background: linear-gradient(165deg, #fff8e8 0%, #fff 70%);
+}
+
+.inquiry-reply-dialog .neg-revision-target strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.inquiry-reply-dialog .neg-revision-target p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.inquiry-reply-dialog .neg-revision-target span {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .gov-approval-actions {

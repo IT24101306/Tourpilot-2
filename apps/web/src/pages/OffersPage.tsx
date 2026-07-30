@@ -4,7 +4,6 @@ import { currentPath, loginPath } from "../utils/authRedirect";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { ModuleHeader } from "../components/module/ModuleHeader";
-import { CurrencyDisclaimerBanner } from "../components/currency/CurrencyDisclaimerBanner";
 import { EmptyState } from "../components/feedback/EmptyState";
 import {
   DiscoveryOfferCard,
@@ -55,7 +54,6 @@ export function OffersPage() {
 
   return (
     <section className="section module-shell module-discovery offers-page">
-      <CurrencyDisclaimerBanner />
       <ModuleHeader
         module="discovery"
         title="Limited offers"

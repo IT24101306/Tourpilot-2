@@ -93,6 +93,9 @@ export function ChatRoomPopup({
     onThread: (thread: ThreadMessage[]) => {
       setInquiry((prev) => (prev ? { ...prev, thread } : prev));
     },
+    onInquiryUpdate: () => {
+      void load({ quiet: true });
+    },
   });
 
   useEffect(() => {
@@ -138,7 +141,7 @@ export function ChatRoomPopup({
 
   if (!open || !inquiryId) return null;
 
-  const roomLink = fullRoomTo ?? (isAgencyViewer ? `/dashboard/agency/trip-room/${inquiryId}` : `/trips?room=${inquiryId}`);
+  const roomLink = fullRoomTo ?? (isAgencyViewer ? `/dashboard/agency/trip-room/${inquiryId}` : `/trips/${inquiryId}`);
 
   return createPortal(
     <div className="chat-room-popup" role="presentation" onClick={requestExit}>

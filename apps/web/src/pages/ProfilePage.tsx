@@ -114,7 +114,7 @@ export function ProfilePage() {
               slug: inquiry.handlerInfluencer.slug,
               href: inquiry.handlerInfluencer.slug
                 ? `/i/${inquiry.handlerInfluencer.slug}`
-                : `/trips?room=${inquiry.id}`,
+                : `/trips/${inquiry.id}`,
             });
           }
           continue;

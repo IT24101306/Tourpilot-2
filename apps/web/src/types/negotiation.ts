@@ -87,6 +87,8 @@ export type InquiryDetail = {
     createdAt: string;
   } | null;
   hasReview?: boolean;
+  pendingRevisionItemId?: string | null;
+  pendingRevisionLabel?: string | null;
 };
 
 export type NegotiationListItem = {
