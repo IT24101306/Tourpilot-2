@@ -15,7 +15,7 @@ import {
   sendPlatformEmail,
   verifySmtpConnection,
 } from "../../services/email.js";
-import { sanitizeRichHtml, stripRichHtml } from "@tourpilot/shared";
+import { sanitizeRichHtml, stripRichHtml, parsePricingPageContent } from "@tourpilot/shared";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
@@ -38,6 +38,11 @@ import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
 import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
 import { recordAuditEvent } from "../../services/auditLog.js";
 import { ensureDriverUserAccount } from "../../services/agencyDriverLink.js";
+import {
+  adminUpdateOwnerSubscription,
+  serializeUserSubscription,
+  type AdminSubscriptionPatch,
+} from "../../services/trial.js";
 
 export const adminRouter = Router();
 
@@ -377,7 +382,25 @@ adminRouter.get("/agencies", async (req, res, next) => {
       where,
       orderBy: { updatedAt: "desc" },
       include: {
-        owner: { select: { id: true, name: true, phone: true, email: true } },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            walletBalance: true,
+            trialEndsAt: true,
+            packageActivatedAt: true,
+            selectedPackageId: true,
+            selectedPackageName: true,
+            selectedPackagePriceLkr: true,
+            selectedPackagePriceLabel: true,
+            selectedPackageBilling: true,
+            subscriptionAutoRenew: true,
+            subscriptionPeriodEnd: true,
+            loginFeeLkr: true,
+          },
+        },
         _count: { select: { tours: true, inquiries: true, reviews: true } },
       },
     });
@@ -393,7 +416,13 @@ adminRouter.get("/agencies", async (req, res, next) => {
         rejectedAt: a.rejectedAt,
         avgRating: Number(a.avgRating),
         reviewCount: a.reviewCount,
-        owner: a.owner,
+        owner: {
+          id: a.owner.id,
+          name: a.owner.name,
+          phone: a.owner.phone,
+          email: a.owner.email,
+        },
+        subscription: serializeUserSubscription(a.owner),
         tourCount: a._count.tours,
         inquiryCount: a._count.inquiries,
         kyc: a.kyc,
@@ -655,6 +684,166 @@ adminRouter.patch("/agencies/:id/features", async (req, res, next) => {
       features: serializeAgencyFeatures(agency),
       sessionInactivityHours: agency.sessionInactivityHours,
       sessionInactivityMinutes: agency.sessionInactivityMinutes,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.get("/agencies/:id/subscription", async (req, res, next) => {
+  try {
+    const agency = await prisma.agency.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+            walletBalance: true,
+            trialEndsAt: true,
+            packageActivatedAt: true,
+            selectedPackageId: true,
+            selectedPackageName: true,
+            selectedPackagePriceLkr: true,
+            selectedPackagePriceLabel: true,
+            selectedPackageBilling: true,
+            subscriptionAutoRenew: true,
+            subscriptionPeriodEnd: true,
+            loginFeeLkr: true,
+          },
+        },
+      },
+    });
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const pricingPage = await prisma.cmsPage.findUnique({ where: { slug: "pricing" } });
+    const pricing = pricingPage ? parsePricingPageContent(pricingPage.blocks) : null;
+
+    res.json({
+      agency: {
+        id: agency.id,
+        name: agency.name,
+        slug: agency.slug,
+        status: agency.status,
+      },
+      owner: {
+        id: agency.owner.id,
+        name: agency.owner.name,
+        phone: agency.owner.phone,
+        email: agency.owner.email,
+      },
+      subscription: serializeUserSubscription(agency.owner),
+      catalogPackages: (pricing?.packages ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        priceLkr: Math.round(p.priceLkr ?? 0),
+        priceLabel: p.priceLabel || p.price || `LKR ${Math.round(p.priceLkr ?? 0).toLocaleString("en-LK")}`,
+        billing: p.billing || (p.buildYourself ? "CUSTOM" : "MONTHLY"),
+      })),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch("/agencies/:id/subscription", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        packageId: z.string().trim().min(1).max(120).nullable().optional(),
+        packageName: z.string().trim().min(1).max(200).nullable().optional(),
+        priceLkr: z.number().int().min(0).max(100_000_000).nullable().optional(),
+        priceLabel: z.string().trim().min(1).max(200).nullable().optional(),
+        billing: z.enum(["MONTHLY", "ONE_TIME", "PAYG", "CUSTOM"]).nullable().optional(),
+        trialEndsAt: z.string().min(1).nullable().optional(),
+        extendTrialDays: z.number().int().min(1).max(365).optional(),
+        restartTrial: z.boolean().optional(),
+        activate: z.boolean().optional(),
+        deactivate: z.boolean().optional(),
+        packageActivatedAt: z.string().min(1).nullable().optional(),
+        subscriptionPeriodEnd: z.string().min(1).nullable().optional(),
+        subscriptionAutoRenew: z.boolean().optional(),
+        setDefaultPeriodOnActivate: z.boolean().optional(),
+        applyTrialFeatures: z.boolean().optional(),
+      })
+      .refine(
+        (v) =>
+          Object.values(v).some((x) => x !== undefined) &&
+          !(v.activate && v.deactivate),
+        { message: "Provide at least one subscription field to update" }
+      )
+      .superRefine((v, ctx) => {
+        for (const key of ["trialEndsAt", "packageActivatedAt", "subscriptionPeriodEnd"] as const) {
+          const raw = v[key];
+          if (raw == null) continue;
+          if (Number.isNaN(new Date(raw).getTime())) {
+            ctx.addIssue({ code: "custom", message: `Invalid ${key}`, path: [key] });
+          }
+        }
+      })
+      .parse(req.body);
+
+    const agency = await prisma.agency.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        ownerId: true,
+        owner: {
+          select: {
+            id: true,
+            walletBalance: true,
+            trialEndsAt: true,
+            packageActivatedAt: true,
+            selectedPackageId: true,
+            selectedPackageName: true,
+            selectedPackagePriceLkr: true,
+            selectedPackagePriceLabel: true,
+            selectedPackageBilling: true,
+            subscriptionAutoRenew: true,
+            subscriptionPeriodEnd: true,
+            loginFeeLkr: true,
+          },
+        },
+      },
+    });
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const before = serializeUserSubscription(agency.owner);
+    const patch = body as AdminSubscriptionPatch;
+    const subscription = await adminUpdateOwnerSubscription(agency.ownerId, agency.id, patch);
+
+    const actions: string[] = [];
+    if (patch.restartTrial) actions.push("restarted trial");
+    if (patch.extendTrialDays) actions.push(`extended trial by ${patch.extendTrialDays}d`);
+    if (patch.activate) actions.push("activated package");
+    if (patch.deactivate) actions.push("cleared activation");
+    if (patch.packageId !== undefined || patch.packageName !== undefined) {
+      actions.push("updated package");
+    }
+    if (actions.length === 0) actions.push("updated subscription");
+
+    await recordAuditEvent({
+      actor: req.user!,
+      agencyId: agency.id,
+      entityType: "AGENCY_SUBSCRIPTION",
+      entityId: agency.id,
+      entityLabel: agency.name,
+      action: "UPDATE",
+      summary: `Subscription for agency "${agency.name}": ${actions.join(", ")}`,
+      before,
+      after: subscription,
+    });
+
+    res.json({
+      agency: { id: agency.id, name: agency.name },
+      subscription,
     });
   } catch (e) {
     next(e);

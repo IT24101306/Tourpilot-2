@@ -8,10 +8,42 @@ import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { RejectAgencyModal } from "../../components/admin/RejectAgencyModal";
 import { AgencyKycModal } from "../../components/admin/AgencyKycModal";
 import { AgencyFeaturesModal } from "../../components/admin/AgencyFeaturesModal";
-import type { AgencyKycRecord } from "@tourpilot/shared";
+import {
+  AgencySubscriptionModal,
+  type AdminAgencySubscription,
+  type AgencySubscriptionSavePayload,
+  type CatalogPackage,
+} from "../../components/admin/AgencySubscriptionModal";
+import type { AgencyKycRecord, PackageBilling, TrialStatusView } from "@tourpilot/shared";
 import type { AdminAgency } from "./types";
 
 const STATUSES = ["", "PENDING", "APPROVED", "SUSPENDED", "REJECTED"] as const;
+
+function subscriptionLabel(agency: AdminAgency): string {
+  const sub = agency.subscription;
+  if (!sub) return "—";
+  const t = sub.trial;
+  const pkg = t.packageName || t.packageId || "No package";
+  if (t.activatedAt) {
+    return `${pkg} · Active`;
+  }
+  if (t.active) {
+    return t.daysRemaining != null ? `${pkg} · Trial ${t.daysRemaining}d` : `${pkg} · Trial`;
+  }
+  if (t.expiredUnpaid) return `${pkg} · Expired`;
+  return pkg;
+}
+
+function asSubscription(sub: AdminAgency["subscription"]): AdminAgencySubscription | null {
+  if (!sub) return null;
+  return {
+    ...sub,
+    trial: {
+      ...sub.trial,
+      billing: (sub.trial.billing as PackageBilling | null) ?? null,
+    } as TrialStatusView,
+  };
+}
 
 export function AdminAgenciesPage() {
   const { token } = useAuth();
@@ -27,6 +59,11 @@ export function AdminAgenciesPage() {
   );
   const [featuresAgency, setFeaturesAgency] = useState<AdminAgency | null>(null);
   const [savingFeatures, setSavingFeatures] = useState(false);
+  const [subscriptionAgency, setSubscriptionAgency] = useState<AdminAgency | null>(null);
+  const [subscriptionDetail, setSubscriptionDetail] = useState<AdminAgencySubscription | null>(null);
+  const [catalogPackages, setCatalogPackages] = useState<CatalogPackage[]>([]);
+  const [savingSubscription, setSavingSubscription] = useState(false);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -40,6 +77,26 @@ export function AdminAgenciesPage() {
   useEffect(() => {
     load().catch(console.error);
   }, [load]);
+
+  async function openSubscription(agency: AdminAgency) {
+    if (!token) return;
+    setSubscriptionAgency(agency);
+    setLoadingSubscription(true);
+    setSubscriptionDetail(asSubscription(agency.subscription));
+    try {
+      const data = await api<{
+        subscription: AdminAgencySubscription;
+        catalogPackages: CatalogPackage[];
+      }>(`/admin/agencies/${agency.id}/subscription`, { token });
+      setSubscriptionDetail(data.subscription);
+      setCatalogPackages(data.catalogPackages);
+    } catch {
+      setMsg("Could not load subscription details.");
+      setSubscriptionAgency(null);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  }
 
   function setStatus(agency: AdminAgency, status: string) {
     if (!token) return;
@@ -148,9 +205,76 @@ export function AdminAgenciesPage() {
     });
   }
 
+  function saveSubscription(payload: AgencySubscriptionSavePayload) {
+    if (!token || !subscriptionAgency) return;
+    const action = payload.activate
+      ? "Activate package"
+      : payload.deactivate
+        ? "Clear activation"
+        : payload.restartTrial
+          ? "Restart trial"
+          : payload.extendTrialDays
+            ? `Extend trial by ${payload.extendTrialDays} days`
+            : "Save subscription";
+    requestConfirm({
+      title: `${action}?`,
+      description: "This updates the agency owner's plan, trial, and activation status.",
+      confirmLabel: action,
+      variant: payload.deactivate ? "danger" : "default",
+      summary: [
+        { label: "Agency", value: subscriptionAgency.name },
+        { label: "Package", value: payload.packageName || payload.packageId || "—" },
+        {
+          label: "Price",
+          value: payload.priceLabel || (payload.priceLkr != null ? String(payload.priceLkr) : "—"),
+        },
+        { label: "Billing", value: payload.billing || "—" },
+        {
+          label: "Trial end",
+          value: payload.trialEndsAt
+            ? new Date(payload.trialEndsAt).toLocaleDateString()
+            : "—",
+        },
+        {
+          label: "Period end",
+          value: payload.subscriptionPeriodEnd
+            ? new Date(payload.subscriptionPeriodEnd).toLocaleDateString()
+            : "—",
+        },
+      ],
+      onConfirm: async () => {
+        setSavingSubscription(true);
+        try {
+          const res = await api<{ subscription: AdminAgencySubscription }>(
+            `/admin/agencies/${subscriptionAgency.id}/subscription`,
+            {
+              method: "PATCH",
+              token,
+              body: JSON.stringify(payload),
+            }
+          );
+          setSubscriptionDetail(res.subscription);
+          setMsg(`Subscription updated for ${subscriptionAgency.name}.`);
+          await load();
+          if (payload.activate || payload.deactivate || payload.restartTrial) {
+            setSubscriptionAgency(null);
+          }
+        } catch {
+          setMsg("Could not update subscription.");
+        } finally {
+          setSavingSubscription(false);
+        }
+      },
+    });
+  }
+
   return (
     <div className="module-shell module-governance">
-      <ModuleHeader module="governance" title="Agencies" subtitle="Full marketplace operator control." />
+      <ModuleHeader
+        module="governance"
+        title="Agencies"
+        subtitle="Approve agencies, control features, and manage subscriptions one by one."
+      />
 
       <div className="gov-toolbar">
         <select
@@ -177,6 +301,7 @@ export function AdminAgenciesPage() {
               <tr>
                 <th>Agency</th>
                 <th>Owner</th>
+                <th>Subscription</th>
                 <th>Status</th>
                 <th>Tours</th>
                 <th>Actions</th>
@@ -199,12 +324,22 @@ export function AdminAgenciesPage() {
                     <span className="muted">{a.owner.phone}</span>
                   </td>
                   <td>
+                    <span className="gov-subscription-cell">{subscriptionLabel(a)}</span>
+                  </td>
+                  <td>
                     <span className={`gov-status-badge gov-status-badge--${a.status.toLowerCase()}`}>
                       {a.status}
                     </span>
                   </td>
                   <td>{a.tourCount}</td>
                   <td className="gov-table-actions">
+                    <button
+                      type="button"
+                      className="btn btn-teal btn-nav"
+                      onClick={() => void openSubscription(a)}
+                    >
+                      Subscription
+                    </button>
                     <button
                       type="button"
                       className="btn btn-primary btn-nav"
@@ -309,6 +444,19 @@ export function AdminAgenciesPage() {
         }
         onClose={() => setFeaturesAgency(null)}
         onSave={saveFeatures}
+      />
+
+      <AgencySubscriptionModal
+        agencyName={subscriptionAgency?.name ?? ""}
+        open={!!subscriptionAgency}
+        loading={savingSubscription || loadingSubscription}
+        subscription={subscriptionDetail}
+        catalogPackages={catalogPackages}
+        onClose={() => {
+          setSubscriptionAgency(null);
+          setSubscriptionDetail(null);
+        }}
+        onSave={saveSubscription}
       />
     </div>
   );

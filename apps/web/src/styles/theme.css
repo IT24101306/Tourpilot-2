@@ -7707,6 +7707,80 @@ a.agency-icon-btn {
   padding: 22px 22px 18px;
 }
 
+.gov-subscription-modal {
+  width: min(560px, 100%);
+  max-height: min(90vh, 820px);
+  overflow-y: auto;
+}
+
+.gov-subscription-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f3f7f5;
+  border: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.gov-subscription-form label,
+.gov-subscription-quick label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.gov-subscription-form input,
+.gov-subscription-quick input,
+.gov-subscription-form select {
+  font: inherit;
+  font-weight: 500;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.gov-subscription-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.gov-subscription-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  font-weight: 550 !important;
+}
+
+.gov-subscription-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin: 16px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.gov-subscription-cell {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 560px) {
+  .gov-subscription-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .gov-features-modal__head {
   margin-bottom: 16px;
   padding-bottom: 12px;

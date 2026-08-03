@@ -103,15 +103,20 @@ export function RichTextEditor({
   const autoId = useId();
   const editorId = id ?? autoId;
   const ref = useRef<HTMLDivElement>(null);
-  const lastEmitted = useRef(value);
+  /** Tracks last HTML we pushed to the DOM / emitted. null = not hydrated yet. */
+  const lastEmitted = useRef<string | null>(null);
   const minHeight = Math.max(72, rows * 24);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const next = value || "";
-    if (next === lastEmitted.current) return;
-    if (el.innerHTML === next) return;
+    // Always hydrate on first mount (DOM starts empty even when value is set).
+    if (lastEmitted.current !== null && next === lastEmitted.current) return;
+    if (el.innerHTML === next) {
+      lastEmitted.current = next;
+      return;
+    }
     el.innerHTML = next;
     lastEmitted.current = next;
   }, [value]);

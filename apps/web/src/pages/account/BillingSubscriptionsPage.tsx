@@ -143,7 +143,13 @@ export function BillingSubscriptionsPage() {
       </nav>
 
       <div className="account-billing-title-row">
-        <h1 className="account-billing-title">Subscriptions</h1>
+        <div>
+          <h1 className="account-billing-title">Manage subscription</h1>
+          <p className="account-billing-lead">
+            Review your plan, top up wallet credits, and renew when your trial or billing period
+            ends.
+          </p>
+        </div>
         <div className="account-billing-balance-pill" title="Platform wallet credits">
           Credits balance: <strong>{formatCredits(walletBalance)}</strong>
         </div>
@@ -154,7 +160,11 @@ export function BillingSubscriptionsPage() {
 
       {showWalletBox && token ? (
         <div className="account-billing-card account-billing-wallet-box">
-          <h2 className="account-billing-card__heading">Wallet</h2>
+          <p className="account-billing-card__eyebrow">Wallet</p>
+          <h2 className="account-billing-card__heading">Credits &amp; top up</h2>
+          <p className="account-billing-card__lead">
+            Use credits for platform login fees and account activity. Top up anytime.
+          </p>
           <WalletTopupPanel
             balance={walletBalance}
             onTopup={handleTopup}
@@ -165,6 +175,12 @@ export function BillingSubscriptionsPage() {
       ) : null}
 
       <div className="account-billing-card">
+        <p className="account-billing-card__eyebrow">Subscription</p>
+        <h2 className="account-billing-card__heading">Your package</h2>
+        <p className="account-billing-card__lead">
+          Activate or renew through the administrator until online payments are live.
+        </p>
+
         <label className="account-billing-search">
           <span className="sr-only">Search subscriptions</span>
           <input
@@ -185,7 +201,7 @@ export function BillingSubscriptionsPage() {
         ) : (
           <dl className="account-billing-fields">
             <div>
-              <dt>Subscription</dt>
+              <dt>Package</dt>
               <dd>
                 <strong>{name}</strong>
                 {trial.packageId ? (
@@ -294,7 +310,10 @@ export function BillingSubscriptionCheckoutPage() {
         <span aria-hidden="true">/</span>
         <span>Checkout</span>
       </nav>
-      <h1 className="account-billing-title">Activate package</h1>
+      <h1 className="account-billing-title">Activate your package</h1>
+      <p className="account-billing-lead">
+        Online payments are not available yet. Contact the administrator to activate or renew.
+      </p>
       <div className="account-billing-card">
         <PaymentGatewayPendingNotice
           packageName={trial?.packageName}

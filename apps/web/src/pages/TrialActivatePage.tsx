@@ -28,7 +28,11 @@ export function TrialActivatePage() {
 
   if (!token) {
     return (
-      <AuthLayout title="Activate package" subtitle="Log in to continue after your trial.">
+      <AuthLayout
+        fullScreen
+        title="Activate package"
+        subtitle="Log in to continue after your trial."
+      >
         <p className="muted">
           <Link to="/login">Log in</Link> to activate your package.
         </p>
@@ -38,6 +42,7 @@ export function TrialActivatePage() {
 
   return (
     <AuthLayout
+      fullScreen
       title="Activate your package"
       subtitle={
         trial?.expiredUnpaid
@@ -45,12 +50,10 @@ export function TrialActivatePage() {
           : "Online payments are not available yet — contact the administrator to activate."
       }
     >
-      <div className="gov-form-card" style={{ marginBottom: 0 }}>
-        <PaymentGatewayPendingNotice
-          packageName={summary?.name}
-          amountLabel={summary?.label}
-        />
-      </div>
+      <PaymentGatewayPendingNotice
+        packageName={summary?.name}
+        amountLabel={summary?.label}
+      />
 
       <p className="muted auth-footnote">
         Already activated? <Link to="/dashboard/agency">Open dashboard</Link>

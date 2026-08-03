@@ -36,7 +36,13 @@ export function BillingPaymentMethodsPage() {
       </nav>
 
       <div className="account-billing-title-row">
-        <h1 className="account-billing-title">Payment methods</h1>
+        <div>
+          <h1 className="account-billing-title">Payment methods</h1>
+          <p className="account-billing-lead">
+            TourPilot Credits are the default way to pay platform fees. Card checkout will appear
+            here when online payments go live.
+          </p>
+        </div>
         <div className="account-billing-balance-pill" title="Platform wallet credits">
           Credits balance: <strong>{formatCredits(balance)}</strong>
         </div>
@@ -52,6 +58,7 @@ export function BillingPaymentMethodsPage() {
       </div>
 
       <div className="account-billing-card">
+        <p className="account-billing-card__eyebrow">Methods</p>
         <h2 className="account-billing-card__heading">Payment method list</h2>
         <ul className="account-billing-methods">
           <li className="account-billing-method">
@@ -71,8 +78,10 @@ export function BillingPaymentMethodsPage() {
       </div>
 
       {token ? (
-        <div className="account-billing-card">
+        <div className="account-billing-card account-billing-wallet-box">
+          <p className="account-billing-card__eyebrow">Wallet</p>
           <h2 className="account-billing-card__heading">Add credits</h2>
+          <p className="account-billing-card__lead">Top up your balance for login fees and account use.</p>
           <WalletTopupPanel balance={balance} onTopup={handleTopup} emphasize />
         </div>
       ) : null}
