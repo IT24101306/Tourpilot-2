@@ -6,6 +6,7 @@ build/
 .env.local.docker
 *.log
 .DS_Store
+*.tsbuildinfo
 .expo/
 apps/mobile/.expo/
 apps/api/uploads/*

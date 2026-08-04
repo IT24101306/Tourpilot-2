@@ -145,14 +145,16 @@ jobs:
             DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
             if [ -z "$DEPLOY_DIR" ]; then DEPLOY_DIR="/var/www/tourpilot"; fi
             cd "$DEPLOY_DIR"
-            git pull --ff-only || true
+            # Discard local junk (lockfiles/tsbuildinfo) so pull cannot abort.
+            git fetch origin --prune
+            git reset --hard origin/main
+            git clean -fd -e .env -e .env.local -e '*.pem' -e '*.key'
             export DEPLOY_PATH="$DEPLOY_DIR"
             export GHCR_PULL_USER="${{ secrets.GHCR_PULL_USER }}"
             export GHCR_PULL_TOKEN="${{ secrets.GHCR_PULL_TOKEN }}"
             export GITHUB_REPOSITORY_OWNER="${{ github.repository_owner }}"
-            if [ -f scripts/ci-deploy.sh ]; then
-              bash scripts/ci-deploy.sh prod "${{ needs.build-and-push.outputs.sha }}"
-            else
-              echo "scripts/ci-deploy.sh missing — pull latest main onto the server first" >&2
+            if [ ! -f scripts/ci-deploy.sh ]; then
+              echo "scripts/ci-deploy.sh still missing after reset to origin/main" >&2
               exit 1
             fi
+            bash scripts/ci-deploy.sh prod "${{ needs.build-and-push.outputs.sha }}"

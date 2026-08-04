@@ -26,12 +26,14 @@ fi
 
 if [[ "$ENV_NAME" == "prod" ]]; then
   DEPLOY_DIR="${DEPLOY_PATH:-/var/www/tourpilot}"
+  GIT_REF="${DEPLOY_GIT_REF:-main}"
   API_TAG="$SHA"
   WEB_TAG="$SHA"
   BUILD_SHA="$SHA"
   COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-tourpilot}"
 else
   DEPLOY_DIR="${DEV_DEPLOY_PATH:-/var/www/tourpilot-dev}"
+  GIT_REF="${DEPLOY_GIT_REF:-development}"
   API_TAG="dev-$SHA"
   WEB_TAG="dev-$SHA"
   BUILD_SHA="dev-$SHA"
@@ -39,7 +41,22 @@ else
 fi
 
 cd "$DEPLOY_DIR"
-git pull --ff-only || true
+
+# Deploy dirs must track origin cleanly. Local edits (lockfiles, tsbuildinfo, etc.)
+# must not block pulls — .env stays safe if it is gitignored/untracked.
+sync_deploy_tree() {
+  if [[ ! -d .git ]]; then
+    echo "No git repo in $DEPLOY_DIR — skipping tree sync" >&2
+    return 0
+  fi
+  echo "==> Syncing $DEPLOY_DIR to origin/${GIT_REF}"
+  git remote update origin --prune >/dev/null 2>&1 || git fetch origin --prune
+  # Drop local modifications that block merge (compose/.env are not overwritten if ignored).
+  git reset --hard "origin/${GIT_REF}"
+  git clean -fd -e .env -e .env.local -e '*.pem' -e '*.key'
+}
+
+sync_deploy_tree
 
 export COMPOSE_PROJECT_NAME
 export API_IMAGE="ghcr.io/${OWNER}/tourpilot-api:${API_TAG}"

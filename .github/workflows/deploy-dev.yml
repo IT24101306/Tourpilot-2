@@ -142,14 +142,15 @@ jobs:
             DEPLOY_DIR="${{ secrets.DEV_DEPLOY_PATH }}"
             if [ -z "$DEPLOY_DIR" ]; then DEPLOY_DIR="/var/www/tourpilot-dev"; fi
             cd "$DEPLOY_DIR"
-            git pull --ff-only || true
+            git fetch origin --prune
+            git reset --hard origin/development
+            git clean -fd -e .env -e .env.local -e '*.pem' -e '*.key'
             export DEV_DEPLOY_PATH="$DEPLOY_DIR"
             export GHCR_PULL_USER="${{ secrets.GHCR_PULL_USER }}"
             export GHCR_PULL_TOKEN="${{ secrets.GHCR_PULL_TOKEN }}"
             export GITHUB_REPOSITORY_OWNER="${{ github.repository_owner }}"
-            if [ -f scripts/ci-deploy.sh ]; then
-              bash scripts/ci-deploy.sh dev "${{ needs.build-and-push.outputs.sha }}"
-            else
-              echo "scripts/ci-deploy.sh missing — pull latest development onto the server first" >&2
+            if [ ! -f scripts/ci-deploy.sh ]; then
+              echo "scripts/ci-deploy.sh still missing after reset to origin/development" >&2
               exit 1
             fi
+            bash scripts/ci-deploy.sh dev "${{ needs.build-and-push.outputs.sha }}"
