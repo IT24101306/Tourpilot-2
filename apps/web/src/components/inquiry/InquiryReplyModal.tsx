@@ -8,6 +8,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../confirm/ConfirmActionContext";
 import { newId } from "../../lib/newId";
 import { TourFormModal } from "../tour/TourFormModal";
+import { ChatAssistBar } from "../smart/ChatAssistBar";
+import { CurrencyClarityNote } from "../smart/CurrencyClarityNote";
 import {
   buildItineraryFromTourForm,
   defaultTourForm,
@@ -405,6 +407,15 @@ export function InquiryReplyModal({
               <form onSubmit={submit}>
                 <div className="entity-form-grid">
                   <ModalField label="Message to the tourist" full>
+                    {inquiryId ? (
+                      <ChatAssistBar
+                        inquiryId={inquiryId}
+                        onInsertDraft={(text) => setMessage(text)}
+                        showProposalIntro
+                        onUseProposalIntro={(text) => setMessage(text)}
+                      />
+                    ) : null}
+                    <CurrencyClarityNote />
                     <textarea
                       rows={4}
                       value={message}

@@ -42,6 +42,8 @@ import {
   type GalleryEntitySnapshot,
 } from "../components/display/displayTypes";
 import { DashboardModal } from "../components/DashboardModal";
+import { TrustBadgeRow } from "../components/smart/TrustBadgeRow";
+import { CurrencyClarityNote } from "../components/smart/CurrencyClarityNote";
 import "../styles/agency-display.css";
 
 type Tour = {
@@ -85,6 +87,12 @@ type Agency = {
   };
   loyaltyOffers?: DiscoveryOffer[];
   features?: AgencyPublicFeatures;
+  trustBadges?: Array<{
+    key: string;
+    label: string;
+    shortLabel: string;
+    description: string;
+  }>;
 };
 
 function splitGalleryColumns(items: GalleryItem[]) {
@@ -464,6 +472,13 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
             {content.heroSubheadline && (
               <p className="agency-hero-banner__lead">{content.heroSubheadline}</p>
             )}
+            {agency.trustBadges && agency.trustBadges.length > 0 ? (
+              <TrustBadgeRow
+                badges={agency.trustBadges.map((b) => ({ ...b, earned: true }))}
+                compact
+              />
+            ) : null}
+            <CurrencyClarityNote className="agency-hero-currency-note" />
           </div>
 
           <div className="agency-hero-banner__actions">

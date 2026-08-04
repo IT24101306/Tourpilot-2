@@ -8,6 +8,7 @@ import {
   toStoredPhone,
 } from "@tourpilot/shared";
 import { hashPassword } from "../src/services/password.js";
+import { seedLegalDocuments } from "./seed-legal.js";
 
 const prisma = new PrismaClient();
 
@@ -507,27 +508,7 @@ async function main() {
     },
   });
 
-  await prisma.cmsPage.upsert({
-    where: { slug: "terms" },
-    update: {},
-    create: {
-      slug: "terms",
-      title: "Terms & Conditions",
-      isPublished: true,
-      blocks: [
-        {
-          type: "section",
-          heading: "1. Using TourPilot",
-          body: "TourPilot connects travelers with licensed tour operators in Sri Lanka.",
-        },
-        {
-          type: "section",
-          heading: "2. Contact",
-          body: "Questions: support@srilankatourpilot.com",
-        },
-      ],
-    },
-  });
+  await seedLegalDocuments(prisma);
 
   console.log("Seed complete:", {
     admin: admin.phone,

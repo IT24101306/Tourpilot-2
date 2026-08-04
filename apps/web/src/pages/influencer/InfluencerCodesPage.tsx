@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { InfluencerTourDetailModal } from "../../components/influencer/InfluencerTourDetailModal";
 import { ReferralCodeCard } from "../../components/influencer/ReferralCodeCard";
+import { InfluencerKitCard } from "../../components/influencer/InfluencerKitCard";
 import { useInfluencerDashboard } from "./types";
 import type { InfluencerTour } from "./types";
 
@@ -37,6 +38,12 @@ export function InfluencerCodesPage() {
           New code
         </button>
       </ModuleHeader>
+
+      <InfluencerKitCard
+        displayName={data?.profile?.name || "Creator"}
+        codes={codes}
+        onCopy={copyText}
+      />
 
       <div className="partner-toolbar">
         <label className="partner-filter">

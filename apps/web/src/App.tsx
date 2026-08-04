@@ -250,7 +250,8 @@ function AppShell() {
           <Route path="register/pro" element={<RegisterProPage />} />
           <Route path="register-pro" element={<RegisterProPage />} />
           <Route path="billing/activate" element={<TrialActivatePage />} />
-          <Route path="terms" element={<TermsPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="terms/:docSlug" element={<TermsPage />} />
           <Route path="agencies/:slug" element={<AgencyDetailPage />} />
           <Route path="agencies/:slug/build-my-trip" element={<BuildMyTripLegacyRedirect />} />
           <Route path="i/:slug" element={<InfluencerDetailPage />} />

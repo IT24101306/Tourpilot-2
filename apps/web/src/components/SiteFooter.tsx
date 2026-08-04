@@ -32,6 +32,7 @@ export function SiteFooter() {
         <nav className="site-footer__nav" aria-label="Footer">
           <Link to="/offers">Offers</Link>
           <Link to="/terms">Terms</Link>
+          <Link to="/terms/privacy-policy">Privacy</Link>
           {user ? (
             <>
               <Link to="/profile">Profile</Link>

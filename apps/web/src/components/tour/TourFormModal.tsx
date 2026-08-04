@@ -7,6 +7,7 @@ import type { TourOfferLinkState } from "../../lib/tourOfferLink";
 import { computeTourFormPricing } from "../../lib/tourFormPricing";
 import { TourOfferLinkSection } from "./TourOfferLinkSection";
 import { TourPackagePricingNotice } from "../itinerary/TourPackagePricingNotice";
+import { MarginCoachPanel } from "../smart/MarginCoachPanel";
 import { RichTextEditor } from "../richtext/RichTextEditor";
 import {
   computeMissingRequirements,
@@ -510,6 +511,13 @@ export function TourFormModal({
 
           <div className="tour-pricing-summary" aria-label="Itinerary pricing breakdown">
             <h4>Pricing breakdown</h4>
+            <MarginCoachPanel
+              costLkr={pricing.catalogSubtotal}
+              sellingLkr={pricing.sellingTotal}
+              commissionLkr={pricing.commissionLkr}
+              listedPriceLkr={pricing.listedPriceLkr}
+              onRequestCount={pricing.onRequestEntityCount}
+            />
             <table className="tour-itinerary-table tour-itinerary-table--summary">
               <thead>
                 <tr>

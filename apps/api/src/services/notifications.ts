@@ -125,6 +125,9 @@ export async function notifyInquiryCreated(inquiryId: string) {
     email: inquiry.agency.owner.email ?? inquiry.agency.contactEmail,
     emailContent: email,
   });
+
+  const { scheduleAgencyReplyNudge } = await import("./followUps.js");
+  void scheduleAgencyReplyNudge(inquiryId).catch(console.error);
 }
 
 export async function notifyInquiryChatMessage(
@@ -239,6 +242,9 @@ export async function notifyProposalSent(inquiryId: string) {
     email: inquiry.tourist.email,
     emailContent: email,
   });
+
+  const { scheduleProposalFollowUps } = await import("./followUps.js");
+  void scheduleProposalFollowUps(inquiryId).catch(console.error);
 }
 
 export async function notifyInquiryStatusChange(
@@ -309,6 +315,15 @@ export async function notifyInquiryStatusChange(
     email: inquiry.tourist.email,
     emailContent: touristEmail,
   });
+
+  if (status === "ACCEPTED") {
+    const { schedulePreTripReminder, cancelFollowUpsForInquiry } = await import("./followUps.js");
+    void cancelFollowUpsForInquiry(inquiryId, [
+      "PROPOSAL_NUDGE_TOURIST",
+      "AGENCY_REPLY_NUDGE",
+    ]).catch(console.error);
+    void schedulePreTripReminder(inquiryId, inquiry.startDate).catch(console.error);
+  }
 }
 
 export async function notifyInquiryExpired(inquiryId: string) {

@@ -1,0 +1,128 @@
+Sri Lanka Tour Pilot Cancellation & Refund Policy
+1. Overview
+
+Sri Lanka Tour Pilot is a travel marketplace platform that connects travelers with registered Tour Agents who provide tour packages, excursions, transportation, accommodation arrangements, activities, and other travel-related services.
+
+Sri Lanka Tour Pilot does not directly operate all tours. Each Tour Agent is responsible for delivering the services listed on the platform. Therefore, cancellation, refund, and modification conditions may vary depending on the Tour Agent and the selected tour package.
+
+The applicable cancellation and refund policy will always be displayed before the traveler confirms a booking.
+
+2. Cancellation Policy
+
+Cancellation terms depend on the Tour Agent’s selected cancellation policy for each tour package.
+
+Before confirming a booking, travelers should review:
+
+✅ Cancellation deadline
+✅ Refund eligibility
+✅ Advance payment requirements
+✅ Non-refundable charges
+✅ Special conditions related to transportation, accommodation, activities, or permits
+
+Once a booking is confirmed, the cancellation policy applicable to that booking will apply.
+
+3. Standard Refund Guidelines
+
+Unless otherwise specified by the Tour Agent, the following standard refund policy applies:
+
+Cancellation Period Before Tour Start Date	Refund Amount
+More than 30 days before departure	100% refund
+15–30 days before departure	75% refund
+7–14 days before departure	50% refund
+Less than 7 days before departure	No refund
+No-show by traveler	No refund
+
+Note: Any non-refundable costs already committed by the Tour Agent, including hotel reservations, entrance tickets, transport bookings, permits, or third-party service fees, may be deducted from the refund amount.
+
+4. Non-Refundable Bookings
+
+Some tours, activities, special offers, or customized travel packages may be marked as Non-Refundable.
+
+For non-refundable bookings:
+
+Cancellation will not qualify for a refund.
+Date changes may not be possible.
+Any exceptions will be considered at the discretion of the Tour Agent.
+5. Tour Date Changes & Modifications
+
+Travelers may request changes to:
+
+Tour dates
+Number of travelers
+Pickup locations
+Activities included
+Accommodation preferences
+
+Changes are subject to:
+
+Tour Agent availability
+Supplier availability
+Additional costs, if applicable
+The original booking conditions
+
+Sri Lanka Tour Pilot cannot guarantee changes after confirmation.
+
+6. No-Show Policy
+
+If a traveler fails to arrive at the agreed pickup location or does not participate in the booked tour:
+
+The booking will be considered a No-Show.
+No refund will be provided.
+The Tour Agent may retain the full booking amount to cover committed operational costs.
+7. Tour Agent Cancellation
+
+If a Tour Agent cancels a confirmed booking due to reasons within their control:
+
+The traveler may receive:
+
+✅ Full refund of the amount paid, or
+✅ An alternative tour option of equal value, subject to traveler approval.
+
+If cancellation occurs due to unavoidable circumstances such as:
+
+Extreme weather conditions
+Government restrictions
+Natural disasters
+Safety-related concerns
+Force majeure events
+
+Refunds or alternative arrangements will be handled based on the circumstances and supplier agreements.
+
+8. Refund Processing
+
+Eligible refunds will be processed through Sri Lanka Tour Pilot according to the applicable refund decision.
+
+Refund processing time may depend on:
+
+Payment gateway processing times
+Banking institutions
+Currency conversion procedures
+Verification requirements
+
+Any applicable transaction fees or non-recoverable charges may be deducted where permitted.
+
+9. Traveler Responsibilities
+
+Travelers are responsible for:
+
+Providing accurate booking information
+Arriving on time at pickup locations
+Carrying required travel documents
+Following safety instructions provided by Tour Agents
+Understanding the cancellation conditions before booking
+10. Dispute Resolution
+
+In case of a dispute between a traveler and a Tour Agent:
+
+Sri Lanka Tour Pilot will facilitate communication between both parties.
+The platform will review booking details, communication records, and applicable policies.
+Final resolution will be based on the agreed booking terms and evidence provided.
+
+Sri Lanka Tour Pilot acts as a marketplace facilitator and aims to ensure fair treatment for both travelers and Tour Agents.
+
+Summary for Travelers
+
+Book with confidence through Sri Lanka Tour Pilot.
+Each tour is operated by verified Tour Agents, and cancellation conditions are clearly displayed before booking. Always review the refund terms before confirming your journey.
+
+This structure also fits well for your Travel Tour Management System / marketplace model, because it separates platform responsibility, Tour Agent responsibility, and traveler protection similar to major travel marketplaces.

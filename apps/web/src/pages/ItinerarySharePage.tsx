@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useFormatMoney } from "../context/CurrencyContext";
 import { ItineraryDreamView } from "../components/itinerary/ItineraryDreamView";
+import { ShareableTripCard } from "../components/share/ShareableTripCard";
+import { CurrencyClarityNote } from "../components/smart/CurrencyClarityNote";
 import type { ItineraryView } from "../types/itinerary";
 
 export function ItinerarySharePage() {
   const { token } = useAuth();
+  const { format } = useFormatMoney();
   const { shareToken } = useParams<{ shareToken: string }>();
   const [itin, setItin] = useState<ItineraryView | null>(null);
   const [error, setError] = useState("");
@@ -66,6 +70,11 @@ export function ItinerarySharePage() {
     );
   }
 
+  const shareUrl =
+    typeof window !== "undefined" && shareToken
+      ? `${window.location.origin}/itinerary/${shareToken}`
+      : `/itinerary/${shareToken}`;
+
   return (
     <>
       {status && (
@@ -73,6 +82,16 @@ export function ItinerarySharePage() {
           {status}
         </div>
       )}
+      <section className="section shareable-trip-card-wrap">
+        <CurrencyClarityNote />
+        <ShareableTripCard
+          title={itin.title || "Trip itinerary"}
+          agencyName={itin.inquiry?.agency?.name}
+          days={itin.days?.length}
+          priceLabel={itin.grandMax > 0 ? format(itin.grandMax) : undefined}
+          shareUrl={shareUrl}
+        />
+      </section>
       <ItineraryDreamView
         itinerary={itin}
         shareToken={shareToken}

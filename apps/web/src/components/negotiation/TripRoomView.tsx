@@ -20,6 +20,10 @@ import { formatInquiryStatus, inquiryStatusClass } from "../../pages/agency/type
 import { AgencyInvoiceModal } from "../billing/AgencyInvoiceModal";
 import { TouristInvoiceModal } from "../billing/TouristInvoiceModal";
 import { useChatLive } from "../../lib/useChatLive";
+import { ChatAssistBar } from "../smart/ChatAssistBar";
+import { PipelineNextBanner } from "../smart/PipelineNextBanner";
+import { TripCompanion } from "../tourist/TripCompanion";
+import { CurrencyClarityNote } from "../smart/CurrencyClarityNote";
 
 const RESPONDABLE = new Set(["SENT_TO_TOURIST", "TOURIST_VIEWED"]);
 
@@ -462,12 +466,34 @@ export function TripRoomView({
               }
             />
             <GuidedStepper status={inquiry.status} />
+            <PipelineNextBanner status={inquiry.status} role="TOURIST" />
+            <TripCompanion
+              status={inquiry.status}
+              partnerName={
+                inquiry.whiteLabel && inquiry.handlerInfluencer?.name
+                  ? inquiry.handlerInfluencer.name
+                  : inquiry.agency?.name
+              }
+              startDate={inquiry.startDate}
+              days={(inquiry.proposal?.items?.[0]?.itinerary?.days ?? []).map((d) => ({
+                dayNumber: d.dayNumber,
+                title: d.title,
+                items: (d.lineItems ?? []).map((li) => ({ label: li.label })),
+              }))}
+            />
           </>
         ) : role === "ADMIN" ? (
           <NegotiationStepper status={inquiry.status} />
         ) : (
-          <NegotiationStepper status={inquiry.status} />
+          <>
+            <NegotiationStepper status={inquiry.status} />
+            {(role === "AGENCY" || role === "INFLUENCER") && (
+              <PipelineNextBanner status={inquiry.status} role="AGENCY" />
+            )}
+          </>
         )}
+
+        <CurrencyClarityNote className="trip-room-currency-note" />
 
         <div className="neg-trip-meta">
           <span className={`agency-status ${inquiryStatusClass(inquiry.status)}`}>
@@ -615,6 +641,13 @@ export function TripRoomView({
               <label htmlFor="tripChatMessage">
                 {role === "INFLUENCER" ? "Message traveler" : "Send a message"}
               </label>
+              <ChatAssistBar
+                inquiryId={inquiryId}
+                onInsertDraft={(text) => {
+                  setChatMessage(text);
+                  onComposeChange(text);
+                }}
+              />
               <textarea
                 id="tripChatMessage"
                 rows={3}

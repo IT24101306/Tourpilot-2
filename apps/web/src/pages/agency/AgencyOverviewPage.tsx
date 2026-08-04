@@ -6,6 +6,7 @@ import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { OpsMetricStrip } from "../../components/module/OpsMetricStrip";
 import { OperationsQueue } from "../../components/module/OperationsQueue";
 import { EmptyState } from "../../components/feedback/EmptyState";
+import { AgencyTrustBadgesPanel } from "../../components/smart/AgencyTrustBadgesPanel";
 import { groupByQueue, opsMetrics } from "./operationsUtils";
 import { AgencyInquiry, AgencyTour } from "./types";
 
@@ -54,6 +55,8 @@ export function AgencyOverviewPage() {
           </Link>
         )}
       </ModuleHeader>
+
+      <AgencyTrustBadgesPanel />
 
       <OpsMetricStrip
         className="ops-metric-strip--overview"

@@ -1,0 +1,131 @@
+Welcome to SriLankaTourPilot.com ("Sri Lanka Tour Pilot", "we", "our", or "us"). We are committed to protecting your privacy and ensuring that your personal information is handled securely and responsibly.
+
+This Privacy Policy explains how Sri Lanka Tour Pilot collects, uses, stores, shares, and protects your personal information when you use our website, mobile applications, or any related services (collectively, the "Platform").
+
+By accessing or using the Platform, you agree to the practices described in this Privacy Policy.
+
+1. About Sri Lanka Tour Pilot
+
+Sri Lanka Tour Pilot is an online travel marketplace that connects travelers with independent Tour Agents offering tours, transportation, accommodations, activities, and other tourism-related services throughout Sri Lanka.
+
+Sri Lanka Tour Pilot acts as a technology platform facilitating bookings between travelers and Tour Agents. Tour services are provided by the respective Tour Agents.
+
+2. Information We Collect
+
+We may collect the following categories of information:
+
+Personal Information
+Full name
+Email address
+Mobile phone number
+Country of residence
+Postal address (where required)
+Passport or identification details (only when necessary for bookings requiring such information)
+Booking Information
+Tour reservations
+Accommodation preferences
+Pickup and drop-off locations
+Travel dates
+Number of travelers
+Special requests
+Booking history
+Payment Information
+
+Payments may be processed through secure third-party payment providers. Sri Lanka Tour Pilot does not store complete credit or debit card details on its servers.
+
+Account Information
+Username
+Password (stored in encrypted form)
+Profile photo (optional)
+Preferred language
+Wishlist or saved tours
+Device & Technical Information
+IP address
+Browser type
+Device information
+Operating system
+Cookies
+Session identifiers
+Website usage analytics
+3. How We Use Your Information
+
+Your information may be used to:
+
+Create and manage your account.
+Process bookings and payments.
+Confirm reservations.
+Communicate booking updates.
+Coordinate services with Tour Agents.
+Respond to customer support requests.
+Improve our Platform and services.
+Personalize recommendations.
+Detect fraud and unauthorized activity.
+Comply with legal obligations.
+Send promotional communications where permitted or where you have opted in.
+4. Sharing Your Information
+
+We may share your personal information only to the extent necessary to provide our services, fulfill your bookings, comply with legal obligations, or improve your experience on the Platform.
+
+Tour Agents
+
+We may share information necessary for your booking with the Tour Agent responsible for providing your selected services. This may include your name, contact details, travel dates, pickup location, number of travelers, and any special requests.
+
+Third-Party Travel Service Providers
+
+Where appropriate, we may share relevant booking information with trusted third-party service providers involved in delivering your travel experience. These may include, but are not limited to:
+
+Hotels and accommodation providers
+Transportation providers
+Activity and excursion operators
+National park and attraction operators
+Ticketing and reservation providers
+Licensed guides
+Restaurant or dining partners (where included in your booking)
+Other suppliers or vendors necessary to fulfill your booked itinerary
+
+Only the information required to provide the requested services will be shared.
+
+Service Providers
+
+We may share information with trusted third-party service providers that support the operation of our Platform, including providers of:
+
+Payment processing
+Email and SMS communications
+Website hosting
+Cloud infrastructure
+Data storage and backups
+Analytics and reporting
+Customer support
+Fraud prevention and security services
+
+These providers are contractually required to protect your information and may only use it for the purposes of providing services to Sri Lanka Tour Pilot.
+
+Legal Authorities
+
+We may disclose your information where required by applicable law, court order, government request, or where we believe such disclosure is necessary to protect the rights, property, safety, or security of Sri Lanka Tour Pilot, our users, Tour Agents, or the public.
+
+We do not sell, rent, or trade your personal information to third parties for their own marketing purposes.
+
+5. Cookies and Tracking Technologies
+
+We use cookies and similar technologies to:
+
+Keep you signed in.
+Remember your preferences.
+Improve website performance.
+Measure traffic and user engagement.
+Analyze Platform usage.
+Deliver relevant content and advertising where applicable.
+
+You may control cookies through your browser settings. Disabling cookies may affect certain Platform features.
+
+6. Data Security
+
+We implement appropriate technical and organizational safeguards to protect your information, including:
+
+Secure encrypted connections (SSL/TLS)
+Encrypted password storage
+Access controls
+Firewalls
+Secure cloud infrastructure
+Regular secu

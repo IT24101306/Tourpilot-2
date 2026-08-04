@@ -1443,6 +1443,9 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
       include: { tourist: { select: { name: true } } },
     });
 
+    const { loadAgencyTrustBadges } = await import("../services/trustBadges.js");
+    const trust = await loadAgencyTrustBadges(agency.id);
+
     res.json({
 
       id: agency.id,
@@ -1493,6 +1496,13 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
       loyaltyOffers: loyaltyOffers.map(serializeActiveOffer),
 
       features,
+
+      trustBadges: trust.earned.map((b) => ({
+        key: b.key,
+        label: b.label,
+        shortLabel: b.shortLabel,
+        description: b.description,
+      })),
 
     });
 

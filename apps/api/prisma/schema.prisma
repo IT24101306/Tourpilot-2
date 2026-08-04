@@ -374,6 +374,11 @@ model Agency {
   influencerCommissionRequests InfluencerCommissionRequest[]
   savedTripPlans               SavedTripPlan[]
   auditEvents                  AuditEvent[]
+  followUpJobs                 FollowUpJob[]
+  /** { targetMarginPct?: number, warnBelowPct?: number } */
+  pricingPrefs                 Json?
+  /** Admin/manual flags e.g. { featuredHost?: boolean } */
+  trustFlags                   Json?
 }
 
 model AgencyStaff {
@@ -575,6 +580,7 @@ model Inquiry {
   /// When tourist requests changes on a specific proposal option.
   pendingRevisionItemId String? @db.VarChar(25)
   pendingRevisionLabel  String? @db.VarChar(255)
+  followUpJobs        FollowUpJob[]
 
   @@index([handlerInfluencerId])
 }
@@ -1044,4 +1050,35 @@ model AuditEvent {
   @@index([agencyId, createdAt])
   @@index([actorId, createdAt])
   @@index([relatedInquiryId])
+}
+
+enum FollowUpJobStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+/**
+ * Scheduled nudges: proposal follow-ups, agency reply reminders, pre-trip tips.
+ */
+model FollowUpJob {
+  id         String           @id @default(cuid()) @db.VarChar(25)
+  inquiryId  String           @db.VarChar(25)
+  inquiry    Inquiry          @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  agencyId   String           @db.VarChar(25)
+  agency     Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  /** PROPOSAL_NUDGE_TOURIST | AGENCY_REPLY_NUDGE | PRE_TRIP_REMINDER */
+  kind       String           @db.VarChar(40)
+  dueAt      DateTime
+  status     FollowUpJobStatus @default(PENDING)
+  payload    Json?
+  sentAt     DateTime?
+  error      String?          @db.Text
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([status, dueAt])
+  @@index([inquiryId, kind])
+  @@index([agencyId, status])
 }

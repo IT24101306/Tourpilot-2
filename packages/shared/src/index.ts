@@ -194,3 +194,31 @@ export {
   sanitizeRichHtml,
   stripRichHtml,
 } from "./richText.js";
+
+export {
+  TRUST_BADGE_DEFS,
+  evaluateTrustBadges,
+  earnedBadgeKeys,
+  type TrustBadgeKey,
+  type TrustBadgeDef,
+  type TrustBadgeStats,
+  type EarnedTrustBadge,
+} from "./trustBadges.js";
+
+export {
+  computeMarginPct,
+  buildMarginCoachTips,
+  type MarginCoachInput,
+  type MarginCoachTip,
+  type MarginCoachTone,
+} from "./marginCoach.js";
+
+export {
+  pipelineNextActions,
+  softAiMomentsForContext,
+  chatAssistSuggestions,
+  draftProposalIntro,
+  type SoftAiMoment,
+  type ChatAssistSuggestion,
+  type PipelineNextAction,
+} from "./softAi.js";

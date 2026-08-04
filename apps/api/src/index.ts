@@ -5,6 +5,7 @@ import { prisma } from "./lib/prisma.js";
 import { attachChatRealtime } from "./services/chatRealtime.js";
 import { startInquiryExpiryScheduler } from "./services/inquiryExpiry.js";
 import { startTrialReminderScheduler } from "./services/trial.js";
+import { startFollowUpScheduler } from "./services/followUps.js";
 
 const app = createApp();
 const httpServer = createServer(app);
@@ -14,6 +15,7 @@ async function main() {
   attachChatRealtime(httpServer);
   startInquiryExpiryScheduler();
   startTrialReminderScheduler();
+  startFollowUpScheduler();
   httpServer.listen(config.port, () => {
     console.log(`TourPilot API running on http://localhost:${config.port}`);
     console.log(`Realtime chat: socket.io on /socket.io`);
@@ -26,6 +28,7 @@ async function main() {
     }
     console.log(`Inquiry auto-expiry: ${config.inquiryExpiryDays} days`);
     console.log("Trial ending reminders: hourly");
+    console.log("Follow-up nudges: every 15 minutes");
     if (config.logOtpToConsole) {
       console.log("DEV: OTP codes will be printed to this console on send-otp / register-request");
     }

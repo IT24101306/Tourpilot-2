@@ -20,6 +20,15 @@ export function RegisterTermsConsent({ checked, onChange, id = "register-terms" 
         I agree to the{" "}
         <Link to="/terms" target="_blank" rel="noopener noreferrer" className="register-terms-consent__link">
           Terms &amp; Conditions
+        </Link>{" "}
+        and{" "}
+        <Link
+          to="/terms/privacy-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="register-terms-consent__link"
+        >
+          Privacy Policy
         </Link>
       </span>
     </label>
