@@ -27,6 +27,7 @@ FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV UPLOAD_DIR=/app/apps/api/uploads
+ENV TERMS_DIR=/app/terms
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates gosu \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd -r tourpilot && useradd -r -g tourpilot tourpilot
@@ -41,6 +42,8 @@ COPY --from=build /app/apps/api/src ./apps/api/src
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY --from=build /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
+# Plain-text legal docs — seeded into CmsPage on API boot when missing.
+COPY terms ./terms
 COPY docker/api-entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh \
   && chmod +x /entrypoint.sh \

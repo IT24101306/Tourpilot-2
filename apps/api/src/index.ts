@@ -6,12 +6,14 @@ import { attachChatRealtime } from "./services/chatRealtime.js";
 import { startInquiryExpiryScheduler } from "./services/inquiryExpiry.js";
 import { startTrialReminderScheduler } from "./services/trial.js";
 import { startFollowUpScheduler } from "./services/followUps.js";
+import { ensureLegalCmsPages } from "./services/ensureLegalCms.js";
 
 const app = createApp();
 const httpServer = createServer(app);
 
 async function main() {
   await prisma.$connect();
+  await ensureLegalCmsPages();
   attachChatRealtime(httpServer);
   startInquiryExpiryScheduler();
   startTrialReminderScheduler();
