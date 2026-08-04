@@ -1,6 +1,8 @@
-import type { EarnedTrustBadge } from "@tourpilot/shared";
-
-type BadgeLite = Pick<EarnedTrustBadge, "key" | "label" | "shortLabel" | "description"> & {
+type BadgeLite = {
+  key: string;
+  label: string;
+  shortLabel: string;
+  description: string;
   earned?: boolean;
   progressHint?: string;
 };

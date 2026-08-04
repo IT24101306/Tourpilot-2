@@ -11,7 +11,7 @@ type CodeLite = {
 type Props = {
   displayName: string;
   codes: CodeLite[];
-  onCopy: (text: string) => void;
+  onCopy: (text: string, label: string) => void;
 };
 
 function absoluteShare(code: CodeLite) {
@@ -71,7 +71,7 @@ export function InfluencerKitCard({ displayName, codes, onCopy }: Props) {
       <div className="influencer-kit__block">
         <p className="muted">Link</p>
         <code>{url}</code>
-        <button type="button" className="btn btn-ghost" onClick={() => onCopy(url)}>
+        <button type="button" className="btn btn-ghost" onClick={() => onCopy(url, "Share link")}>
           Copy link
         </button>
       </div>
@@ -79,7 +79,7 @@ export function InfluencerKitCard({ displayName, codes, onCopy }: Props) {
       <div className="influencer-kit__block">
         <p className="muted">Ready caption</p>
         <textarea readOnly rows={4} value={caption} />
-        <button type="button" className="btn btn-primary" onClick={() => onCopy(caption)}>
+        <button type="button" className="btn btn-primary" onClick={() => onCopy(caption, "Caption")}>
           Copy caption
         </button>
       </div>
