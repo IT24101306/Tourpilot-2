@@ -84,6 +84,12 @@ export function TourFormModal({
     [entities, groups, typeFilter, groupFilter, entitySearch, cityFilter]
   );
 
+  const filtersNarrowList =
+    typeFilter !== "all" ||
+    cityFilter !== "all" ||
+    groupFilter !== "all" ||
+    entitySearch.trim().length > 0;
+
   useEffect(() => {
     if (!open) {
       setTypeFilter("all");
@@ -472,11 +478,13 @@ export function TourFormModal({
             </div>
           </div>
 
-          {filteredEntities.length === 0 && (
-            <p className="entity-filter-hint muted">
-              No entities match your search or filters. Adjust them or add entities in the Entities tab.
-            </p>
-          )}
+          <p className="entity-filter-hint muted">
+            {entities.length === 0
+              ? "No entities in your catalog yet — add some in the Entities tab."
+              : filtersNarrowList
+                ? `Filters match ${filteredEntities.length} of ${entities.length} entities. The dropdown still lists your full catalog (matches first).`
+                : `${entities.length} entit${entities.length === 1 ? "y" : "ies"} in your catalog — all appear in each day dropdown.`}
+          </p>
 
           <TourPackagePricingNotice />
 
@@ -867,24 +875,37 @@ function DayRow({
   const emptyLabel =
     allEntitiesCount === 0
       ? "No entities available — add some in Entities tab"
-      : entities.length === 0
-        ? "No entities match filters"
-        : "Select entity";
+      : "Select entity";
 
-  // Keep the currently-selected entity visible even if the active filters would
-  // otherwise exclude it, so switching filters never hides/loses a selection.
-  const options = useMemo(() => {
-    if (!entry.entityId || entities.some((e) => e.id === entry.entityId)) {
-      return entities;
+  // Always offer the full agency catalog. When filters are active, matching
+  // entities are listed first so browsing stays easy without hiding the rest.
+  const { matched, rest } = useMemo(() => {
+    const matchIds = new Set(entities.map((e) => e.id));
+    const filtersOn = matchIds.size < allEntities.length;
+    if (!filtersOn) {
+      return { matched: allEntities, rest: [] as EntityOption[] };
     }
-    const selected = allEntities.find((e) => e.id === entry.entityId);
-    return selected ? [selected, ...entities] : entities;
-  }, [entities, allEntities, entry.entityId]);
+    return {
+      matched: allEntities.filter((e) => matchIds.has(e.id)),
+      rest: allEntities.filter((e) => !matchIds.has(e.id)),
+    };
+  }, [entities, allEntities]);
 
   const selectedGuide = useMemo(() => {
     if (!entry.entityId) return null;
     return allEntities.find((e) => e.id === entry.entityId)?.guide ?? null;
   }, [allEntities, entry.entityId]);
+
+  function renderOption(ent: EntityOption) {
+    return (
+      <option key={ent.id} value={ent.id}>
+        {entityOptionLabel(ent)}
+        {ent.priceHint != null
+          ? ` · LKR ${ent.priceHint.toLocaleString()}`
+          : " · Price on request"}
+      </option>
+    );
+  }
 
   return (
     <tr className="tour-itinerary-table__entry">
@@ -904,14 +925,18 @@ function DayRow({
             aria-label="Entity"
           >
             <option value="">{emptyLabel}</option>
-            {options.map((ent) => (
-              <option key={ent.id} value={ent.id}>
-                {entityOptionLabel(ent)}
-                {ent.priceHint != null
-                  ? ` · LKR ${ent.priceHint.toLocaleString()}`
-                  : " · Price on request"}
-              </option>
-            ))}
+            {rest.length > 0 ? (
+              <>
+                <optgroup label={`Matches filters (${matched.length})`}>
+                  {matched.map(renderOption)}
+                </optgroup>
+                <optgroup label={`All other entities (${rest.length})`}>
+                  {rest.map(renderOption)}
+                </optgroup>
+              </>
+            ) : (
+              matched.map(renderOption)
+            )}
           </select>
         </div>
         {selectedGuide && (

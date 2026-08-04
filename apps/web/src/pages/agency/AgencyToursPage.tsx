@@ -197,6 +197,7 @@ export function AgencyToursPage() {
     setOfferLink(emptyTourOfferLink());
     setInitialLinkedOfferIds([]);
     setModalOpen(true);
+    refresh().catch(console.error);
   }
 
   function goAddNewEntity() {
@@ -222,6 +223,7 @@ export function AgencyToursPage() {
     setOfferLink(emptyTourOfferLink());
     setInitialLinkedOfferIds([]);
     setModalOpen(true);
+    refresh().catch(console.error);
   }
 
   function openEdit(tour: AgencyTour) {
@@ -249,6 +251,7 @@ export function AgencyToursPage() {
     );
     setTourStatus("");
     setModalOpen(true);
+    refresh().catch(console.error);
   }
 
   async function executeSaveTour() {

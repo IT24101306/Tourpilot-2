@@ -187,8 +187,8 @@ curl -fsS https://www.srilankatourpilot.com/api/health
 | Workflow | When | What |
 |----------|------|------|
 | `ci.yml` | PR + push to `main` or `development` | Install, Prisma generate, build shared/api/web |
-| `deploy.yml` | Push to `main` | Build Docker images → push GHCR (`latest`/`<sha>`) → SSH → prod compose |
-| `deploy-dev.yml` | Push to `development` | Build Docker images → push GHCR (`dev`/`dev-<sha>`) → SSH → `/var/www/tourpilot-dev` |
+| `deploy.yml` | Push to `main` | Build → GHCR → deploy on VPS (**self-hosted** when `DEPLOY_USE_SELF_HOSTED=true`, else SSH) |
+| `deploy-dev.yml` | Push to `development` | Same for `dev` / `dev-<sha>` tags → `/var/www/tourpilot-dev` |
 
 **Database schema (automatic):** each API container start runs `prisma db push` via [`docker/api-entrypoint.sh`](../docker/api-entrypoint.sh). GitHub deploys force-recreate the API so the new schema always applies before health checks pass. Default is `PRISMA_ACCEPT_DATA_LOSS=true` (set `false` in `.env` to refuse destructive changes).
 
@@ -645,9 +645,35 @@ You no longer SSH and run `npm run build` by hand for every change.
 |---------|-----|
 | 502 / blank error | `docker compose ... logs api` — often DB not ready or bad `DATABASE_URL` |
 | Images won’t pull | GHCR login / package visibility / wrong owner name (must be lowercase) |
-| Deploy SSH fails | Check `DEPLOY_HOST`, key, `authorized_keys`, firewall port 22 |
+| Deploy SSH fails (`dial tcp … i/o timeout`) | **Cause:** GitHub cloud runners cannot open TCP to your VPS (firewall, fail2ban, provider filtering, or flaky route). Retries only mask it. **Permanent fix:** install a [self-hosted runner](#permanent-fix-self-hosted-runner) on the VPS, then set repo variable `DEPLOY_USE_SELF_HOSTED=true`. Temporary: ensure port 22 is open to the internet (key-only auth) and check fail2ban bans. |
 | Old UI after deploy | Hard refresh; confirm `BUILD_SHA` in `/api/health` |
 | Uploads lost after recreate | Ensure `tourpilot_uploads` volume is mounted (it is in compose) |
+
+### Permanent fix: self-hosted runner
+
+GitHub’s `ubuntu-latest` runners live on changing public IPs. Your VPS (or fail2ban / cloud firewall) often drops or rate-limits that traffic → **`dial tcp … i/o timeout`**. Whitelisting GitHub IPs is brittle; raising SSH `timeout` does not help if the port never answers.
+
+**Solution:** build images in the cloud (unchanged), run the **deploy job on the VPS** via a self-hosted Actions runner. No inbound SSH from GitHub is required for deploys.
+
+1. On the VPS (as the deploy user that can run `docker`):
+
+```bash
+cd /var/www/tourpilot   # or wherever the repo lives
+git pull
+
+# GitHub → Settings → Actions → Runners → New self-hosted runner → copy token
+export GITHUB_REPO_URL="https://github.com/OWNER/TourPilot"
+export RUNNER_TOKEN="AAAA..."   # from that page (expires quickly)
+bash scripts/setup-github-actions-runner.sh
+```
+
+2. Confirm the runner shows **Idle** under Actions → Runners, with labels `self-hosted`, `linux`, `tourpilot`.
+
+3. Repo → **Settings → Variables → Actions** → create **`DEPLOY_USE_SELF_HOSTED`** = `true`.
+
+4. Optionally lock down SSH to your laptop IP only — CI no longer needs port 22 open to the world.
+
+Until that variable is set, workflows keep using SSH (with a port probe). Remove `DEPLOY_USE_SELF_HOSTED` only if you must fall back to SSH.
 
 ---
 

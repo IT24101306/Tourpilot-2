@@ -329,6 +329,7 @@ export function AgencyDashboard() {
     setOfferLink(emptyTourOfferLink());
     setTourStatus("");
     setTourModalOpen(true);
+    if (token) refresh(token).catch(console.error);
   }
 
   async function saveTour(e: FormEvent) {

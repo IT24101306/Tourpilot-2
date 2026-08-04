@@ -43,8 +43,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Dev images use dedicated `dev` / `dev-<sha>` tags so they never
-      # overwrite the production `latest`/`<sha>` tags in GHCR.
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
@@ -72,12 +70,26 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to dev stack on VPS
+    name: Deploy on VPS (self-hosted)
+    needs: build-and-push
+    if: github.ref == 'refs/heads/development' && vars.DEPLOY_USE_SELF_HOSTED == 'true'
+    runs-on: [self-hosted, linux, tourpilot]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull images & recreate dev stack
+        env:
+          DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+          GHCR_PULL_USER: ${{ secrets.GHCR_PULL_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: bash scripts/ci-deploy.sh dev "${{ needs.build-and-push.outputs.sha }}"
+
+  deploy-ssh:
+    name: Deploy via SSH
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/development'
+    if: github.ref == 'refs/heads/development' && vars.DEPLOY_USE_SELF_HOSTED != 'true'
     steps:
-      # Secrets pasted from editors often include trailing whitespace.
       - name: Normalize SSH target
         id: ssh
         env:
@@ -92,11 +104,29 @@ jobs:
           fi
           if [ -z "$PORT" ]; then PORT=22; fi
           if ! [[ "$PORT" =~ ^[0-9]+$ ]]; then
-            echo "DEPLOY_PORT must be a number (got non-numeric after trim)" >&2
+            echo "DEPLOY_PORT must be a number" >&2
             exit 1
           fi
           echo "host=$HOST" >> "$GITHUB_OUTPUT"
           echo "port=$PORT" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for SSH port
+        env:
+          HOST: ${{ steps.ssh.outputs.host }}
+          PORT: ${{ steps.ssh.outputs.port }}
+        run: |
+          set +e
+          for i in 1 2 3 4 5 6; do
+            echo "SSH probe $i/6 → ${HOST}:${PORT}"
+            if timeout 15 bash -c "echo >/dev/tcp/${HOST}/${PORT}" 2>/dev/null; then
+              echo "Port is open"
+              exit 0
+            fi
+            sleep $((i * 10))
+          done
+          echo "Port ${HOST}:${PORT} unreachable from GitHub (dial timeout)." >&2
+          echo "Permanent fix: self-hosted runner — see docs/DEPLOY.md" >&2
+          exit 1
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -105,7 +135,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.ssh.outputs.port }}
-          timeout: 60s
+          timeout: 120s
           command_timeout: 15m
           script: |
             set -euo pipefail
@@ -113,38 +143,13 @@ jobs:
             if [ -z "$DEPLOY_DIR" ]; then DEPLOY_DIR="/var/www/tourpilot-dev"; fi
             cd "$DEPLOY_DIR"
             git pull --ff-only || true
-
-            OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-            export COMPOSE_PROJECT_NAME=tourpilot-dev
-            export API_IMAGE="ghcr.io/${OWNER}/tourpilot-api:dev-${{ needs.build-and-push.outputs.sha }}"
-            export WEB_IMAGE="ghcr.io/${OWNER}/tourpilot-web:dev-${{ needs.build-and-push.outputs.sha }}"
-            export BUILD_SHA="dev-${{ needs.build-and-push.outputs.sha }}"
-            export BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-            echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_PULL_USER }}" --password-stdin
-
-            docker compose -f docker-compose.prod.yml --env-file .env pull api web
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --force-recreate api web
-
-            echo "Waiting for API health (includes Prisma sync)..."
-            ok=0
-            for i in $(seq 1 60); do
-              if docker compose -f docker-compose.prod.yml --env-file .env exec -T api \
-                node -e "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" \
-                >/dev/null 2>&1; then
-                ok=1
-                break
-              fi
-              sleep 3
-            done
-            if [ "$ok" != "1" ]; then
-              echo "API did not become healthy — recent logs:" >&2
-              docker compose -f docker-compose.prod.yml --env-file .env logs --tail=80 api >&2 || true
+            export DEV_DEPLOY_PATH="$DEPLOY_DIR"
+            export GHCR_PULL_USER="${{ secrets.GHCR_PULL_USER }}"
+            export GHCR_PULL_TOKEN="${{ secrets.GHCR_PULL_TOKEN }}"
+            export GITHUB_REPOSITORY_OWNER="${{ github.repository_owner }}"
+            if [ -f scripts/ci-deploy.sh ]; then
+              bash scripts/ci-deploy.sh dev "${{ needs.build-and-push.outputs.sha }}"
+            else
+              echo "scripts/ci-deploy.sh missing — pull latest development onto the server first" >&2
               exit 1
             fi
-
-            docker image prune -f
-            HTTP_PORT="$(grep -E '^HTTP_PORT=' .env | cut -d= -f2 | tr -d '[:space:]')"
-            if [ -z "$HTTP_PORT" ]; then HTTP_PORT=8081; fi
-            curl -fsS "http://127.0.0.1:${HTTP_PORT}/api/health"
-            echo "Deployed dev-${{ needs.build-and-push.outputs.sha }} (Prisma schema synced on API start)"
