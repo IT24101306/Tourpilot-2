@@ -22,9 +22,7 @@ export function PaymentGatewayPendingNotice({ packageName, amountLabel }: Props)
   return (
     <div className="account-billing-gateway-pending">
       <p className="account-billing-gateway-pending__eyebrow">Payment gateway</p>
-      <h2 className="account-billing-gateway-pending__title">
-        Contact the system administrator
-      </h2>
+      <h2 className="account-billing-gateway-pending__title">Contact the system administrator</h2>
       <p className="account-billing-gateway-pending__lead">
         Online payments are not available yet. To activate or renew your package, please contact
         the TourPilot system administrator at {c.company}.

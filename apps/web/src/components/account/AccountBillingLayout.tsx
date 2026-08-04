@@ -3,9 +3,24 @@ import { useAuth } from "../../context/AuthContext";
 import "../../styles/account-billing.css";
 
 const NAV = [
-  { to: "/profile/billing/subscriptions", label: "Subscriptions", end: true },
-  { to: "/profile/billing/history", label: "Payment history", end: true },
-  { to: "/profile/billing/methods", label: "Payment methods", end: true },
+  {
+    to: "/profile/billing/subscriptions",
+    label: "Subscriptions",
+    hint: "Plan, renew & wallet",
+    end: true,
+  },
+  {
+    to: "/profile/billing/history",
+    label: "Payment history",
+    hint: "Past invoices",
+    end: true,
+  },
+  {
+    to: "/profile/billing/methods",
+    label: "Payment methods",
+    hint: "Credits & checkout",
+    end: true,
+  },
 ] as const;
 
 export function AccountBillingLayout() {
@@ -36,7 +51,8 @@ export function AccountBillingLayout() {
                     `account-billing__nav-link${isActive ? " is-active" : ""}`
                   }
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  <span className="account-billing__nav-link__hint">{item.hint}</span>
                 </NavLink>
               </li>
             ))}

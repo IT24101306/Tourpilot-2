@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
+import { recalculateAgencyRatings } from "../services/agencyRatings.js";
 
 export const reviewsRouter = Router();
 
@@ -44,6 +45,7 @@ reviewsRouter.post(
         },
       });
 
+      // Not public by default — rating updates when agency publishes.
       res.status(201).json(review);
     } catch (e) {
       next(e);
@@ -123,6 +125,8 @@ reviewsRouter.patch(
         where: { id: review.id },
         data: { isPublic },
       });
+
+      await recalculateAgencyRatings(agency.id);
 
       res.json(updated);
     } catch (e) {

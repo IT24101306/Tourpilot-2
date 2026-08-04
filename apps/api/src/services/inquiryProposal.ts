@@ -139,6 +139,8 @@ export async function upsertInquiryProposal(
       where: { id: inquiryId },
       data: {
         status: "SENT_TO_TOURIST",
+        pendingRevisionItemId: null,
+        pendingRevisionLabel: null,
         statusHistory: {
           create: {
             status: "SENT_TO_TOURIST",
@@ -157,7 +159,7 @@ export async function upsertInquiryProposal(
 
   await syncReferralCommission(inquiryId, inquiry.referralCodeId);
 
-  await createInquiryMessage(
+  const proposalMessage = await createInquiryMessage(
     inquiryId,
     authorId,
     "AGENCY",
@@ -167,6 +169,15 @@ export async function upsertInquiryProposal(
 
   const { notifyProposalSent } = await import("./notifications.js");
   void notifyProposalSent(inquiryId).catch(console.error);
+
+  try {
+    const { emitChatMessage, emitInquiryUpdated } = await import("./chatRealtime.js");
+    const { serializeInquiryMessage } = await import("./inquiryMessages.js");
+    emitChatMessage(inquiryId, serializeInquiryMessage(proposalMessage));
+    emitInquiryUpdated(inquiryId, hadProposal ? "proposal_updated" : "proposal_sent");
+  } catch {
+    /* realtime optional */
+  }
 
   return proposal;
 }

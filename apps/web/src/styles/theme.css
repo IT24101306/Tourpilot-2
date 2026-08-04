@@ -647,6 +647,25 @@ button.nav-link-light:hover {
   color: rgba(255, 255, 255, 0.82);
 }
 
+.topbar--agency-dash .nav-link-light--icon,
+.agency-dashboard > .topbar .nav-link-light--icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  line-height: 0;
+}
+
+.topbar--agency-dash .nav-link-light--icon:hover,
+.agency-dashboard > .topbar .nav-link-light--icon:hover,
+.topbar--agency-dash .nav-link-light--icon.nav-link-light--active,
+.agency-dashboard > .topbar .nav-link-light--icon.nav-link-light--active {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+
 .topbar--agency-dash .nav-link-light,
 .topbar--agency-dash .nav a.nav-link-light,
 .topbar--agency-dash button.nav-link-light,
@@ -3931,12 +3950,60 @@ a.agency-icon-btn {
   gap: 8px;
 }
 
+.module-negotiation .neg-revision-form select,
 .module-negotiation .neg-revision-form textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   font-family: inherit;
+  font-size: 0.92rem;
+  background: var(--white);
+}
+
+.module-negotiation .neg-revision-form textarea {
   resize: vertical;
+}
+
+.module-negotiation .neg-revision-target {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(180, 120, 20, 0.35);
+  background: linear-gradient(165deg, #fff8e8 0%, #fff 70%);
+}
+
+.module-negotiation .neg-revision-target strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.module-negotiation .neg-revision-target p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.module-negotiation .neg-revision-target span {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.module-negotiation .neg-proposal-card.is-revision-target {
+  border-color: rgba(180, 120, 20, 0.55);
+  box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.25);
+}
+
+.module-negotiation .neg-proposal-revision-badge {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #8a5a00;
+  background: rgba(245, 166, 35, 0.2);
 }
 
 .module-negotiation .neg-stepper {
@@ -7387,7 +7454,47 @@ a.agency-icon-btn {
 
 .tp-empty-state--agency-blocked {
   margin: 2rem auto;
-  max-width: 28rem;
+  max-width: 32rem;
+}
+
+.tp-feature-pricing-path {
+  display: block;
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(26, 92, 58, 0.22);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(26, 92, 58, 0.06) 0%, rgba(255, 255, 255, 0.9) 55%);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tp-feature-pricing-path:hover {
+  border-color: rgba(26, 92, 58, 0.45);
+  transform: translateY(-1px);
+}
+
+.tp-feature-pricing-path__eyebrow {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green-dark, #1a5c3a);
+  margin-bottom: 4px;
+}
+
+.tp-feature-pricing-path__title {
+  display: block;
+  font-size: 0.98rem;
+  margin-bottom: 2px;
+}
+
+.tp-feature-pricing-path__hint {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--muted);
 }
 
 .tp-empty-state__title {
@@ -7417,6 +7524,30 @@ a.agency-icon-btn {
   margin-left: 0;
   margin-right: 0;
   max-width: none;
+}
+
+.inquiry-reply-dialog .neg-revision-target {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(180, 120, 20, 0.35);
+  background: linear-gradient(165deg, #fff8e8 0%, #fff 70%);
+}
+
+.inquiry-reply-dialog .neg-revision-target strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.inquiry-reply-dialog .neg-revision-target p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.inquiry-reply-dialog .neg-revision-target span {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .gov-approval-actions {
@@ -7574,6 +7705,80 @@ a.agency-icon-btn {
 .gov-features-modal {
   width: min(440px, 100%);
   padding: 22px 22px 18px;
+}
+
+.gov-subscription-modal {
+  width: min(560px, 100%);
+  max-height: min(90vh, 820px);
+  overflow-y: auto;
+}
+
+.gov-subscription-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f3f7f5;
+  border: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.gov-subscription-form label,
+.gov-subscription-quick label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.gov-subscription-form input,
+.gov-subscription-quick input,
+.gov-subscription-form select {
+  font: inherit;
+  font-weight: 500;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.gov-subscription-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.gov-subscription-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  font-weight: 550 !important;
+}
+
+.gov-subscription-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin: 16px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.gov-subscription-cell {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 560px) {
+  .gov-subscription-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .gov-features-modal__head {

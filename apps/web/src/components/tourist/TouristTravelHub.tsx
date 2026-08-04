@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CoverImage } from "../CoverImage";
 import { FormatTourPrice } from "../currency/FormatLkr";
 import { EmptyState } from "../feedback/EmptyState";
 import { GuidedTripCard } from "../guided/GuidedTripCard";
 import { ModuleHeader } from "../module/ModuleHeader";
 import { SaveTourButton } from "./SaveTourButton";
-import { TouristTripRoomDrawer } from "./TouristTripRoomDrawer";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import type { NegotiationListItem } from "../../types/negotiation";
@@ -24,7 +23,8 @@ function tabFromParam(raw: string | null): TravelTab {
 
 export function TouristTravelHub() {
   const { token } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const tab = tabFromParam(searchParams.get("tab"));
   const roomId = searchParams.get("room");
 
@@ -36,28 +36,16 @@ export function TouristTravelHub() {
 
   const openRoom = useCallback(
     (inquiryId: string) => {
-      setSearchParams(
-        (prev) => {
-          const p = new URLSearchParams(prev);
-          p.set("room", inquiryId);
-          return p;
-        },
-        { replace: false }
-      );
+      navigate(`/trips/${inquiryId}`);
     },
-    [setSearchParams]
+    [navigate]
   );
 
-  const closeRoom = useCallback(() => {
-    setSearchParams(
-      (prev) => {
-        const p = new URLSearchParams(prev);
-        p.delete("room");
-        return p;
-      },
-      { replace: true }
-    );
-  }, [setSearchParams]);
+  // Legacy ?room= deep links → full-page trip room (same layout as agency)
+  useEffect(() => {
+    if (!roomId) return;
+    navigate(`/trips/${roomId}`, { replace: true });
+  }, [roomId, navigate]);
 
   const loadInquiries = useCallback(async () => {
     if (!token) return;
@@ -94,11 +82,6 @@ export function TouristTravelHub() {
   useEffect(() => {
     if (tab === "saved") void loadSaved();
   }, [tab, loadSaved]);
-
-  useEffect(() => {
-    if (!roomId) return;
-    void loadInquiries();
-  }, [roomId, loadInquiries]);
 
   const bookings = useMemo(
     () => inquiries.filter((i) => BOOKING_STATUSES.has(i.status)),
@@ -278,8 +261,6 @@ export function TouristTravelHub() {
           </>
         )}
       </div>
-
-      <TouristTripRoomDrawer open={Boolean(roomId)} inquiryId={roomId} onClose={closeRoom} />
     </section>
   );
 }

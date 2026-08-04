@@ -572,6 +572,9 @@ model Inquiry {
   driverAssignments   DriverAssignment[]
   invoice             Invoice?
   touristReview       TouristReview?
+  /// When tourist requests changes on a specific proposal option.
+  pendingRevisionItemId String? @db.VarChar(25)
+  pendingRevisionLabel  String? @db.VarChar(255)
 
   @@index([handlerInfluencerId])
 }

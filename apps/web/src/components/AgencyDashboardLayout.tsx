@@ -1,16 +1,15 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { api, ApiError } from "../api/client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { agencyFeaturesOf, useAuth } from "../context/AuthContext";
-import { navLinkLightClass } from "../utils/navLinkClass";
 import { NotificationBell } from "./NotificationBell";
-import { ConfirmActionProvider, useConfirmAction } from "./confirm/ConfirmActionContext";
+import { ConfirmActionProvider } from "./confirm/ConfirmActionContext";
 import { TourPilotBrand } from "./TourPilotBrand";
 import { DashboardSupportButton } from "./support/SupportAgentsModal";
 import {
   FeatureBlockedPanel,
   resolveAgencyBlockedFeature,
 } from "./feedback/FeatureBlockedPanel";
+import { LineUserIcon } from "./icons/LineIcons";
 import "../styles/dashboard.css";
 
 const AGENCY_TABS: {
@@ -124,6 +123,26 @@ function PartnersIcon() {
   );
 }
 
+function WalletTopupIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.85"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 7.5A2.5 2.5 0 0 1 4.5 5h13A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-13A2.5 2.5 0 0 1 2 16.5v-9Z" />
+      <path d="M2 10h20" />
+      <path d="M16 14h2" />
+    </svg>
+  );
+}
+
 export function AgencyDashboardLayout() {
   return (
     <ConfirmActionProvider>
@@ -133,15 +152,10 @@ export function AgencyDashboardLayout() {
 }
 
 function AgencyDashboardLayoutInner() {
-  const { user, token, refreshUser, logout } = useAuth();
-  const { requestConfirm } = useConfirmAction();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const features = agencyFeaturesOf(user);
   const agencyStatus = user?.agency?.status;
-  const [topupOpen, setTopupOpen] = useState(false);
-  const [topupAmount, setTopupAmount] = useState("");
-  const [topupStatus, setTopupStatus] = useState("");
-  const [topupLoading, setTopupLoading] = useState(false);
   const [stepsMenuOpen, setStepsMenuOpen] = useState(false);
   const [networkMenuOpen, setNetworkMenuOpen] = useState(false);
   const sideMenusRef = useRef<HTMLDivElement>(null);
@@ -214,47 +228,6 @@ function AgencyDashboardLayoutInner() {
     };
   }, [stepsMenuOpen, networkMenuOpen]);
 
-  async function executeTopup(value: number) {
-    if (!token) return;
-    setTopupLoading(true);
-    setTopupStatus("");
-    try {
-      await api("/wallet/topup", {
-        method: "POST",
-        token,
-        body: JSON.stringify({ amount: value }),
-      });
-      await refreshUser();
-      setTopupStatus(`Topup successful. ${value.toLocaleString()} Credits added.`);
-      setTopupAmount("");
-      setTimeout(() => {
-        setTopupOpen(false);
-        setTopupStatus("");
-      }, 900);
-    } catch (err) {
-      setTopupStatus(err instanceof ApiError ? err.message : "Topup failed");
-    } finally {
-      setTopupLoading(false);
-    }
-  }
-
-  function handleTopup(e: FormEvent) {
-    e.preventDefault();
-    const value = Number(topupAmount);
-    if (!token || !Number.isFinite(value) || value <= 0) {
-      setTopupStatus("Enter a valid amount.");
-      return;
-    }
-
-    requestConfirm({
-      title: "Confirm wallet topup",
-      description: "Funds will be added to your agency wallet immediately.",
-      confirmLabel: "Add funds",
-      summary: [{ label: "Amount", value: `${value.toLocaleString()} Credits` }],
-      onConfirm: () => executeTopup(value),
-    });
-  }
-
   return (
     <div className="agency-dashboard">
       <div className="agency-dash-chrome">
@@ -266,28 +239,28 @@ function AgencyDashboardLayoutInner() {
           <div className="nav-actions nav-actions--light">
             {features.support && <DashboardSupportButton />}
             {features.walletTopup && (
-              <button type="button" className="nav-link-light" onClick={() => setTopupOpen(true)}>
-                Topup
-              </button>
+              <NavLink
+                to="/profile/billing/subscriptions"
+                className={({ isActive }) =>
+                  `nav-link-light nav-link-light--icon${isActive ? " nav-link-light--active" : ""}`
+                }
+                aria-label="Manage subscription and wallet"
+                title="Manage subscription"
+              >
+                <WalletTopupIcon />
+              </NavLink>
             )}
-            <NavLink to="/profile" className={navLinkLightClass}>
-              Profile
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                `nav-link-light nav-link-light--icon${isActive ? " nav-link-light--active" : ""}`
+              }
+              aria-label="Profile"
+              title="Profile"
+            >
+              <LineUserIcon size={20} />
             </NavLink>
             <NotificationBell />
-            {user?.agency?.slug ? (
-              <a
-                href={`/agencies/${user.agency.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="nav-link-light"
-              >
-                Site
-              </a>
-            ) : features.display ? (
-              <Link to="/dashboard/agency/display" className="nav-link-light">
-                Site
-              </Link>
-            ) : null}
             <button type="button" className="nav-link-light" onClick={logout}>
               Log out
             </button>
@@ -427,71 +400,6 @@ function AgencyDashboardLayoutInner() {
         )}
         {blockedFeature ? <FeatureBlockedPanel feature={blockedFeature} /> : <Outlet />}
       </section>
-
-      {topupOpen && (
-        <div
-          className="entity-modal open"
-          role="presentation"
-          onClick={() => setTopupOpen(false)}
-        >
-          <div
-            className="entity-dialog topup-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="topupTitle"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="dialog-head">
-              <h3 id="topupTitle">Wallet topup</h3>
-              <button
-                type="button"
-                className="close-btn"
-                onClick={() => setTopupOpen(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <p className="dialog-sub muted">Add funds to your agency wallet.</p>
-            <form className="topup-form" onSubmit={(e) => handleTopup(e)}>
-              <div className="topup-quick-row">
-                {[100, 500, 1000].map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    className="topup-quick-btn"
-                    disabled={topupLoading}
-                    onClick={() => {
-                      setTopupAmount(String(amount));
-                      setTopupStatus("");
-                    }}
-                  >
-                    {amount}
-                  </button>
-                ))}
-              </div>
-              <label htmlFor="topupAmount">Custom amount (Credits)</label>
-              <input
-                id="topupAmount"
-                type="number"
-                min="1"
-                value={topupAmount}
-                onChange={(e) => setTopupAmount(e.target.value)}
-                placeholder="Enter amount"
-              />
-              <div className="dialog-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setTopupOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={topupLoading}>
-                  {topupLoading ? "Processing…" : "Topup"}
-                </button>
-              </div>
-              {topupStatus && <p className="entity-status">{topupStatus}</p>}
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

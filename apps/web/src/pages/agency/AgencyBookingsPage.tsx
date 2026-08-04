@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../../api/client";
+import { Link } from "react-router-dom";
+import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { OpsMetricStrip } from "../../components/module/OpsMetricStrip";
@@ -19,6 +20,8 @@ export function AgencyBookingsPage() {
   const [selectedInquiry, setSelectedInquiry] = useState<string | null>(null);
   const [itineraryLabel, setItineraryLabel] = useState("Day 1 experience");
   const [loading, setLoading] = useState(true);
+  const [actingId, setActingId] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState("");
 
   useEffect(() => {
     if (!token) return;
@@ -36,6 +39,25 @@ export function AgencyBookingsPage() {
     if (!token) return;
     const list = await api<AgencyInquiry[]>("/inquiries/mine", { token });
     setInquiries(list);
+  }
+
+  async function lifecycle(inquiryId: string, action: "start" | "complete") {
+    if (!token) return;
+    setActingId(inquiryId);
+    setActionMsg("");
+    try {
+      await api(`/inquiries/${inquiryId}/lifecycle`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ action }),
+      });
+      setActionMsg(action === "start" ? "Trip started." : "Trip completed.");
+      await refresh();
+    } catch (err) {
+      setActionMsg(err instanceof ApiError ? err.message : "Action failed");
+    } finally {
+      setActingId(null);
+    }
   }
 
   async function sendItinerary(inquiryId: string) {
@@ -115,6 +137,8 @@ export function AgencyBookingsPage() {
         ]}
       />
 
+      {actionMsg && <p className="neg-action-status">{actionMsg}</p>}
+
       {loading ? (
         <p className="muted">Loading bookings…</p>
       ) : filtered.length === 0 ? (
@@ -131,7 +155,9 @@ export function AgencyBookingsPage() {
       <section className="ops-detail-panel">
         <div className="ops-board-head">
           <h3>Quick actions</h3>
-          <p className="muted">Select a booking below to build and send an itinerary.</p>
+          <p className="muted">
+            Start or complete trips here, or build a quick itinerary for open requests.
+          </p>
         </div>
         <div className="agency-list">
           {filtered.map((inq) => (
@@ -150,14 +176,42 @@ export function AgencyBookingsPage() {
                 {inq.tourist?.phone}
                 {inq.message ? ` — ${inq.message}` : ""}
               </p>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ marginTop: 10 }}
-                onClick={() => setSelectedInquiry(inq.id)}
-              >
-                Build &amp; send itinerary
-              </button>
+              <div className="neg-inquiry-card-actions" style={{ marginTop: 10 }}>
+                <Link to={`/dashboard/agency/trip-room/${inq.id}`} className="btn btn-ghost">
+                  Trip room
+                </Link>
+                {inq.status === "ACCEPTED" && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={actingId === inq.id}
+                    onClick={() => lifecycle(inq.id, "start")}
+                  >
+                    {actingId === inq.id ? "Working…" : "Start trip"}
+                  </button>
+                )}
+                {inq.status === "IN_PROGRESS" && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={actingId === inq.id}
+                    onClick={() => lifecycle(inq.id, "complete")}
+                  >
+                    {actingId === inq.id ? "Working…" : "Complete trip"}
+                  </button>
+                )}
+                {!["ACCEPTED", "IN_PROGRESS", "COMPLETED", "DECLINED", "EXPIRED"].includes(
+                  inq.status
+                ) && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setSelectedInquiry(inq.id)}
+                  >
+                    Build &amp; send itinerary
+                  </button>
+                )}
+              </div>
               {selectedInquiry === inq.id && (
                 <div className="ops-inline-form">
                   <input

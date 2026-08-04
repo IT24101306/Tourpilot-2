@@ -61,6 +61,7 @@ export function TripRoomView({
   const [acting, setActing] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionNote, setRevisionNote] = useState("");
+  const [revisionItemId, setRevisionItemId] = useState("");
   const [adminMessage, setAdminMessage] = useState("");
   const [adminSending, setAdminSending] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
@@ -101,9 +102,13 @@ export function TripRoomView({
   const { typing, onComposeChange, stopTyping } = useChatLive({
     inquiryId,
     token,
+    viewerUserId: user?.id,
     enabled: Boolean(inquiryId && token && !loading && inquiry),
     onThread: (thread: ThreadMessage[]) => {
       setInquiry((prev) => (prev ? { ...prev, thread } : prev));
+    },
+    onInquiryUpdate: () => {
+      void load({ quiet: true });
     },
   });
 
@@ -141,6 +146,12 @@ export function TripRoomView({
       setInvoiceModalOpen(true);
     }
   }, [role, inquiry?.invoice?.id, inquiry?.invoice?.status]);
+
+  useEffect(() => {
+    if (inquiry?.touristReview || inquiry?.hasReview) {
+      setReviewSubmitted(true);
+    }
+  }, [inquiry?.touristReview, inquiry?.hasReview]);
 
   // Keep the action bar floating, but dock it above the site footer when that enters view.
   useEffect(() => {
@@ -188,24 +199,33 @@ export function TripRoomView({
     });
   }, [role, token]);
 
-  async function touristRespond(action: "accept" | "revision" | "decline", note?: string) {
+  async function touristRespond(
+    action: "accept" | "revision" | "decline",
+    note?: string,
+    proposalItemId?: string
+  ) {
     setActing(true);
     setActionStatus("");
     try {
       await api(`/inquiries/${inquiryId}/respond`, {
         method: "POST",
         token,
-        body: JSON.stringify({ action, note }),
+        body: JSON.stringify({
+          action,
+          note,
+          ...(proposalItemId ? { proposalItemId } : {}),
+        }),
       });
       setActionStatus(
         action === "accept"
           ? "You accepted the proposal."
           : action === "decline"
             ? "You declined the proposal."
-            : "Revision sent — your agency will update the options."
+            : "Revision sent — your agency will update that option."
       );
       setRevisionOpen(false);
       setRevisionNote("");
+      setRevisionItemId("");
       await load();
     } catch (err) {
       setActionStatus(err instanceof ApiError ? err.message : "Action failed");
@@ -251,8 +271,8 @@ export function TripRoomView({
 
   function onRevisionSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!revisionNote.trim()) return;
-    touristRespond("revision", revisionNote.trim());
+    if (!revisionNote.trim() || !revisionItemId) return;
+    touristRespond("revision", revisionNote.trim(), revisionItemId);
   }
 
   function sendAdminMessage(e: FormEvent) {
@@ -486,7 +506,7 @@ export function TripRoomView({
             </div>
           )}
 
-        {role === "TOURIST" && inquiry.status === "COMPLETED" && !reviewSubmitted && (
+        {role === "TOURIST" && inquiry.status === "COMPLETED" && !reviewSubmitted && !inquiry.hasReview && !inquiry.touristReview && (
           <div className="neg-review-prompt" role="region" aria-label="Leave a review">
             <h3>How was your trip?</h3>
             <p className="muted">Your review helps other travelers and the agency.</p>
@@ -521,11 +541,15 @@ export function TripRoomView({
             </button>
           </div>
         )}
-        {role === "TOURIST" && reviewSubmitted && (
+        {role === "TOURIST" &&
+          inquiry.status === "COMPLETED" &&
+          (reviewSubmitted || inquiry.hasReview || inquiry.touristReview) && (
           <div className="neg-review-prompt neg-review-prompt--done">
             <h3>Thank you for your review!</h3>
             <p className="muted">
-              Your feedback is pending agency approval before appearing publicly.
+              {inquiry.touristReview?.isPublic
+                ? "Your feedback is visible on the agency page."
+                : "Your feedback is pending agency approval before appearing publicly."}
             </p>
           </div>
         )}
@@ -637,9 +661,23 @@ export function TripRoomView({
           <h3 className="neg-panel-title">Proposal options</h3>
           <p className="neg-panel-hint">
             {inquiry.proposal
-              ? "Compare options and choose what fits best."
+              ? role === "TOURIST"
+                ? "Compare options here. Request changes on a specific tour when you need tweaks."
+                : "Compare options and choose what fits best."
               : "Options will appear here when your agency sends a proposal."}
           </p>
+
+          {role === "AGENCY" &&
+            inquiry.status === "REVISION_REQUESTED" &&
+            inquiry.pendingRevisionLabel && (
+              <div className="neg-revision-target" role="status">
+                <strong>Traveler asked for changes</strong>
+                <p>
+                  Focus on <span>{inquiry.pendingRevisionLabel}</span>. Update that option and
+                  resend the proposal.
+                </p>
+              </div>
+            )}
 
           {inquiry.proposal?.message && (
             <blockquote className="neg-proposal-message">
@@ -656,6 +694,11 @@ export function TripRoomView({
               inquiry.whiteLabel && inquiry.handlerInfluencer?.name
                 ? inquiry.handlerInfluencer.name
                 : inquiry.agency?.name
+            }
+            highlightItemId={
+              inquiry.status === "REVISION_REQUESTED"
+                ? inquiry.pendingRevisionItemId ?? undefined
+                : undefined
             }
           />
         </section>
@@ -734,7 +777,12 @@ export function TripRoomView({
             type="button"
             className="btn btn-ghost"
             disabled={acting}
-            onClick={() => setRevisionOpen((v) => !v)}
+            onClick={() => {
+              setRevisionOpen((v) => !v);
+              if (!revisionItemId && inquiry.proposal?.items?.[0]) {
+                setRevisionItemId(inquiry.proposal.items[0].id);
+              }
+            }}
           >
             Request changes
           </button>
@@ -753,7 +801,27 @@ export function TripRoomView({
 
       {revisionOpen && (
         <form className="neg-revision-form trip-room-revision-float" onSubmit={onRevisionSubmit}>
-          <label htmlFor="revisionNote">What would you like changed?</label>
+          <label htmlFor="revisionItem">Which option needs changes?</label>
+          <select
+            id="revisionItem"
+            value={revisionItemId}
+            onChange={(e) => setRevisionItemId(e.target.value)}
+            required
+          >
+            <option value="">Select a tour / option…</option>
+            {(inquiry.proposal?.items ?? []).map((item, index) => {
+              const title =
+                item.tour?.title ||
+                item.itinerary?.title ||
+                (item.kind === "CUSTOM" ? "Custom itinerary" : "Tour option");
+              return (
+                <option key={item.id} value={item.id}>
+                  {`Option ${index + 1} · ${title}`}
+                </option>
+              );
+            })}
+          </select>
+          <label htmlFor="revisionNote">What would you like changed on this option?</label>
           <textarea
             id="revisionNote"
             rows={3}
@@ -762,7 +830,11 @@ export function TripRoomView({
             placeholder="e.g. Prefer fewer travel days, add a beach stay…"
             required
           />
-          <button type="submit" className="btn btn-teal" disabled={acting}>
+          <button
+            type="submit"
+            className="btn btn-teal"
+            disabled={acting || !revisionItemId || !revisionNote.trim()}
+          >
             Send revision request
           </button>
         </form>

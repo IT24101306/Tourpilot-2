@@ -6,6 +6,7 @@ export type AuditEntityType =
   | "OFFER"
   | "ENTITY"
   | "AGENCY_FEATURES"
+  | "AGENCY_SUBSCRIPTION"
   | "PLATFORM_SETTINGS"
   | "CMS_PAGE"
   | "VOUCHER";

@@ -22,7 +22,7 @@ const QUEUE_META: Record<
   },
   confirmed: {
     title: "Confirmed",
-    hint: "Ready for execution and task assignment.",
+    hint: "Accepted, in progress, or completed trips.",
   },
   closed: {
     title: "Closed",

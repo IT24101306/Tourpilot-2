@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { dashboardPathForRole } from "@tourpilot/shared";
 import { api } from "../api/client";
 import { AccountProfileShell } from "../components/account/AccountProfileShell";
+import { AccountProfileStepNav } from "../components/account/AccountProfileStepNav";
 import type {
   AccountAction,
   AccountField,
@@ -25,13 +26,66 @@ type InquirySummary = {
   whiteLabel?: boolean;
 };
 
+const TOURIST_STEPS = [
+  { id: "inquiries", label: "Inquiries", hint: "Open & pending requests" },
+  { id: "bookings", label: "Bookings", hint: "Confirmed & active trips" },
+  { id: "wallet", label: "Wallet", hint: "Balance, top up & history" },
+  { id: "featured", label: "Featured", hint: "Travel hub & glance stats" },
+  { id: "favourite", label: "Favourite", hint: "Your saved tours" },
+  { id: "currency", label: "Display currency", hint: "How prices appear" },
+] as const;
+
+type TouristStepId = (typeof TOURIST_STEPS)[number]["id"];
+
+const TOURIST_STEP_IDS = new Set<string>(TOURIST_STEPS.map((s) => s.id));
+
+function isTouristStep(value: string | null): value is TouristStepId {
+  return Boolean(value && TOURIST_STEP_IDS.has(value));
+}
+
+const BOOKING_STATUSES = new Set(["ACCEPTED", "IN_PROGRESS", "COMPLETED"]);
+
+function statusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function partnerName(inquiry: InquirySummary): string {
+  if (inquiry.whiteLabel && inquiry.handlerInfluencer?.name) {
+    return inquiry.handlerInfluencer.name;
+  }
+  return inquiry.agency?.name ?? "Travel partner";
+}
+
 export function ProfilePage() {
   const { user, token } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [inquiries, setInquiries] = useState<InquirySummary[]>([]);
   const [savedCount, setSavedCount] = useState(0);
   const [partner, setPartner] = useState<InfluencerDashboardData | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(false);
   const [loadError, setLoadError] = useState("");
+
+  const sectionParam = searchParams.get("section");
+  const activeStep: TouristStepId = isTouristStep(sectionParam) ? sectionParam : "inquiries";
+
+  const setActiveStep = useCallback(
+    (id: TouristStepId) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (id === "inquiries") next.delete("section");
+          else next.set("section", id);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
 
   const loadInquiries = useCallback(async () => {
     if (!token || user?.role !== "TOURIST") return;
@@ -47,11 +101,12 @@ export function ProfilePage() {
 
   const loadSavedCount = useCallback(async () => {
     if (!token || user?.role !== "TOURIST") return;
-    const [tours, plans] = await Promise.all([
-      api<{ id: string }[]>("/saved-tours/mine", { token }),
-      api<{ id: string }[]>("/saved-trip-plans/mine", { token }),
-    ]);
-    setSavedCount(tours.length + plans.length);
+    try {
+      const tours = await api<{ id: string }[]>("/saved-tours/mine", { token });
+      setSavedCount(tours.length);
+    } catch {
+      setSavedCount(0);
+    }
   }, [token, user?.role]);
 
   const loadPartner = useCallback(async () => {
@@ -68,6 +123,16 @@ export function ProfilePage() {
     );
   }, [user, token, loadInquiries, loadSavedCount, loadPartner]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#account-favourites-title") {
+      setActiveStep("favourite");
+    }
+  }, [setActiveStep]);
+
+  const bookings = inquiries.filter((i) => BOOKING_STATUSES.has(i.status));
+  const openInquiries = inquiries.filter((i) => !BOOKING_STATUSES.has(i.status));
+
   if (!user) {
     return (
       <section className="section account-profile">
@@ -78,6 +143,8 @@ export function ProfilePage() {
     );
   }
 
+  const profileUser = user;
+
   const stats: AccountStat[] = [];
   const fields: AccountField[] = [];
   const actions: AccountAction[] = [];
@@ -87,22 +154,25 @@ export function ProfilePage() {
   let contextPartners: { name: string; slug?: string | null; logoUrl?: string | null; href?: string }[] =
     [];
 
-  const dashPath = dashboardPathForRole(user.role);
-  if (dashPath !== "/profile") {
+  const dashPath = dashboardPathForRole(profileUser.role);
+  if (profileUser.role !== "TOURIST" && dashPath !== "/profile") {
     actions.push({
-      label: `${roleLabel(user.role)} dashboard`,
+      label: `${roleLabel(profileUser.role)} dashboard`,
       to: dashPath,
       variant: "primary",
     });
   }
 
-  switch (user.role) {
+  switch (profileUser.role) {
     case "TOURIST": {
-      const loyalty = user.touristProfile?.loyaltyPoints ?? 0;
+      const loyalty = profileUser.touristProfile?.loyaltyPoints ?? 0;
       const inquiryCount = inquiries.length;
-      const bookingCount = inquiries.filter((i) => i.status === "ACCEPTED").length;
+      const bookingCount = inquiries.filter((i) => BOOKING_STATUSES.has(i.status)).length;
 
-      const partnerMap = new Map<string, { name: string; slug?: string | null; logoUrl?: string | null; href?: string }>();
+      const partnerMap = new Map<
+        string,
+        { name: string; slug?: string | null; logoUrl?: string | null; href?: string }
+      >();
       for (const inquiry of inquiries) {
         if (inquiry.whiteLabel && inquiry.handlerInfluencer?.name) {
           const key = `i:${inquiry.handlerInfluencer.id}`;
@@ -112,7 +182,7 @@ export function ProfilePage() {
               slug: inquiry.handlerInfluencer.slug,
               href: inquiry.handlerInfluencer.slug
                 ? `/i/${inquiry.handlerInfluencer.slug}`
-                : `/trips?room=${inquiry.id}`,
+                : `/trips/${inquiry.id}`,
             });
           }
           continue;
@@ -156,12 +226,6 @@ export function ProfilePage() {
         { label: "Bookings", value: String(bookingCount) },
         { label: "Saved", value: String(savedCount) },
         { label: "Loyalty points", value: loyalty.toLocaleString() }
-      );
-
-      actions.push(
-        { label: "Inquiries", to: "/trips", variant: "teal" },
-        { label: "Bookings", to: "/trips?tab=bookings" },
-        { label: "Favourites", to: "#account-favourites-title" }
       );
       break;
     }
@@ -316,6 +380,184 @@ export function ProfilePage() {
     }
   }
 
+  const isTourist = user.role === "TOURIST";
+  const featured = highlights[0] ?? null;
+
+  function renderTouristPanel() {
+    switch (activeStep) {
+      case "inquiries":
+        return (
+          <section className="account-profile-panel" aria-labelledby="account-inquiries-title">
+            <header className="account-block-head">
+              <h2 id="account-inquiries-title">Inquiries</h2>
+              <p className="muted">Requests still in negotiation or waiting on a reply.</p>
+            </header>
+            {loadError ? <p className="form-error">{loadError}</p> : null}
+            {loadingExtra ? <p className="muted">Refreshing your travel activity…</p> : null}
+            {openInquiries.length === 0 ? (
+              <p className="muted account-profile-panel__empty">
+                No open inquiries.{" "}
+                <Link to="/offers">Browse offers</Link> or open your{" "}
+                <Link to="/trips">travel hub</Link>.
+              </p>
+            ) : (
+              <ul className="account-profile-list">
+                {openInquiries.map((inquiry) => (
+                  <li key={inquiry.id}>
+                    <Link to={`/trips/${inquiry.id}`} className="account-profile-list__item">
+                      <span className="account-profile-list__title">{partnerName(inquiry)}</span>
+                      <span className="account-profile-list__meta">{statusLabel(inquiry.status)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="account-profile-panel__footer">
+              <Link to="/trips" className="btn btn-teal">
+                Open travel hub
+              </Link>
+            </p>
+          </section>
+        );
+      case "bookings":
+        return (
+          <section className="account-profile-panel" aria-labelledby="account-bookings-title">
+            <header className="account-block-head">
+              <h2 id="account-bookings-title">Bookings</h2>
+              <p className="muted">Confirmed, in-progress, and completed trips.</p>
+            </header>
+            {bookings.length === 0 ? (
+              <p className="muted account-profile-panel__empty">
+                No bookings yet. Accept a proposal from an inquiry to see it here.
+              </p>
+            ) : (
+              <ul className="account-profile-list">
+                {bookings.map((inquiry) => (
+                  <li key={inquiry.id}>
+                    <Link to={`/trips/${inquiry.id}`} className="account-profile-list__item">
+                      <span className="account-profile-list__title">{partnerName(inquiry)}</span>
+                      <span className="account-profile-list__meta">{statusLabel(inquiry.status)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="account-profile-panel__footer">
+              <Link to="/trips?tab=bookings" className="btn btn-teal">
+                View all bookings
+              </Link>
+            </p>
+          </section>
+        );
+      case "wallet":
+        return <WalletHistoryPanel />;
+      case "featured":
+        return (
+          <section className="account-profile-panel" aria-labelledby="account-featured-title">
+            <header className="account-block-head">
+              <h2 id="account-featured-title">Featured</h2>
+              <p className="muted">Your travel hub snapshot and account overview.</p>
+            </header>
+            {featured ? (
+              <Link to={featured.to} className="account-featured-card">
+                <div className="account-featured-card-body">
+                  <span className="account-featured-kicker">{featured.label}</span>
+                  <strong className="account-featured-value">{featured.value}</strong>
+                  {featured.description ? (
+                    <p className="account-featured-desc">{featured.description}</p>
+                  ) : null}
+                </div>
+                <span className="account-featured-cta">Open</span>
+              </Link>
+            ) : null}
+            {stats.length > 0 ? (
+              <div className="account-profile-block" style={{ marginTop: "1.5rem" }}>
+                <header className="account-block-head">
+                  <h2>At a glance</h2>
+                </header>
+                <dl className="account-stat-row">
+                  {stats.map((s) => (
+                    <div
+                      key={s.label}
+                      className={`account-stat-item account-stat-item--${s.tone ?? "default"}`}
+                    >
+                      <dt>{s.label}</dt>
+                      <dd>{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ) : null}
+            {(profileUser.email || fields.length > 0) && (
+              <div className="account-profile-block account-profile-block--meta">
+                <p className="account-meta-note">
+                  <span className="account-meta-note__label">Account details</span>
+                  {[
+                    ...fields,
+                    ...(profileUser.email ? [{ label: "Email", value: profileUser.email }] : []),
+                  ].map(
+                    (f, i) => (
+                      <span key={f.label} className="account-meta-note__item">
+                        {i > 0 ? (
+                          <span className="account-meta-note__sep" aria-hidden="true">
+                            ·
+                          </span>
+                        ) : null}
+                        <span className="account-meta-note__key">{f.label}</span> {f.value}
+                      </span>
+                    )
+                  )}
+                  <span className="account-meta-note__hint">Read-only</span>
+                </p>
+              </div>
+            )}
+          </section>
+        );
+      case "favourite":
+        return (
+          <section
+            className="account-profile-favourites account-profile-panel"
+            aria-labelledby="account-favourites-title"
+          >
+            <header className="account-block-head">
+              <h2 id="account-favourites-title">Favourite</h2>
+              <p className="muted">Tours you saved with Add to favourites.</p>
+            </header>
+            <TouristSavedPage />
+          </section>
+        );
+      case "currency":
+        return <CurrencyPreferencePanel />;
+      default:
+        return null;
+    }
+  }
+
+  if (isTourist) {
+    return (
+      <AccountProfileShell
+        name={user.name}
+        phone={user.phone}
+        role={user.role}
+        email={user.email}
+        walletBalance={user.walletBalance}
+        tagline={tagline}
+        contextLabel={contextLabel}
+        contextPartners={contextPartners}
+        sideNav={
+          <AccountProfileStepNav
+            steps={[...TOURIST_STEPS]}
+            active={activeStep}
+            onChange={(id) => setActiveStep(id as TouristStepId)}
+          />
+        }
+        onWalletCta={() => setActiveStep("wallet")}
+      >
+        {renderTouristPanel()}
+      </AccountProfileShell>
+    );
+  }
+
   return (
     <AccountProfileShell
       name={user.name}
@@ -332,19 +574,6 @@ export function ProfilePage() {
       contextPartners={contextPartners}
       leading={<WalletHistoryPanel />}
     >
-      {loadError && <p className="form-error">{loadError}</p>}
-      {loadingExtra && user.role === "TOURIST" && (
-        <p className="muted">Refreshing your travel activity…</p>
-      )}
-      {user.role === "TOURIST" && (
-        <section className="account-profile-favourites" aria-labelledby="account-favourites-title">
-          <header className="account-block-head">
-            <h2 id="account-favourites-title">Favourites</h2>
-            <p className="muted">Tours you saved with Add to favourites.</p>
-          </header>
-          <TouristSavedPage />
-        </section>
-      )}
       <CurrencyPreferencePanel />
       {user.role === "AGENCY" && <AgencyLogoPanel />}
     </AccountProfileShell>

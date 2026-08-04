@@ -7,6 +7,8 @@ type Props = {
   items: ProposalItem[];
   agencySlug?: string;
   compare?: boolean;
+  partnerName?: string | null;
+  highlightItemId?: string;
 };
 
 export function ProposalCards({
@@ -14,7 +16,8 @@ export function ProposalCards({
   agencySlug,
   compare = true,
   partnerName,
-}: Props & { partnerName?: string | null }) {
+  highlightItemId,
+}: Props) {
   const { format } = useFormatMoney();
   const partner = partnerName?.trim() || "Your travel partner";
 
@@ -30,8 +33,14 @@ export function ProposalCards({
   return (
     <div className={`neg-proposal-grid${compare && items.length > 1 ? " neg-proposal-grid--compare" : ""}`}>
       {items.map((item, index) => (
-        <article key={item.id} className="neg-proposal-card">
+        <article
+          key={item.id}
+          className={`neg-proposal-card${highlightItemId === item.id ? " is-revision-target" : ""}`}
+        >
           <span className="neg-proposal-option">Option {index + 1}</span>
+          {highlightItemId === item.id && (
+            <span className="neg-proposal-revision-badge">Needs changes</span>
+          )}
           {item.kind === "READY_MADE" && item.tour && (
             <>
               <span className="neg-proposal-tag">Ready-made</span>

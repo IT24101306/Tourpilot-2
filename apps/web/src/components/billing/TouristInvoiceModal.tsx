@@ -93,7 +93,7 @@ export function TouristInvoiceModal({ open, inquiryId, token, onClose, onUpdated
       onClose();
       if (result.mode === "zero_total") {
         onUpdated?.();
-        navigate(result.redirectUrl.replace(/^https?:\/\/[^/]+/, "") || `/trips?room=${inquiryId}&paid=1`);
+        navigate(result.redirectUrl.replace(/^https?:\/\/[^/]+/, "") || `/trips/${inquiryId}`);
         return;
       }
       navigate(`/checkout/${invoice.id}${result.paymentId ? `?payment=${result.paymentId}` : ""}`);

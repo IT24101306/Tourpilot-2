@@ -982,7 +982,9 @@ agenciesRouter.put(
 
     });
 
-
+    // Include public tourist reviews in stored agency rating.
+    const { recalculateAgencyRatings } = await import("../services/agencyRatings.js");
+    await recalculateAgencyRatings(agency.id);
 
     const updated = await prisma.agency.findUniqueOrThrow({
 

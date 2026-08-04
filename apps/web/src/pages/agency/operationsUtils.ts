@@ -74,7 +74,11 @@ export function nextActionLabel(status: string): string {
     case "TOURIST_VIEWED":
       return "Follow up with traveler";
     case "ACCEPTED":
-      return "Confirm operations";
+      return "Start trip when ready";
+    case "IN_PROGRESS":
+      return "Complete trip when finished";
+    case "COMPLETED":
+      return "Trip done — check reviews";
     default:
       return "View details";
   }

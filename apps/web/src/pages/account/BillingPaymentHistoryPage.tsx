@@ -52,6 +52,9 @@ export function BillingPaymentHistoryPage() {
         <span>Payment history</span>
       </nav>
       <h1 className="account-billing-title">Payment history</h1>
+      <p className="account-billing-lead">
+        Subscription payments and renewals for this agency account.
+      </p>
 
       {error ? <p className="form-error">{error}</p> : null}
       {loading ? <p className="muted">Loading…</p> : null}

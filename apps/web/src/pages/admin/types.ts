@@ -20,6 +20,25 @@ export type AdminAgency = {
   avgRating: number;
   reviewCount: number;
   owner: { id: string; name: string; phone: string; email: string | null };
+  subscription?: {
+    ownerId: string;
+    walletBalance: number;
+    autoRenew: boolean;
+    periodEnd: string | null;
+    loginFeeLkr: number | null;
+    trial: {
+      active: boolean;
+      expiredUnpaid: boolean;
+      endsAt: string | null;
+      daysRemaining: number | null;
+      packageId: string | null;
+      packageName: string | null;
+      priceLkr: number | null;
+      priceLabel: string | null;
+      billing: string | null;
+      activatedAt: string | null;
+    };
+  };
   tourCount: number;
   inquiryCount: number;
   kyc: Record<string, unknown> | null;
