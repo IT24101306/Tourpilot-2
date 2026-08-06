@@ -4,9 +4,71 @@ import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth
 import { prisma } from "../lib/prisma.js";
 import { buildInquiryAssist } from "../services/aiAssist.js";
 import { loadAgencyTrustBadges } from "../services/trustBadges.js";
+import { generateTripPlan } from "../services/tripPlanner.js";
+import { generateChatbotReply } from "../services/chatbot.js";
 import { buildMarginCoachTips } from "@tourpilot/shared";
 
 export const smartRouter = Router();
+
+const tripPlannerBodySchema = z.object({
+  days: z.number().int().min(1).max(30),
+  pax: z.number().int().min(1).max(50).default(2),
+  interests: z.array(z.string().min(1).max(80)).max(20).default([]),
+  budgetMinLkr: z.number().min(0).nullable().optional(),
+  budgetMaxLkr: z.number().min(0).nullable().optional(),
+  startDate: z.string().max(32).nullable().optional(),
+  pace: z.enum(["relaxed", "balanced", "packed"]).optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+/** Public: AI trip planner. Requires OPENAI_API_KEY — no stub replies. */
+smartRouter.post("/trip-planner", async (req, res, next) => {
+  try {
+    const body = tripPlannerBodySchema.parse(req.body);
+    if (
+      body.budgetMinLkr != null &&
+      body.budgetMaxLkr != null &&
+      body.budgetMinLkr > body.budgetMaxLkr
+    ) {
+      return res.status(400).json({ error: "budgetMinLkr cannot exceed budgetMaxLkr" });
+    }
+    const plan = await generateTripPlan(body);
+    res.json(plan);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const chatbotBodySchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().min(1).max(4000),
+      })
+    )
+    .min(1)
+    .max(24),
+  pagePath: z.string().max(200).nullable().optional(),
+});
+
+/** Public: AI chatbot. Requires OPENAI_API_KEY — no stub replies. */
+smartRouter.post("/chatbot", async (req, res, next) => {
+  try {
+    const body = chatbotBodySchema.parse(req.body);
+    const last = body.messages[body.messages.length - 1];
+    if (!last || last.role !== "user") {
+      return res.status(400).json({ error: "Last message must be from the user" });
+    }
+    const result = await generateChatbotReply({
+      messages: body.messages,
+      pagePath: body.pagePath ?? null,
+    });
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
 
 smartRouter.get(
   "/inquiries/:id/assist",

@@ -213,6 +213,24 @@ export {
   type MarginCoachTone,
 } from "./marginCoach.js";
 
+export type {
+  TripPlannerPace,
+  TripPlannerRequest,
+  TripPlannerDestination,
+  TripPlannerItineraryDay,
+  TripPlannerPackageSuggestion,
+  TripPlannerResult,
+} from "./tripPlanner.js";
+
+export type {
+  ChatbotMessageRole,
+  ChatbotMessage,
+  ChatbotLink,
+  ChatbotLeadHints,
+  ChatbotRequest,
+  ChatbotResult,
+} from "./chatbot.js";
+
 export {
   pipelineNextActions,
   softAiMomentsForContext,

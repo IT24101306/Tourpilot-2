@@ -59,6 +59,15 @@ export const config = {
     /** Sandbox checkout unless PAYHERE_SANDBOX=false */
     sandbox: process.env.PAYHERE_SANDBOX !== "false",
   },
+  /**
+   * OpenAI-compatible chat API. No stub replies — callers must fail if key is missing.
+   * OPENAI_BASE_URL can point at OpenAI or a compatible proxy.
+   */
+  ai: {
+    apiKey: process.env.OPENAI_API_KEY?.trim() || "",
+    baseUrl: (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, ""),
+    model: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
+  },
 };
 
 function corsOrigins(): string[] {

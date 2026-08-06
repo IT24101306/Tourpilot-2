@@ -23,6 +23,7 @@ import { AgencyDetailPage } from "./pages/AgencyDetailPage";
 import { TourDetailPage } from "./pages/TourDetailPage";
 import { OffersPage } from "./pages/OffersPage";
 import { OfferBookPage } from "./pages/OfferBookPage";
+import { TripPlannerPage } from "./pages/TripPlannerPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AccountBillingLayout } from "./components/account/AccountBillingLayout";
 import {
@@ -33,6 +34,7 @@ import {
 import { BillingPaymentHistoryPage } from "./pages/account/BillingPaymentHistoryPage";
 import { BillingPaymentMethodsPage } from "./pages/account/BillingPaymentMethodsPage";
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { AiChatbotWidget } from "./components/smart/AiChatbotWidget";
 import { initAnalyticsConsentListener } from "./lib/analytics";
 import { useEffect } from "react";
 import { AgencyOverviewPage } from "./pages/agency/AgencyOverviewPage";
@@ -176,6 +178,7 @@ function AppShell() {
             <Route path="agencies" element={<AgenciesListingRedirect />} />
             <Route path="offers" element={<OffersPage />} />
             <Route path="offers/:offerId/book" element={<OfferBookPage />} />
+            <Route path="plan" element={<TripPlannerPage />} />
             <Route
               path="profile"
               element={
@@ -358,6 +361,7 @@ function AppShell() {
           </div>
           <SiteFooter />
           <CookieConsentBanner />
+          <AiChatbotWidget />
         </div>
   );
 }

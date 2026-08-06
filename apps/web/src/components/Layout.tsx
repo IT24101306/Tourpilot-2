@@ -55,6 +55,7 @@ export function PublicLayout() {
   const storefront = useStorefrontDomain();
   const onProfile = pathname === "/profile";
   const onTravel = pathname === "/trips";
+  const onPlan = pathname === "/plan";
   const travelTab = searchParams.get("tab");
   const onInquiries = onTravel && (!travelTab || travelTab === "inquiries");
   const onBookings = onTravel && travelTab === "bookings";
@@ -94,10 +95,26 @@ export function PublicLayout() {
                 <NavLink to="/offers" className={navLinkClass}>
                   Offers
                 </NavLink>
+                <NavLink
+                  to="/plan"
+                  className={() => navLinkClass({ isActive: onPlan })}
+                >
+                  Plan trip
+                </NavLink>
               </>
             )}
             {user?.role === "TOURIST" && (
               <>
+                {onProfile && (
+                  <NavLink
+                    to="/plan"
+                    className={() =>
+                      `nav-link-light${onPlan ? " nav-link-light--active" : ""}`
+                    }
+                  >
+                    Plan trip
+                  </NavLink>
+                )}
                 <NavLink
                   to="/trips?tab=bookings"
                   className={() =>

@@ -11823,3 +11823,336 @@ a.agency-icon-btn {
 .currency-disclaimer-banner__close:hover {
   opacity: 1;
 }
+
+/* AI Trip Planner */
+.trip-planner-page {
+  max-width: 920px;
+}
+
+.trip-planner-form {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.trip-planner-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.trip-planner-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.trip-planner-form .field-label,
+.trip-planner-interests > legend {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--tp-muted, #5a6b7a);
+}
+
+.trip-planner-form input,
+.trip-planner-form select,
+.trip-planner-form textarea {
+  border: 1px solid var(--tp-border, #d5dde5);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  background: #fff;
+}
+
+.trip-planner-interests {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.trip-planner-interests__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.trip-planner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--tp-border, #d5dde5);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.trip-planner-chip:has(input:checked) {
+  border-color: var(--tp-teal, #0d9488);
+  background: color-mix(in srgb, var(--tp-teal, #0d9488) 10%, white);
+}
+
+.trip-planner-chip input {
+  margin: 0;
+}
+
+.trip-planner-form__actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.trip-planner-error {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #f5c2c7;
+  background: #fff5f5;
+  color: #842029;
+}
+
+.trip-planner-result {
+  margin-top: 2rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.trip-planner-result__title {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.trip-planner-result__summary {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.trip-planner-block h3 {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+}
+
+.trip-planner-dest-list,
+.trip-planner-days,
+.trip-planner-packages {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.trip-planner-packages {
+  list-style: none;
+  padding-left: 0;
+}
+
+.trip-planner-packages > li {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--tp-border, #d5dde5);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.trip-planner-packages .muted,
+.trip-planner-dest-list .muted,
+.trip-planner-handoff .muted {
+  color: var(--tp-muted, #5a6b7a);
+}
+
+.trip-planner-handoff {
+  padding-top: 0.5rem;
+}
+
+/* AI Chatbot widget */
+.ai-chatbot {
+  position: fixed;
+  right: 2.25rem;
+  bottom: 2.5rem;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.ai-chatbot__fab {
+  border: none;
+  border-radius: 999px;
+  min-width: 3.25rem;
+  min-height: 3.25rem;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  color: #fff;
+  background: var(--brand-accent-teal, #0d9488);
+  box-shadow: 0 8px 24px rgba(13, 43, 29, 0.22);
+}
+
+.ai-chatbot__fab:hover {
+  filter: brightness(1.05);
+}
+
+.ai-chatbot__panel {
+  width: min(380px, calc(100vw - 1.5rem));
+  height: min(520px, calc(100vh - 6.5rem));
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid var(--tp-border, #d5dde5);
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(13, 43, 29, 0.18);
+  overflow: hidden;
+}
+
+.ai-chatbot__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--tp-border, #e5ebe8);
+  background: #f6faf8;
+}
+
+.ai-chatbot__head strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.ai-chatbot__sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--tp-muted, #5a6b7a);
+}
+
+.ai-chatbot__icon-btn {
+  border: none;
+  background: transparent;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #334;
+  padding: 0.15rem 0.35rem;
+}
+
+.ai-chatbot__messages {
+  flex: 1;
+  overflow: auto;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: #fbfcfc;
+}
+
+.ai-chatbot__hint {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--tp-muted, #5a6b7a);
+  line-height: 1.45;
+}
+
+.ai-chatbot__bubble {
+  max-width: 92%;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.ai-chatbot__bubble p {
+  margin: 0;
+}
+
+.ai-chatbot__bubble--user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--brand-accent-teal, #0d9488) 16%, white);
+  border: 1px solid color-mix(in srgb, var(--brand-accent-teal, #0d9488) 28%, white);
+}
+
+.ai-chatbot__bubble--assistant {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid var(--tp-border, #d5dde5);
+}
+
+.ai-chatbot__links {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ai-chatbot__links a {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--tp-border, #d5dde5);
+  font-size: 0.8rem;
+  text-decoration: none;
+  color: var(--brand-accent-teal, #0d9488);
+  background: #f7fbf9;
+}
+
+.ai-chatbot__status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--tp-muted, #5a6b7a);
+}
+
+.ai-chatbot__error {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #f5c2c7;
+  background: #fff5f5;
+  color: #842029;
+  font-size: 0.85rem;
+}
+
+.ai-chatbot__lead {
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--tp-border, #e5ebe8);
+  font-size: 0.82rem;
+  background: #f3faf7;
+}
+
+.ai-chatbot__compose {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--tp-border, #e5ebe8);
+  background: #fff;
+}
+
+.ai-chatbot__compose input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--tp-border, #d5dde5);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+}
+
+.ai-chatbot__compose .btn {
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .ai-chatbot {
+    right: 1.25rem;
+    bottom: 1.75rem;
+  }
+
+  .ai-chatbot__panel {
+    width: calc(100vw - 2rem);
+  }
+}
+
+
