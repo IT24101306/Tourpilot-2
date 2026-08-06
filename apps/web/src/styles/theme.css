@@ -11369,38 +11369,192 @@ a.agency-icon-btn {
 
 .trust-badge-row {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+
+.trust-badge-row--compact {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .trust-badge {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 140, 2, 0.28);
-  background: rgba(0, 175, 2, 0.08);
-  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 140, 2, 0.22);
+  background: #f3faf4;
   color: #0f3d18;
+  box-sizing: border-box;
+}
+
+.trust-badge--earned {
+  border-color: rgba(0, 140, 2, 0.28);
+  background: #f3faf4;
 }
 
 .trust-badge--locked {
-  border-color: rgba(0, 0, 0, 0.12);
-  background: #f3f4f3;
-  color: #6b7280;
+  border-color: rgba(15, 40, 30, 0.1);
+  background: #f7f8f7;
+  color: #5b6560;
+}
+
+.trust-badge__status {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(0, 175, 2, 0.16);
+  color: #008c02;
+}
+
+.trust-badge--locked .trust-badge__status {
+  background: rgba(15, 40, 30, 0.08);
+  color: #8a938e;
+}
+
+.trust-badge__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.trust-badge__label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .trust-badge__hint {
-  font-size: 0.72rem;
-  opacity: 0.85;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  color: #66706b;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.trust-badge--earned .trust-badge__hint {
+  color: #2f6b3c;
+  font-weight: 600;
 }
 
 .trust-badge-row--compact .trust-badge {
-  padding: 4px 9px;
+  padding: 4px 9px 4px 7px;
+  border-radius: 999px;
+  gap: 5px;
+}
+
+.trust-badge-row--compact .trust-badge__status {
+  width: 14px;
+  height: 14px;
+  font-size: 0.55rem;
+}
+
+.trust-badge-row--compact .trust-badge__label {
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.trust-badge-row--compact .trust-badge__hint {
+  display: none;
+}
+
+.agency-trust-panel {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 40, 15, 0.1);
+  background: #fff;
+  box-shadow: none;
+}
+
+.agency-trust-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding-bottom: 8px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(15, 40, 30, 0.08);
+}
+
+.agency-trust-panel__eyebrow {
+  display: none;
+}
+
+.agency-trust-panel__head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #0f2a1f;
+}
+
+.agency-trust-panel__lead {
+  display: none;
+}
+
+.agency-trust-panel__meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.agency-trust-panel__meter strong {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #0f2a1f;
+}
+
+.agency-trust-panel__meter > span {
+  font-size: 0.75rem;
+  color: #66706b;
+}
+
+.agency-trust-panel__bar {
+  width: 72px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(15, 40, 30, 0.08);
+  overflow: hidden;
+}
+
+.agency-trust-panel__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #00af02, #1aa19d);
+}
+
+@media (max-width: 640px) {
+  .trust-badge-row--progress {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .pipeline-next {
@@ -11434,7 +11588,6 @@ a.agency-icon-btn {
 
 .trip-companion,
 .influencer-kit,
-.agency-trust-panel,
 .shareable-trip-card {
   margin: 16px 0;
   padding: 16px 18px;
@@ -11527,10 +11680,6 @@ a.agency-icon-btn {
   border: 1px solid rgba(0, 40, 15, 0.14);
   background: #f8faf9;
   font-size: 0.9rem;
-}
-
-.agency-trust-panel header h3 {
-  margin: 0 0 4px;
 }
 
 .agency-hero-currency-note {

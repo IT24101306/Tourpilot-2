@@ -20,15 +20,24 @@ export function AgencyTrustBadgesPanel() {
   }, [token]);
 
   const earnedCount = badges.filter((b) => b.earned).length;
+  const total = badges.length;
+  const pct = total > 0 ? Math.round((earnedCount / total) * 100) : 0;
 
   return (
     <section className="agency-trust-panel" aria-label="Trust signals">
-      <header>
+      <header className="agency-trust-panel__head">
         <h3>Trust signals</h3>
-        <p className="muted">
-          Earn badges travelers see on your storefront
-          {loading ? "…" : ` · ${earnedCount} of ${badges.length} unlocked`}.
-        </p>
+        {!loading && total > 0 ? (
+          <div className="agency-trust-panel__meter" aria-label={`${earnedCount} of ${total} unlocked`}>
+            <strong>
+              {earnedCount}/{total}
+            </strong>
+            <span>unlocked</span>
+            <div className="agency-trust-panel__bar" aria-hidden="true">
+              <span style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        ) : null}
       </header>
       {loading ? (
         <p className="muted">Checking your progress…</p>
