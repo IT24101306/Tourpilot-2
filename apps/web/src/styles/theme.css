@@ -12123,6 +12123,64 @@ a.agency-icon-btn {
   background: #f3faf7;
 }
 
+.ai-chatbot__starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ai-chatbot__starter {
+  border: 1px solid var(--tp-border, #d5dde5);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #1f3a2f;
+}
+
+.ai-chatbot__starter:hover:not(:disabled) {
+  border-color: var(--brand-accent-teal, #0d9488);
+  color: var(--brand-accent-teal, #0d9488);
+}
+
+.ai-chatbot__starter:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ai-chatbot__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--tp-border, #e5ebe8);
+  background: #f7faf8;
+}
+
+.ai-chatbot__action-btn {
+  border: 1px solid var(--tp-border, #d5dde5);
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #24362e;
+}
+
+.ai-chatbot__action-btn:hover {
+  border-color: #9bb5a8;
+}
+
+.ai-chatbot__action-btn--primary {
+  border-color: color-mix(in srgb, var(--brand-accent-teal, #0d9488) 45%, white);
+  background: color-mix(in srgb, var(--brand-accent-teal, #0d9488) 12%, white);
+  color: #0a5c54;
+}
+
 .ai-chatbot__compose {
   display: flex;
   gap: 0.45rem;

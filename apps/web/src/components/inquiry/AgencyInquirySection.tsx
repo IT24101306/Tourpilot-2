@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { currentPath, loginPath, registerPath } from "../../utils/authRedirect";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
@@ -14,6 +14,11 @@ import { InquiryTripDates } from "./InquiryTripDates";
 import { InquiryInterestTags } from "./InquiryInterestTags";
 import { ChatRoomPopup } from "./ChatRoomPopup";
 import { endDateFromStartAndTourDays, DISPLAY_CURRENCIES, type DisplayCurrency } from "@tourpilot/shared";
+import {
+  CHAT_HANDOFF_PARAM,
+  clearChatHandoff,
+  readChatHandoff,
+} from "../../lib/chatHandoff";
 
 const BUDGET_CURRENCIES = DISPLAY_CURRENCIES;
 
@@ -63,6 +68,7 @@ export function AgencyInquirySection({
 }: Props) {
   const sectionRef = useRef<HTMLElement>(null);
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const returnTo = currentPath(location);
   const { token, user, refreshUser } = useAuth();
   const { currency: displayCurrency } = useCurrency();
@@ -84,10 +90,28 @@ export function AgencyInquirySection({
   const [sentInquiryId, setSentInquiryId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const chatHandoffApplied = useRef(false);
 
   const canSubmit = Boolean(token && user?.role === "TOURIST");
   const isTourInquiry = Boolean(tour);
   const partnerLabel = agencyName.trim() || (influencerSlug ? "the creator" : "the agency");
+
+  useEffect(() => {
+    if (chatHandoffApplied.current) return;
+    if (searchParams.get(CHAT_HANDOFF_PARAM) !== "1") return;
+    const handoff = readChatHandoff();
+    if (!handoff) return;
+    if (handoff.agencySlug && handoff.agencySlug !== agencySlug) return;
+
+    chatHandoffApplied.current = true;
+    if (handoff.pax && handoff.pax >= 1) setPax(handoff.pax);
+    if (handoff.interests?.length) setInterests(handoff.interests);
+    if (handoff.message?.trim() && !tour) setMessage(handoff.message.trim());
+    clearChatHandoff();
+    const next = new URLSearchParams(searchParams);
+    next.delete(CHAT_HANDOFF_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [agencySlug, searchParams, setSearchParams, tour]);
 
   useEffect(() => {
     if (user?.email) {

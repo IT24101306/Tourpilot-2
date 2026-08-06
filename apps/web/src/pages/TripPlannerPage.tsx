@@ -1,5 +1,5 @@
-import { FormEvent, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import type { TripPlannerPace, TripPlannerResult } from "@tourpilot/shared";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -22,23 +22,55 @@ function formatLkr(n: number | null | undefined): string {
   return `LKR ${Math.round(n).toLocaleString()}`;
 }
 
+function parsePrefillInterests(raw: string | null): string[] {
+  if (!raw?.trim()) return ["Beaches", "Culture & temples"];
+  const parts = raw
+    .split(/[|,]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  return parts.length ? parts : ["Beaches", "Culture & temples"];
+}
+
 export function TripPlannerPage() {
   const { user } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const returnPath = currentPath(location);
 
-  const [days, setDays] = useState(7);
-  const [pax, setPax] = useState(2);
-  const [interests, setInterests] = useState<string[]>(["Beaches", "Culture & temples"]);
+  const [days, setDays] = useState(() => {
+    const n = Number(searchParams.get("days"));
+    return Number.isFinite(n) && n >= 1 && n <= 30 ? Math.round(n) : 7;
+  });
+  const [pax, setPax] = useState(() => {
+    const n = Number(searchParams.get("pax"));
+    return Number.isFinite(n) && n >= 1 && n <= 50 ? Math.round(n) : 2;
+  });
+  const [interests, setInterests] = useState<string[]>(() =>
+    parsePrefillInterests(searchParams.get("interests"))
+  );
   const [pace, setPace] = useState<TripPlannerPace>("balanced");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(() => searchParams.get("notes")?.slice(0, 2000) || "");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TripPlannerResult | null>(null);
+
+  useEffect(() => {
+    const d = Number(searchParams.get("days"));
+    if (Number.isFinite(d) && d >= 1 && d <= 30) setDays(Math.round(d));
+    const p = Number(searchParams.get("pax"));
+    if (Number.isFinite(p) && p >= 1 && p <= 50) setPax(Math.round(p));
+    if (searchParams.has("interests")) {
+      setInterests(parsePrefillInterests(searchParams.get("interests")));
+    }
+    if (searchParams.has("notes")) {
+      setNotes(searchParams.get("notes")?.slice(0, 2000) || "");
+    }
+  }, [searchParams]);
 
   const interestSet = useMemo(() => new Set(interests), [interests]);
 
@@ -276,7 +308,7 @@ export function TripPlannerPage() {
             ) : user.role === "TOURIST" ? (
               <p className="muted">
                 Open a matching agency or tour above, then send an inquiry — you can paste this plan
-                into a custom request. Full one-click handoff lands with the chatbot pass.
+                into a custom request. Or use Send inquiry in the Ask chat once an agency is suggested.
               </p>
             ) : (
               <p className="muted">Switch to a tourist account to send this plan as an inquiry.</p>
