@@ -103,10 +103,20 @@ export function AgencyInquirySection({
     if (!handoff) return;
     if (handoff.agencySlug && handoff.agencySlug !== agencySlug) return;
 
+    const wantsTour = Boolean(searchParams.get("inquireTour") || handoff.tourId);
+    if (wantsTour && !tour) return;
+
     chatHandoffApplied.current = true;
     if (handoff.pax && handoff.pax >= 1) setPax(handoff.pax);
     if (handoff.interests?.length) setInterests(handoff.interests);
-    if (handoff.message?.trim() && !tour) setMessage(handoff.message.trim());
+    if (handoff.message?.trim()) {
+      const chatMsg = handoff.message.trim();
+      if (tour) {
+        setMessage(`${defaultTourInquiryMessage(tour)}\n\nChat context:\n${chatMsg}`);
+      } else {
+        setMessage(chatMsg);
+      }
+    }
     clearChatHandoff();
     const next = new URLSearchParams(searchParams);
     next.delete(CHAT_HANDOFF_PARAM);
@@ -133,7 +143,7 @@ export function AgencyInquirySection({
   }, [user?.touristProfile?.displayCurrency]);
 
   useEffect(() => {
-    if (tour) {
+    if (tour && !chatHandoffApplied.current) {
       setMessage(defaultTourInquiryMessage(tour));
     }
   }, [tour?.id]);

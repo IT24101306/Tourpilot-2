@@ -4,12 +4,16 @@ import type { ChatbotLeadHints, ChatbotLink, ChatbotMessage } from "@tourpilot/s
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { SupportAgentsModal } from "../support/SupportAgentsModal";
-import { currentPath, loginPath } from "../../utils/authRedirect";
+import { loginPath } from "../../utils/authRedirect";
 import {
   agencyInquiryHandoffPath,
   buildChatSummaryMessage,
   buildPlanPrefillPath,
+  clearChatSession,
+  parseCatalogHref,
+  readChatSession,
   saveChatHandoff,
+  saveChatSession,
 } from "../../lib/chatHandoff";
 
 type UiMessage = ChatbotMessage & { links?: ChatbotLink[] };
@@ -38,10 +42,7 @@ function mergeLead(prev: ChatbotLeadHints, next: ChatbotLeadHints): ChatbotLeadH
   return {
     days: next.days !== undefined ? next.days : prev.days,
     pax: next.pax !== undefined ? next.pax : prev.pax,
-    interests:
-      next.interests !== undefined
-        ? next.interests
-        : prev.interests,
+    interests: next.interests !== undefined ? next.interests : prev.interests,
     budgetBand: next.budgetBand !== undefined ? next.budgetBand : prev.budgetBand,
     preferredAgencySlug:
       next.preferredAgencySlug !== undefined
@@ -52,21 +53,36 @@ function mergeLead(prev: ChatbotLeadHints, next: ChatbotLeadHints): ChatbotLeadH
   };
 }
 
+function initialSession(): { messages: UiMessage[]; lead: ChatbotLeadHints; open: boolean } {
+  const saved = readChatSession();
+  return {
+    messages: saved?.messages ?? [],
+    lead: saved?.lead ?? {},
+    open: Boolean(saved?.open),
+  };
+}
+
 export function AiChatbotWidget() {
   const { pathname } = useLocation();
-  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const visible = shouldShowChatbot(pathname);
-  const [open, setOpen] = useState(false);
+  const boot = useRef(initialSession()).current;
+
+  const [open, setOpen] = useState(boot.open);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<UiMessage[]>([]);
-  const [lead, setLead] = useState<ChatbotLeadHints>({});
+  const [messages, setMessages] = useState<UiMessage[]>(boot.messages);
+  const [lead, setLead] = useState<ChatbotLeadHints>(boot.lead);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [tourIdByHref, setTourIdByHref] = useState<Record<string, string>>({});
   const listRef = useRef<HTMLDivElement>(null);
-  const returnPath = currentPath(location);
+  const resolvedTourHrefs = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    saveChatSession({ messages, lead, open });
+  }, [messages, lead, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -74,7 +90,45 @@ export function AiChatbotWidget() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [open, messages, loading, error]);
 
-  if (!visible) return null;
+  /** Resolve tour slug links → tour ids for one-click inquire. */
+  useEffect(() => {
+    const pending: Array<{ href: string; agencySlug: string; tourSlug: string }> = [];
+    for (const m of messages) {
+      for (const link of m.links || []) {
+        const parsed = parseCatalogHref(link.href);
+        if (!parsed?.tourSlug) continue;
+        if (resolvedTourHrefs.current[link.href]) continue;
+        pending.push({
+          href: link.href,
+          agencySlug: parsed.agencySlug,
+          tourSlug: parsed.tourSlug,
+        });
+      }
+    }
+    if (!pending.length) return;
+
+    let cancelled = false;
+    void (async () => {
+      const updates: Record<string, string> = {};
+      await Promise.all(
+        pending.map(async ({ href, agencySlug, tourSlug }) => {
+          try {
+            const tour = await api<{ id: string }>(`/tours/public/${agencySlug}/${tourSlug}`);
+            if (tour?.id) updates[href] = tour.id;
+          } catch {
+            /* ignore missing tours */
+          }
+        })
+      );
+      if (cancelled || !Object.keys(updates).length) return;
+      resolvedTourHrefs.current = { ...resolvedTourHrefs.current, ...updates };
+      setTourIdByHref((prev) => ({ ...prev, ...updates }));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [messages]);
 
   async function send(text: string) {
     const content = text.trim();
@@ -125,20 +179,18 @@ export function AiChatbotWidget() {
     if (lead.preferredAgencySlug) return lead.preferredAgencySlug;
     for (const m of [...messages].reverse()) {
       for (const link of m.links || []) {
-        const match = link.href.match(/^\/agencies\/([a-z0-9-]+)/i);
-        if (match?.[1]) return match[1];
-        const tourMatch = link.href.match(/^\/tours\/([a-z0-9-]+)\//i);
-        if (tourMatch?.[1]) return tourMatch[1];
+        const parsed = parseCatalogHref(link.href);
+        if (parsed?.agencySlug) return parsed.agencySlug;
       }
     }
     return null;
   }
 
-  function startInquiryHandoff() {
-    const agencySlug = agencySlugFromChat();
-    const message = buildChatSummaryMessage(messages, lead);
+  function goInquiry(opts: { agencySlug: string; tourId?: string; message?: string }) {
+    const message = opts.message || buildChatSummaryMessage(messages, lead);
     saveChatHandoff({
-      agencySlug: agencySlug || undefined,
+      agencySlug: opts.agencySlug,
+      tourId: opts.tourId,
       pax: lead.pax ?? undefined,
       days: lead.days,
       interests: lead.interests,
@@ -147,27 +199,38 @@ export function AiChatbotWidget() {
       createdAt: new Date().toISOString(),
     });
 
+    const target = agencyInquiryHandoffPath(opts.agencySlug, { tourId: opts.tourId });
+
     if (!user) {
-      const target = agencySlug
-        ? agencyInquiryHandoffPath(agencySlug)
-        : buildPlanPrefillPath(lead, message);
       navigate(loginPath(target));
       setOpen(false);
       return;
     }
-
     if (user.role !== "TOURIST") {
       setError("Switch to a tourist account to send an inquiry to an agency.");
       return;
     }
+    navigate(target);
+    setOpen(false);
+  }
 
+  function startInquiryHandoff() {
+    const agencySlug = agencySlugFromChat();
     if (!agencySlug) {
       setError("Pick an agency or tour link from the chat first, then tap Send inquiry.");
       return;
     }
+    goInquiry({ agencySlug });
+  }
 
-    navigate(agencyInquiryHandoffPath(agencySlug));
-    setOpen(false);
+  function inquireFromLink(href: string) {
+    const parsed = parseCatalogHref(href);
+    if (!parsed) return;
+    const tourId = tourIdByHref[href];
+    goInquiry({
+      agencySlug: parsed.agencySlug,
+      tourId: parsed.tourSlug ? tourId : undefined,
+    });
   }
 
   function openTripPlanner() {
@@ -180,7 +243,18 @@ export function AiChatbotWidget() {
     setOpen(false);
   }
 
+  function clearConversation() {
+    setMessages([]);
+    setLead({});
+    setError(null);
+    setTourIdByHref({});
+    resolvedTourHrefs.current = {};
+    clearChatSession();
+  }
+
   const showHandoff = messages.length > 0 || Boolean(lead.readyForInquiry);
+
+  if (!visible) return null;
 
   return (
     <div className={`ai-chatbot${open ? " ai-chatbot--open" : ""}`}>
@@ -191,14 +265,25 @@ export function AiChatbotWidget() {
               <strong>TourPilot assistant</strong>
               <p className="ai-chatbot__sub">Sri Lanka travel help · live AI</p>
             </div>
-            <button
-              type="button"
-              className="ai-chatbot__icon-btn"
-              aria-label="Close chat"
-              onClick={() => setOpen(false)}
-            >
-              ×
-            </button>
+            <div className="ai-chatbot__head-actions">
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  className="ai-chatbot__text-btn"
+                  onClick={clearConversation}
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                type="button"
+                className="ai-chatbot__icon-btn"
+                aria-label="Close chat"
+                onClick={() => setOpen(false)}
+              >
+                ×
+              </button>
+            </div>
           </header>
 
           <div className="ai-chatbot__messages" ref={listRef}>
@@ -231,13 +316,29 @@ export function AiChatbotWidget() {
                 <p>{m.content}</p>
                 {m.links && m.links.length > 0 && (
                   <ul className="ai-chatbot__links">
-                    {m.links.map((link) => (
-                      <li key={`${link.href}-${link.label}`}>
-                        <Link to={link.href} onClick={() => setOpen(false)}>
-                          {link.label}
-                        </Link>
-                      </li>
-                    ))}
+                    {m.links.map((link) => {
+                      const catalog = parseCatalogHref(link.href);
+                      const canInquire = Boolean(catalog);
+                      const tourReady =
+                        !catalog?.tourSlug || Boolean(tourIdByHref[link.href]);
+                      return (
+                        <li key={`${link.href}-${link.label}`} className="ai-chatbot__link-row">
+                          <Link to={link.href} onClick={() => setOpen(false)}>
+                            {link.label}
+                          </Link>
+                          {canInquire && (
+                            <button
+                              type="button"
+                              className="ai-chatbot__inquire"
+                              disabled={!tourReady}
+                              onClick={() => inquireFromLink(link.href)}
+                            >
+                              Inquire
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -254,9 +355,7 @@ export function AiChatbotWidget() {
             <button
               type="button"
               className="ai-chatbot__action-btn"
-              onClick={() => {
-                setSupportOpen(true);
-              }}
+              onClick={() => setSupportOpen(true)}
             >
               Talk to a human
             </button>

@@ -1,10 +1,15 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type { TripPlannerPace, TripPlannerResult } from "@tourpilot/shared";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { ModuleHeader } from "../components/module/ModuleHeader";
 import { currentPath, loginPath } from "../utils/authRedirect";
+import {
+  agencyInquiryHandoffPath,
+  formatTripPlanHandoffMessage,
+  saveChatHandoff,
+} from "../lib/chatHandoff";
 
 const INTEREST_OPTIONS = [
   "Beaches",
@@ -35,6 +40,7 @@ function parsePrefillInterests(raw: string | null): string[] {
 export function TripPlannerPage() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnPath = currentPath(location);
 
@@ -78,6 +84,34 @@ export function TripPlannerPage() {
     setInterests((prev) =>
       prev.includes(label) ? prev.filter((x) => x !== label) : [...prev, label]
     );
+  }
+
+  function inquireWithPlan(opts: { agencySlug: string; tourId?: string }) {
+    if (!result) return;
+    const message = formatTripPlanHandoffMessage(result);
+    saveChatHandoff({
+      agencySlug: opts.agencySlug,
+      tourId: opts.tourId,
+      pax,
+      days,
+      interests,
+      message,
+      createdAt: new Date().toISOString(),
+    });
+    const target = agencyInquiryHandoffPath(opts.agencySlug, { tourId: opts.tourId });
+    if (!user) {
+      navigate(loginPath(target));
+      return;
+    }
+    if (user.role !== "TOURIST") return;
+    navigate(target);
+  }
+
+  function primaryAgencySlug(): string | null {
+    if (!result) return null;
+    if (result.draftTripPlan?.agencySlug) return result.draftTripPlan.agencySlug;
+    const pkg = result.packages?.find((p) => p.agencySlug);
+    return pkg?.agencySlug || null;
   }
 
   async function onSubmit(e: FormEvent) {
@@ -278,22 +312,35 @@ export function TripPlannerPage() {
                         : ""}
                     </div>
                     <p className="muted">{pkg.matchReason}</p>
-                    {pkg.agencySlug && (
-                      <Link to={`/agencies/${pkg.agencySlug}`} className="text-link">
-                        View agency
-                      </Link>
-                    )}
-                    {pkg.tourSlug && pkg.agencySlug && (
-                      <>
-                        {" · "}
+                    <div className="trip-planner-package-actions">
+                      {pkg.agencySlug && (
+                        <Link to={`/agencies/${pkg.agencySlug}`} className="text-link">
+                          View agency
+                        </Link>
+                      )}
+                      {pkg.tourSlug && pkg.agencySlug && (
                         <Link
                           to={`/tours/${pkg.agencySlug}/${pkg.tourSlug}`}
                           className="text-link"
                         >
                           View tour
                         </Link>
-                      </>
-                    )}
+                      )}
+                      {pkg.agencySlug && (
+                        <button
+                          type="button"
+                          className="btn btn-teal trip-planner-inquire-btn"
+                          onClick={() =>
+                            inquireWithPlan({
+                              agencySlug: pkg.agencySlug!,
+                              tourId: pkg.tourId,
+                            })
+                          }
+                        >
+                          Inquire
+                        </button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -306,10 +353,20 @@ export function TripPlannerPage() {
                 Log in to inquire with an agency
               </Link>
             ) : user.role === "TOURIST" ? (
-              <p className="muted">
-                Open a matching agency or tour above, then send an inquiry — you can paste this plan
-                into a custom request. Or use Send inquiry in the Ask chat once an agency is suggested.
-              </p>
+              primaryAgencySlug() ? (
+                <button
+                  type="button"
+                  className="btn btn-teal"
+                  onClick={() => inquireWithPlan({ agencySlug: primaryAgencySlug()! })}
+                >
+                  Send this plan as an inquiry
+                </button>
+              ) : (
+                <p className="muted">
+                  No matching agency yet — ask the Ask chat for packages, or browse agencies to
+                  inquire.
+                </p>
+              )
             ) : (
               <p className="muted">Switch to a tourist account to send this plan as an inquiry.</p>
             )}
