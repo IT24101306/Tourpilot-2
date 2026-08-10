@@ -29,6 +29,7 @@ import { subscriptionRouter } from "./routes/subscription.js";
 import { fxRouter } from "./routes/fx.js";
 import { reviewsRouter } from "./routes/reviews.js";
 import { smartRouter } from "./routes/smart.js";
+import { agencyReferralsRouter } from "./routes/agencyReferrals.js";
 
 export function createApp() {
   const app = express();
@@ -79,6 +80,7 @@ export function createApp() {
   app.use("/api/wallet", walletRouter);
   app.use("/api/billing", billingRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/agency/referrals", agencyReferralsRouter);
   app.use("/api/driver", driverRouter);
   app.use("/api/drivers", driversRouter);
   app.use("/api/uploads", uploadsRouter);

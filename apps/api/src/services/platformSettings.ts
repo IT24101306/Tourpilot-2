@@ -24,6 +24,13 @@ export type EmailTemplateOverride = {
 
 export type EmailTemplatesMap = Record<string, EmailTemplateOverride>;
 
+export type AgencyReferralSettings = {
+  enabled: boolean;
+  cap: number;
+  loginFeePct: number;
+  rewardMonths: number;
+};
+
 export type PlatformSettingsView = {
   loginFees: LoginFeesByRole;
   inquiryExpiryDays: number;
@@ -37,7 +44,18 @@ export type PlatformSettingsView = {
   sessionInactivityHours: number;
   emailTemplates: EmailTemplatesMap;
   supportContent: SupportContent;
+  agencyReferralEnabled: boolean;
+  agencyReferralCap: number;
+  agencyReferralLoginFeePct: number;
+  agencyReferralRewardMonths: number;
   updatedAt: string | null;
+};
+
+export const DEFAULT_AGENCY_REFERRAL: AgencyReferralSettings = {
+  enabled: true,
+  cap: 5,
+  loginFeePct: 25,
+  rewardMonths: 12,
 };
 
 const ROLES: UserRole[] = ["TOURIST", "AGENCY", "INFLUENCER", "DRIVER", "ADMIN"];
@@ -91,6 +109,16 @@ function normalizeEmailTemplates(raw: unknown): EmailTemplatesMap {
   return out;
 }
 
+function clampReferralCap(n: number) {
+  return Math.max(1, Math.min(50, Math.round(n)));
+}
+function clampReferralPct(n: number) {
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+function clampReferralMonths(n: number) {
+  return Math.max(1, Math.min(60, Math.round(n)));
+}
+
 function viewFromRow(row: {
   loginFees: unknown;
   inquiryExpiryDays: number;
@@ -102,6 +130,10 @@ function viewFromRow(row: {
   sessionInactivityMinutes?: number | null;
   emailTemplates: unknown;
   supportContent?: unknown;
+  agencyReferralEnabled?: boolean | null;
+  agencyReferralCap?: number | null;
+  agencyReferralLoginFeePct?: number | null;
+  agencyReferralRewardMonths?: number | null;
   updatedAt: Date;
 } | null): PlatformSettingsView {
   const sessionInactivityMinutes = resolveSessionInactivityMinutes({
@@ -119,6 +151,19 @@ function viewFromRow(row: {
     sessionInactivityHours: Math.max(1, Math.ceil(sessionInactivityMinutes / 60)),
     emailTemplates: normalizeEmailTemplates(row?.emailTemplates),
     supportContent: parseSupportContent(row?.supportContent ?? DEFAULT_SUPPORT_CONTENT),
+    agencyReferralEnabled: row?.agencyReferralEnabled ?? DEFAULT_AGENCY_REFERRAL.enabled,
+    agencyReferralCap:
+      row?.agencyReferralCap != null
+        ? clampReferralCap(row.agencyReferralCap)
+        : DEFAULT_AGENCY_REFERRAL.cap,
+    agencyReferralLoginFeePct:
+      row?.agencyReferralLoginFeePct != null
+        ? clampReferralPct(row.agencyReferralLoginFeePct)
+        : DEFAULT_AGENCY_REFERRAL.loginFeePct,
+    agencyReferralRewardMonths:
+      row?.agencyReferralRewardMonths != null
+        ? clampReferralMonths(row.agencyReferralRewardMonths)
+        : DEFAULT_AGENCY_REFERRAL.rewardMonths,
     updatedAt: row?.updatedAt?.toISOString() ?? null,
   };
 }
@@ -135,6 +180,16 @@ export async function getSupportContent(): Promise<SupportContent> {
   return settings.supportContent;
 }
 
+export async function getAgencyReferralSettings(): Promise<AgencyReferralSettings> {
+  const s = await getPlatformSettings();
+  return {
+    enabled: s.agencyReferralEnabled,
+    cap: s.agencyReferralCap,
+    loginFeePct: s.agencyReferralLoginFeePct,
+    rewardMonths: s.agencyReferralRewardMonths,
+  };
+}
+
 export async function updatePlatformSettings(input: {
   loginFees?: Partial<Record<SharedRole, number>>;
   inquiryExpiryDays?: number;
@@ -148,6 +203,10 @@ export async function updatePlatformSettings(input: {
   sessionInactivityHours?: number;
   emailTemplates?: EmailTemplatesMap;
   supportContent?: SupportContent;
+  agencyReferralEnabled?: boolean;
+  agencyReferralCap?: number;
+  agencyReferralLoginFeePct?: number;
+  agencyReferralRewardMonths?: number;
 }): Promise<PlatformSettingsView> {
   const current = await getPlatformSettings();
   const loginFees = { ...current.loginFees };
@@ -217,6 +276,23 @@ export async function updatePlatformSettings(input: {
       ? input.emailFrom?.trim() || null
       : current.emailFrom || null;
 
+  const agencyReferralEnabled =
+    input.agencyReferralEnabled !== undefined
+      ? Boolean(input.agencyReferralEnabled)
+      : current.agencyReferralEnabled;
+  const agencyReferralCap =
+    input.agencyReferralCap !== undefined
+      ? clampReferralCap(input.agencyReferralCap)
+      : current.agencyReferralCap;
+  const agencyReferralLoginFeePct =
+    input.agencyReferralLoginFeePct !== undefined
+      ? clampReferralPct(input.agencyReferralLoginFeePct)
+      : current.agencyReferralLoginFeePct;
+  const agencyReferralRewardMonths =
+    input.agencyReferralRewardMonths !== undefined
+      ? clampReferralMonths(input.agencyReferralRewardMonths)
+      : current.agencyReferralRewardMonths;
+
   const row = await prisma.platformSettings.upsert({
     where: { id: PLATFORM_SETTINGS_ID },
     create: {
@@ -232,6 +308,10 @@ export async function updatePlatformSettings(input: {
         sessionInactivityMinutes || SESSION_INACTIVITY_DEFAULT_MINUTES,
       emailTemplates: asJson(emailTemplates),
       supportContent: asJson(supportContent),
+      agencyReferralEnabled,
+      agencyReferralCap,
+      agencyReferralLoginFeePct,
+      agencyReferralRewardMonths,
     },
     update: {
       loginFees: asJson(loginFees),
@@ -244,6 +324,10 @@ export async function updatePlatformSettings(input: {
       sessionInactivityMinutes,
       emailTemplates: asJson(emailTemplates),
       supportContent: asJson(supportContent),
+      agencyReferralEnabled,
+      agencyReferralCap,
+      agencyReferralLoginFeePct,
+      agencyReferralRewardMonths,
     },
   });
 

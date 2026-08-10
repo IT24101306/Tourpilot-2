@@ -30,12 +30,12 @@ export async function chargeLoginFee(userId: string, _role?: UserRole) {
   const noteSuffix =
     user.loginFeeLkr != null ? `${user.role}, custom` : user.role;
 
-  await prisma.$transaction([
-    prisma.user.update({
+  const ledger = await prisma.$transaction(async (tx) => {
+    await tx.user.update({
       where: { id: userId },
       data: { walletBalance: newBalance },
-    }),
-    prisma.walletLedger.create({
+    });
+    return tx.walletLedger.create({
       data: {
         userId,
         type: "LOGIN_FEE" as WalletTxnType,
@@ -43,8 +43,8 @@ export async function chargeLoginFee(userId: string, _role?: UserRole) {
         balanceAfter: newBalance,
         note: `Login fee (${noteSuffix})`,
       },
-    }),
-  ]);
+    });
+  });
 
   void notifyWalletReceipt({
     userId,
@@ -54,6 +54,15 @@ export async function chargeLoginFee(userId: string, _role?: UserRole) {
     amountLkr: fee,
     balanceLkr: newBalance,
   }).catch((err) => console.error("[login fee receipt]", err));
+
+  if (user.role === "AGENCY") {
+    const { creditAgencyReferralReward } = await import("./agencyReferral.js");
+    void creditAgencyReferralReward({
+      inviteeOwnerId: userId,
+      loginFeeCharged: fee,
+      sourceLedgerId: ledger.id,
+    }).catch((err) => console.error("[agency referral reward]", err));
+  }
 
   return { charged: fee, balance: newBalance };
 }

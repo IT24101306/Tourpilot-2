@@ -38,7 +38,14 @@ walletRouter.get("/ledger", authRequired, async (req, res, next) => {
       .object({
         limit: z.coerce.number().int().min(1).max(100).optional().default(50),
         type: z
-          .enum(["LOGIN_FEE", "TOPUP", "COMMISSION", "REFUND", "ADJUSTMENT"])
+          .enum([
+            "LOGIN_FEE",
+            "TOPUP",
+            "COMMISSION",
+            "REFUND",
+            "ADJUSTMENT",
+            "AGENCY_REFERRAL_REWARD",
+          ])
           .optional(),
       })
       .parse(req.query);

@@ -16,6 +16,7 @@ import { buildDisplayPayload, defaultInfluencerDisplay } from "../lib/influencer
 import { ensureUniqueInfluencerSlug } from "../lib/influencerSlug.js";
 import { serializeAgencyFeatures } from "../lib/agencyFeatures.js";
 import { buildAgencyKycRecord, parseAgencyKyc } from "../lib/agencyKyc.js";
+import { bindReferralOnAgencyCreate } from "../services/agencyReferral.js";
 import { asJson } from "../utils/json.js";
 import { notifyWelcome } from "../services/notifications.js";
 import {
@@ -188,6 +189,7 @@ authRouter.post("/verify-registration", async (req, res, next) => {
             ...(startTrial ? TRIAL_AGENCY_FEATURES : {}),
           },
         });
+        await bindReferralOnAgencyCreate(tx, { phone, agencyId: agency.id });
         await tx.displaySettings.create({
           data: {
             agencyId: agency.id,

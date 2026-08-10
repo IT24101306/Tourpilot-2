@@ -314,6 +314,11 @@ export function AdminAgenciesPage() {
                     <strong>{a.name}</strong>
                     <br />
                     <span className="muted">{a.slug}</span>
+                    {a.referredByAgency && (
+                      <p className="muted" style={{ margin: "0.35rem 0 0" }}>
+                        Referred by {a.referredByAgency.name}
+                      </p>
+                    )}
                     {a.rejectionReason && (
                       <p className="gov-inline-warn">Rejected: {a.rejectionReason}</p>
                     )}

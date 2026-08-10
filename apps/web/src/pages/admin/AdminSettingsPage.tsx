@@ -32,6 +32,10 @@ type PlatformSettings = {
   sessionInactivityHours: number;
   emailTemplates: Record<string, EmailTemplate>;
   supportContent: SupportContent;
+  agencyReferralEnabled: boolean;
+  agencyReferralCap: number;
+  agencyReferralLoginFeePct: number;
+  agencyReferralRewardMonths: number;
   updatedAt: string | null;
 };
 
@@ -131,6 +135,10 @@ export function AdminSettingsPage() {
   const [support, setSupport] = useState<SupportContent>(
     structuredClone(DEFAULT_SUPPORT_CONTENT)
   );
+  const [referralEnabled, setReferralEnabled] = useState(true);
+  const [referralCap, setReferralCap] = useState("5");
+  const [referralPct, setReferralPct] = useState("25");
+  const [referralMonths, setReferralMonths] = useState("12");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -163,6 +171,10 @@ export function AdminSettingsPage() {
         setIdleUnit(idle.unit);
         setTemplates(data.emailTemplates || {});
         setSupport(data.supportContent || structuredClone(DEFAULT_SUPPORT_CONTENT));
+        setReferralEnabled(data.agencyReferralEnabled ?? true);
+        setReferralCap(String(data.agencyReferralCap ?? 5));
+        setReferralPct(String(data.agencyReferralLoginFeePct ?? 25));
+        setReferralMonths(String(data.agencyReferralRewardMonths ?? 12));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -254,6 +266,22 @@ export function AdminSettingsPage() {
       return;
     }
 
+    const cap = Number(referralCap);
+    const pct = Number(referralPct);
+    const months = Number(referralMonths);
+    if (!Number.isFinite(cap) || cap < 1 || cap > 50) {
+      setMsg("Referral cap must be between 1 and 50.");
+      return;
+    }
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      setMsg("Referral login fee % must be between 0 and 100.");
+      return;
+    }
+    if (!Number.isFinite(months) || months < 1 || months > 60) {
+      setMsg("Referral reward months must be between 1 and 60.");
+      return;
+    }
+
     requestConfirm({
       title: "Save platform settings?",
       description:
@@ -271,6 +299,12 @@ export function AdminSettingsPage() {
           value: formatSessionInactivity(sessionInactivityMinutes),
         },
         { label: "Support agents", value: String(supportContent.agents.length) },
+        {
+          label: "Agency referrals",
+          value: referralEnabled
+            ? `${Math.round(cap)} max · ${Math.round(pct)}% · ${Math.round(months)} mo`
+            : "Off",
+        },
       ],
       onConfirm: async () => {
         setSaving(true);
@@ -288,10 +322,18 @@ export function AdminSettingsPage() {
               sessionInactivityMinutes,
               emailTemplates,
               supportContent,
+              agencyReferralEnabled: referralEnabled,
+              agencyReferralCap: Math.round(cap),
+              agencyReferralLoginFeePct: Math.round(pct),
+              agencyReferralRewardMonths: Math.round(months),
             }),
           });
           setSettings(data);
           setSupport(data.supportContent);
+          setReferralEnabled(data.agencyReferralEnabled);
+          setReferralCap(String(data.agencyReferralCap));
+          setReferralPct(String(data.agencyReferralLoginFeePct));
+          setReferralMonths(String(data.agencyReferralRewardMonths));
           const idle = splitSessionInactivityForEdit(data.sessionInactivityMinutes);
           setIdleAmount(String(idle.amount));
           setIdleUnit(idle.unit);
@@ -341,6 +383,59 @@ export function AdminSettingsPage() {
                     />
                   </label>
                 ))}
+              </div>
+            </div>
+          </details>
+
+          <details className="gov-settings-section">
+            <summary className="gov-settings-section__summary">
+              <span>Agency referrals</span>
+              <span className="gov-settings-section__hint">Invite cap, login-fee share, reward window</span>
+            </summary>
+            <div className="gov-settings-section__body">
+              <p className="muted">
+                Approved agencies can invite other agencies by phone. Referrers earn a share of each
+                charged login fee for a fixed window after the invitee is approved.
+              </p>
+              <label className="gov-check-row">
+                <input
+                  type="checkbox"
+                  checked={referralEnabled}
+                  onChange={(e) => setReferralEnabled(e.target.checked)}
+                />
+                <span>Enable agency-to-agency referrals</span>
+              </label>
+              <div className="gov-fee-grid">
+                <label className="gov-fee-field">
+                  <span>Max successful referrals</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={referralCap}
+                    onChange={(e) => setReferralCap(e.target.value)}
+                  />
+                </label>
+                <label className="gov-fee-field">
+                  <span>Referrer % of login fee</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={referralPct}
+                    onChange={(e) => setReferralPct(e.target.value)}
+                  />
+                </label>
+                <label className="gov-fee-field">
+                  <span>Reward window (months)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={referralMonths}
+                    onChange={(e) => setReferralMonths(e.target.value)}
+                  />
+                </label>
               </div>
             </div>
           </details>

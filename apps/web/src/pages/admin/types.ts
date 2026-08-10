@@ -20,6 +20,10 @@ export type AdminAgency = {
   avgRating: number;
   reviewCount: number;
   owner: { id: string; name: string; phone: string; email: string | null };
+  referredByAgency?: { id: string; name: string; slug: string } | null;
+  referralApprovedAt?: string | null;
+  referralRewardEndsAt?: string | null;
+  referralRegistrantBenefitPending?: boolean;
   subscription?: {
     ownerId: string;
     walletBalance: number;

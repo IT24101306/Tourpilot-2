@@ -34,6 +34,7 @@ import {
   resolveLoginFeeForUser,
   updatePlatformSettings,
 } from "../../services/platformSettings.js";
+import { activateReferralOnAgencyApproval } from "../../services/agencyReferral.js";
 import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
 import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
 import { recordAuditEvent } from "../../services/auditLog.js";
@@ -121,6 +122,10 @@ adminRouter.put("/settings", async (req, res, next) => {
               .max(20),
           })
           .optional(),
+        agencyReferralEnabled: z.boolean().optional(),
+        agencyReferralCap: z.number().int().min(1).max(50).optional(),
+        agencyReferralLoginFeePct: z.number().int().min(0).max(100).optional(),
+        agencyReferralRewardMonths: z.number().int().min(1).max(60).optional(),
       })
       .parse(req.body);
     const before = await getPlatformSettings();
@@ -401,6 +406,7 @@ adminRouter.get("/agencies", async (req, res, next) => {
             loginFeeLkr: true,
           },
         },
+        referredByAgency: { select: { id: true, name: true, slug: true } },
         _count: { select: { tours: true, inquiries: true, reviews: true } },
       },
     });
@@ -422,6 +428,16 @@ adminRouter.get("/agencies", async (req, res, next) => {
           phone: a.owner.phone,
           email: a.owner.email,
         },
+        referredByAgency: a.referredByAgency
+          ? {
+              id: a.referredByAgency.id,
+              name: a.referredByAgency.name,
+              slug: a.referredByAgency.slug,
+            }
+          : null,
+        referralApprovedAt: a.referralApprovedAt,
+        referralRewardEndsAt: a.referralRewardEndsAt,
+        referralRegistrantBenefitPending: a.referralRegistrantBenefitPending,
         subscription: serializeUserSubscription(a.owner),
         tourCount: a._count.tours,
         inquiryCount: a._count.inquiries,
@@ -466,6 +482,8 @@ adminRouter.patch("/agencies/:id/approve", async (req, res, next) => {
         rejectedAt: null,
       },
     });
+
+    await activateReferralOnAgencyApproval(agency.id);
 
     if (body.sendEmail) {
       void notifyAgencyApproved(agency.id).catch((err) =>
@@ -551,6 +569,9 @@ adminRouter.patch("/agencies/:id/status", async (req, res, next) => {
     }
 
     const agency = await prisma.agency.update({ where: { id: req.params.id }, data });
+    if (body.status === "APPROVED") {
+      await activateReferralOnAgencyApproval(agency.id);
+    }
     res.json(agency);
   } catch (e) {
     next(e);

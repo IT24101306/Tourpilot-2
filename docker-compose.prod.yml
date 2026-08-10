@@ -78,6 +78,10 @@ services:
       PAYHERE_MERCHANT_ID: ${PAYHERE_MERCHANT_ID:-}
       PAYHERE_MERCHANT_SECRET: ${PAYHERE_MERCHANT_SECRET:-}
       PAYHERE_SANDBOX: ${PAYHERE_SANDBOX:-true}
+      # OpenAI-compatible (OpenAI, Gemini via OpenAI compat URL, etc.)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       BUILD_SHA: ${BUILD_SHA:-manual}
       BUILD_TIME: ${BUILD_TIME:-}
       # Auto-apply Prisma schema on API start (set false to block destructive pushes).

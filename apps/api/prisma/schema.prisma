@@ -131,6 +131,15 @@ enum WalletTxnType {
   COMMISSION
   REFUND
   ADJUSTMENT
+  AGENCY_REFERRAL_REWARD
+}
+
+enum AgencyReferralInviteStatus {
+  PENDING
+  REGISTERED
+  APPROVED
+  CANCELLED
+  EXPIRED
 }
 
 enum TourKind {
@@ -359,6 +368,16 @@ model Agency {
   customDomain           String?             @unique @db.VarChar(191)
   customDomainStatus     CustomDomainStatus  @default(NONE)
   customDomainVerifiedAt DateTime?
+  /** Agency that invited this agency (phone invite). */
+  referredByAgencyId     String?             @db.VarChar(25)
+  referredByAgency       Agency?             @relation("AgencyReferrals", fields: [referredByAgencyId], references: [id], onDelete: SetNull)
+  referredAgencies       Agency[]            @relation("AgencyReferrals")
+  /** When this referred agency was approved (starts reward window). */
+  referralApprovedAt     DateTime?
+  /** Referrer earns login-fee share until this date (approval + N months). */
+  referralRewardEndsAt   DateTime?
+  /** Stub: registrant service-fee perk to wire later. */
+  referralRegistrantBenefitPending Boolean @default(false)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   staff           AgencyStaff[]
@@ -375,10 +394,29 @@ model Agency {
   savedTripPlans               SavedTripPlan[]
   auditEvents                  AuditEvent[]
   followUpJobs                 FollowUpJob[]
+  referralInvitesSent          AgencyReferralInvite[] @relation("ReferralInvitesSent")
+  referralInviteReceived       AgencyReferralInvite?  @relation("ReferralInviteRegistered")
   /** { targetMarginPct?: number, warnBelowPct?: number } */
   pricingPrefs                 Json?
   /** Admin/manual flags e.g. { featuredHost?: boolean } */
   trustFlags                   Json?
+
+  @@index([referredByAgencyId])
+}
+
+model AgencyReferralInvite {
+  id                 String                     @id @default(cuid()) @db.VarChar(25)
+  referrerAgencyId   String                     @db.VarChar(25)
+  referrerAgency     Agency                     @relation("ReferralInvitesSent", fields: [referrerAgencyId], references: [id], onDelete: Cascade)
+  inviteePhone       String                     @unique @db.VarChar(20)
+  status             AgencyReferralInviteStatus @default(PENDING)
+  registeredAgencyId String?                    @unique @db.VarChar(25)
+  registeredAgency   Agency?                    @relation("ReferralInviteRegistered", fields: [registeredAgencyId], references: [id], onDelete: SetNull)
+  cancelledAt        DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@index([referrerAgencyId, status])
 }
 
 model AgencyStaff {
@@ -920,6 +958,11 @@ model PlatformSettings {
   emailTemplates     Json?
   /** Support agents modal copy (title, subtitle, footer, agents[]). */
   supportContent     Json?
+  /** Agency-to-agency referral program. */
+  agencyReferralEnabled       Boolean @default(true)
+  agencyReferralCap           Int     @default(5)
+  agencyReferralLoginFeePct   Int     @default(25)
+  agencyReferralRewardMonths  Int     @default(12)
   updatedAt          DateTime @updatedAt
 }
 

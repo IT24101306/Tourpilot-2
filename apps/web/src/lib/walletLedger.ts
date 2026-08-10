@@ -3,7 +3,8 @@ export type WalletLedgerType =
   | "TOPUP"
   | "COMMISSION"
   | "REFUND"
-  | "ADJUSTMENT";
+  | "ADJUSTMENT"
+  | "AGENCY_REFERRAL_REWARD";
 
 export type WalletLedgerEntry = {
   id: string;
@@ -27,6 +28,8 @@ export function walletTxnLabel(type: WalletLedgerType): string {
       return "Refund";
     case "ADJUSTMENT":
       return "Adjustment";
+    case "AGENCY_REFERRAL_REWARD":
+      return "Agency referral reward";
     default:
       return type;
   }
