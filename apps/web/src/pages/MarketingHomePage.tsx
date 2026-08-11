@@ -73,7 +73,7 @@ export function MarketingHomePage() {
         ref={iframeRef}
         className="marketing-home__frame"
         title="TourPilot"
-        src="/marketing-home.html?v=20260728-cookies"
+        src="/marketing-home.html?v=20260811-terms"
         onLoad={() => {
           postAuth();
           const section = (hash || "").replace(/^#/, "");
