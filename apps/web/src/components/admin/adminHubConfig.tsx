@@ -183,6 +183,14 @@ export const HUB_SECTIONS: HubSection[] = [
     blurb: "System defaults and change history",
     modules: [
       {
+        id: "support",
+        to: "/dashboard/admin/support",
+        title: "Live support",
+        description: "Human chat with site visitors",
+        icon: "settings",
+        navLabel: "Support",
+      },
+      {
         id: "settings",
         to: "/dashboard/admin/settings",
         title: "Settings",

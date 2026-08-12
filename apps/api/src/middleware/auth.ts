@@ -49,12 +49,16 @@ function isPassiveActivityPath(req: Request): boolean {
   return false;
 }
 
-export async function authRequired(req: Request, res: Response, next: NextFunction) {
+async function attachUserFromBearer(
+  req: Request,
+  opts: { requireAuth: boolean }
+): Promise<{ status: number; body: Record<string, unknown> } | null> {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
 
   if (!token) {
-    return res.status(401).json({ error: "Unauthorized" });
+    if (opts.requireAuth) return { status: 401, body: { error: "Unauthorized" } };
+    return null;
   }
 
   try {
@@ -81,13 +85,15 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
       },
     });
     if (!user || !user.isActive) {
-      return res.status(401).json({ error: "Account disabled" });
+      if (opts.requireAuth) return { status: 401, body: { error: "Account disabled" } };
+      return null;
     }
 
     if (user.role === "AGENCY") {
       const inactive = await enforceAgencySessionInactivity(user.id, user.lastActiveAt);
       if (inactive) {
-        return res.status(401).json(inactive);
+        if (opts.requireAuth) return { status: 401, body: inactive };
+        return null;
       }
     }
 
@@ -97,11 +103,13 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
     });
     if (expiredUnpaid && !trialExemptPath(req.originalUrl || req.path)) {
       const trial = buildTrialStatus(user);
-      return res.status(402).json({
+      const body = {
         error: `Your free trial has ended. Activate ${trial.packageName || "your package"} (${trial.priceLabel || "selected plan"}) to continue.`,
         code: "TRIAL_EXPIRED",
         trial,
-      });
+      };
+      if (opts.requireAuth) return { status: 402, body };
+      return null;
     }
 
     req.user = { id: user.id, phone: user.phone, role: user.role };
@@ -118,10 +126,23 @@ export async function authRequired(req: Request, res: Response, next: NextFuncti
         .catch(() => undefined);
     }
 
-    next();
+    return null;
   } catch {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    if (opts.requireAuth) return { status: 401, body: { error: "Invalid or expired token" } };
+    return null;
   }
+}
+
+export async function authRequired(req: Request, res: Response, next: NextFunction) {
+  const err = await attachUserFromBearer(req, { requireAuth: true });
+  if (err) return res.status(err.status).json(err.body);
+  next();
+}
+
+/** Attach req.user when a valid token is present; otherwise continue anonymously. */
+export async function authOptional(req: Request, _res: Response, next: NextFunction) {
+  await attachUserFromBearer(req, { requireAuth: false });
+  next();
 }
 
 async function enforceAgencySessionInactivity(

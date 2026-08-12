@@ -66,6 +66,17 @@ enum InquiryMessageKind {
   INFLUENCER
 }
 
+enum SupportSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum SupportMessageSender {
+  USER
+  ADMIN
+  SYSTEM
+}
+
 enum EntityType {
   HOTEL
   VIEWPOINT
@@ -200,6 +211,9 @@ model User {
   notifications             Notification[]
   auditEvents               AuditEvent[]
   touristReviews            TouristReview[]
+  supportSessions           SupportSession[]       @relation("SupportSessionUser")
+  assignedSupportSessions   SupportSession[]       @relation("SupportSessionAssignee")
+  supportMessages           SupportMessage[]
 }
 
 model SubscriptionPayment {
@@ -1100,6 +1114,44 @@ enum FollowUpJobStatus {
   SENT
   CANCELLED
   FAILED
+}
+
+/** Live human support chat between site visitors and platform admins. */
+model SupportSession {
+  id              String               @id @default(cuid()) @db.VarChar(25)
+  userId          String?              @db.VarChar(25)
+  user            User?                @relation("SupportSessionUser", fields: [userId], references: [id], onDelete: SetNull)
+  /** Stable anonymous key from the browser (localStorage) when logged out. */
+  guestKey        String?              @db.VarChar(64)
+  status          SupportSessionStatus @default(OPEN)
+  pagePath        String?              @db.VarChar(200)
+  contactName     String?              @db.VarChar(120)
+  contactEmail    String?              @db.VarChar(200)
+  chatbotSummary  String?              @db.Text
+  assignedAdminId String?              @db.VarChar(25)
+  assignedAdmin   User?                @relation("SupportSessionAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  lastMessageAt   DateTime?
+  adminNotifiedAt DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  messages        SupportMessage[]
+
+  @@index([status, lastMessageAt])
+  @@index([userId, status])
+  @@index([guestKey, status])
+}
+
+model SupportMessage {
+  id        String               @id @default(cuid()) @db.VarChar(25)
+  sessionId String               @db.VarChar(25)
+  session   SupportSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender    SupportMessageSender
+  authorId  String?              @db.VarChar(25)
+  author    User?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  body      String               @db.Text
+  createdAt DateTime             @default(now())
+
+  @@index([sessionId, createdAt])
 }
 
 /**

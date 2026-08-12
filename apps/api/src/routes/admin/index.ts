@@ -2274,3 +2274,87 @@ adminRouter.delete("/vouchers/:id", async (req, res, next) => {
     next(e);
   }
 });
+
+adminRouter.get("/support/sessions", async (req, res, next) => {
+  try {
+    const status = z.enum(["OPEN", "CLOSED", "ALL"]).optional().parse(req.query.status);
+    const { listAdminSupportSessions } = await import("../../services/supportChat.js");
+    res.json(await listAdminSupportSessions(status ?? "OPEN"));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.get("/support/sessions/:id", async (req, res, next) => {
+  try {
+    const { loadSessionThread, serializeSession } = await import("../../services/supportChat.js");
+    const session = await loadSessionThread(req.params.id);
+    if (!session) return res.status(404).json({ error: "Support chat not found" });
+    res.json(serializeSession(session, { includeMessages: true }));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/support/sessions/:id/messages", async (req, res, next) => {
+  try {
+    const body = z.object({ body: z.string().min(1).max(4000) }).parse(req.body || {});
+    const {
+      addSupportMessage,
+      assertSessionAccess,
+      loadSessionThread,
+      serializeSession,
+    } = await import("../../services/supportChat.js");
+
+    const access = await assertSessionAccess(req.params.id, { asAdmin: true });
+    if (!access) return res.status(404).json({ error: "Support chat not found" });
+
+    await addSupportMessage({
+      sessionId: access.id,
+      sender: "ADMIN",
+      authorId: req.user!.id,
+      body: body.body,
+    });
+
+    const session = await loadSessionThread(access.id);
+    if (!session) return res.status(404).json({ error: "Support chat not found" });
+    res.json(serializeSession(session, { includeMessages: true }));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch("/support/sessions/:id", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        status: z.enum(["OPEN", "CLOSED"]).optional(),
+        claim: z.boolean().optional(),
+      })
+      .parse(req.body || {});
+
+    const existing = await prisma.supportSession.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Support chat not found" });
+
+    const updated = await prisma.supportSession.update({
+      where: { id: existing.id },
+      data: {
+        ...(body.status ? { status: body.status } : {}),
+        ...(body.claim ? { assignedAdminId: req.user!.id } : {}),
+      },
+      include: {
+        assignedAdmin: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, phone: true, email: true } },
+        messages: {
+          orderBy: { createdAt: "asc" },
+          include: { author: { select: { name: true } } },
+        },
+      },
+    });
+
+    const { serializeSession } = await import("../../services/supportChat.js");
+    res.json(serializeSession(updated, { includeMessages: true }));
+  } catch (e) {
+    next(e);
+  }
+});

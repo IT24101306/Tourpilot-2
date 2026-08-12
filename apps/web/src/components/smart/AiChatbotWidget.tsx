@@ -1,9 +1,8 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { ChatbotLeadHints, ChatbotLink, ChatbotMessage } from "@tourpilot/shared";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
-import { SupportAgentsModal } from "../support/SupportAgentsModal";
 import { loginPath } from "../../utils/authRedirect";
 import {
   agencyInquiryHandoffPath,
@@ -15,8 +14,17 @@ import {
   saveChatHandoff,
   saveChatSession,
 } from "../../lib/chatHandoff";
+import {
+  clearSupportSessionId,
+  getOrCreateSupportGuestKey,
+  readSupportSessionId,
+  saveSupportSessionId,
+  type SupportChatMessage,
+  type SupportChatSession,
+} from "../../lib/supportChat";
 
 type UiMessage = ChatbotMessage & { links?: ChatbotLink[] };
+type ChatMode = "ai" | "human";
 
 const QUICK_STARTERS = [
   { label: "7-day beaches", text: "Plan a relaxed 7-day Sri Lanka beach trip for 2 people." },
@@ -65,20 +73,26 @@ function initialSession(): { messages: UiMessage[]; lead: ChatbotLeadHints; open
 export function AiChatbotWidget() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const visible = shouldShowChatbot(pathname);
   const boot = useRef(initialSession()).current;
 
   const [open, setOpen] = useState(boot.open);
+  const [mode, setMode] = useState<ChatMode>(() =>
+    readSupportSessionId() ? "human" : "ai"
+  );
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<UiMessage[]>(boot.messages);
   const [lead, setLead] = useState<ChatbotLeadHints>(boot.lead);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [supportOpen, setSupportOpen] = useState(false);
   const [tourIdByHref, setTourIdByHref] = useState<Record<string, string>>({});
+  const [supportSession, setSupportSession] = useState<SupportChatSession | null>(null);
+  const [supportMessages, setSupportMessages] = useState<SupportChatMessage[]>([]);
+  const [humanConnecting, setHumanConnecting] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const resolvedTourHrefs = useRef<Record<string, string>>({});
+  const guestKeyRef = useRef(getOrCreateSupportGuestKey());
 
   useEffect(() => {
     saveChatSession({ messages, lead, open });
@@ -88,7 +102,102 @@ export function AiChatbotWidget() {
     if (!open) return;
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [open, messages, loading, error]);
+  }, [open, messages, supportMessages, loading, humanConnecting, error, mode]);
+
+  const applySupportSession = useCallback((session: SupportChatSession) => {
+    setSupportSession(session);
+    setSupportMessages(session.messages || []);
+    saveSupportSessionId(session.id);
+  }, []);
+
+  const loadSupportSession = useCallback(
+    async (sessionId: string) => {
+      const guestKey = guestKeyRef.current;
+      const qs = guestKey ? `?guestKey=${encodeURIComponent(guestKey)}` : "";
+      const session = await api<SupportChatSession>(`/support/chat/sessions/${sessionId}${qs}`, {
+        token,
+      });
+      applySupportSession(session);
+      return session;
+    },
+    [applySupportSession, token]
+  );
+
+  const ensureHumanSession = useCallback(async () => {
+    setHumanConnecting(true);
+    setError(null);
+    try {
+      const existingId = readSupportSessionId();
+      if (existingId) {
+        try {
+          await loadSupportSession(existingId);
+          return;
+        } catch {
+          clearSupportSessionId();
+        }
+      }
+
+      const session = await api<SupportChatSession>("/support/chat/sessions", {
+        method: "POST",
+        token,
+        body: JSON.stringify({
+          guestKey: guestKeyRef.current,
+          pagePath: pathname,
+          contactName: user?.name ?? null,
+          contactEmail: user?.email ?? null,
+          chatbotSummary: messages.length
+            ? buildChatSummaryMessage(messages, lead)
+            : null,
+        }),
+      });
+      applySupportSession(session);
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not reach human support";
+      setError(msg);
+    } finally {
+      setHumanConnecting(false);
+    }
+  }, [applySupportSession, lead, loadSupportSession, messages, pathname, token, user?.email, user?.name]);
+
+  /** Resume human thread when widget opens in human mode. */
+  useEffect(() => {
+    if (!visible || !open || mode !== "human") return;
+    if (supportSession) return;
+    void ensureHumanSession();
+  }, [visible, open, mode, supportSession, ensureHumanSession]);
+
+  /** Poll human chat while open. */
+  useEffect(() => {
+    if (!visible || !open || mode !== "human") return;
+    const sessionId = supportSession?.id || readSupportSessionId();
+    if (!sessionId) return;
+
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const guestKey = guestKeyRef.current;
+        const qs = guestKey ? `?guestKey=${encodeURIComponent(guestKey)}` : "";
+        const session = await api<SupportChatSession>(
+          `/support/chat/sessions/${sessionId}${qs}`,
+          { token }
+        );
+        if (!cancelled) applySupportSession(session);
+      } catch {
+        /* keep last known messages */
+      }
+    };
+
+    const id = window.setInterval(() => void tick(), 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [visible, open, mode, supportSession?.id, token, applySupportSession]);
 
   /** Resolve tour slug links → tour ids for one-click inquire. */
   useEffect(() => {
@@ -130,7 +239,7 @@ export function AiChatbotWidget() {
     };
   }, [messages]);
 
-  async function send(text: string) {
+  async function sendAi(text: string) {
     const content = text.trim();
     if (!content || loading) return;
 
@@ -170,9 +279,49 @@ export function AiChatbotWidget() {
     }
   }
 
+  async function sendHuman(text: string) {
+    const content = text.trim();
+    if (!content || loading || humanConnecting) return;
+    let sessionId = supportSession?.id || readSupportSessionId();
+    if (!sessionId) {
+      await ensureHumanSession();
+      sessionId = readSupportSessionId();
+    }
+    if (!sessionId) return;
+
+    setInput("");
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await api<{ session: SupportChatSession }>(
+        `/support/chat/sessions/${sessionId}/messages`,
+        {
+          method: "POST",
+          token,
+          body: JSON.stringify({
+            guestKey: guestKeyRef.current,
+            body: content,
+          }),
+        }
+      );
+      applySupportSession(result.session);
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not send message";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    void send(input);
+    if (mode === "human") void sendHuman(input);
+    else void sendAi(input);
   }
 
   function agencySlugFromChat(): string | null {
@@ -243,34 +392,75 @@ export function AiChatbotWidget() {
     setOpen(false);
   }
 
-  function clearConversation() {
+  async function talkToHuman() {
+    setMode("human");
+    setOpen(true);
+    setError(null);
+    await ensureHumanSession();
+  }
+
+  function backToAi() {
+    setMode("ai");
+    setError(null);
+  }
+
+  async function clearConversation() {
+    const sessionId = supportSession?.id || readSupportSessionId();
+    if (sessionId) {
+      try {
+        await api(`/support/chat/sessions/${sessionId}/leave`, {
+          method: "POST",
+          token,
+          body: JSON.stringify({ guestKey: guestKeyRef.current }),
+        });
+      } catch {
+        /* still clear locally */
+      }
+    }
+
     setMessages([]);
     setLead({});
     setError(null);
     setTourIdByHref({});
     resolvedTourHrefs.current = {};
     clearChatSession();
+    clearSupportSessionId();
+    setSupportSession(null);
+    setSupportMessages([]);
+    setMode("ai");
   }
 
-  const showHandoff = messages.length > 0 || Boolean(lead.readyForInquiry);
+  const showHandoff = mode === "ai" && (messages.length > 0 || Boolean(lead.readyForInquiry));
+  const hasSomethingToClear =
+    messages.length > 0 || supportMessages.length > 0 || Boolean(readSupportSessionId());
 
   if (!visible) return null;
 
   return (
     <div className={`ai-chatbot${open ? " ai-chatbot--open" : ""}`}>
       {open && (
-        <div className="ai-chatbot__panel" role="dialog" aria-label="TourPilot AI assistant">
+        <div
+          className="ai-chatbot__panel"
+          role="dialog"
+          aria-label={mode === "human" ? "TourPilot live support" : "TourPilot AI assistant"}
+        >
           <header className="ai-chatbot__head">
             <div>
-              <strong>TourPilot assistant</strong>
-              <p className="ai-chatbot__sub">Sri Lanka travel help · live AI</p>
+              <strong>{mode === "human" ? "Live support" : "TourPilot assistant"}</strong>
+              <p className="ai-chatbot__sub">
+                {mode === "human"
+                  ? supportSession?.assignedAdmin
+                    ? `Chatting with ${supportSession.assignedAdmin.name}`
+                    : "A TourPilot admin will reply here"
+                  : "Sri Lanka travel help · live AI"}
+              </p>
             </div>
             <div className="ai-chatbot__head-actions">
-              {messages.length > 0 && (
+              {hasSomethingToClear && (
                 <button
                   type="button"
                   className="ai-chatbot__text-btn"
-                  onClick={clearConversation}
+                  onClick={() => void clearConversation()}
                 >
                   Clear
                 </button>
@@ -287,11 +477,11 @@ export function AiChatbotWidget() {
           </header>
 
           <div className="ai-chatbot__messages" ref={listRef}>
-            {messages.length === 0 && !error && (
+            {mode === "ai" && messages.length === 0 && !error && (
               <>
                 <p className="ai-chatbot__hint">
                   Ask about destinations, seasons, budgets, or packages. Replies come from the AI —
-                  starters only send your message.
+                  starters only send your message. Need a person? Tap Talk to a human.
                 </p>
                 <div className="ai-chatbot__starters">
                   {QUICK_STARTERS.map((s) => (
@@ -300,7 +490,7 @@ export function AiChatbotWidget() {
                       type="button"
                       className="ai-chatbot__starter"
                       disabled={loading}
-                      onClick={() => void send(s.text)}
+                      onClick={() => void sendAi(s.text)}
                     >
                       {s.label}
                     </button>
@@ -308,42 +498,80 @@ export function AiChatbotWidget() {
                 </div>
               </>
             )}
-            {messages.map((m, i) => (
-              <div
-                key={`${m.role}-${i}`}
-                className={`ai-chatbot__bubble ai-chatbot__bubble--${m.role}`}
-              >
-                <p>{m.content}</p>
-                {m.links && m.links.length > 0 && (
-                  <ul className="ai-chatbot__links">
-                    {m.links.map((link) => {
-                      const catalog = parseCatalogHref(link.href);
-                      const canInquire = Boolean(catalog);
-                      const tourReady =
-                        !catalog?.tourSlug || Boolean(tourIdByHref[link.href]);
-                      return (
-                        <li key={`${link.href}-${link.label}`} className="ai-chatbot__link-row">
-                          <Link to={link.href} onClick={() => setOpen(false)}>
-                            {link.label}
-                          </Link>
-                          {canInquire && (
-                            <button
-                              type="button"
-                              className="ai-chatbot__inquire"
-                              disabled={!tourReady}
-                              onClick={() => inquireFromLink(link.href)}
-                            >
-                              Inquire
-                            </button>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            ))}
-            {loading && <p className="ai-chatbot__status">Thinking…</p>}
+
+            {mode === "ai" &&
+              messages.map((m, i) => (
+                <div
+                  key={`${m.role}-${i}`}
+                  className={`ai-chatbot__bubble ai-chatbot__bubble--${m.role}`}
+                >
+                  <p>{m.content}</p>
+                  {m.links && m.links.length > 0 && (
+                    <ul className="ai-chatbot__links">
+                      {m.links.map((link) => {
+                        const catalog = parseCatalogHref(link.href);
+                        const canInquire = Boolean(catalog);
+                        const tourReady =
+                          !catalog?.tourSlug || Boolean(tourIdByHref[link.href]);
+                        return (
+                          <li key={`${link.href}-${link.label}`} className="ai-chatbot__link-row">
+                            <Link to={link.href} onClick={() => setOpen(false)}>
+                              {link.label}
+                            </Link>
+                            {canInquire && (
+                              <button
+                                type="button"
+                                className="ai-chatbot__inquire"
+                                disabled={!tourReady}
+                                onClick={() => inquireFromLink(link.href)}
+                              >
+                                Inquire
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              ))}
+
+            {mode === "human" && humanConnecting && supportMessages.length === 0 && (
+              <p className="ai-chatbot__status">Connecting you to support…</p>
+            )}
+            {mode === "human" &&
+              !humanConnecting &&
+              supportMessages.length === 0 &&
+              !error && (
+                <p className="ai-chatbot__hint">
+                  You are in a live chat with TourPilot staff. Write your question below — this
+                  thread stays until you tap Clear.
+                </p>
+              )}
+            {mode === "human" &&
+              supportMessages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`ai-chatbot__bubble ai-chatbot__bubble--${
+                    m.sender === "USER"
+                      ? "user"
+                      : m.sender === "ADMIN"
+                        ? "admin"
+                        : "system"
+                  }`}
+                >
+                  {m.sender === "ADMIN" && m.authorName && (
+                    <span className="ai-chatbot__sender-label">{m.authorName}</span>
+                  )}
+                  <p>{m.body}</p>
+                </div>
+              ))}
+
+            {loading && (
+              <p className="ai-chatbot__status">
+                {mode === "human" ? "Sending…" : "Thinking…"}
+              </p>
+            )}
             {error && (
               <div className="ai-chatbot__error" role="alert">
                 {error}
@@ -352,13 +580,15 @@ export function AiChatbotWidget() {
           </div>
 
           <div className="ai-chatbot__actions">
-            <button
-              type="button"
-              className="ai-chatbot__action-btn"
-              onClick={() => setSupportOpen(true)}
-            >
-              Talk to a human
-            </button>
+            {mode === "ai" ? (
+              <button type="button" className="ai-chatbot__action-btn" onClick={() => void talkToHuman()}>
+                Talk to a human
+              </button>
+            ) : (
+              <button type="button" className="ai-chatbot__action-btn" onClick={backToAi}>
+                Back to AI assistant
+              </button>
+            )}
             {showHandoff && (
               <>
                 <button
@@ -384,12 +614,20 @@ export function AiChatbotWidget() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything about your Sri Lanka trip…"
-              disabled={loading}
+              placeholder={
+                mode === "human"
+                  ? "Message TourPilot support…"
+                  : "Ask anything about your Sri Lanka trip…"
+              }
+              disabled={loading || humanConnecting}
               maxLength={4000}
               aria-label="Message"
             />
-            <button type="submit" className="btn btn-teal" disabled={loading || !input.trim()}>
+            <button
+              type="submit"
+              className="btn btn-teal"
+              disabled={loading || humanConnecting || !input.trim()}
+            >
               Send
             </button>
           </form>
@@ -405,8 +643,6 @@ export function AiChatbotWidget() {
       >
         {open ? "×" : "ASK"}
       </button>
-
-      <SupportAgentsModal open={supportOpen} onClose={() => setSupportOpen(false)} />
     </div>
   );
 }
