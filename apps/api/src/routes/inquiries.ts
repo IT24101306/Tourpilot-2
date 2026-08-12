@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { resolveReferralCommissionLkr } from "../lib/referralCommission.js";
 import { parseInfluencerDisplay } from "../lib/influencerDisplay.js";
 import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
-import { InquiryMessageKind } from "@prisma/client";
+import { InquiryMessageKind, type InquiryStatus } from "@prisma/client";
 import { calculateItineraryTotals } from "../utils/pricing.js";
 import { createShareToken } from "../services/otp.js";
 import {
@@ -834,6 +834,65 @@ inquiriesRouter.patch("/:id/status", authRequired, requireRoles("AGENCY"), async
     });
 
     res.json(inquiry);
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** Reopen an inquiry that was auto-closed due to inactivity (EXPIRED only). */
+inquiriesRouter.post("/:id/reopen", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+  try {
+    const agency = await getAgencyForUser(req.user!.id);
+    if (!agency) return res.status(404).json({ error: "Agency not found" });
+
+    const existing = await prisma.inquiry.findFirst({
+      where: { id: req.params.id, agencyId: agency.id },
+      include: {
+        statusHistory: { orderBy: { createdAt: "desc" }, take: 20 },
+      },
+    });
+    if (!existing) return res.status(404).json({ error: "Inquiry not found" });
+
+    if (existing.status !== "EXPIRED") {
+      return res.status(400).json({
+        error:
+          existing.status === "DECLINED"
+            ? "Declined inquiries cannot be reopened. Only inquiries closed due to inactivity can be reopened."
+            : "Only inquiries closed due to inactivity (expired) can be reopened.",
+        code: "REOPEN_NOT_ALLOWED",
+      });
+    }
+
+    const reopenable: InquiryStatus[] = [
+      "NEW",
+      "AGENCY_REVIEWING",
+      "ITINERARY_DRAFT",
+      "SENT_TO_TOURIST",
+      "TOURIST_VIEWED",
+      "REVISION_REQUESTED",
+    ];
+    const previous = existing.statusHistory.find(
+      (h) => h.status !== "EXPIRED" && reopenable.includes(h.status)
+    );
+    const restoreStatus: InquiryStatus = previous?.status ?? "AGENCY_REVIEWING";
+
+    const inquiry = await prisma.inquiry.update({
+      where: { id: existing.id },
+      data: {
+        status: restoreStatus,
+        statusHistory: {
+          create: {
+            status: restoreStatus,
+            note: `Reopened by agency after inactivity expiry (restored to ${restoreStatus})`,
+            actorId: req.user!.id,
+          },
+        },
+      },
+      include: inquiryIncludeForAgency,
+    });
+
+    emitInquiryUpdated(inquiry.id);
+    res.json(serializeInquiryForClient(inquiry));
   } catch (e) {
     next(e);
   }

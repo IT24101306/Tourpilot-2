@@ -24,6 +24,7 @@ export function AgencyNegotiationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [chatInquiry, setChatInquiry] = useState<{ id: string; name: string } | null>(null);
+  const [reopeningId, setReopeningId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -37,6 +38,25 @@ export function AgencyNegotiationsPage() {
       })
       .finally(() => setLoading(false));
   }, [token]);
+
+  async function reopenInquiry(id: string) {
+    if (!token) return;
+    setReopeningId(id);
+    setError("");
+    try {
+      const updated = await api<NegotiationListItem>(`/inquiries/${id}/reopen`, {
+        method: "POST",
+        token,
+      });
+      setInquiries((prev) =>
+        prev.map((row) => (row.id === id ? { ...row, status: updated.status } : row))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reopen inquiry");
+    } finally {
+      setReopeningId(null);
+    }
+  }
 
   const active = inquiries.filter((i) => ACTIVE.has(i.status));
   const booked = inquiries.filter((i) => BOOKED.has(i.status));
@@ -111,7 +131,10 @@ export function AgencyNegotiationsPage() {
             <section className="neg-list-section">
               <h3>Closed ({closed.length})</h3>
               {closed.length === 0 ? (
-                <p className="muted">Completed, declined, and expired inquiries appear here.</p>
+                <p className="muted">
+                  Completed, declined, and expired (inactivity) inquiries appear here. Expired ones
+                  can be reopened.
+                </p>
               ) : (
                 <ul className="neg-inquiry-list">
                   {closed.map((inq) => (
@@ -119,6 +142,10 @@ export function AgencyNegotiationsPage() {
                       <InquiryCard
                         inq={inq}
                         muted
+                        reopening={reopeningId === inq.id}
+                        onReopen={
+                          inq.status === "EXPIRED" ? () => void reopenInquiry(inq.id) : undefined
+                        }
                         onChat={() =>
                           setChatInquiry({
                             id: inq.id,
@@ -151,11 +178,15 @@ function InquiryCard({
   primary,
   muted,
   onChat,
+  onReopen,
+  reopening,
 }: {
   inq: NegotiationListItem;
   primary?: boolean;
   muted?: boolean;
   onChat: () => void;
+  onReopen?: () => void;
+  reopening?: boolean;
 }) {
   return (
     <div className={`neg-inquiry-card${muted ? " muted-card" : ""}`}>
@@ -178,6 +209,11 @@ function InquiryCard({
           {inq.proposal ? `${inq.proposal.items.length} option(s)` : "Awaiting proposal"}
         </p>
       )}
+      {inq.status === "EXPIRED" && (
+        <p className="muted" style={{ margin: "0.35rem 0 0" }}>
+          Closed due to inactivity — you can reopen this inquiry.
+        </p>
+      )}
       <div className="neg-inquiry-card-actions">
         <button
           type="button"
@@ -189,7 +225,18 @@ function InquiryCard({
         <Link to={`/dashboard/agency/trip-room/${inq.id}`} className="btn btn-ghost">
           {primary ? "Open trip room" : "Trip room"}
         </Link>
+        {onReopen && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={reopening}
+            onClick={onReopen}
+          >
+            {reopening ? "Reopening…" : "Reopen"}
+          </button>
+        )}
       </div>
     </div>
   );
 }
+

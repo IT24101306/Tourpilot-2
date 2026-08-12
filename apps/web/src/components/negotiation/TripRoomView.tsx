@@ -256,6 +256,23 @@ export function TripRoomView({
     }
   }
 
+  async function reopenInquiry() {
+    setActing(true);
+    setActionStatus("");
+    try {
+      await api(`/inquiries/${inquiryId}/reopen`, {
+        method: "POST",
+        token,
+      });
+      setActionStatus("Inquiry reopened — it is active again.");
+      await load();
+    } catch (err) {
+      setActionStatus(err instanceof ApiError ? err.message : "Could not reopen inquiry");
+    } finally {
+      setActing(false);
+    }
+  }
+
   async function submitReview() {
     if (reviewRating < 1 || reviewRating > 5) return;
     setReviewSubmitting(true);
@@ -754,7 +771,28 @@ export function TripRoomView({
             {backLabel}
           </button>
         )}
-        {role === "AGENCY" && (
+        {role === "AGENCY" && inquiry.status === "EXPIRED" && (
+          <div className="feature-unavailable-note" role="status">
+            <strong>Closed due to inactivity</strong>
+            <p>
+              This inquiry expired after a week with no activity. You can reopen it to continue
+              negotiating with the traveler.
+            </p>
+          </div>
+        )}
+
+        {role === "AGENCY" && inquiry.status === "EXPIRED" && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={acting}
+            onClick={() => reopenInquiry()}
+          >
+            Reopen inquiry
+          </button>
+        )}
+
+        {role === "AGENCY" && inquiry.status !== "EXPIRED" && inquiry.status !== "DECLINED" && inquiry.status !== "COMPLETED" && (
           <button type="button" className="btn btn-primary" onClick={() => setReplyOpen(true)}>
             {inquiry.proposal ? "Update proposal" : "Send proposal"}
           </button>

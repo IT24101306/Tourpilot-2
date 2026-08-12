@@ -945,7 +945,7 @@ model RefreshToken {
 model PlatformSettings {
   id                 String   @id @db.VarChar(32)
   loginFees          Json
-  inquiryExpiryDays  Int      @default(14)
+  inquiryExpiryDays  Int      @default(7)
   webAppUrl          String?  @db.VarChar(255)
   emailFrom          String?  @db.VarChar(255)
   walletTopupMinLkr  Int      @default(100)

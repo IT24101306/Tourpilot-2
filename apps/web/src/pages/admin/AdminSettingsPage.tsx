@@ -124,7 +124,7 @@ export function AdminSettingsPage() {
     DRIVER: "25",
     ADMIN: "0",
   });
-  const [inquiryExpiryDays, setInquiryExpiryDays] = useState("14");
+  const [inquiryExpiryDays, setInquiryExpiryDays] = useState("7");
   const [webAppUrl, setWebAppUrl] = useState("");
   const [emailFrom, setEmailFrom] = useState("");
   const [topupMin, setTopupMin] = useState("100");
@@ -459,6 +459,10 @@ export function AdminSettingsPage() {
                       onChange={(e) => setInquiryExpiryDays(e.target.value)}
                     />
                   </label>
+                  <p className="muted" style={{ margin: 0 }}>
+                    Default is 7 days (1 week). Agencies can reopen inquiries that closed due to
+                    inactivity; declined inquiries stay closed.
+                  </p>
                   <label>
                     Public site URL
                     <input

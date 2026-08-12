@@ -142,7 +142,7 @@ function viewFromRow(row: {
   });
   return {
     loginFees: normalizeLoginFees(row?.loginFees),
-    inquiryExpiryDays: row?.inquiryExpiryDays ?? config.inquiryExpiryDays ?? 14,
+    inquiryExpiryDays: row?.inquiryExpiryDays ?? config.inquiryExpiryDays ?? 7,
     webAppUrl: row?.webAppUrl?.trim() || config.webAppUrl || "",
     emailFrom: row?.emailFrom?.trim() || config.email.from || "",
     walletTopupMinLkr: row?.walletTopupMinLkr ?? 100,
