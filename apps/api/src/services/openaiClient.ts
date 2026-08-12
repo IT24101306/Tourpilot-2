@@ -139,7 +139,7 @@ async function geminiGenerateContent(opts: {
   if (!res.ok) {
     const detail = providerDetail(raw, res.status);
     throw new AiProviderError(
-      `Gemini native API failed (model=${model}). ${detail}. Try OPENAI_MODEL=gemini-2.0-flash or gemini-flash-latest, then restart.`,
+      `Gemini native API failed (model=${model}). ${detail}. Set OPENAI_MODEL to a model your key lists (e.g. gemini-2.5-flash), then restart the API.`,
       mapProviderStatus(res.status)
     );
   }
