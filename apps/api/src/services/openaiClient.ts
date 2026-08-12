@@ -27,6 +27,15 @@ export function assertAiConfigured(): void {
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
+export type ChatCompletionOptions = {
+  messages: ChatMessage[];
+  temperature?: number;
+  /** Ask the model for JSON. Prefer also passing jsonSchema for Gemini. */
+  responseFormatJson?: boolean;
+  /** JSON Schema object for structured output (Gemini Interactions / OpenAI json_schema). */
+  jsonSchema?: Record<string, unknown>;
+};
+
 type ChatCompletionResponse = {
   choices?: Array<{ message?: { content?: string | null } }>;
   error?: { message?: string; type?: string; code?: string | number; status?: string };
@@ -99,24 +108,39 @@ function isRetiredModelError(detail: string): boolean {
   );
 }
 
+function collectTextParts(parts: unknown): string[] {
+  if (!Array.isArray(parts)) return [];
+  const out: string[] = [];
+  for (const part of parts) {
+    if (!part || typeof part !== "object") continue;
+    const p = part as Record<string, unknown>;
+    if (typeof p.text === "string" && p.text.trim()) out.push(p.text);
+  }
+  return out;
+}
+
 function extractInteractionText(raw: GeminiInteractionResponse): string {
-  // Newer responses may expose outputs[]; steps[].content[] is the documented REST shape.
+  // Legacy outputs[] shape
   if (Array.isArray(raw.outputs)) {
     const fromOutputs = raw.outputs
-      .map((o) => (typeof o.text === "string" ? o.text : ""))
+      .flatMap((o) => {
+        if (typeof o.text === "string" && o.text.trim()) return [o.text];
+        return collectTextParts(o.content);
+      })
       .join("")
       .trim();
     if (fromOutputs) return fromOutputs;
   }
 
-  const modelSteps = (raw.steps || []).filter((s) => s.type === "model_output");
-  const texts: string[] = [];
-  for (const step of modelSteps) {
-    for (const part of step.content || []) {
-      if (part.type === "text" && typeof part.text === "string") texts.push(part.text);
-    }
-  }
-  return texts.join("").trim();
+  // Current steps[] shape — prefer model_output, skip thoughts
+  const steps = raw.steps || [];
+  const modelSteps = steps.filter((s) => s.type === "model_output");
+  const fromModel = modelSteps.flatMap((s) => collectTextParts(s.content)).join("").trim();
+  if (fromModel) return fromModel;
+
+  // Fallback: any step with text content
+  const any = steps.flatMap((s) => collectTextParts(s.content)).join("").trim();
+  return any;
 }
 
 function buildInteractionInput(messages: ChatMessage[]): {
@@ -132,7 +156,6 @@ function buildInteractionInput(messages: ChatMessage[]): {
     throw new AiProviderError("No user/assistant messages to send to Gemini", 400);
   }
 
-  // Stateless multi-turn: fold history into one input (Interactions can also use previous_interaction_id).
   const input =
     turns.length === 1 && turns[0].role === "user"
       ? turns[0].content
@@ -155,6 +178,7 @@ async function geminiInteractionsOnce(opts: {
   messages: ChatMessage[];
   temperature?: number;
   responseFormatJson?: boolean;
+  jsonSchema?: Record<string, unknown>;
 }): Promise<string> {
   const model = normalizeModelId(opts.model);
   const endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions";
@@ -168,13 +192,14 @@ async function geminiInteractionsOnce(opts: {
     },
   };
   if (systemInstruction) body.system_instruction = systemInstruction;
-  if (opts.responseFormatJson) {
-    // Loose JSON object — callers validate their own schema.
+
+  // Never send schema:{type:"object"} with no properties — Gemini returns {}.
+  if (opts.responseFormatJson && opts.jsonSchema) {
     body.response_format = [
       {
         type: "text",
         mime_type: "application/json",
-        schema: { type: "object" },
+        schema: opts.jsonSchema,
       },
     ];
   }
@@ -206,21 +231,22 @@ async function geminiInteractionsOnce(opts: {
     throw err;
   }
 
+  if (raw.status && raw.status !== "completed" && raw.status !== "complete") {
+    console.warn(`[ai] interaction status=${raw.status} model=${model}`);
+  }
+
   const text = extractInteractionText(raw);
   if (!text) {
+    const preview = JSON.stringify(raw).slice(0, 500);
     throw new AiProviderError(
-      `Gemini Interactions returned an empty response (model=${model} endpoint=${endpoint})`,
+      `Gemini Interactions returned an empty response (model=${model}). Body preview: ${preview}`,
       502
     );
   }
   return text;
 }
 
-async function geminiChat(opts: {
-  messages: ChatMessage[];
-  temperature?: number;
-  responseFormatJson?: boolean;
-}): Promise<string> {
+async function geminiChat(opts: ChatCompletionOptions): Promise<string> {
   const primary = normalizeModelId(config.ai.model);
   const candidates = [
     primary,
@@ -254,11 +280,7 @@ async function geminiChat(opts: {
   );
 }
 
-async function openAiCompatibleChat(opts: {
-  messages: ChatMessage[];
-  temperature?: number;
-  responseFormatJson?: boolean;
-}): Promise<string> {
+async function openAiCompatibleChat(opts: ChatCompletionOptions): Promise<string> {
   const baseUrl = config.ai.baseUrl.replace(/\/$/, "");
   const model = normalizeModelId(config.ai.model);
   const endpoint = `${baseUrl}/chat/completions`;
@@ -269,7 +291,14 @@ async function openAiCompatibleChat(opts: {
     temperature: opts.temperature ?? 0.4,
   };
   if (opts.responseFormatJson) {
-    body.response_format = { type: "json_object" };
+    if (opts.jsonSchema) {
+      body.response_format = {
+        type: "json_schema",
+        json_schema: { name: "response", schema: opts.jsonSchema, strict: false },
+      };
+    } else {
+      body.response_format = { type: "json_object" };
+    }
   }
 
   let res: Response;
@@ -310,11 +339,7 @@ async function openAiCompatibleChat(opts: {
  * OpenAI-compatible chat, or Gemini Interactions API when BASE_URL is Google.
  * Never returns canned fallback text.
  */
-export async function chatCompletion(opts: {
-  messages: ChatMessage[];
-  temperature?: number;
-  responseFormatJson?: boolean;
-}): Promise<string> {
+export async function chatCompletion(opts: ChatCompletionOptions): Promise<string> {
   assertAiConfigured();
 
   if (isGeminiHost(config.ai.baseUrl)) {
@@ -322,4 +347,32 @@ export async function chatCompletion(opts: {
   }
 
   return openAiCompatibleChat(opts);
+}
+
+/** Strip ```json fences and extract the first JSON object/array from model text. */
+export function extractJsonText(raw: string): string {
+  let s = raw.trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(s);
+  if (fence) s = fence[1].trim();
+
+  if (s.startsWith("{") || s.startsWith("[")) return s;
+
+  const objStart = s.indexOf("{");
+  const arrStart = s.indexOf("[");
+  let start = -1;
+  if (objStart >= 0 && (arrStart < 0 || objStart < arrStart)) start = objStart;
+  else if (arrStart >= 0) start = arrStart;
+  if (start < 0) return s;
+
+  const open = s[start];
+  const close = open === "{" ? "}" : "]";
+  let depth = 0;
+  for (let i = start; i < s.length; i++) {
+    if (s[i] === open) depth++;
+    else if (s[i] === close) {
+      depth--;
+      if (depth === 0) return s.slice(start, i + 1);
+    }
+  }
+  return s.slice(start);
 }
