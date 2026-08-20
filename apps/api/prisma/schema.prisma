@@ -64,6 +64,24 @@ enum InquiryMessageKind {
   AGENCY
   ADMIN
   INFLUENCER
+  SYSTEM
+}
+
+enum PolicyViolationStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+enum SupportSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum SupportMessageSender {
+  USER
+  ADMIN
+  SYSTEM
 }
 
 enum EntityType {
@@ -200,6 +218,11 @@ model User {
   notifications             Notification[]
   auditEvents               AuditEvent[]
   touristReviews            TouristReview[]
+  supportSessions           SupportSession[]       @relation("SupportSessionUser")
+  assignedSupportSessions   SupportSession[]       @relation("SupportSessionAssignee")
+  supportMessages           SupportMessage[]
+  policyViolations          PolicyViolation[] @relation("PolicyOffender")
+  reviewedPolicyViolations  PolicyViolation[] @relation("PolicyReviewer")
 }
 
 model SubscriptionPayment {
@@ -592,6 +615,9 @@ model Inquiry {
   tour                Tour?              @relation(fields: [tourId], references: [id], onDelete: SetNull)
   type                InquiryType
   status              InquiryStatus      @default(NEW)
+  /** When set, tourist/agency/influencer cannot send chat until an admin resumes. */
+  chatPausedAt        DateTime?
+  chatPausedReason    String?            @db.VarChar(80)
   pax                 Int                @default(2)
   startDate           DateTime?
   endDate             DateTime?
@@ -619,6 +645,7 @@ model Inquiry {
   pendingRevisionItemId String? @db.VarChar(25)
   pendingRevisionLabel  String? @db.VarChar(255)
   followUpJobs        FollowUpJob[]
+  policyViolations    PolicyViolation[]
 
   @@index([handlerInfluencerId])
 }
@@ -635,6 +662,28 @@ model InquiryMessage {
   createdAt DateTime           @default(now())
 
   @@index([inquiryId, createdAt])
+}
+
+/** Contact-sharing (or similar) policy hits from trip-room chat. Visible to admins only. */
+model PolicyViolation {
+  id              String                 @id @default(cuid()) @db.VarChar(25)
+  inquiryId       String                 @db.VarChar(25)
+  inquiry         Inquiry                @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  offenderUserId  String                 @db.VarChar(25)
+  offender        User                   @relation("PolicyOffender", fields: [offenderUserId], references: [id], onDelete: Cascade)
+  offenderRole    UserRole
+  categories      Json
+  originalBody    String                 @db.Text
+  status          PolicyViolationStatus  @default(OPEN)
+  createdAt       DateTime               @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?                @db.VarChar(25)
+  reviewedBy      User?                  @relation("PolicyReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote      String?                @db.Text
+
+  @@index([status, createdAt])
+  @@index([offenderUserId, status])
+  @@index([inquiryId, status])
 }
 
 /** Per-user read cursor + typing heartbeat for WhatsApp-style chat. */
@@ -963,6 +1012,14 @@ model PlatformSettings {
   agencyReferralCap           Int     @default(5)
   agencyReferralLoginFeePct   Int     @default(25)
   agencyReferralRewardMonths  Int     @default(12)
+  /** Public floating Ask AI chatbot. Off hides the widget and blocks /smart/chatbot. */
+  aiChatbotEnabled            Boolean @default(true)
+  /** Public AI trip planner at /plan. Off hides nav and blocks /smart/trip-planner. */
+  aiTripPlannerEnabled        Boolean @default(true)
+  /** Live “Talk to a human” chat from the public widget. Independent of Ask AI. */
+  liveSupportEnabled          Boolean @default(true)
+  /** Public offers catalog (/offers) and traveler booking. Agency/admin tools stay. */
+  publicOffersEnabled         Boolean @default(true)
   updatedAt          DateTime @updatedAt
 }
 
@@ -1100,6 +1157,44 @@ enum FollowUpJobStatus {
   SENT
   CANCELLED
   FAILED
+}
+
+/** Live human support chat between site visitors and platform admins. */
+model SupportSession {
+  id              String               @id @default(cuid()) @db.VarChar(25)
+  userId          String?              @db.VarChar(25)
+  user            User?                @relation("SupportSessionUser", fields: [userId], references: [id], onDelete: SetNull)
+  /** Stable anonymous key from the browser (localStorage) when logged out. */
+  guestKey        String?              @db.VarChar(64)
+  status          SupportSessionStatus @default(OPEN)
+  pagePath        String?              @db.VarChar(200)
+  contactName     String?              @db.VarChar(120)
+  contactEmail    String?              @db.VarChar(200)
+  chatbotSummary  String?              @db.Text
+  assignedAdminId String?              @db.VarChar(25)
+  assignedAdmin   User?                @relation("SupportSessionAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  lastMessageAt   DateTime?
+  adminNotifiedAt DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  messages        SupportMessage[]
+
+  @@index([status, lastMessageAt])
+  @@index([userId, status])
+  @@index([guestKey, status])
+}
+
+model SupportMessage {
+  id        String               @id @default(cuid()) @db.VarChar(25)
+  sessionId String               @db.VarChar(25)
+  session   SupportSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender    SupportMessageSender
+  authorId  String?              @db.VarChar(25)
+  author    User?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  body      String               @db.Text
+  createdAt DateTime             @default(now())
+
+  @@index([sessionId, createdAt])
 }
 
 /**

@@ -1,9 +1,7 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { openCookieSettings } from "./CookieConsentBanner";
 
 export function SiteFooter() {
-  const { user, logout } = useAuth();
   const year = new Date().getFullYear();
 
   return (
@@ -30,19 +28,8 @@ export function SiteFooter() {
         </div>
 
         <nav className="site-footer__nav" aria-label="Footer">
-          <Link to="/offers">Offers</Link>
           <Link to="/terms">Terms & Conditions</Link>
           <Link to="/terms/privacy-policy">Privacy</Link>
-          {user ? (
-            <>
-              <Link to="/profile">Profile</Link>
-              <button type="button" className="site-footer__link-btn" onClick={logout}>
-                Log out
-              </button>
-            </>
-          ) : (
-            <Link to="/login">Log in</Link>
-          )}
           <button type="button" className="site-footer__link-btn" onClick={openCookieSettings}>
             Cookies
           </button>

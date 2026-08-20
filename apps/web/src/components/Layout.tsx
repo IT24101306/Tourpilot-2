@@ -5,6 +5,7 @@ import { NotificationBell } from "./NotificationBell";
 import { ClientBrand } from "./ClientBrand";
 import { TourPilotBrand } from "./TourPilotBrand";
 import { navLinkClass } from "../utils/navLinkClass";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 
 function ProfileTopBrand() {
   const { user } = useAuth();
@@ -53,6 +54,7 @@ export function PublicLayout() {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const storefront = useStorefrontDomain();
+  const { aiTripPlannerEnabled, publicOffersEnabled } = usePublicSmartFeatures();
   const onProfile = pathname === "/profile";
   const onTravel = pathname === "/trips";
   const onPlan = pathname === "/plan";
@@ -92,20 +94,24 @@ export function PublicLayout() {
                     Pricing
                   </NavLink>
                 )}
-                <NavLink to="/offers" className={navLinkClass}>
-                  Offers
-                </NavLink>
-                <NavLink
-                  to="/plan"
-                  className={() => navLinkClass({ isActive: onPlan })}
-                >
-                  Plan trip
-                </NavLink>
+                {publicOffersEnabled ? (
+                  <NavLink to="/offers" className={navLinkClass}>
+                    Offers
+                  </NavLink>
+                ) : null}
+                {aiTripPlannerEnabled ? (
+                  <NavLink
+                    to="/plan"
+                    className={() => navLinkClass({ isActive: onPlan })}
+                  >
+                    Plan trip
+                  </NavLink>
+                ) : null}
               </>
             )}
             {user?.role === "TOURIST" && (
               <>
-                {onProfile && (
+                {onProfile && aiTripPlannerEnabled && (
                   <NavLink
                     to="/plan"
                     className={() =>

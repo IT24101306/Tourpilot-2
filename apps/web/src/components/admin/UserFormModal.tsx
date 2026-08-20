@@ -13,6 +13,9 @@ export type UserFormValues = {
   loginFeeLkr?: string;
   /** Optional agency display name when duplicating an agency owner. */
   agencyName?: string;
+  /** Admin login password. Required when role is ADMIN on create/duplicate. */
+  password?: string;
+  passwordConfirm?: string;
 };
 
 type Props = {
@@ -24,6 +27,8 @@ type Props = {
   sourceLabel?: string | null;
   /** When duplicating an agency owner, show agency name field. */
   showAgencyName?: boolean;
+  /** When editing an admin, true if a password is already stored. */
+  hasPassword?: boolean;
   onClose: () => void;
   onSave: (values: UserFormValues) => void;
 };
@@ -37,6 +42,8 @@ const EMPTY: UserFormValues = {
   walletBalance: "0",
   loginFeeLkr: "",
   agencyName: "",
+  password: "",
+  passwordConfirm: "",
 };
 
 export function UserFormModal({
@@ -46,13 +53,16 @@ export function UserFormModal({
   initial,
   sourceLabel,
   showAgencyName = false,
+  hasPassword = false,
   onClose,
   onSave,
 }: Props) {
   const [form, setForm] = useState<UserFormValues>(EMPTY);
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     if (!open) return;
+    setFormError("");
     setForm({
       ...EMPTY,
       ...initial,
@@ -61,6 +71,8 @@ export function UserFormModal({
       walletBalance: initial?.walletBalance ?? "0",
       loginFeeLkr: initial?.loginFeeLkr ?? "",
       agencyName: initial?.agencyName ?? "",
+      password: "",
+      passwordConfirm: "",
       isActive: initial?.isActive ?? true,
       role: (initial?.role as UserFormValues["role"]) || "TOURIST",
     });
@@ -71,11 +83,31 @@ export function UserFormModal({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim()) return;
+    const password = form.password?.trim() ?? "";
+    const passwordConfirm = form.passwordConfirm?.trim() ?? "";
+    if (form.role === "ADMIN") {
+      const needPassword = mode !== "edit" || !hasPassword;
+      if (needPassword && !password) {
+        setFormError("Admin accounts need a password to sign in.");
+        return;
+      }
+      if (password && password.length < 8) {
+        setFormError("Password must be at least 8 characters.");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        setFormError("Passwords do not match.");
+        return;
+      }
+    }
+    setFormError("");
     onSave({
       ...form,
       name: form.name.trim(),
       phone: form.phone.trim(),
       email: form.email.trim(),
+      password,
+      passwordConfirm,
     });
   }
 
@@ -141,7 +173,12 @@ export function UserFormModal({
             className="agency-filter"
             value={form.role}
             onChange={(e) =>
-              setForm((p) => ({ ...p, role: e.target.value as UserFormValues["role"] }))
+              setForm((p) => ({
+                ...p,
+                role: e.target.value as UserFormValues["role"],
+                password: "",
+                passwordConfirm: "",
+              }))
             }
           >
             {ROLES.map((r) => (
@@ -150,6 +187,42 @@ export function UserFormModal({
               </option>
             ))}
           </select>
+
+          {form.role === "ADMIN" ? (
+            <>
+              <label htmlFor="user-password">
+                {mode === "edit" && hasPassword ? "New password (optional)" : "Password"}
+              </label>
+              <input
+                id="user-password"
+                type="password"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                minLength={8}
+                required={mode !== "edit" || !hasPassword}
+                placeholder={
+                  mode === "edit" && hasPassword
+                    ? "Leave blank to keep current"
+                    : "At least 8 characters"
+                }
+              />
+              <label htmlFor="user-password-confirm">Confirm password</label>
+              <input
+                id="user-password-confirm"
+                type="password"
+                autoComplete="new-password"
+                value={form.passwordConfirm}
+                onChange={(e) => setForm((p) => ({ ...p, passwordConfirm: e.target.value }))}
+                minLength={8}
+                required={Boolean(form.password) || mode !== "edit" || !hasPassword}
+                placeholder="Repeat password"
+              />
+              <p className="muted">Admins sign in with this password, not an OTP.</p>
+            </>
+          ) : null}
+
+          {formError ? <p className="form-error">{formError}</p> : null}
 
           {mode === "duplicate" && showAgencyName ? (
             <>

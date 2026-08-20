@@ -1,6 +1,6 @@
 export type ThreadMessage = {
   id: string;
-  kind: "TOURIST" | "AGENCY" | "ADMIN" | "INFLUENCER";
+  kind: "TOURIST" | "AGENCY" | "ADMIN" | "INFLUENCER" | "SYSTEM";
   body: string;
   action: string | null;
   createdAt: string;
@@ -25,7 +25,9 @@ export function InquiryThread({ messages, compact, hideTitle, currentUserId }: P
       {!hideTitle && <h4 className="inquiry-thread-title">Conversation</h4>}
       <ul className="inquiry-thread-list">
         {messages.map((msg) => {
-          const mine = Boolean(currentUserId && msg.author.id === currentUserId);
+          const mine = Boolean(
+            currentUserId && msg.author.id === currentUserId && msg.kind !== "SYSTEM"
+          );
           return (
             <li
               key={msg.id}
@@ -39,6 +41,9 @@ export function InquiryThread({ messages, compact, hideTitle, currentUserId }: P
                 <strong>{displayAuthor(msg)}</strong>
                 {msg.kind === "ADMIN" && (
                   <span className="inquiry-thread-role-badge">Platform</span>
+                )}
+                {msg.kind === "SYSTEM" && (
+                  <span className="inquiry-thread-role-badge">Policy</span>
                 )}
                 {msg.kind === "INFLUENCER" && (
                   <span className="inquiry-thread-role-badge">Partner</span>
@@ -91,11 +96,13 @@ export function TypingIndicator({ names }: { names: string[] }) {
 
 function displayAuthor(msg: ThreadMessage) {
   if (msg.kind === "ADMIN") return "TourPilot Admin";
+  if (msg.kind === "SYSTEM") return "TourPilot";
   return msg.author.name;
 }
 
 function actionLabel(action: string) {
   if (action === "ADMIN_MESSAGE") return "Platform note";
+  if (action === "POLICY_REMOVED") return "Removed";
   if (action === "TOUR_INQUIRY") return "Tour inquiry";
   if (action === "INQUIRY_CREATED") return "Trip request";
   if (action === "REVISION_REQUESTED") return "Requested changes";
@@ -109,6 +116,7 @@ function actionLabel(action: string) {
 
 function badgeClass(action: string) {
   if (action === "ADMIN_MESSAGE") return "admin";
+  if (action === "POLICY_REMOVED") return "late";
   if (action === "REVISION_REQUESTED") return "warn";
   if (action === "ACCEPTED" || action === "PROPOSAL_SENT" || action === "TOUR_INQUIRY") return "ok";
   if (action === "DECLINED") return "late";

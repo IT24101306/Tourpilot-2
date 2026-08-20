@@ -7,6 +7,8 @@ import { useChatExitGuard } from "../../context/ChatSessionContext";
 import { lockBodyScroll, unlockBodyScroll } from "../../lib/scrollLock";
 import type { InquiryDetail } from "../../types/negotiation";
 import { InquiryThread, TypingIndicator } from "./InquiryThread";
+import { ChatPolicyNotice } from "./ChatPolicyNotice";
+import { CHAT_POLICY_PAUSED_NOTICE } from "@tourpilot/shared";
 import { useChatLive } from "../../lib/useChatLive";
 import type { ThreadMessage } from "./InquiryThread";
 
@@ -134,6 +136,10 @@ export function ChatRoomPopup({
       await load({ quiet: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to send message");
+      if (err instanceof ApiError && (err.code === "POLICY_VIOLATION" || err.code === "CHAT_PAUSED")) {
+        setDraft("");
+        await load({ quiet: true });
+      }
     } finally {
       setSending(false);
     }
@@ -173,6 +179,12 @@ export function ChatRoomPopup({
         </header>
 
         <div className="chat-room-popup__body" ref={listRef}>
+          <ChatPolicyNotice />
+          {inquiry?.chatPaused ? (
+            <p className="chat-paused-banner" role="status">
+              {CHAT_POLICY_PAUSED_NOTICE}
+            </p>
+          ) : null}
           {loading && !inquiry ? <p className="muted">Loading conversation…</p> : null}
           {error ? <p className="form-error">{error}</p> : null}
           {inquiry?.thread && inquiry.thread.length > 0 ? (
@@ -202,6 +214,11 @@ export function ChatRoomPopup({
         </div>
 
         <footer className="chat-room-popup__foot">
+          {inquiry?.chatPaused ? (
+            <p className="muted" style={{ margin: 0 }}>
+              Messaging is paused until an admin reviews this chat.
+            </p>
+          ) : (
           <form className="chat-room-popup__compose" onSubmit={sendMessage}>
             <label htmlFor="chat-room-draft" className="sr-only">
               Message
@@ -231,6 +248,7 @@ export function ChatRoomPopup({
               </button>
             </div>
           </form>
+          )}
         </footer>
       </aside>
     </div>,

@@ -12,6 +12,7 @@ import { OfferBookStepper } from "../components/discovery/OfferBookStepper";
 import { OfferShareButton } from "../components/discovery/OfferShareButton";
 import type { DiscoveryOffer, OfferTourOption } from "../components/discovery/DiscoveryOfferCard";
 import { formatRegistrationOrdinal, offerBookPath } from "../lib/offerBookPaths";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 import { loginPath } from "../utils/authRedirect";
 
 type BookStep = "tour" | "register" | "confirmed";
@@ -79,6 +80,7 @@ export function OfferBookPage() {
   const navigate = useNavigate();
   const { token, loading: authLoading } = useAuth();
   const { format } = useFormatMoney();
+  const { publicOffersEnabled, loaded: flagsLoaded } = usePublicSmartFeatures();
 
   const returnTo = searchParams.get("returnTo") ?? "/offers";
   const step = (searchParams.get("step") as BookStep | null) ?? "tour";
@@ -119,6 +121,10 @@ export function OfferBookPage() {
 
   useEffect(() => {
     if (!offerId) return;
+    if (!publicOffersEnabled) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError("");
     api<DiscoveryOffer>(`/offers/${offerId}`)
@@ -141,7 +147,7 @@ export function OfferBookPage() {
         setLoadError(err instanceof ApiError ? err.message : "Could not load this offer");
       })
       .finally(() => setLoading(false));
-  }, [offerId]);
+  }, [offerId, publicOffersEnabled]);
 
   useEffect(() => {
     if (tourIdFromUrl) setSelectedTourId(tourIdFromUrl);
@@ -230,6 +236,22 @@ export function OfferBookPage() {
 
   if (!offerId) {
     return <Navigate to="/offers" replace />;
+  }
+
+  if (flagsLoaded && !publicOffersEnabled) {
+    return (
+      <section className="section offer-book-page">
+        <p className="muted">
+          Public offers are currently turned off. Browse agencies and tours, or send an inquiry
+          from an agency page.
+        </p>
+        <p>
+          <Link to="/" className="btn btn-teal">
+            Back to home
+          </Link>
+        </p>
+      </section>
+    );
   }
 
   if (loading || authLoading) {

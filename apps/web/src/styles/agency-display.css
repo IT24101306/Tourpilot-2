@@ -4199,6 +4199,13 @@ button.agency-gallery-item {
   background: #f7faf8;
 }
 
+.chat-room-popup__body .chat-policy-notice {
+  position: sticky;
+  top: -16px;
+  z-index: 1;
+  margin: -4px 0 12px;
+}
+
 .chat-room-popup__empty {
   padding: 18px 16px;
   border-radius: 14px;

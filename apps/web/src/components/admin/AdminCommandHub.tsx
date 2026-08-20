@@ -56,6 +56,14 @@ export function AdminCommandHub({ stats, userTotal }: Props) {
       tone: pendingCommissions > 0 ? "warn" : "default",
       to: "/dashboard/admin/commissions",
     },
+    {
+      id: "policy",
+      label: "Policy flags",
+      value: stats.openPolicyViolations ?? 0,
+      hint: "Trip chats paused for review",
+      tone: (stats.openPolicyViolations ?? 0) > 0 ? "warn" : "default",
+      to: "/dashboard/admin/policy-flags",
+    },
   ];
 
   return (
@@ -104,7 +112,9 @@ export function AdminCommandHub({ stats, userTotal }: Props) {
               {section.modules.map((mod) => {
                 const statVal = mod.stat?.(stats);
                 const showBadge = statVal !== undefined && Number(statVal) > 0;
-                const isPendingAgency = mod.id === "agencies" && stats.pendingAgencies > 0;
+                const isPendingAgency =
+                  (mod.id === "agencies" && stats.pendingAgencies > 0) ||
+                  (mod.id === "policy-flags" && (stats.openPolicyViolations ?? 0) > 0);
 
                 return (
                   <Link

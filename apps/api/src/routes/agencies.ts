@@ -41,6 +41,7 @@ import {
 } from "../lib/offers.js";
 import { applyOfferUpdate } from "../lib/offers.js";
 import { recordAuditEvent, snapshotOffer } from "../services/auditLog.js";
+import { getPublicSmartFeatures } from "../services/platformSettings.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
 import { publicAgencyWhere } from "../lib/publicVisibility.js";
 import { config } from "../lib/config.js";
@@ -1425,16 +1426,19 @@ agenciesRouter.get("/:slug", async (req, res, next) => {
     );
 
     const now = new Date();
-    const loyaltyOffers = await prisma.offer.findMany({
-      where: {
-        ...agencyOfferWhere(agency.id),
-        isActive: true,
-        validFrom: { lte: now },
-        validUntil: { gte: now },
-      },
-      include: offerIncludeActive,
-      orderBy: { validUntil: "asc" },
-    });
+    const siteFlags = await getPublicSmartFeatures();
+    const loyaltyOffers = siteFlags.publicOffersEnabled
+      ? await prisma.offer.findMany({
+          where: {
+            ...agencyOfferWhere(agency.id),
+            isActive: true,
+            validFrom: { lte: now },
+            validUntil: { gte: now },
+          },
+          include: offerIncludeActive,
+          orderBy: { validUntil: "asc" },
+        })
+      : [];
 
     const touristReviewsPublic = await prisma.touristReview.findMany({
       where: { agencyId: agency.id, isPublic: true },

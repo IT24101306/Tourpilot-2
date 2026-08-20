@@ -240,3 +240,13 @@ export {
   type ChatAssistSuggestion,
   type PipelineNextAction,
 } from "./softAi.js";
+
+export {
+  CHAT_POLICY_PINNED_NOTICE,
+  CHAT_POLICY_REMOVED_NOTICE,
+  CHAT_POLICY_PAUSED_NOTICE,
+  scanChatPolicy,
+  chatPolicyCategoryLabel,
+  type ChatPolicyCategory,
+  type ChatPolicyHit,
+} from "./chatPolicy.js";

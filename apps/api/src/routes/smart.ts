@@ -6,9 +6,19 @@ import { buildInquiryAssist } from "../services/aiAssist.js";
 import { loadAgencyTrustBadges } from "../services/trustBadges.js";
 import { generateTripPlan } from "../services/tripPlanner.js";
 import { generateChatbotReply } from "../services/chatbot.js";
+import { getPublicSmartFeatures } from "../services/platformSettings.js";
 import { buildMarginCoachTips } from "@tourpilot/shared";
 
 export const smartRouter = Router();
+
+/** Public flags so the site can hide Ask AI / Plan trip without an admin token. */
+smartRouter.get("/features", async (_req, res, next) => {
+  try {
+    res.json(await getPublicSmartFeatures());
+  } catch (e) {
+    next(e);
+  }
+});
 
 const tripPlannerBodySchema = z.object({
   days: z.number().int().min(1).max(30),
@@ -24,6 +34,13 @@ const tripPlannerBodySchema = z.object({
 /** Public: AI trip planner. Requires OPENAI_API_KEY — no stub replies. */
 smartRouter.post("/trip-planner", async (req, res, next) => {
   try {
+    const flags = await getPublicSmartFeatures();
+    if (!flags.aiTripPlannerEnabled) {
+      return res.status(403).json({
+        error: "AI Trip Planner is turned off",
+        code: "FEATURE_DISABLED",
+      });
+    }
     const body = tripPlannerBodySchema.parse(req.body);
     if (
       body.budgetMinLkr != null &&
@@ -55,6 +72,13 @@ const chatbotBodySchema = z.object({
 /** Public: AI chatbot. Requires OPENAI_API_KEY — no stub replies. */
 smartRouter.post("/chatbot", async (req, res, next) => {
   try {
+    const flags = await getPublicSmartFeatures();
+    if (!flags.aiChatbotEnabled) {
+      return res.status(403).json({
+        error: "Ask AI is turned off",
+        code: "FEATURE_DISABLED",
+      });
+    }
     const body = chatbotBodySchema.parse(req.body);
     const last = body.messages[body.messages.length - 1];
     if (!last || last.role !== "user") {
