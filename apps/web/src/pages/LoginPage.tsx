@@ -43,7 +43,7 @@ export function LoginPage() {
   const sessionInactive = searchParams.get("reason") === "session_inactive";
   const justRegistered = searchParams.get("registered") === "1";
   const phoneFromRegister = searchParams.get("phone")?.trim() || "";
-  const { user, token, refreshUser, setSession } = useAuth();
+  const { user, token, setSession } = useAuth();
 
   function afterLogin(authUser: AuthUser, apiRedirect?: string) {
     if (authUser.role === "AGENCY" || authUser.role === "INFLUENCER") {
@@ -93,31 +93,28 @@ export function LoginPage() {
 
   async function runTopup(amount: number) {
     if (user && token) {
-      const result = await api<{ balance: number }>("/wallet/topup", {
+      return api<{ mode: "payhere"; checkoutUrl: string; fields: Record<string, string> }>("/wallet/topup", {
         method: "POST",
         token,
         body: JSON.stringify({ amount }),
       });
-      await refreshUser();
-      setWalletBalance(result.balance);
-      return result.balance;
     }
 
     if (!phone || !activeTopupChallengeId) {
       throw new Error("Enter your phone number first.");
     }
 
-    const result = await api<{ balance: number; walletBalance: number }>("/auth/login-topup", {
-      method: "POST",
-      body: JSON.stringify({
-        phone,
-        challengeId: activeTopupChallengeId,
-        amount,
-      }),
-    });
-    const next = result.walletBalance ?? result.balance;
-    setWalletBalance(next);
-    return next;
+    return api<{ mode: "payhere"; checkoutUrl: string; fields: Record<string, string> }>(
+      "/auth/login-topup",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone,
+          challengeId: activeTopupChallengeId,
+          amount,
+        }),
+      }
+    );
   }
 
   async function handlePhoneSubmit(e: FormEvent) {
@@ -239,6 +236,16 @@ export function LoginPage() {
       }
     >
       <AuthSwitch mode="login" returnTo={returnTo} />
+      {searchParams.get("topup") === "1" && (
+        <p className="entity-status" role="status">
+          Payment received. Credits appear after PayHere confirms — then continue login.
+        </p>
+      )}
+      {searchParams.get("cancelled") === "1" && (
+        <p className="muted" role="status">
+          Top-up cancelled.
+        </p>
+      )}
 
       {sessionInactive && (
         <p className="form-error" role="status">

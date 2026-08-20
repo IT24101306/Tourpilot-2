@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { WalletTopupPanel } from "../../components/wallet/WalletTopupPanel";
@@ -7,22 +7,31 @@ import { formatCredits } from "../../lib/walletLedger";
 
 export function BillingPaymentMethodsPage() {
   const { token, user, refreshUser } = useAuth();
+  const [searchParams] = useSearchParams();
   const [balance, setBalance] = useState(user?.walletBalance ?? 0);
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     setBalance(user?.walletBalance ?? 0);
   }, [user?.walletBalance]);
 
+  useEffect(() => {
+    if (searchParams.get("topup") === "1") {
+      setStatus("Payment received. Credits appear after PayHere confirms.");
+      void refreshUser();
+    }
+    if (searchParams.get("cancelled") === "1") {
+      setStatus("Top-up cancelled.");
+    }
+  }, [searchParams, refreshUser]);
+
   async function handleTopup(amount: number) {
     if (!token) throw new Error("Not signed in");
-    const result = await api<{ balance: number }>("/wallet/topup", {
+    return api<{ mode: "payhere"; checkoutUrl: string; fields: Record<string, string> }>("/wallet/topup", {
       method: "POST",
       token,
       body: JSON.stringify({ amount }),
     });
-    setBalance(result.balance);
-    await refreshUser();
-    return result.balance;
   }
 
   return (
@@ -39,14 +48,16 @@ export function BillingPaymentMethodsPage() {
         <div>
           <h1 className="account-billing-title">Payment methods</h1>
           <p className="account-billing-lead">
-            TourPilot Credits are the default way to pay platform fees. Card checkout will appear
-            here when online payments go live.
+            TourPilot Credits pay platform login fees. Add credits with PayHere — cards are not stored
+            on TourPilot.
           </p>
         </div>
         <div className="account-billing-balance-pill" title="Platform wallet credits">
           Credits balance: <strong>{formatCredits(balance)}</strong>
         </div>
       </div>
+
+      {status ? <p className="entity-status">{status}</p> : null}
 
       <div className="account-billing-status-bar">
         <span className="account-billing-status-bar__ok" aria-hidden="true">
@@ -81,7 +92,7 @@ export function BillingPaymentMethodsPage() {
         <div className="account-billing-card account-billing-wallet-box">
           <p className="account-billing-card__eyebrow">Wallet</p>
           <h2 className="account-billing-card__heading">Add credits</h2>
-          <p className="account-billing-card__lead">Top up your balance for login fees and account use.</p>
+          <p className="account-billing-card__lead">Top up via PayHere. Credits appear after payment is confirmed.</p>
           <WalletTopupPanel balance={balance} onTopup={handleTopup} emphasize />
         </div>
       ) : null}

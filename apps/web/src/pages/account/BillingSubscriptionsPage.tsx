@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { agencyFeaturesOf, useAuth } from "../../context/AuthContext";
-import { PaymentGatewayPendingNotice } from "../../components/billing/PaymentGatewayPendingNotice";
 import { WalletTopupPanel } from "../../components/wallet/WalletTopupPanel";
+import { PayHereAutoSubmit } from "../../components/billing/PayHereAutoSubmit";
 import { formatCredits } from "../../lib/walletLedger";
 
 type SubscriptionPayload = {
@@ -64,7 +64,12 @@ export function BillingSubscriptionsPage() {
     if (searchParams.get("cancelled") === "1") {
       setStatus("Checkout cancelled.");
     }
-  }, [searchParams]);
+    if (searchParams.get("paid") === "1") {
+      setStatus("Payment received. Your package will show as active once PayHere confirms.");
+      void load();
+      void refreshUser();
+    }
+  }, [searchParams, load, refreshUser]);
 
   async function toggleAutoRenew(next: boolean) {
     if (!token) return;
@@ -87,15 +92,11 @@ export function BillingSubscriptionsPage() {
 
   async function handleTopup(amount: number) {
     if (!token) throw new Error("Not signed in");
-    const result = await api<{ balance: number }>("/wallet/topup", {
+    return api<{ mode: "payhere"; checkoutUrl: string; fields: Record<string, string> }>("/wallet/topup", {
       method: "POST",
       token,
       body: JSON.stringify({ amount }),
     });
-    setWalletBalance(result.balance);
-    setData((prev) => (prev ? { ...prev, walletBalance: result.balance } : prev));
-    await refreshUser();
-    return result.balance;
   }
 
   function openActivationCheckout() {
@@ -177,9 +178,9 @@ export function BillingSubscriptionsPage() {
       <div className="account-billing-card">
         <p className="account-billing-card__eyebrow">Subscription</p>
         <h2 className="account-billing-card__heading">Your package</h2>
-        <p className="account-billing-card__lead">
-          Activate or renew through the administrator until online payments are live.
-        </p>
+          <p className="account-billing-card__lead">
+            Activate or renew securely with PayHere. Wallet credits stay for login fees.
+          </p>
 
         <label className="account-billing-search">
           <span className="sr-only">Search subscriptions</span>
@@ -283,23 +284,60 @@ export function BillingSubscriptionsPage() {
 }
 export function BillingSubscriptionCheckoutPage() {
   const { token } = useAuth();
-  const [data, setData] = useState<SubscriptionPayload | null>(null);
+  const [searchParams] = useSearchParams();
+  const paymentId = searchParams.get("payment");
+  const [error, setError] = useState("");
+  const [payHere, setPayHere] = useState<{ checkoutUrl: string; fields: Record<string, string> } | null>(
+    null
+  );
+  const [activated, setActivated] = useState(false);
 
   useEffect(() => {
     if (!token) return;
-    api<SubscriptionPayload>("/subscription", { token })
-      .then(setData)
-      .catch(() => setData(null));
-  }, [token]);
-
-  const trial = data?.trial;
-  const amountLabel =
-    trial?.priceLabel ||
-    (trial?.priceLkr != null && trial.priceLkr > 0
-      ? formatCredits(trial.priceLkr)
-      : trial
-        ? "Pay as you go"
-        : null);
+    let cancelled = false;
+    async function run() {
+      setError("");
+      try {
+        if (paymentId) {
+          const session = await api<{
+            payHere: { checkoutUrl: string; fields: Record<string, string> } | null;
+            payment: { status: string };
+          }>(`/subscription/checkout-session?payment=${encodeURIComponent(paymentId)}`, { token: token! });
+          if (cancelled) return;
+          if (session.payment.status === "COMPLETED") {
+            setActivated(true);
+            return;
+          }
+          if (session.payHere) setPayHere(session.payHere);
+          else setError("This checkout session is no longer available.");
+          return;
+        }
+        const result = await api<{
+          mode: "payhere" | "activated";
+          checkoutUrl?: string;
+          fields?: Record<string, string>;
+        }>("/subscription/checkout", { method: "POST", token: token! });
+        if (cancelled) return;
+        if (result.mode === "activated") {
+          setActivated(true);
+          return;
+        }
+        if (result.checkoutUrl && result.fields) {
+          setPayHere({ checkoutUrl: result.checkoutUrl, fields: result.fields });
+        } else {
+          setError("Could not start PayHere checkout.");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : "Could not start checkout");
+        }
+      }
+    }
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, paymentId]);
 
   return (
     <div className="account-billing-page">
@@ -311,14 +349,22 @@ export function BillingSubscriptionCheckoutPage() {
         <span>Checkout</span>
       </nav>
       <h1 className="account-billing-title">Activate your package</h1>
-      <p className="account-billing-lead">
-        Online payments are not available yet. Contact the administrator to activate or renew.
-      </p>
+      <p className="account-billing-lead">Pay securely with PayHere. Cards are not stored on TourPilot.</p>
       <div className="account-billing-card">
-        <PaymentGatewayPendingNotice
-          packageName={trial?.packageName}
-          amountLabel={amountLabel}
-        />
+        {activated ? (
+          <>
+            <p>Your package is active.</p>
+            <Link to="/profile/billing/subscriptions" className="btn btn-primary">
+              Back to subscriptions
+            </Link>
+          </>
+        ) : payHere ? (
+          <PayHereAutoSubmit checkoutUrl={payHere.checkoutUrl} fields={payHere.fields} />
+        ) : error ? (
+          <p className="form-error">{error}</p>
+        ) : (
+          <p className="muted">Preparing PayHere checkout…</p>
+        )}
         <p className="muted" style={{ marginTop: "1.25rem", marginBottom: 0 }}>
           <Link to="/profile/billing/subscriptions">← Back to subscriptions</Link>
         </p>
@@ -334,7 +380,7 @@ export function BillingSubscriptionReturnPage({ cancelled = false }: { cancelled
     navigate(
       cancelled
         ? "/profile/billing/subscriptions?cancelled=1"
-        : "/profile/billing/subscriptions/checkout",
+        : "/profile/billing/subscriptions?paid=1",
       { replace: true }
     );
   }, [cancelled, navigate]);

@@ -209,6 +209,7 @@ model User {
   savedTripPlans       SavedTripPlan[]
   walletLedger         WalletLedger[]
   subscriptionPayments SubscriptionPayment[]
+  walletTopups         WalletTopup[]
   refreshTokens        RefreshToken[]
   referralAttributions ReferralAttribution[]
   agencyDriver              AgencyDriver?
@@ -245,6 +246,25 @@ model SubscriptionPayment {
 
   @@index([userId, createdAt])
   @@index([payhereOrderId])
+}
+
+model WalletTopup {
+  id           String        @id @default(cuid()) @db.VarChar(25)
+  userId       String        @db.VarChar(25)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountLkr    Decimal       @db.Decimal(12, 2)
+  currency     String        @default("LKR") @db.VarChar(8)
+  status       PaymentStatus @default(PENDING)
+  provider     String        @default("payhere") @db.VarChar(32)
+  providerRef  String?       @db.VarChar(128)
+  checkoutUrl  String?       @db.Text
+  metadata     Json?
+  paidAt       DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([providerRef])
 }
 
 model Notification {

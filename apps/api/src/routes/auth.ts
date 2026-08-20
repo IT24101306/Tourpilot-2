@@ -3,12 +3,13 @@ import { z } from "zod";
 import type { UserRole } from "@prisma/client";
 import { dashboardPathForRole, resolveSessionInactivityMinutes, TRIAL_DAYS } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
+import { config } from "../lib/config.js";
 import { authRequired, signAccessToken, touchUserActivity } from "../middleware/auth.js";
 import { assertLoginTopupChallenge, createOtpChallenge, verifyOtpChallenge } from "../services/otp.js";
-import { topUpWallet } from "../services/wallet.js";
+import { chargeLoginFee } from "../services/wallet.js";
+import { startWalletTopupCheckout } from "./wallet.js";
 import { verifyPassword } from "../services/password.js";
 import { linkAgencyDriverOnDriverSignup } from "../services/agencyDriverLink.js";
-import { chargeLoginFee } from "../services/wallet.js";
 import { getPlatformSettings, resolveLoginFeeForUser } from "../services/platformSettings.js";
 import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
 import { slugify } from "../utils/slug.js";
@@ -356,8 +357,13 @@ authRouter.post("/login-topup", async (req, res, next) => {
       return res.status(404).json({ error: "No account found for this phone" });
     }
 
-    const result = await topUpWallet(user.id, body.amount);
-    res.json({ balance: result.balance, walletBalance: result.balance });
+    const result = await startWalletTopupCheckout({
+      userId: user.id,
+      amount: Math.round(body.amount),
+      returnUrl: `${config.webAppUrl}/login?topup=1`,
+      cancelUrl: `${config.webAppUrl}/login?cancelled=1`,
+    });
+    res.json(result);
   } catch (e) {
     next(e);
   }

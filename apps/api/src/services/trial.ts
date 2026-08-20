@@ -11,6 +11,7 @@ import {
 import type { Prisma, UserRole, WalletTxnType } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { notifyTrialEnding } from "./notifications.js";
+import { asJson } from "../utils/json.js";
 
 export { buildTrialStatus, isTrialActive, isTrialExpiredUnpaid };
 
@@ -180,7 +181,10 @@ export function subscriptionPeriodEndForBilling(
 }
 
 /** Mark package active after a successful SubscriptionPayment (PayHere / demo). */
-export async function fulfillSubscriptionPayment(paymentId: string) {
+export async function fulfillSubscriptionPayment(
+  paymentId: string,
+  opts?: { providerRef?: string; metadata?: object }
+) {
   const payment = await prisma.subscriptionPayment.findUnique({ where: { id: paymentId } });
   if (!payment) {
     const err = new Error("Subscription payment not found");
@@ -218,7 +222,12 @@ export async function fulfillSubscriptionPayment(paymentId: string) {
   const [, updatedUser] = await prisma.$transaction([
     prisma.subscriptionPayment.update({
       where: { id: payment.id },
-      data: { status: "COMPLETED", paidAt: now },
+      data: {
+        status: "COMPLETED",
+        paidAt: now,
+        payhereOrderId: opts?.providerRef || payment.payhereOrderId,
+        ...(opts?.metadata ? { metadata: asJson(opts.metadata) } : {}),
+      },
     }),
     prisma.user.update({
       where: { id: user.id },

@@ -1,9 +1,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import { formatCredits } from "../../lib/walletLedger";
+import { PayHereAutoSubmit } from "../billing/PayHereAutoSubmit";
+
+export type WalletTopupResult =
+  | { mode: "payhere"; checkoutUrl: string; fields: Record<string, string> }
+  | { mode: "credited"; balance: number };
 
 type Props = {
   balance: number;
-  onTopup: (amount: number) => Promise<number>;
+  onTopup: (amount: number) => Promise<WalletTopupResult | number>;
   feeHint?: number;
   className?: string;
   /** Stronger top-up prompt for profile / account surfaces. */
@@ -23,6 +28,10 @@ export function WalletTopupPanel({
   const [loading, setLoading] = useState(false);
   const [displayBalance, setDisplayBalance] = useState(balance);
 
+  const [payHere, setPayHere] = useState<{ checkoutUrl: string; fields: Record<string, string> } | null>(
+    null
+  );
+
   useEffect(() => {
     setDisplayBalance(balance);
   }, [balance]);
@@ -41,14 +50,28 @@ export function WalletTopupPanel({
     setLoading(true);
     setStatus("");
     try {
-      const nextBalance = await onTopup(value);
-      setDisplayBalance(nextBalance);
-      setStatus(`Topup successful. ${formatCredits(value)} added.`);
-      setAmount("");
-      window.setTimeout(() => {
-        setOpen(false);
-        setStatus("");
-      }, 900);
+      const result = await onTopup(value);
+      if (typeof result === "number") {
+        setDisplayBalance(result);
+        setStatus(`Topup successful. ${formatCredits(value)} added.`);
+        setAmount("");
+        window.setTimeout(() => {
+          setOpen(false);
+          setStatus("");
+        }, 900);
+        return;
+      }
+      if (result.mode === "credited" && typeof result.balance === "number") {
+        setDisplayBalance(result.balance);
+        setStatus(`Topup successful. ${formatCredits(value)} added.`);
+        return;
+      }
+      if (result.mode === "payhere") {
+        setPayHere({ checkoutUrl: result.checkoutUrl, fields: result.fields });
+        setStatus("Redirecting to PayHere…");
+        return;
+      }
+      setStatus("Could not start PayHere checkout.");
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Topup failed");
     } finally {
@@ -83,7 +106,10 @@ export function WalletTopupPanel({
         <button
           type="button"
           className={`btn ${emphasize ? "btn-primary" : "btn-teal"} login-wallet-panel__btn`}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setPayHere(null);
+            setOpen(true);
+          }}
         >
           Top up
         </button>
@@ -106,7 +132,11 @@ export function WalletTopupPanel({
             </div>
             <p className="dialog-sub muted">
               Current balance: <strong>{formatCredits(displayBalance)}</strong>
+              . Card payment is processed by PayHere — credits are added after confirmation.
             </p>
+            {payHere ? (
+              <PayHereAutoSubmit checkoutUrl={payHere.checkoutUrl} fields={payHere.fields} />
+            ) : (
             <form className="topup-form" onSubmit={handleSubmit}>
               <div className="topup-quick-row">
                 {[100, 500, 1000].map((quick) => (
@@ -143,6 +173,7 @@ export function WalletTopupPanel({
               </div>
               {status && <p className="entity-status">{status}</p>}
             </form>
+            )}
           </div>
         </div>
       )}

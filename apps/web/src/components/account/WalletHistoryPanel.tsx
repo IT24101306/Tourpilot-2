@@ -82,7 +82,7 @@ function HistoryTable({
 }
 
 export function WalletHistoryPanel({ refreshKey = 0 }: Props) {
-  const { token, user, refreshUser } = useAuth();
+  const { token, user } = useAuth();
   const [entries, setEntries] = useState<WalletLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -113,14 +113,11 @@ export function WalletHistoryPanel({ refreshKey = 0 }: Props) {
 
   async function handleTopup(amount: number) {
     if (!token) throw new Error("Not signed in");
-    const result = await api<{ balance: number }>("/wallet/topup", {
+    return api<{ mode: "payhere"; checkoutUrl: string; fields: Record<string, string> }>("/wallet/topup", {
       method: "POST",
       token,
       body: JSON.stringify({ amount }),
     });
-    await refreshUser();
-    await load();
-    return result.balance;
   }
 
   if (!token || !user) return null;
