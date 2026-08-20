@@ -8,6 +8,7 @@ import { ModuleHeader } from "../module/ModuleHeader";
 import { SaveTourButton } from "./SaveTourButton";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { usePublicSmartFeatures } from "../../lib/publicSmartFeatures";
 import type { NegotiationListItem } from "../../types/negotiation";
 import type { SavedTourItem } from "../../pages/TouristSavedPage";
 import { DEFAULT_TOUR_COVER_URL, stripRichHtml } from "@tourpilot/shared";
@@ -23,6 +24,7 @@ function tabFromParam(raw: string | null): TravelTab {
 
 export function TouristTravelHub() {
   const { token } = useAuth();
+  const { publicOffersEnabled } = usePublicSmartFeatures();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tab = tabFromParam(searchParams.get("tab"));
@@ -121,8 +123,14 @@ export function TouristTravelHub() {
               <EmptyState
                 title="No inquiries yet"
                 description="Visit an agency or tour page and send an inquiry to track proposals here."
-                action={{ label: "Browse offers", to: "/offers" }}
-                secondaryAction={{ label: "Find agencies", to: "/" }}
+                action={
+                  publicOffersEnabled
+                    ? { label: "Browse offers", to: "/offers" }
+                    : { label: "Find agencies", to: "/" }
+                }
+                secondaryAction={
+                  publicOffersEnabled ? { label: "Find agencies", to: "/" } : undefined
+                }
               />
             ) : null}
             {!loading && inquiries.length > 0 ? (
@@ -213,7 +221,11 @@ export function TouristTravelHub() {
               <EmptyState
                 title="No saved tours yet"
                 description="Tap the heart on any tour to build your wishlist."
-                action={{ label: "Browse offers", to: "/offers" }}
+                action={
+                  publicOffersEnabled
+                    ? { label: "Browse offers", to: "/offers" }
+                    : { label: "Find agencies", to: "/" }
+                }
               />
             ) : null}
             {!savedLoading && savedItems.length > 0 ? (

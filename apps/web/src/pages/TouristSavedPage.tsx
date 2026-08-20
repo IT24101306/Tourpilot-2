@@ -6,6 +6,7 @@ import { EmptyState } from "../components/feedback/EmptyState";
 import { SaveTourButton } from "../components/tourist/SaveTourButton";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 import { DEFAULT_TOUR_COVER_URL, stripRichHtml } from "@tourpilot/shared";
 
 export type SavedTourItem = {
@@ -26,6 +27,7 @@ export type SavedTourItem = {
 
 export function TouristSavedPage() {
   const { token } = useAuth();
+  const { publicOffersEnabled } = usePublicSmartFeatures();
   const [tourItems, setTourItems] = useState<SavedTourItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +52,11 @@ export function TouristSavedPage() {
       <EmptyState
         title="No saved tours yet"
         description="Tap the heart on any tour to build your wishlist."
-        action={{ label: "Browse offers", to: "/offers" }}
+        action={
+          publicOffersEnabled
+            ? { label: "Browse offers", to: "/offers" }
+            : { label: "Find agencies", to: "/" }
+        }
       />
     );
   }

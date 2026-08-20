@@ -5,6 +5,7 @@ import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { ModuleHeader } from "../components/module/ModuleHeader";
 import { currentPath, loginPath } from "../utils/authRedirect";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 import {
   agencyInquiryHandoffPath,
   formatTripPlanHandoffMessage,
@@ -39,6 +40,7 @@ function parsePrefillInterests(raw: string | null): string[] {
 
 export function TripPlannerPage() {
   const { user } = useAuth();
+  const { aiTripPlannerEnabled, loaded: flagsLoaded } = usePublicSmartFeatures();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -155,6 +157,13 @@ export function TripPlannerPage() {
         subtitle="Tell us your dates, pace, and interests — we build a Sri Lanka itinerary from live AI (no canned replies)."
       />
 
+      {flagsLoaded && !aiTripPlannerEnabled ? (
+        <p className="muted">
+          The AI trip planner is currently turned off. Browse tours and agencies, or send an
+          inquiry from an agency page.
+        </p>
+      ) : (
+      <>
       <form className="trip-planner-form" onSubmit={onSubmit}>
         <div className="trip-planner-form__grid">
           <label className="field">
@@ -372,6 +381,8 @@ export function TripPlannerPage() {
             )}
           </div>
         </div>
+      )}
+      </>
       )}
     </section>
   );

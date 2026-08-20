@@ -15,7 +15,7 @@ import {
   sendPlatformEmail,
   verifySmtpConnection,
 } from "../../services/email.js";
-import { sanitizeRichHtml, stripRichHtml, parsePricingPageContent } from "@tourpilot/shared";
+import { sanitizeRichHtml, stripRichHtml, parsePricingPageContent, chatPolicyCategoryLabel, type ChatPolicyCategory } from "@tourpilot/shared";
 import { InquiryMessageKind } from "@prisma/client";
 import { createInquiryMessage, serializeInquiryMessage } from "../../services/inquiryMessages.js";
 import {
@@ -38,6 +38,7 @@ import { activateReferralOnAgencyApproval } from "../../services/agencyReferral.
 import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
 import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
 import { recordAuditEvent } from "../../services/auditLog.js";
+import { resumeInquiryChat } from "../../services/chatPolicyEnforce.js";
 import { ensureDriverUserAccount } from "../../services/agencyDriverLink.js";
 import {
   adminUpdateOwnerSubscription,
@@ -126,6 +127,10 @@ adminRouter.put("/settings", async (req, res, next) => {
         agencyReferralCap: z.number().int().min(1).max(50).optional(),
         agencyReferralLoginFeePct: z.number().int().min(0).max(100).optional(),
         agencyReferralRewardMonths: z.number().int().min(1).max(60).optional(),
+        aiChatbotEnabled: z.boolean().optional(),
+        aiTripPlannerEnabled: z.boolean().optional(),
+        liveSupportEnabled: z.boolean().optional(),
+        publicOffersEnabled: z.boolean().optional(),
       })
       .parse(req.body);
     const before = await getPlatformSettings();
@@ -136,7 +141,7 @@ adminRouter.put("/settings", async (req, res, next) => {
       entityId: "default",
       entityLabel: "Platform settings",
       action: "UPDATE",
-      summary: "Updated platform settings (fees, email, session, support)",
+      summary: "Updated platform settings (fees, email, session, support, AI)",
       before,
       after,
     });
@@ -342,6 +347,7 @@ adminRouter.get("/stats", async (_req, res, next) => {
       activeOffers,
       ledgerAgg,
       pendingAgencies,
+      openPolicyViolations,
     ] = await Promise.all([
       prisma.user.groupBy({ by: ["role"], _count: { id: true } }),
       prisma.agency.groupBy({ by: ["status"], _count: { id: true } }),
@@ -351,6 +357,7 @@ adminRouter.get("/stats", async (_req, res, next) => {
       prisma.offer.count({ where: { isActive: true } }),
       prisma.walletLedger.aggregate({ _sum: { amountLkr: true } }),
       prisma.agency.count({ where: { status: "PENDING" } }),
+      prisma.policyViolation.count({ where: { status: "OPEN" } }),
     ]);
 
     const users: Record<string, number> = {};
@@ -373,6 +380,7 @@ adminRouter.get("/stats", async (_req, res, next) => {
       offers: { total: offerCount, active: activeOffers },
       ledgerVolumeLkr: Number(ledgerAgg._sum.amountLkr ?? 0),
       pendingAgencies,
+      openPolicyViolations,
     });
   } catch (e) {
     next(e);
@@ -1300,6 +1308,8 @@ adminRouter.delete("/users/:id", async (req, res, next) => {
       await tx.savedTripPlan.deleteMany({ where: { userId: id } });
       await tx.inquiryMessage.deleteMany({ where: { authorId: id } });
       await tx.inquiryChatPresence.deleteMany({ where: { userId: id } });
+      await tx.policyViolation.deleteMany({ where: { offenderUserId: id } });
+      await tx.policyViolation.updateMany({ where: { reviewedById: id }, data: { reviewedById: null } });
       await tx.inquiryResponse.deleteMany({ where: { authorId: id } });
       await tx.auditEvent.updateMany({ where: { actorId: id }, data: { actorId: null } });
       await tx.agencyStaff.deleteMany({ where: { userId: id } });
@@ -1554,6 +1564,138 @@ adminRouter.post("/inquiries/:id/messages", async (req, res, next) => {
     void notifyAdminInquiryMessage(inquiry.id, body.message).catch(console.error);
 
     res.status(201).json(serializeInquiryMessage(message));
+  } catch (e) {
+    next(e);
+  }
+});
+
+function serializePolicyViolation(row: {
+  id: string;
+  inquiryId: string;
+  offenderRole: string;
+  categories: unknown;
+  originalBody: string;
+  status: string;
+  createdAt: Date;
+  reviewedAt: Date | null;
+  reviewNote: string | null;
+  offender: { id: string; name: string; phone: string; email: string | null; role: string };
+  reviewedBy: { id: string; name: string } | null;
+  inquiry: {
+    id: string;
+    chatPausedAt: Date | null;
+    tourist: { id: string; name: string };
+    agency: { id: string; name: string; slug: string };
+  };
+}) {
+  const categories = Array.isArray(row.categories)
+    ? (row.categories as ChatPolicyCategory[])
+    : [];
+  return {
+    id: row.id,
+    inquiryId: row.inquiryId,
+    offenderRole: row.offenderRole,
+    categories,
+    categoryLabels: categories.map(chatPolicyCategoryLabel),
+    originalBody: row.originalBody,
+    status: row.status,
+    createdAt: row.createdAt.toISOString(),
+    reviewedAt: row.reviewedAt?.toISOString() ?? null,
+    reviewNote: row.reviewNote,
+    offender: row.offender,
+    reviewedBy: row.reviewedBy,
+    chatPaused: Boolean(row.inquiry.chatPausedAt),
+    tourist: row.inquiry.tourist,
+    agency: row.inquiry.agency,
+  };
+}
+
+adminRouter.get("/policy-violations", async (req, res, next) => {
+  try {
+    const statusRaw = String(req.query.status || "OPEN").toUpperCase();
+    const status =
+      statusRaw === "ALL" ? undefined : statusRaw === "REVIEWED" || statusRaw === "DISMISSED" || statusRaw === "OPEN"
+        ? statusRaw
+        : "OPEN";
+    const rows = await prisma.policyViolation.findMany({
+      where: status ? { status } : {},
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        offender: { select: { id: true, name: true, phone: true, email: true, role: true } },
+        reviewedBy: { select: { id: true, name: true } },
+        inquiry: {
+          select: {
+            id: true,
+            chatPausedAt: true,
+            tourist: { select: { id: true, name: true } },
+            agency: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
+    });
+    res.json(rows.map(serializePolicyViolation));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.patch("/policy-violations/:id", async (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        status: z.enum(["REVIEWED", "DISMISSED"]),
+        resumeChat: z.boolean().optional(),
+        note: z.string().max(2000).optional(),
+      })
+      .parse(req.body);
+
+    const existing = await prisma.policyViolation.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing) return res.status(404).json({ error: "Violation not found" });
+
+    const updated = await prisma.policyViolation.update({
+      where: { id: existing.id },
+      data: {
+        status: body.status,
+        reviewedAt: new Date(),
+        reviewedById: req.user!.id,
+        reviewNote: body.note?.trim() || null,
+      },
+      include: {
+        offender: { select: { id: true, name: true, phone: true, email: true, role: true } },
+        reviewedBy: { select: { id: true, name: true } },
+        inquiry: {
+          select: {
+            id: true,
+            chatPausedAt: true,
+            tourist: { select: { id: true, name: true } },
+            agency: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
+    });
+
+    if (body.resumeChat !== false) {
+      await resumeInquiryChat(existing.inquiryId, req.user!.id, body.note);
+    }
+
+    res.json(serializePolicyViolation(updated));
+  } catch (e) {
+    next(e);
+  }
+});
+
+adminRouter.post("/inquiries/:id/resume-chat", async (req, res, next) => {
+  try {
+    const inquiry = await prisma.inquiry.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, chatPausedAt: true },
+    });
+    if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
+    await resumeInquiryChat(inquiry.id, req.user!.id, "Chat resumed from trip room");
+    res.json({ ok: true, chatPaused: false });
   } catch (e) {
     next(e);
   }

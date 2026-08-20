@@ -15,6 +15,7 @@ import { CurrencyPreferencePanel } from "../components/account/CurrencyPreferenc
 import { WalletHistoryPanel } from "../components/account/WalletHistoryPanel";
 import { lkr, roleLabel } from "../components/account/accountProfileUtils";
 import { agencyFeaturesOf, useAuth } from "../context/AuthContext";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 import { TouristSavedPage } from "./TouristSavedPage";
 import type { InfluencerDashboardData } from "./influencer/types";
 
@@ -62,6 +63,7 @@ function partnerName(inquiry: InquirySummary): string {
 
 export function ProfilePage() {
   const { user, token } = useAuth();
+  const { publicOffersEnabled } = usePublicSmartFeatures();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inquiries, setInquiries] = useState<InquirySummary[]>([]);
   const [savedCount, setSavedCount] = useState(0);
@@ -397,8 +399,16 @@ export function ProfilePage() {
             {openInquiries.length === 0 ? (
               <p className="muted account-profile-panel__empty">
                 No open inquiries.{" "}
-                <Link to="/offers">Browse offers</Link> or open your{" "}
-                <Link to="/trips">travel hub</Link>.
+                {publicOffersEnabled ? (
+                  <>
+                    <Link to="/offers">Browse offers</Link> or open your{" "}
+                    <Link to="/trips">travel hub</Link>.
+                  </>
+                ) : (
+                  <>
+                    Open your <Link to="/trips">travel hub</Link>.
+                  </>
+                )}
               </p>
             ) : (
               <ul className="account-profile-list">

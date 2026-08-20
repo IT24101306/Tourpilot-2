@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { getSupportContent } from "../services/platformSettings.js";
+import { getSupportContent, getPublicSmartFeatures } from "../services/platformSettings.js";
 import { authOptional } from "../middleware/auth.js";
 import { prisma } from "../lib/prisma.js";
 import {
@@ -47,6 +47,14 @@ supportRouter.post("/chat/sessions", authOptional, async (req, res, next) => {
 
     if (!req.user?.id && !body.guestKey) {
       return res.status(400).json({ error: "guestKey is required when not logged in" });
+    }
+
+    const flags = await getPublicSmartFeatures();
+    if (!flags.liveSupportEnabled) {
+      return res.status(403).json({
+        error: "Talk to a human is turned off",
+        code: "FEATURE_DISABLED",
+      });
     }
 
     const session = await createOrResumeSupportSession({

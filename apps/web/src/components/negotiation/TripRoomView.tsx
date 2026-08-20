@@ -24,6 +24,8 @@ import { ChatAssistBar } from "../smart/ChatAssistBar";
 import { PipelineNextBanner } from "../smart/PipelineNextBanner";
 import { TripCompanion } from "../tourist/TripCompanion";
 import { CurrencyClarityNote } from "../smart/CurrencyClarityNote";
+import { ChatPolicyNotice } from "../inquiry/ChatPolicyNotice";
+import { CHAT_POLICY_PAUSED_NOTICE } from "@tourpilot/shared";
 
 const RESPONDABLE = new Set(["SENT_TO_TOURIST", "TOURIST_VIEWED"]);
 
@@ -352,6 +354,10 @@ export function TripRoomView({
         await load({ quiet: true });
       } catch (err) {
         setActionStatus(err instanceof ApiError ? err.message : "Failed to send message");
+        if (err instanceof ApiError && (err.code === "POLICY_VIOLATION" || err.code === "CHAT_PAUSED")) {
+          setChatMessage("");
+          await load({ quiet: true });
+        }
       } finally {
         setChatSending(false);
       }
@@ -601,6 +607,40 @@ export function TripRoomView({
         <section className="neg-panel neg-panel--chat">
           <h3 className="neg-panel-title">Conversation</h3>
           <p className="neg-panel-hint">Ask questions and refine the plan together.</p>
+          <ChatPolicyNotice />
+          {inquiry.chatPaused ? (
+            <div className="chat-paused-banner" role="status">
+              <p>{CHAT_POLICY_PAUSED_NOTICE}</p>
+              {role === "ADMIN" ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={acting}
+                  onClick={() => {
+                    requestConfirm({
+                      title: "Resume this chat?",
+                      description: "The tourist and agency will be able to send messages again.",
+                      confirmLabel: "Resume chat",
+                      onConfirm: async () => {
+                        setActing(true);
+                        try {
+                          await api(`/admin/inquiries/${inquiryId}/resume-chat`, {
+                            method: "POST",
+                            token,
+                          });
+                          await load({ quiet: true });
+                        } finally {
+                          setActing(false);
+                        }
+                      },
+                    });
+                  }}
+                >
+                  Resume chat
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           {inquiry.tour && agencySlug && !whiteLabel && (
             <InquiryTourChip
@@ -653,7 +693,7 @@ export function TripRoomView({
 
           <TypingIndicator names={typing.map((t) => t.name)} />
 
-          {canChat && (
+          {canChat && !inquiry.chatPaused && (
             <form className="neg-admin-compose" onSubmit={sendChatMessage}>
               <label htmlFor="tripChatMessage">
                 {role === "INFLUENCER" ? "Message traveler" : "Send a message"}

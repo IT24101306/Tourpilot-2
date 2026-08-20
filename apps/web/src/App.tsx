@@ -77,6 +77,7 @@ import { AdminInquiriesPage } from "./pages/admin/AdminInquiriesPage";
 import { AdminCommissionsPage } from "./pages/admin/AdminCommissionsPage";
 import { AdminLedgerPage } from "./pages/admin/AdminLedgerPage";
 import { AdminReviewsPage } from "./pages/admin/AdminReviewsPage";
+import { AdminPolicyFlagsPage } from "./pages/admin/AdminPolicyFlagsPage";
 import { AdminDriversPage } from "./pages/admin/AdminDriversPage";
 import { AdminCmsPage } from "./pages/admin/AdminCmsPage";
 import { AdminPricingPage } from "./pages/admin/AdminPricingPage";
@@ -351,6 +352,7 @@ function AppShell() {
             <Route path="promo-email" element={<AdminPromoEmailPage />} />
             <Route path="vouchers" element={<AdminVouchersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
+            <Route path="policy-flags" element={<AdminPolicyFlagsPage />} />
             <Route path="drivers" element={<AdminDriversPage />} />
             <Route path="influencers" element={<AdminInfluencersPage />} />
             <Route path="itineraries" element={<AdminItinerariesPage />} />

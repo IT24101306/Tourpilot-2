@@ -183,6 +183,15 @@ export const HUB_SECTIONS: HubSection[] = [
     blurb: "System defaults and change history",
     modules: [
       {
+        id: "policy-flags",
+        to: "/dashboard/admin/policy-flags",
+        title: "Policy flags",
+        description: "Contact-sharing blocked in trip chats",
+        icon: "audit",
+        navLabel: "Policy flags",
+        stat: (s) => s.openPolicyViolations ?? 0,
+      },
+      {
         id: "support",
         to: "/dashboard/admin/support",
         title: "Live support",

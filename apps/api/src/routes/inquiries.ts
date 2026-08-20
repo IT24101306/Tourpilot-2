@@ -40,6 +40,13 @@ import {
 } from "../services/chatPresence.js";
 import { emitChatMessage, emitChatPresence, emitInquiryUpdated } from "../services/chatRealtime.js";
 import {
+  chatIsPaused,
+  chatPausedError,
+  policyViolationError,
+  recordChatPolicyViolation,
+} from "../services/chatPolicyEnforce.js";
+import { scanChatPolicy, CHAT_POLICY_REMOVED_NOTICE } from "@tourpilot/shared";
+import {
   notifyCommissionApproved,
   notifyInquiryChatMessage,
   notifyInquiryCreated,
@@ -348,6 +355,9 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
       return res.status(400).json({ error: "Please describe your trip requirements" });
     }
 
+    const openingHit = scanChatPolicy(messageBody);
+    const visibleOpening = openingHit ? CHAT_POLICY_REMOVED_NOTICE : messageBody;
+
     const interestsPayload = body.tripPlan
       ? {
           _kind: "trip_plan" as const,
@@ -375,7 +385,7 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
           endDate: body.endDate ? new Date(body.endDate) : undefined,
           budgetBand: body.budgetBand,
           interests: asJson(interestsPayload ?? []),
-          message: messageBody,
+          message: visibleOpening,
           referralCodeId,
           handlerInfluencerId,
           statusHistory: { create: { status: "NEW", actorId: req.user!.id } },
@@ -388,7 +398,7 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
           inquiryId: created.id,
           authorId: req.user!.id,
           kind: "TOURIST",
-          body: messageBody,
+          body: visibleOpening,
           action: tourId ? "TOUR_INQUIRY" : "INQUIRY_CREATED",
         },
       });
@@ -397,6 +407,17 @@ inquiriesRouter.post("/", authRequired, requireRoles("TOURIST"), async (req, res
     });
 
     void notifyInquiryCreated(inquiry.id).catch(console.error);
+
+    if (openingHit) {
+      void recordChatPolicyViolation({
+        inquiryId: inquiry.id,
+        authorId: req.user!.id,
+        authorRole: "TOURIST",
+        body: messageBody,
+        hit: openingHit,
+        insertNotice: false,
+      }).catch(console.error);
+    }
 
     res.status(201).json(inquiry);
   } catch (e) {
@@ -615,9 +636,15 @@ inquiriesRouter.post("/:id/messages", authRequired, async (req, res, next) => {
         touristId: true,
         agencyId: true,
         handlerInfluencerId: true,
+        chatPausedAt: true,
       },
     });
     if (!inquiry) return res.status(404).json({ error: "Inquiry not found" });
+
+    if (chatIsPaused(inquiry)) {
+      const err = chatPausedError();
+      return res.status(err.status).json({ error: err.message, code: err.code });
+    }
 
     let kind: InquiryMessageKind;
     if (role === "TOURIST") {
@@ -640,6 +667,24 @@ inquiriesRouter.post("/:id/messages", authRequired, async (req, res, next) => {
       kind = InquiryMessageKind.INFLUENCER;
     } else {
       return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const policyHit = scanChatPolicy(body.message);
+    if (policyHit) {
+      const { notice, categories } = await recordChatPolicyViolation({
+        inquiryId: inquiry.id,
+        authorId: req.user!.id,
+        authorRole: role,
+        body: body.message,
+        hit: policyHit,
+      });
+      const err = policyViolationError(categories);
+      return res.status(err.status).json({
+        error: err.message,
+        code: err.code,
+        chatPaused: true,
+        notice,
+      });
     }
 
     const message = await createInquiryMessage(
@@ -1239,6 +1284,7 @@ function serializeInquiryForClient(
   endDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  chatPausedAt?: Date | null;
   tourist?: {
     id: string;
     name: string;
@@ -1391,6 +1437,8 @@ function serializeInquiryForClient(
     hasReview: Boolean(inquiry.touristReview),
     pendingRevisionItemId: inquiry.pendingRevisionItemId ?? null,
     pendingRevisionLabel: inquiry.pendingRevisionLabel ?? null,
+    chatPaused: Boolean(inquiry.chatPausedAt),
+    chatPausedAt: inquiry.chatPausedAt?.toISOString() ?? null,
   };
 }
 

@@ -4,6 +4,7 @@ import type { ChatbotLeadHints, ChatbotLink, ChatbotMessage } from "@tourpilot/s
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { loginPath } from "../../utils/authRedirect";
+import { usePublicSmartFeatures } from "../../lib/publicSmartFeatures";
 import {
   agencyInquiryHandoffPath,
   buildChatSummaryMessage,
@@ -74,7 +75,10 @@ export function AiChatbotWidget() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const visible = shouldShowChatbot(pathname);
+  const { aiChatbotEnabled, aiTripPlannerEnabled, liveSupportEnabled, loaded: flagsLoaded } =
+    usePublicSmartFeatures();
+  const visible =
+    shouldShowChatbot(pathname) && flagsLoaded && (aiChatbotEnabled || liveSupportEnabled);
   const boot = useRef(initialSession()).current;
 
   const [open, setOpen] = useState(boot.open);
@@ -97,6 +101,17 @@ export function AiChatbotWidget() {
   useEffect(() => {
     saveChatSession({ messages, lead, open });
   }, [messages, lead, open]);
+
+  useEffect(() => {
+    if (!flagsLoaded) return;
+    if (!liveSupportEnabled) {
+      setMode("ai");
+      return;
+    }
+    if (!aiChatbotEnabled || readSupportSessionId()) {
+      setMode("human");
+    }
+  }, [flagsLoaded, liveSupportEnabled, aiChatbotEnabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -166,14 +181,14 @@ export function AiChatbotWidget() {
 
   /** Resume human thread when widget opens in human mode. */
   useEffect(() => {
-    if (!visible || !open || mode !== "human") return;
+    if (!visible || !open || mode !== "human" || !liveSupportEnabled) return;
     if (supportSession) return;
     void ensureHumanSession();
-  }, [visible, open, mode, supportSession, ensureHumanSession]);
+  }, [visible, open, mode, supportSession, ensureHumanSession, liveSupportEnabled]);
 
   /** Poll human chat while open. */
   useEffect(() => {
-    if (!visible || !open || mode !== "human") return;
+    if (!visible || !open || mode !== "human" || !liveSupportEnabled) return;
     const sessionId = supportSession?.id || readSupportSessionId();
     if (!sessionId) return;
 
@@ -197,7 +212,7 @@ export function AiChatbotWidget() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [visible, open, mode, supportSession?.id, token, applySupportSession]);
+  }, [visible, open, mode, supportSession?.id, token, applySupportSession, liveSupportEnabled]);
 
   /** Resolve tour slug links → tour ids for one-click inquire. */
   useEffect(() => {
@@ -241,7 +256,7 @@ export function AiChatbotWidget() {
 
   async function sendAi(text: string) {
     const content = text.trim();
-    if (!content || loading) return;
+    if (!content || loading || !aiChatbotEnabled) return;
 
     const nextMessages: UiMessage[] = [...messages, { role: "user", content }];
     setMessages(nextMessages);
@@ -481,7 +496,8 @@ export function AiChatbotWidget() {
               <>
                 <p className="ai-chatbot__hint">
                   Ask about destinations, seasons, budgets, or packages. Replies come from the AI —
-                  starters only send your message. Need a person? Tap Talk to a human.
+                  starters only send your message.
+                  {liveSupportEnabled ? " Need a person? Tap Talk to a human." : ""}
                 </p>
                 <div className="ai-chatbot__starters">
                   {QUICK_STARTERS.map((s) => (
@@ -580,24 +596,27 @@ export function AiChatbotWidget() {
           </div>
 
           <div className="ai-chatbot__actions">
-            {mode === "ai" ? (
+            {mode === "ai" && liveSupportEnabled ? (
               <button type="button" className="ai-chatbot__action-btn" onClick={() => void talkToHuman()}>
                 Talk to a human
               </button>
-            ) : (
+            ) : null}
+            {mode === "human" && aiChatbotEnabled ? (
               <button type="button" className="ai-chatbot__action-btn" onClick={backToAi}>
                 Back to AI assistant
               </button>
-            )}
+            ) : null}
             {showHandoff && (
               <>
-                <button
-                  type="button"
-                  className="ai-chatbot__action-btn"
-                  onClick={openTripPlanner}
-                >
-                  Open trip planner
-                </button>
+                {aiTripPlannerEnabled ? (
+                  <button
+                    type="button"
+                    className="ai-chatbot__action-btn"
+                    onClick={openTripPlanner}
+                  >
+                    Open trip planner
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="ai-chatbot__action-btn ai-chatbot__action-btn--primary"
@@ -638,10 +657,16 @@ export function AiChatbotWidget() {
         type="button"
         className="ai-chatbot__fab"
         aria-expanded={open}
-        aria-label={open ? "Close assistant" : "Open assistant"}
+        aria-label={
+          open
+            ? "Close assistant"
+            : aiChatbotEnabled
+              ? "Open assistant"
+              : "Open live support"
+        }
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? "×" : "ASK"}
+        {open ? "×" : aiChatbotEnabled ? "ASK" : "HELP"}
       </button>
     </div>
   );

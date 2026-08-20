@@ -2618,6 +2618,43 @@ textarea.field-invalid {
   background: #f4f6fd;
 }
 
+.inquiry-thread-item--system {
+  border-left: 3px solid #b45309;
+  background: #fff8ed;
+}
+
+.chat-policy-notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #f0d9a8;
+  background: #fff8ed;
+  color: #7a4a12;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.chat-paused-banner {
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #f0c7c0;
+  background: #fff4f2;
+  color: #8a2a22;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chat-paused-banner p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .inquiry-thread-role-badge {
   font-size: 0.68rem;
   font-weight: 700;
