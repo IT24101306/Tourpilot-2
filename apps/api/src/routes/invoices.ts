@@ -8,6 +8,8 @@ import {
   buildPayHereCheckoutFields,
   payHereCheckoutUrl,
   payHereConfigured,
+  payHereNotConfiguredError,
+  verifyPayHereNotify,
 } from "../lib/payhere.js";
 import {
   buildDefaultInvoiceLines,
@@ -500,13 +502,15 @@ invoicesRouter.post(
         });
       }
 
+      if (!payHereConfigured()) throw payHereNotConfiguredError();
+
       const payment = await prisma.payment.create({
         data: {
           invoiceId: invoice.id,
           amountLkr,
           currency: invoice.currency,
           status: "PENDING",
-          provider: payHereConfigured() ? "payhere" : "demo",
+          provider: "payhere",
         },
       });
 
@@ -533,34 +537,20 @@ invoicesRouter.post(
         },
       });
 
-      if (payHereFields) {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: {
-            checkoutUrl: payHereCheckoutUrl(),
-            metadata: { fields: payHereFields },
-          },
-        });
-        return res.json({
-          mode: "payhere",
-          paymentId: payment.id,
-          checkoutUrl: payHereCheckoutUrl(),
-          fields: payHereFields,
-          redirectUrl: `${config.webAppUrl}/checkout/${invoice.id}?payment=${payment.id}`,
-        });
-      }
+      if (!payHereFields) throw payHereNotConfiguredError();
 
-      // Demo / stub gateway until PayHere credentials are configured.
       await prisma.payment.update({
         where: { id: payment.id },
         data: {
-          checkoutUrl: `${config.webAppUrl}/checkout/${invoice.id}?payment=${payment.id}`,
+          checkoutUrl: payHereCheckoutUrl(),
+          metadata: { fields: payHereFields },
         },
       });
-
-      res.json({
-        mode: "demo",
+      return res.json({
+        mode: "payhere",
         paymentId: payment.id,
+        checkoutUrl: payHereCheckoutUrl(),
+        fields: payHereFields,
         redirectUrl: `${config.webAppUrl}/checkout/${invoice.id}?payment=${payment.id}`,
       });
     } catch (err) {
@@ -569,94 +559,42 @@ invoicesRouter.post(
   }
 );
 
-/** Demo gateway: mark payment completed (only when PayHere is not configured). */
 invoicesRouter.post(
   "/:invoiceId/demo-complete",
   authRequired,
   requireRoles("TOURIST"),
-  async (req, res, next) => {
-    try {
-      if (payHereConfigured()) {
-        return res.status(400).json({ error: "Demo checkout is disabled when PayHere is configured" });
-      }
-      const body = z.object({ paymentId: z.string().min(1) }).parse(req.body);
-      const payment = await prisma.payment.findUnique({
-        where: { id: body.paymentId },
-        include: {
-          invoice: {
-            include: {
-              inquiry: { select: { touristId: true, id: true } },
-              lineItems: true,
-              payments: { orderBy: { createdAt: "desc" }, take: 1 },
-            },
-          },
-        },
-      });
-      if (!payment || payment.invoiceId !== req.params.invoiceId) {
-        return res.status(404).json({ error: "Payment not found" });
-      }
-      if (payment.invoice.inquiry.touristId !== req.user!.id) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-      if (payment.status === "COMPLETED") {
-        return res.json({
-          invoice: serializeInvoice(payment.invoice),
-          redirectUrl: `${config.webAppUrl}/trips?room=${payment.invoice.inquiry.id}&paid=1`,
-        });
-      }
-
-      const updated = await prisma.$transaction(async (tx) => {
-        await tx.payment.update({
-          where: { id: payment.id },
-          data: {
-            status: "COMPLETED",
-            paidAt: new Date(),
-            providerRef: `demo-${payment.id}`,
-          },
-        });
-        return tx.invoice.update({
-          where: { id: payment.invoiceId },
-          data: { status: "PAID", paidAt: new Date() },
-          include: {
-            lineItems: true,
-            payments: { orderBy: { createdAt: "desc" }, take: 1 },
-          },
-        });
-      });
-
-      res.json({
-        invoice: serializeInvoice(updated),
-        redirectUrl: `${config.webAppUrl}/trips?room=${payment.invoice.inquiry.id}&paid=1`,
-      });
-    } catch (err) {
-      next(err);
-    }
+  async (_req, res) => {
+    res.status(400).json({
+      error: "Demo checkout is disabled. Complete payment with PayHere.",
+      code: "PAYHERE_REQUIRED",
+    });
   }
 );
 
 /** PayHere server notify (no auth — verified by merchant_id + status). */
 invoicesRouter.post("/payhere/notify", async (req, res, next) => {
   try {
-    const orderId = String(req.body?.order_id || "");
-    const statusCode = String(req.body?.status_code || "");
-    const paymentId = String(req.body?.payment_id || "");
-    if (!orderId) return res.status(400).send("missing order_id");
+    const body = (req.body || {}) as Record<string, unknown>;
+    const verified = verifyPayHereNotify(body);
+    if (!verified.ok || !verified.orderId) {
+      return res.status(403).send("invalid_signature");
+    }
 
     const payment = await prisma.payment.findUnique({
-      where: { id: orderId },
+      where: { id: verified.orderId },
       include: { invoice: true },
     });
     if (!payment) return res.status(404).send("unknown order");
 
-    if (statusCode === "2") {
+    if (verified.statusCode === "2") {
       await prisma.$transaction(async (tx) => {
         await tx.payment.update({
           where: { id: payment.id },
           data: {
             status: "COMPLETED",
-            providerRef: paymentId || payment.providerRef,
+            providerRef: verified.providerPaymentId || payment.providerRef,
             paidAt: new Date(),
-            metadata: req.body as object,
+            metadata: body as object,
           },
         });
         await tx.invoice.update({
@@ -664,12 +602,12 @@ invoicesRouter.post("/payhere/notify", async (req, res, next) => {
           data: { status: "PAID", paidAt: new Date() },
         });
       });
-    } else if (statusCode === "0" || statusCode === "-1" || statusCode === "-2") {
+    } else if (verified.statusCode === "0" || verified.statusCode === "-1" || verified.statusCode === "-2") {
       await prisma.payment.update({
         where: { id: payment.id },
         data: {
-          status: statusCode === "0" ? "PENDING" : "FAILED",
-          metadata: req.body as object,
+          status: verified.statusCode === "0" ? "PENDING" : "FAILED",
+          metadata: body as object,
         },
       });
     }
@@ -724,7 +662,7 @@ invoicesRouter.get(
               amountLkr: Number(payment.amountLkr),
             }
           : null,
-        mode: payHereConfigured() ? "payhere" : "demo",
+        mode: "payhere",
         payHere: meta?.fields
           ? { checkoutUrl: payHereCheckoutUrl(), fields: meta.fields }
           : null,

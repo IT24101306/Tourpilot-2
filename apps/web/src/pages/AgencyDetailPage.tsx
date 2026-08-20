@@ -12,6 +12,7 @@ import {
 } from "@tourpilot/shared";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 import { newId } from "../lib/newId";
 import { AgencyOfferFreeBanner } from "../components/discovery/AgencyOfferFreeBanner";
 import type { DiscoveryOffer } from "../components/discovery/DiscoveryOfferCard";
@@ -259,6 +260,7 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
   const focusInquiryForm =
     Boolean(inquireTourId) || location.hash === "#request-custom-tour";
   const { user, logout } = useAuth();
+  const { publicOffersEnabled } = usePublicSmartFeatures();
   const agencyReturnPath = slug
     ? `/agencies/${slug}${refCode ? `?ref=${encodeURIComponent(refCode)}` : ""}`
     : "/";
@@ -391,7 +393,7 @@ export function AgencyDetailPage({ slugOverride }: { slugOverride?: string } = {
 
   const ratingDisplay = content.ratingScore || String(agency.avgRating.toFixed(1));
 
-  const hasLoyaltyOffers = showOffers && loyaltyOffers.length > 0;
+  const hasLoyaltyOffers = publicOffersEnabled && showOffers && loyaltyOffers.length > 0;
   const hasCmsOffers = showOffers && cmsOffers.length > 0;
   const hasOffers = hasLoyaltyOffers || hasCmsOffers;
   const showStripBanner = hasLoyaltyOffers;

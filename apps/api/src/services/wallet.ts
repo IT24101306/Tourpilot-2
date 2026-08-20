@@ -117,6 +117,60 @@ export async function topUpWallet(userId: string, amount: number) {
   return { balance: newBalance };
 }
 
+/** Credit wallet after a verified PayHere wallet top-up. Idempotent. */
+export async function fulfillWalletTopup(topupId: string, providerRef?: string) {
+  const topup = await prisma.walletTopup.findUnique({ where: { id: topupId } });
+  if (!topup) {
+    const err = new Error("Wallet top-up not found");
+    (err as Error & { status: number }).status = 404;
+    throw err;
+  }
+  if (topup.status === "COMPLETED") {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: topup.userId } });
+    return { alreadyPaid: true as const, balance: Number(user.walletBalance) };
+  }
+
+  const amount = Math.round(Number(topup.amountLkr));
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: topup.userId } });
+  const newBalance = Number(user.walletBalance) + amount;
+  const now = new Date();
+
+  await prisma.$transaction([
+    prisma.walletTopup.update({
+      where: { id: topup.id },
+      data: {
+        status: "COMPLETED",
+        paidAt: now,
+        providerRef: providerRef || topup.providerRef,
+      },
+    }),
+    prisma.user.update({
+      where: { id: user.id },
+      data: { walletBalance: newBalance },
+    }),
+    prisma.walletLedger.create({
+      data: {
+        userId: user.id,
+        type: "TOPUP",
+        amountLkr: amount,
+        balanceAfter: newBalance,
+        note: "Wallet top-up (PayHere)",
+      },
+    }),
+  ]);
+
+  void notifyWalletReceipt({
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    kind: "TOPUP",
+    amountLkr: amount,
+    balanceLkr: newBalance,
+  }).catch((err) => console.error("[top-up receipt]", err));
+
+  return { alreadyPaid: false as const, balance: newBalance };
+}
+
 /** Credit influencer wallet when admin marks a commission PAID. Idempotent per commission id. */
 export async function creditCommissionPayout(commissionId: string) {
   const commission = await prisma.commission.findUnique({

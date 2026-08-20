@@ -48,7 +48,18 @@ export type PlatformSettingsView = {
   agencyReferralCap: number;
   agencyReferralLoginFeePct: number;
   agencyReferralRewardMonths: number;
+  aiChatbotEnabled: boolean;
+  aiTripPlannerEnabled: boolean;
+  liveSupportEnabled: boolean;
+  publicOffersEnabled: boolean;
   updatedAt: string | null;
+};
+
+export type PublicSmartFeatures = {
+  aiChatbotEnabled: boolean;
+  aiTripPlannerEnabled: boolean;
+  liveSupportEnabled: boolean;
+  publicOffersEnabled: boolean;
 };
 
 export const DEFAULT_AGENCY_REFERRAL: AgencyReferralSettings = {
@@ -134,6 +145,10 @@ function viewFromRow(row: {
   agencyReferralCap?: number | null;
   agencyReferralLoginFeePct?: number | null;
   agencyReferralRewardMonths?: number | null;
+  aiChatbotEnabled?: boolean | null;
+  aiTripPlannerEnabled?: boolean | null;
+  liveSupportEnabled?: boolean | null;
+  publicOffersEnabled?: boolean | null;
   updatedAt: Date;
 } | null): PlatformSettingsView {
   const sessionInactivityMinutes = resolveSessionInactivityMinutes({
@@ -142,7 +157,7 @@ function viewFromRow(row: {
   });
   return {
     loginFees: normalizeLoginFees(row?.loginFees),
-    inquiryExpiryDays: row?.inquiryExpiryDays ?? config.inquiryExpiryDays ?? 14,
+    inquiryExpiryDays: row?.inquiryExpiryDays ?? config.inquiryExpiryDays ?? 7,
     webAppUrl: row?.webAppUrl?.trim() || config.webAppUrl || "",
     emailFrom: row?.emailFrom?.trim() || config.email.from || "",
     walletTopupMinLkr: row?.walletTopupMinLkr ?? 100,
@@ -164,6 +179,10 @@ function viewFromRow(row: {
       row?.agencyReferralRewardMonths != null
         ? clampReferralMonths(row.agencyReferralRewardMonths)
         : DEFAULT_AGENCY_REFERRAL.rewardMonths,
+    aiChatbotEnabled: row?.aiChatbotEnabled ?? true,
+    aiTripPlannerEnabled: row?.aiTripPlannerEnabled ?? true,
+    liveSupportEnabled: row?.liveSupportEnabled ?? true,
+    publicOffersEnabled: row?.publicOffersEnabled ?? true,
     updatedAt: row?.updatedAt?.toISOString() ?? null,
   };
 }
@@ -190,6 +209,16 @@ export async function getAgencyReferralSettings(): Promise<AgencyReferralSetting
   };
 }
 
+export async function getPublicSmartFeatures(): Promise<PublicSmartFeatures> {
+  const s = await getPlatformSettings();
+  return {
+    aiChatbotEnabled: s.aiChatbotEnabled,
+    aiTripPlannerEnabled: s.aiTripPlannerEnabled,
+    liveSupportEnabled: s.liveSupportEnabled,
+    publicOffersEnabled: s.publicOffersEnabled,
+  };
+}
+
 export async function updatePlatformSettings(input: {
   loginFees?: Partial<Record<SharedRole, number>>;
   inquiryExpiryDays?: number;
@@ -207,6 +236,10 @@ export async function updatePlatformSettings(input: {
   agencyReferralCap?: number;
   agencyReferralLoginFeePct?: number;
   agencyReferralRewardMonths?: number;
+  aiChatbotEnabled?: boolean;
+  aiTripPlannerEnabled?: boolean;
+  liveSupportEnabled?: boolean;
+  publicOffersEnabled?: boolean;
 }): Promise<PlatformSettingsView> {
   const current = await getPlatformSettings();
   const loginFees = { ...current.loginFees };
@@ -292,6 +325,20 @@ export async function updatePlatformSettings(input: {
     input.agencyReferralRewardMonths !== undefined
       ? clampReferralMonths(input.agencyReferralRewardMonths)
       : current.agencyReferralRewardMonths;
+  const aiChatbotEnabled =
+    input.aiChatbotEnabled !== undefined ? Boolean(input.aiChatbotEnabled) : current.aiChatbotEnabled;
+  const aiTripPlannerEnabled =
+    input.aiTripPlannerEnabled !== undefined
+      ? Boolean(input.aiTripPlannerEnabled)
+      : current.aiTripPlannerEnabled;
+  const liveSupportEnabled =
+    input.liveSupportEnabled !== undefined
+      ? Boolean(input.liveSupportEnabled)
+      : current.liveSupportEnabled;
+  const publicOffersEnabled =
+    input.publicOffersEnabled !== undefined
+      ? Boolean(input.publicOffersEnabled)
+      : current.publicOffersEnabled;
 
   const row = await prisma.platformSettings.upsert({
     where: { id: PLATFORM_SETTINGS_ID },
@@ -312,6 +359,10 @@ export async function updatePlatformSettings(input: {
       agencyReferralCap,
       agencyReferralLoginFeePct,
       agencyReferralRewardMonths,
+      aiChatbotEnabled,
+      aiTripPlannerEnabled,
+      liveSupportEnabled,
+      publicOffersEnabled,
     },
     update: {
       loginFees: asJson(loginFees),
@@ -328,6 +379,10 @@ export async function updatePlatformSettings(input: {
       agencyReferralCap,
       agencyReferralLoginFeePct,
       agencyReferralRewardMonths,
+      aiChatbotEnabled,
+      aiTripPlannerEnabled,
+      liveSupportEnabled,
+      publicOffersEnabled,
     },
   });
 

@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import type { InvoiceDetail } from "../types/billing";
+import { PayHereAutoSubmit } from "../components/billing/PayHereAutoSubmit";
 
 type CheckoutSession = {
   invoice: InvoiceDetail;
@@ -18,11 +19,8 @@ export function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const paymentId = searchParams.get("payment") ?? undefined;
   const { token, user } = useAuth();
-  const navigate = useNavigate();
   const [session, setSession] = useState<CheckoutSession | null>(null);
   const [error, setError] = useState("");
-  const [working, setWorking] = useState(false);
-  const autoSubmitRef = useRef(false);
 
   useEffect(() => {
     if (!token || !invoiceId) return;
@@ -32,14 +30,6 @@ export function CheckoutPage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load checkout"));
   }, [token, invoiceId, paymentId]);
 
-  useEffect(() => {
-    if (!session?.payHere || autoSubmitRef.current) return;
-    if (session.mode !== "payhere") return;
-    autoSubmitRef.current = true;
-    const form = document.getElementById("payhere-checkout-form") as HTMLFormElement | null;
-    form?.submit();
-  }, [session]);
-
   if (!user || user.role !== "TOURIST") {
     return (
       <div className="page-narrow">
@@ -47,26 +37,6 @@ export function CheckoutPage() {
         <Link to="/login">Sign in</Link>
       </div>
     );
-  }
-
-  async function completeDemo(e: FormEvent) {
-    e.preventDefault();
-    if (!token || !session?.payment) return;
-    setWorking(true);
-    setError("");
-    try {
-      const result = await api<{ redirectUrl: string }>(`/invoices/${invoiceId}/demo-complete`, {
-        method: "POST",
-        token,
-        body: JSON.stringify({ paymentId: session.payment.id }),
-      });
-      const path = result.redirectUrl.replace(/^https?:\/\/[^/]+/, "");
-      navigate(path || session.tripRoomUrl);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Payment failed");
-    } finally {
-      setWorking(false);
-    }
   }
 
   if (error && !session) {
@@ -106,38 +76,17 @@ export function CheckoutPage() {
             Back to trip room
           </Link>
         </>
-      ) : session.mode === "payhere" && session.payHere ? (
-        <>
-          <p className="muted">Redirecting you to PayHere…</p>
-          <form id="payhere-checkout-form" method="post" action={session.payHere.checkoutUrl}>
-            {Object.entries(session.payHere.fields).map(([key, value]) => (
-              <input key={key} type="hidden" name={key} value={value} />
-            ))}
-            <button type="submit" className="btn btn-primary">
-              Continue to PayHere
-            </button>
-          </form>
-        </>
+      ) : session.payHere ? (
+        <PayHereAutoSubmit checkoutUrl={session.payHere.checkoutUrl} fields={session.payHere.fields} />
       ) : (
-        <form onSubmit={completeDemo} className="checkout-demo-card">
-          <p>
-            Payment gateway credentials are not configured yet. This is a <strong>demo checkout</strong>{" "}
-            so you can verify the voucher → pay flow. Once PayHere merchant keys are set on the
-            server, tourists will be sent to the real gateway automatically.
+        <>
+          <p className="field-error-note">
+            {error || "PayHere is not ready for this invoice. Please try again or contact support."}
           </p>
-          <p>
-            Amount: <strong>LKR {invoice.totalLkr.toLocaleString()}</strong>
-          </p>
-          {error && <p className="field-error-note">{error}</p>}
-          <div className="dialog-actions" style={{ justifyContent: "flex-start" }}>
-            <Link to={session.tripRoomUrl} className="btn btn-ghost">
-              Cancel
-            </Link>
-            <button type="submit" className="btn btn-primary" disabled={working || !session.payment}>
-              {working ? "Processing…" : "Complete demo payment"}
-            </button>
-          </div>
-        </form>
+          <Link to={session.tripRoomUrl} className="btn btn-ghost">
+            Back to trip room
+          </Link>
+        </>
       )}
     </div>
   );
@@ -165,7 +114,7 @@ export function CheckoutReturnPage({ cancelled }: { cancelled?: boolean }) {
       <p className="muted">
         {cancelled
           ? "You cancelled the payment. You can try again from your trip room invoice."
-          : "If payment succeeded, your invoice will show as paid shortly after confirmation from the gateway."}
+          : "If payment succeeded, your invoice will show as paid shortly after confirmation from PayHere."}
       </p>
       <Link to={tripRoomUrl} className="btn btn-primary">
         Back to trip room

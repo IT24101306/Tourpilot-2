@@ -15,7 +15,7 @@ import {
   welcomeEmail,
 } from "./email.js";
 import { getPlatformSettings } from "./platformSettings.js";
-import { buildTrialStatus } from "@tourpilot/shared";
+import { buildTrialStatus, chatPolicyCategoryLabel, type ChatPolicyCategory } from "@tourpilot/shared";
 
 export type NotifyInput = {
   userId: string;
@@ -635,4 +635,70 @@ export async function notifyCommissionPaid(
     email,
     emailContent: mail,
   });
+}
+
+export async function notifyAdminsChatPolicyViolation(input: {
+  violationId: string;
+  inquiryId: string;
+  offenderUserId: string;
+  categories: ChatPolicyCategory[];
+}) {
+  const [offender, inquiry, admins] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: input.offenderUserId },
+      select: { id: true, name: true, role: true, phone: true, email: true },
+    }),
+    prisma.inquiry.findUnique({
+      where: { id: input.inquiryId },
+      select: {
+        id: true,
+        tourist: { select: { name: true } },
+        agency: { select: { name: true, slug: true } },
+      },
+    }),
+    prisma.user.findMany({
+      where: { role: "ADMIN", isActive: true },
+      select: { id: true, name: true, email: true },
+    }),
+  ]);
+  if (!offender || !inquiry) return;
+
+  const settings = await getPlatformSettings().catch(() => null);
+  const base = (settings?.webAppUrl?.trim() || config.webAppUrl).replace(/\/$/, "");
+  const reviewUrl = `${base}/dashboard/admin/policy-flags`;
+  const tripUrl = `${base}/dashboard/admin/inquiries/${inquiry.id}/trip-room`;
+  const labels = input.categories.map(chatPolicyCategoryLabel).join(", ");
+  const title = "Trip chat policy violation";
+  const body = `${offender.name} (${offender.role.toLowerCase()}) shared ${labels} in the ${inquiry.agency.name} × ${inquiry.tourist.name} trip room. Chat is paused.`;
+
+  for (const admin of admins) {
+    await createNotification({
+      userId: admin.id,
+      type: "POLICY_VIOLATION",
+      title,
+      body,
+      inquiryId: inquiry.id,
+      email: admin.email,
+      emailContent: {
+        subject: `Policy flag — ${offender.name} (${offender.role})`,
+        text: [
+          `Hello ${admin.name},`,
+          "",
+          "A trip-room message was blocked for sharing personal contact details.",
+          "",
+          `Person: ${offender.name} (${offender.role})`,
+          `Phone: ${offender.phone}`,
+          `Detected: ${labels}`,
+          `Trip: ${inquiry.tourist.name} × ${inquiry.agency.name}`,
+          "",
+          `Review queue: ${reviewUrl}`,
+          `Trip room: ${tripUrl}`,
+          "",
+          "The original message was not shown to the other person.",
+          "",
+          "— TourPilot",
+        ].join("\n"),
+      },
+    });
+  }
 }

@@ -15,9 +15,17 @@ import {
 } from "../lib/offers.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
 import { publicOfferWhere } from "../lib/publicVisibility.js";
+import { getPublicSmartFeatures } from "../services/platformSettings.js";
 import { recordAuditEvent, snapshotOffer } from "../services/auditLog.js";
 
 export const offersRouter = Router();
+
+async function publicOffersDisabled(res: { status: (n: number) => { json: (b: unknown) => void } }) {
+  const flags = await getPublicSmartFeatures();
+  if (flags.publicOffersEnabled) return false;
+  res.status(403).json({ error: "Public offers are turned off", code: "FEATURE_DISABLED" });
+  return true;
+}
 
 const offerRegisterBodySchema = z.object({
   screenshotUrl: storedImageUrlSchema,
@@ -28,6 +36,7 @@ const offerRegisterBodySchema = z.object({
 
 offersRouter.get("/active", async (_req, res, next) => {
   try {
+    if (await publicOffersDisabled(res)) return;
     const now = new Date();
     const offers = await prisma.offer.findMany({
       where: publicOfferWhere(now),
@@ -44,6 +53,7 @@ offersRouter.get("/active", async (_req, res, next) => {
 /** Public: active offers ending soonest (for hero / urgency banners). */
 offersRouter.get("/ending-soon", async (req, res, next) => {
   try {
+    if (await publicOffersDisabled(res)) return;
     const limit = Math.min(10, Math.max(1, Number(req.query.limit) || 3));
     const now = new Date();
     const offers = await prisma.offer.findMany({
@@ -81,6 +91,7 @@ offersRouter.get("/", authRequired, requireRoles("ADMIN"), async (_req, res, nex
 /** Public: registered tourists for an active offer (name + avatar for social proof). */
 offersRouter.get("/:id/registrations", async (req, res, next) => {
   try {
+    if (await publicOffersDisabled(res)) return;
     const offer = await prisma.offer.findFirst({
       where: { id: req.params.id, ...publicOfferWhere() },
     });
@@ -114,6 +125,7 @@ offersRouter.get("/:id/registrations", async (req, res, next) => {
 
 offersRouter.get("/:id", async (req, res, next) => {
   try {
+    if (await publicOffersDisabled(res)) return;
     const now = new Date();
     const offer = await prisma.offer.findFirst({
       where: {
@@ -133,6 +145,7 @@ offersRouter.get("/:id", async (req, res, next) => {
 
 offersRouter.post("/:id/register", authRequired, async (req, res, next) => {
   try {
+    if (await publicOffersDisabled(res)) return;
     const body = offerRegisterBodySchema.parse(req.body);
     const now = new Date();
     const offer = await prisma.offer.findFirst({

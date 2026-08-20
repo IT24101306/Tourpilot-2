@@ -3,10 +3,12 @@ import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { EmptyState } from "../components/feedback/EmptyState";
 import { GuidedTripCard } from "../components/guided/GuidedTripCard";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 import type { NegotiationListItem } from "../types/negotiation";
 
 export function TouristTripsPage() {
   const { token } = useAuth();
+  const { publicOffersEnabled } = usePublicSmartFeatures();
   const [inquiries, setInquiries] = useState<NegotiationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,8 +43,14 @@ export function TouristTripsPage() {
       <EmptyState
         title="No inquiries yet"
         description="Visit an agency or tour page and send an inquiry — proposals and trip rooms will show up here."
-        action={{ label: "Browse offers", to: "/offers" }}
-        secondaryAction={{ label: "Find agencies", to: "/" }}
+        action={
+          publicOffersEnabled
+            ? { label: "Browse offers", to: "/offers" }
+            : { label: "Find agencies", to: "/" }
+        }
+        secondaryAction={
+          publicOffersEnabled ? { label: "Find agencies", to: "/" } : undefined
+        }
       />
     );
   }

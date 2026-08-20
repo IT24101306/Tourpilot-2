@@ -68,6 +68,8 @@ export type InquiryDetail = {
   } | null;
   thread?: ThreadMessage[];
   typing?: Array<{ userId: string; name: string; role: string; until: string }>;
+  chatPaused?: boolean;
+  chatPausedAt?: string | null;
   invoice?: {
     id: string;
     invoiceNumber: string;

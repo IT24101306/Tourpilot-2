@@ -37,7 +37,7 @@ export const config = {
           Number(process.env.SMTP_PORT || 587) === 465),
     },
   },
-  inquiryExpiryDays: Number(process.env.INQUIRY_EXPIRY_DAYS || 14),
+  inquiryExpiryDays: Number(process.env.INQUIRY_EXPIRY_DAYS || 7),
   inquiryExpiryIntervalMs: Number(process.env.INQUIRY_EXPIRY_INTERVAL_MS || 60 * 60 * 1000),
   customDomain: {
     /** Public IPv4 of the server; agencies point an A record here. */

@@ -18,7 +18,10 @@ function notificationLink(n: NotificationRow, role: string | undefined) {
   if (role === "AGENCY") return `/dashboard/agency/trip-room/${n.inquiryId}`;
   if (role === "TOURIST") return `/trips/${n.inquiryId}`;
   if (role === "INFLUENCER") return `/dashboard/i/trip-room/${n.inquiryId}`;
-  if (role === "ADMIN") return `/dashboard/admin/inquiries/${n.inquiryId}/trip-room`;
+  if (role === "ADMIN") {
+    if (n.type === "POLICY_VIOLATION") return "/dashboard/admin/policy-flags";
+    return `/dashboard/admin/inquiries/${n.inquiryId}/trip-room`;
+  }
   return null;
 }
 

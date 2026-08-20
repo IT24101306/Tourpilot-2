@@ -6,6 +6,7 @@ export type AdminStats = {
   offers: { total: number; active: number };
   ledgerVolumeLkr: number;
   pendingAgencies: number;
+  openPolicyViolations?: number;
 };
 
 export type AdminAgency = {
@@ -80,6 +81,8 @@ export type AdminUser = {
   loginFeeOverride: number | null;
   isActive: boolean;
   createdAt: string;
+  /** True when an admin login password is stored. Never send the hash to the client. */
+  hasPassword?: boolean;
   agency: {
     id: string;
     name: string;
@@ -151,6 +154,24 @@ export type AdminLedgerRow = {
   note: string | null;
   createdAt: string;
   user: { id: string; name: string; phone: string; role: string };
+};
+
+export type AdminPolicyViolation = {
+  id: string;
+  inquiryId: string;
+  offenderRole: string;
+  categories: string[];
+  categoryLabels: string[];
+  originalBody: string;
+  status: "OPEN" | "REVIEWED" | "DISMISSED";
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  chatPaused: boolean;
+  offender: { id: string; name: string; phone: string; email: string | null; role: string };
+  reviewedBy: { id: string; name: string } | null;
+  tourist: { id: string; name: string };
+  agency: { id: string; name: string; slug: string };
 };
 
 export type AdminReview = {

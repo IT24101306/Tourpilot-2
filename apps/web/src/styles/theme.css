@@ -12119,6 +12119,31 @@ a.agency-icon-btn {
   border: 1px solid var(--tp-border, #d5dde5);
 }
 
+.ai-chatbot__bubble--admin {
+  align-self: flex-start;
+  background: #eef6f2;
+  border: 1px solid color-mix(in srgb, var(--brand-accent-teal, #0d9488) 28%, white);
+}
+
+.ai-chatbot__bubble--system {
+  align-self: center;
+  max-width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--tp-muted, #5a6b7a);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+}
+
+.ai-chatbot__sender-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: #0a5c54;
+  margin-bottom: 0.2rem;
+}
+
 .ai-chatbot__links {
   list-style: none;
   margin: 0.55rem 0 0;
@@ -12276,6 +12301,182 @@ a.agency-icon-btn {
 
   .ai-chatbot__panel {
     width: calc(100vw - 2rem);
+  }
+}
+
+/* Admin live support inbox */
+.admin-support {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 1rem;
+  min-height: 70vh;
+  align-items: stretch;
+}
+
+.admin-support__inbox,
+.admin-support__thread {
+  border: 1px solid var(--tp-border, #d5dde5);
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.admin-support__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--tp-border, #e5ebe8);
+}
+
+.admin-support__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+}
+
+.admin-support__row {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--tp-border, #eef2ef);
+  background: transparent;
+  padding: 0.85rem 0.9rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-support__row strong {
+  display: block;
+}
+
+.admin-support__row p {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--tp-muted, #5a6b7a);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin-support__row.is-active {
+  background: #f3faf7;
+}
+
+.admin-support__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--tp-border, #e5ebe8);
+}
+
+.admin-support__head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.admin-support__head p {
+  margin: 0.25rem 0 0;
+}
+
+.admin-support__head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-support__context {
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--tp-border, #e5ebe8);
+  background: #fafcfb;
+  font-size: 0.85rem;
+}
+
+.admin-support__context pre {
+  white-space: pre-wrap;
+  margin: 0.5rem 0 0;
+  font: inherit;
+  color: #334;
+}
+
+.admin-support__messages {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: #f7faf8;
+}
+
+.admin-support__bubble {
+  max-width: 85%;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--tp-border, #d5dde5);
+}
+
+.admin-support__bubble p {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+}
+
+.admin-support__meta {
+  font-size: 0.72rem;
+  color: var(--tp-muted, #5a6b7a);
+}
+
+.admin-support__bubble--user {
+  align-self: flex-start;
+}
+
+.admin-support__bubble--admin {
+  align-self: flex-end;
+  background: #eef6f2;
+  border-color: color-mix(in srgb, var(--brand-accent-teal, #0d9488) 28%, white);
+}
+
+.admin-support__bubble--system {
+  align-self: center;
+  background: transparent;
+  border: none;
+  color: var(--tp-muted, #5a6b7a);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.admin-support__compose {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  border-top: 1px solid var(--tp-border, #e5ebe8);
+}
+
+.admin-support__compose input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--tp-border, #d5dde5);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+}
+
+@media (max-width: 900px) {
+  .admin-support {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-support__inbox {
+    max-height: 280px;
   }
 }
 

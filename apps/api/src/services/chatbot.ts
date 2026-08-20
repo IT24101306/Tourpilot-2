@@ -1,6 +1,37 @@
 import type { ChatbotMessage, ChatbotResult } from "@tourpilot/shared";
 import { catalogForPrompt, loadPublishedTourCatalog } from "./aiCatalog.js";
-import { AiProviderError, chatCompletion } from "./openaiClient.js";
+import { AiProviderError, chatCompletion, extractJsonText } from "./openaiClient.js";
+
+/** Schema for Gemini Interactions / OpenAI structured JSON (reply is required). */
+const CHATBOT_JSON_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    reply: { type: "string" },
+    links: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          label: { type: "string" },
+          href: { type: "string" },
+        },
+        required: ["label", "href"],
+      },
+    },
+    lead: {
+      type: "object",
+      properties: {
+        days: { type: "number" },
+        pax: { type: "number" },
+        interests: { type: "array", items: { type: "string" } },
+        budgetBand: { type: "string" },
+        preferredAgencySlug: { type: "string" },
+        readyForInquiry: { type: "boolean" },
+      },
+    },
+  },
+  required: ["reply"],
+};
 
 const ALLOWED_HREF =
   /^\/(plan|offers|discover|agencies\/[a-z0-9-]+|tours\/[a-z0-9-]+\/[a-z0-9-]+)(\?[^#]*)?$/i;
@@ -15,7 +46,7 @@ Goals:
 - Collect trip requirements (days, travellers, interests, budget, dates) naturally.
 - When helpful, point users to /plan (AI Trip Planner), /offers, agency pages, or specific tours.
 - Encourage creating an inquiry with an agency when they are ready (do not invent booking confirmations).
-- The UI has "Talk to a human", "Send inquiry", and "Open trip planner" buttons — you can mention them when relevant.
+- The UI has "Talk to a human" (live admin chat), "Send inquiry", and "Open trip planner" buttons — you can mention them when relevant.
 - When the traveler seems ready, set lead.readyForInquiry=true and preferredAgencySlug from the catalog when a specific agency fits.
 
 Rules:
@@ -90,18 +121,25 @@ function sanitizeLead(lead: unknown): ChatbotResult["lead"] {
 }
 
 function parseResult(raw: string): ChatbotResult {
+  const jsonText = extractJsonText(raw);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(jsonText);
   } catch {
-    throw new AiProviderError("AI returned invalid JSON for the chatbot reply", 502);
+    throw new AiProviderError(
+      `AI returned invalid JSON for the chatbot reply. Preview: ${raw.slice(0, 240)}`,
+      502
+    );
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new AiProviderError("AI returned an unexpected chatbot shape", 502);
   }
   const o = parsed as Record<string, unknown>;
   if (typeof o.reply !== "string" || !o.reply.trim()) {
-    throw new AiProviderError("AI chatbot reply was empty", 502);
+    throw new AiProviderError(
+      `AI chatbot reply was empty. Preview: ${jsonText.slice(0, 240)}`,
+      502
+    );
   }
   return {
     reply: o.reply.trim(),
@@ -132,6 +170,7 @@ export async function generateChatbotReply(input: {
     ],
     temperature: 0.55,
     responseFormatJson: true,
+    jsonSchema: CHATBOT_JSON_SCHEMA,
   });
 
   return parseResult(content);

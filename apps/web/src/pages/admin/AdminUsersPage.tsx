@@ -239,6 +239,7 @@ export function AdminUsersPage() {
               ? { loginFeeLkr }
               : {}),
             ...(agencyName ? { agencyName } : {}),
+            ...(values.role === "ADMIN" && values.password ? { password: values.password } : {}),
           }),
         });
         const catalogNote = created.agency
@@ -263,6 +264,7 @@ export function AdminUsersPage() {
             ...(loginFeeLkr !== undefined && Number.isFinite(loginFeeLkr)
               ? { loginFeeLkr }
               : {}),
+            ...(values.role === "ADMIN" && values.password ? { password: values.password } : {}),
           }),
         });
         setMsg(`Created ${values.name}.`);
@@ -276,6 +278,7 @@ export function AdminUsersPage() {
             email,
             role: values.role,
             isActive: values.isActive,
+            ...(values.role === "ADMIN" && values.password ? { password: values.password } : {}),
           }),
         });
         setMsg(`Updated ${values.name}.`);
@@ -589,6 +592,7 @@ export function AdminUsersPage() {
             : null
         }
         showAgencyName={formMode === "duplicate" && Boolean(editUser?.agency)}
+        hasPassword={Boolean(editUser?.hasPassword)}
         initial={
           formMode === "edit" && editUser
             ? {

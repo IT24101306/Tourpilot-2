@@ -18,6 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useConfirmAction } from "../../components/confirm/ConfirmActionContext";
 import { ModuleHeader } from "../../components/module/ModuleHeader";
 import { RichTextEditor } from "../../components/richtext/RichTextEditor";
+import { applyPublicSmartFeatures } from "../../lib/publicSmartFeatures";
 
 type EmailTemplate = { subject?: string; body?: string };
 
@@ -36,6 +37,10 @@ type PlatformSettings = {
   agencyReferralCap: number;
   agencyReferralLoginFeePct: number;
   agencyReferralRewardMonths: number;
+  aiChatbotEnabled: boolean;
+  aiTripPlannerEnabled: boolean;
+  liveSupportEnabled: boolean;
+  publicOffersEnabled: boolean;
   updatedAt: string | null;
 };
 
@@ -113,6 +118,40 @@ function blankAgent(): SupportAgent {
   };
 }
 
+function FeatureSwitchRow({
+  label,
+  hint,
+  on,
+  onToggle,
+}: {
+  label: string;
+  hint: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="gov-features-row">
+      <div className="gov-features-row__copy">
+        <span className="gov-features-row__label">{label}</span>
+        <span className="gov-features-row__hint">{hint}</span>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={`${label}: ${on ? "enabled" : "disabled"}`}
+        className={`gov-feature-switch${on ? " is-on" : ""}`}
+        onClick={onToggle}
+      >
+        <span className="gov-feature-switch__track">
+          <span className="gov-feature-switch__thumb" />
+        </span>
+        <span className="gov-feature-switch__state">{on ? "On" : "Off"}</span>
+      </button>
+    </div>
+  );
+}
+
 export function AdminSettingsPage() {
   const { token } = useAuth();
   const { requestConfirm } = useConfirmAction();
@@ -124,7 +163,7 @@ export function AdminSettingsPage() {
     DRIVER: "25",
     ADMIN: "0",
   });
-  const [inquiryExpiryDays, setInquiryExpiryDays] = useState("14");
+  const [inquiryExpiryDays, setInquiryExpiryDays] = useState("7");
   const [webAppUrl, setWebAppUrl] = useState("");
   const [emailFrom, setEmailFrom] = useState("");
   const [topupMin, setTopupMin] = useState("100");
@@ -139,6 +178,10 @@ export function AdminSettingsPage() {
   const [referralCap, setReferralCap] = useState("5");
   const [referralPct, setReferralPct] = useState("25");
   const [referralMonths, setReferralMonths] = useState("12");
+  const [aiChatbotEnabled, setAiChatbotEnabled] = useState(true);
+  const [aiTripPlannerEnabled, setAiTripPlannerEnabled] = useState(true);
+  const [liveSupportEnabled, setLiveSupportEnabled] = useState(true);
+  const [publicOffersEnabled, setPublicOffersEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -175,6 +218,10 @@ export function AdminSettingsPage() {
         setReferralCap(String(data.agencyReferralCap ?? 5));
         setReferralPct(String(data.agencyReferralLoginFeePct ?? 25));
         setReferralMonths(String(data.agencyReferralRewardMonths ?? 12));
+        setAiChatbotEnabled(data.aiChatbotEnabled ?? true);
+        setAiTripPlannerEnabled(data.aiTripPlannerEnabled ?? true);
+        setLiveSupportEnabled(data.liveSupportEnabled ?? true);
+        setPublicOffersEnabled(data.publicOffersEnabled ?? true);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -285,7 +332,7 @@ export function AdminSettingsPage() {
     requestConfirm({
       title: "Save platform settings?",
       description:
-        "Login fees, wallet limits, enquiry expiry, session timeout, email overrides, and support modal copy apply immediately.",
+        "Login fees, wallet limits, enquiry expiry, session timeout, email overrides, support modal copy, and AI feature switches apply immediately.",
       confirmLabel: "Save settings",
       summary: [
         { label: "Inquiry expiry", value: `${Math.round(expiry)} days` },
@@ -305,6 +352,10 @@ export function AdminSettingsPage() {
             ? `${Math.round(cap)} max · ${Math.round(pct)}% · ${Math.round(months)} mo`
             : "Off",
         },
+        { label: "Ask AI", value: aiChatbotEnabled ? "On" : "Off" },
+        { label: "Talk to a human", value: liveSupportEnabled ? "On" : "Off" },
+        { label: "AI Trip Planner", value: aiTripPlannerEnabled ? "On" : "Off" },
+        { label: "Public offers", value: publicOffersEnabled ? "On" : "Off" },
       ],
       onConfirm: async () => {
         setSaving(true);
@@ -326,6 +377,10 @@ export function AdminSettingsPage() {
               agencyReferralCap: Math.round(cap),
               agencyReferralLoginFeePct: Math.round(pct),
               agencyReferralRewardMonths: Math.round(months),
+              aiChatbotEnabled,
+              aiTripPlannerEnabled,
+              liveSupportEnabled,
+              publicOffersEnabled,
             }),
           });
           setSettings(data);
@@ -334,6 +389,16 @@ export function AdminSettingsPage() {
           setReferralCap(String(data.agencyReferralCap));
           setReferralPct(String(data.agencyReferralLoginFeePct));
           setReferralMonths(String(data.agencyReferralRewardMonths));
+          setAiChatbotEnabled(data.aiChatbotEnabled);
+          setAiTripPlannerEnabled(data.aiTripPlannerEnabled);
+          setLiveSupportEnabled(data.liveSupportEnabled);
+          setPublicOffersEnabled(data.publicOffersEnabled);
+          applyPublicSmartFeatures({
+            aiChatbotEnabled: data.aiChatbotEnabled,
+            aiTripPlannerEnabled: data.aiTripPlannerEnabled,
+            liveSupportEnabled: data.liveSupportEnabled,
+            publicOffersEnabled: data.publicOffersEnabled,
+          });
           const idle = splitSessionInactivityForEdit(data.sessionInactivityMinutes);
           setIdleAmount(String(idle.amount));
           setIdleUnit(idle.unit);
@@ -352,7 +417,7 @@ export function AdminSettingsPage() {
       <ModuleHeader
         module="governance"
         title="Platform settings"
-        subtitle="Fees, wallet limits, enquiry expiry, support modal, site email, and message templates."
+        subtitle="Fees, wallet limits, enquiry expiry, site features, support modal, site email, and message templates."
       />
 
       {msg && <p className="gov-status-msg">{msg}</p>}
@@ -383,6 +448,46 @@ export function AdminSettingsPage() {
                     />
                   </label>
                 ))}
+              </div>
+            </div>
+          </details>
+
+          <details className="gov-settings-section" open>
+            <summary className="gov-settings-section__summary">
+              <span>Site features</span>
+              <span className="gov-settings-section__hint">Ask AI, live support, planner, public offers</span>
+            </summary>
+            <div className="gov-settings-section__body">
+              <p className="muted">
+                Turn these off site-wide when you need to pause AI spend, live chat, or the public
+                offers catalog. This tab updates as soon as you save; other visitors pick it up on
+                their next page load.
+              </p>
+              <div className="gov-features-table" role="group" aria-label="Site feature toggles">
+                <FeatureSwitchRow
+                  label="Ask AI"
+                  hint="Floating ASK button on public pages. Off hides AI replies; Talk to a human can stay on."
+                  on={aiChatbotEnabled}
+                  onToggle={() => setAiChatbotEnabled((v) => !v)}
+                />
+                <FeatureSwitchRow
+                  label="Talk to a human"
+                  hint="Live support from the public widget. Independent of Ask AI — keep this on if you still want human chat."
+                  on={liveSupportEnabled}
+                  onToggle={() => setLiveSupportEnabled((v) => !v)}
+                />
+                <FeatureSwitchRow
+                  label="AI Trip Planner"
+                  hint="Plan trip in the public nav and /plan. Off hides the link and blocks new AI itineraries."
+                  on={aiTripPlannerEnabled}
+                  onToggle={() => setAiTripPlannerEnabled((v) => !v)}
+                />
+                <FeatureSwitchRow
+                  label="Public offers"
+                  hint="Offers in the public nav, /offers catalog, and traveler booking. Agency and admin offer tools stay available."
+                  on={publicOffersEnabled}
+                  onToggle={() => setPublicOffersEnabled((v) => !v)}
+                />
               </div>
             </div>
           </details>
@@ -459,6 +564,10 @@ export function AdminSettingsPage() {
                       onChange={(e) => setInquiryExpiryDays(e.target.value)}
                     />
                   </label>
+                  <p className="muted" style={{ margin: 0 }}>
+                    Default is 7 days (1 week). Agencies can reopen inquiries that closed due to
+                    inactivity; declined inquiries stay closed.
+                  </p>
                   <label>
                     Public site URL
                     <input

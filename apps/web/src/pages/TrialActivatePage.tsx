@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { AuthLayout } from "../components/AuthLayout";
-import { PaymentGatewayPendingNotice } from "../components/billing/PaymentGatewayPendingNotice";
+import { PayHereAutoSubmit } from "../components/billing/PayHereAutoSubmit";
 
 export function TrialActivatePage() {
   const { token, user } = useAuth();
   const [trial, setTrial] = useState(user?.trial ?? null);
+  const [error, setError] = useState("");
+  const [payHere, setPayHere] = useState<{ checkoutUrl: string; fields: Record<string, string> } | null>(
+    null
+  );
+  const [activated, setActivated] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -16,8 +21,35 @@ export function TrialActivatePage() {
       .catch(console.error);
   }, [token]);
 
-  const due = trial?.priceLkr ?? 0;
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    api<{
+      mode: "payhere" | "activated";
+      checkoutUrl?: string;
+      fields?: Record<string, string>;
+    }>("/billing/activate-package", { method: "POST", token })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.mode === "activated") {
+          setActivated(true);
+          return;
+        }
+        if (result.checkoutUrl && result.fields) {
+          setPayHere({ checkoutUrl: result.checkoutUrl, fields: result.fields });
+        } else {
+          setError("Could not start PayHere checkout.");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "Could not start checkout");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
+  const due = trial?.priceLkr ?? 0;
   const summary = useMemo(() => {
     if (!trial) return null;
     return {
@@ -28,11 +60,7 @@ export function TrialActivatePage() {
 
   if (!token) {
     return (
-      <AuthLayout
-        fullScreen
-        title="Activate package"
-        subtitle="Log in to continue after your trial."
-      >
+      <AuthLayout fullScreen title="Activate package" subtitle="Log in to continue after your trial.">
         <p className="muted">
           <Link to="/login">Log in</Link> to activate your package.
         </p>
@@ -46,14 +74,26 @@ export function TrialActivatePage() {
       title="Activate your package"
       subtitle={
         trial?.expiredUnpaid
-          ? "Your 7-day free trial has ended. Contact the administrator to activate your package."
-          : "Online payments are not available yet — contact the administrator to activate."
+          ? "Your free trial has ended. Pay with PayHere to keep using TourPilot."
+          : "Complete payment with PayHere to activate your package."
       }
     >
-      <PaymentGatewayPendingNotice
-        packageName={summary?.name}
-        amountLabel={summary?.label}
-      />
+      {summary ? (
+        <p className="muted">
+          {summary.name} · {summary.label}
+        </p>
+      ) : null}
+      {activated ? (
+        <p>
+          Package activated. <Link to="/dashboard/agency">Open dashboard</Link>
+        </p>
+      ) : payHere ? (
+        <PayHereAutoSubmit checkoutUrl={payHere.checkoutUrl} fields={payHere.fields} />
+      ) : error ? (
+        <p className="form-error">{error}</p>
+      ) : (
+        <p className="muted">Preparing PayHere checkout…</p>
+      )}
 
       <p className="muted auth-footnote">
         Already activated? <Link to="/dashboard/agency">Open dashboard</Link>

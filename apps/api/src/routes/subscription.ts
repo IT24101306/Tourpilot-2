@@ -6,16 +6,28 @@ import {
   type PricingPageContent,
 } from "@tourpilot/shared";
 import { prisma } from "../lib/prisma.js";
-import { authRequired, requireRoles } from "../middleware/auth.js";
+import { authRequired, getAgencyForUser, requireRoles } from "../middleware/auth.js";
 import { config } from "../lib/config.js";
-import { payHereCheckoutUrl, payHereConfigured } from "../lib/payhere.js";
 import {
+  payHereCheckoutUrl,
+  payHereConfigured,
+  payHereCustomerFromUser,
+  payHereNotConfiguredError,
+  requirePayHereCheckoutFields,
+  verifyPayHereNotify,
+} from "../lib/payhere.js";
+import {
+  activateSelectedPackage,
   buildTrialStatus,
+  fulfillSubscriptionPayment,
   parseSelectedPackage,
   trialUserUpdateData,
 } from "../services/trial.js";
+import { asJson } from "../utils/json.js";
 
 export const subscriptionRouter = Router();
+
+const BILLING_ROLES = ["AGENCY", "INFLUENCER", "DRIVER"] as const;
 
 async function loadPricingPackages() {
   const page = await prisma.cmsPage.findUnique({ where: { slug: "pricing" } });
@@ -57,7 +69,7 @@ function serializePayment(row: {
   };
 }
 
-subscriptionRouter.get("/", authRequired, requireRoles("AGENCY"), async (req, res, next) => {
+subscriptionRouter.get("/", authRequired, requireRoles(...BILLING_ROLES), async (req, res, next) => {
   try {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
     const packages = await loadPricingPackages();
@@ -83,7 +95,7 @@ subscriptionRouter.get("/", authRequired, requireRoles("AGENCY"), async (req, re
 subscriptionRouter.patch(
   "/auto-renew",
   authRequired,
-  requireRoles("AGENCY"),
+    requireRoles(...BILLING_ROLES),
   async (req, res, next) => {
     try {
       const body = z.object({ autoRenew: z.boolean() }).parse(req.body);
@@ -105,7 +117,7 @@ subscriptionRouter.patch(
 subscriptionRouter.get(
   "/payments",
   authRequired,
-  requireRoles("AGENCY"),
+    requireRoles(...BILLING_ROLES),
   async (req, res, next) => {
     try {
       const rows = await prisma.subscriptionPayment.findMany({
@@ -123,7 +135,7 @@ subscriptionRouter.get(
 subscriptionRouter.post(
   "/select-package",
   authRequired,
-  requireRoles("AGENCY"),
+    requireRoles(...BILLING_ROLES),
   async (req, res, next) => {
     try {
       const body = z
@@ -164,31 +176,77 @@ subscriptionRouter.post(
   }
 );
 
+export async function startPackageCheckout(userId: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  if (!user.selectedPackageId || !user.selectedPackageName) {
+    const err = new Error("No package selected for this account");
+    (err as Error & { status: number }).status = 400;
+    throw err;
+  }
+
+  const amount = Math.round(Number(user.selectedPackagePriceLkr ?? 0));
+  const billing = (user.selectedPackageBilling || "MONTHLY").toUpperCase();
+
+  if (billing === "PAYG" || amount <= 0) {
+    const result = await activateSelectedPackage(user.id);
+    return {
+      mode: "activated" as const,
+      trial: result.trial,
+      redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions`,
+    };
+  }
+
+  if (!payHereConfigured()) throw payHereNotConfiguredError();
+
+  const agency = user.role === "AGENCY" ? await getAgencyForUser(user.id) : null;
+  const payment = await prisma.subscriptionPayment.create({
+    data: {
+      userId: user.id,
+      agencyId: agency?.id ?? null,
+      packageId: user.selectedPackageId,
+      packageName: user.selectedPackageName,
+      amountLkr: amount,
+      currency: "LKR",
+      status: "PENDING",
+      provider: "payhere",
+    },
+  });
+
+  const fields = requirePayHereCheckoutFields({
+    orderId: payment.id,
+    amountLkr: amount,
+    itemTitle: `${user.selectedPackageName} — TourPilot`,
+    returnUrl: `${config.webAppUrl}/profile/billing/subscriptions/return`,
+    cancelUrl: `${config.webAppUrl}/profile/billing/subscriptions/cancel`,
+    notifyUrl: `${config.webAppUrl}/api/subscription/payhere/notify`,
+    customer: payHereCustomerFromUser(user),
+  });
+
+  await prisma.subscriptionPayment.update({
+    where: { id: payment.id },
+    data: {
+      checkoutUrl: payHereCheckoutUrl(),
+      payhereOrderId: payment.id,
+      metadata: asJson({ fields }),
+    },
+  });
+
+  return {
+    mode: "payhere" as const,
+    paymentId: payment.id,
+    checkoutUrl: payHereCheckoutUrl(),
+    fields,
+    redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions/checkout?payment=${payment.id}`,
+  };
+}
+
 subscriptionRouter.post(
   "/checkout",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles(...BILLING_ROLES),
   async (req, res, next) => {
     try {
-      const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
-      if (!user.selectedPackageId || !user.selectedPackageName) {
-        return res.status(400).json({ error: "No package selected for this account" });
-      }
-
-      // Payment gateway not live yet — do not auto-activate or start PayHere/demo checkout.
-      return res.status(503).json({
-        error:
-          "Online payments are not available yet. Please contact the system administrator to activate your package.",
-        mode: "manual_contact",
-        contact: {
-          company: "IYYO Solutions",
-          email: "info@iyyosolutions.com",
-          phone: "+94719990173",
-          whatsapp: "+94720140224",
-          website: "https://iyyosolutions.com",
-        },
-        redirectUrl: `${config.webAppUrl}/profile/billing/subscriptions/checkout`,
-      });
+      res.json(await startPackageCheckout(req.user!.id));
     } catch (e) {
       next(e);
     }
@@ -198,7 +256,7 @@ subscriptionRouter.post(
 subscriptionRouter.get(
   "/checkout-session",
   authRequired,
-  requireRoles("AGENCY"),
+    requireRoles(...BILLING_ROLES),
   async (req, res, next) => {
     try {
       const paymentId = String(req.query.payment || "");
@@ -210,7 +268,7 @@ subscriptionRouter.get(
       const meta = (payment.metadata || {}) as { fields?: Record<string, string> };
       res.json({
         payment: serializePayment(payment),
-        mode: payment.provider === "payhere" && payHereConfigured() ? "payhere" : "demo",
+        mode: "payhere",
         payHere:
           meta.fields && payment.provider === "payhere"
             ? { checkoutUrl: payHereCheckoutUrl(), fields: meta.fields }
@@ -225,17 +283,45 @@ subscriptionRouter.get(
 subscriptionRouter.post(
   "/demo-complete",
   authRequired,
-  requireRoles("AGENCY"),
+  requireRoles(...BILLING_ROLES),
   async (_req, res) => {
-    res.status(503).json({
-      error:
-        "Online payments are not available yet. Please contact the system administrator to activate your package.",
-      mode: "manual_contact",
+    res.status(400).json({
+      error: "Demo checkout is disabled. Complete payment with PayHere.",
+      code: "PAYHERE_REQUIRED",
     });
   }
 );
 
-subscriptionRouter.post("/payhere/notify", async (_req, res) => {
-  // Payment gateway not live — ignore notifications so packages are not auto-activated.
-  res.status(503).send("payments_unavailable");
+subscriptionRouter.post("/payhere/notify", async (req, res, next) => {
+  try {
+    const body = (req.body || {}) as Record<string, unknown>;
+    const verified = verifyPayHereNotify(body);
+    if (!verified.ok || !verified.orderId) {
+      return res.status(403).send("invalid_signature");
+    }
+
+    const payment = await prisma.subscriptionPayment.findUnique({
+      where: { id: verified.orderId },
+    });
+    if (!payment) return res.status(404).send("unknown order");
+
+    if (verified.statusCode === "2") {
+      await fulfillSubscriptionPayment(payment.id, {
+        providerRef: verified.providerPaymentId,
+        metadata: body,
+      });
+    } else if (verified.statusCode === "0" || verified.statusCode === "-1" || verified.statusCode === "-2") {
+      await prisma.subscriptionPayment.update({
+        where: { id: payment.id },
+        data: {
+          status: verified.statusCode === "0" ? "PENDING" : "FAILED",
+          metadata: asJson(body),
+        },
+      });
+    }
+
+    res.status(200).send("OK");
+  } catch (e) {
+    next(e);
+  }
 });

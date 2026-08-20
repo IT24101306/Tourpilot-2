@@ -571,6 +571,42 @@ export function tripMessageEmail(params: {
   return { subject, text, html };
 }
 
+export function supportChatEmail(params: {
+  visitorName: string;
+  pagePath: string;
+  transcript: string;
+  inboxUrl: string;
+}) {
+  const subject = `TourPilot support chat — ${params.visitorName}`;
+  const text = emailText(
+    "A visitor requested live human support on TourPilot.",
+    "",
+    `Visitor: ${params.visitorName}`,
+    `Page: ${params.pagePath}`,
+    "",
+    "Chat so far:",
+    params.transcript,
+    "",
+    `Open admin inbox: ${params.inboxUrl}`,
+    "",
+    "— TourPilot"
+  );
+  const html = renderBrandedEmail({
+    preheader: `Live support request from ${params.visitorName}`,
+    eyebrow: "Live support",
+    title: "Visitor needs a human",
+    bodyHtml: [
+      emailP("A visitor requested live human support on TourPilot."),
+      emailP(`${emailStrong("Visitor:")} ${escapeHtml(params.visitorName)}`),
+      emailP(`${emailStrong("Page:")} ${escapeHtml(params.pagePath)}`),
+      emailP(emailStrong("Chat so far:")),
+      emailQuote(params.transcript),
+    ].join(""),
+    cta: { label: "Open support inbox", url: params.inboxUrl },
+  });
+  return { subject, text, html };
+}
+
 export function agencyApprovedEmail(params: {
   agencyName: string;
   ownerName: string;

@@ -11,12 +11,14 @@ import {
 } from "../components/discovery/DiscoveryOfferCard";
 import { offerBookPath } from "../lib/offerBookPaths";
 import { daysUntilEnd } from "../lib/discoveryUtils";
+import { usePublicSmartFeatures } from "../lib/publicSmartFeatures";
 
 export function OffersPage() {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { publicOffersEnabled, loaded: flagsLoaded } = usePublicSmartFeatures();
   const highlightId = searchParams.get("offer");
   const [offers, setOffers] = useState<DiscoveryOffer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,12 +26,17 @@ export function OffersPage() {
   const returnPath = currentPath(location);
 
   useEffect(() => {
+    if (!publicOffersEnabled) {
+      setOffers([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     api<DiscoveryOffer[]>("/offers/active")
       .then(setOffers)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [publicOffersEnabled]);
 
   useEffect(() => {
     if (!highlightId || loading || scrolledRef.current) return;
@@ -59,13 +66,20 @@ export function OffersPage() {
         title="Limited offers"
         subtitle="Transparent tour pricing with rewards and countdown — no hidden surprises."
       >
-        {!user && (
+        {!user && publicOffersEnabled && (
           <Link to={loginPath(returnPath)} className="btn btn-teal">
             Log in to book
           </Link>
         )}
       </ModuleHeader>
 
+      {flagsLoaded && !publicOffersEnabled ? (
+        <p className="muted">
+          Public offers are currently turned off. Browse agencies and tours, or send an inquiry
+          from an agency page.
+        </p>
+      ) : (
+      <>
       {!loading && offers.length > 0 && (
         <div className="offers-stat-row">
           <div className="offers-stat">
@@ -106,6 +120,8 @@ export function OffersPage() {
             />
           ))}
         </div>
+      )}
+      </>
       )}
     </section>
   );

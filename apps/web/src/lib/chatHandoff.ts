@@ -118,14 +118,13 @@ export function clearChatHandoff(): void {
 
 export function saveChatSession(state: ChatSessionState): void {
   try {
-    sessionStorage.setItem(
-      CHAT_SESSION_KEY,
-      JSON.stringify({
-        messages: state.messages.slice(-24),
-        lead: state.lead,
-        open: state.open,
-      })
-    );
+    const payload = JSON.stringify({
+      messages: state.messages.slice(-24),
+      lead: state.lead,
+      open: state.open,
+    });
+    localStorage.setItem(CHAT_SESSION_KEY, payload);
+    sessionStorage.removeItem(CHAT_SESSION_KEY);
   } catch {
     /* ignore */
   }
@@ -133,7 +132,8 @@ export function saveChatSession(state: ChatSessionState): void {
 
 export function readChatSession(): ChatSessionState | null {
   try {
-    const raw = sessionStorage.getItem(CHAT_SESSION_KEY);
+    const raw =
+      localStorage.getItem(CHAT_SESSION_KEY) || sessionStorage.getItem(CHAT_SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ChatSessionState;
     if (!parsed || !Array.isArray(parsed.messages)) return null;
@@ -149,6 +149,7 @@ export function readChatSession(): ChatSessionState | null {
 
 export function clearChatSession(): void {
   try {
+    localStorage.removeItem(CHAT_SESSION_KEY);
     sessionStorage.removeItem(CHAT_SESSION_KEY);
   } catch {
     /* ignore */
