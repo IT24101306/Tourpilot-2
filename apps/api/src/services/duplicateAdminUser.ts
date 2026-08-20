@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { asJson } from "../utils/json.js";
 import { slugify } from "../utils/slug.js";
 import { isValidInternationalPhone, toStoredPhone } from "../utils/phone.js";
+import { hashPassword } from "./password.js";
 
 export type DuplicateUserInput = {
   name: string;
@@ -14,6 +15,8 @@ export type DuplicateUserInput = {
   loginFeeLkr?: number | null;
   /** Optional new agency name/slug base when cloning an agency. */
   agencyName?: string;
+  /** Required when role is ADMIN. Never copied from the source account. */
+  password?: string;
 };
 
 export type DuplicateUserResult = {
@@ -108,6 +111,7 @@ export async function duplicateAdminUser(
       : input.loginFeeLkr === null
         ? null
         : Math.round(input.loginFeeLkr);
+  const passwordHash = input.password ? await hashPassword(input.password) : undefined;
 
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
@@ -119,6 +123,7 @@ export async function duplicateAdminUser(
         isActive: input.isActive ?? true,
         walletBalance: wallet,
         loginFeeLkr: loginFee === undefined ? undefined : loginFee,
+        passwordHash,
       },
     });
 

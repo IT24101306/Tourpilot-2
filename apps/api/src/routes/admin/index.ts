@@ -37,6 +37,7 @@ import {
 import { activateReferralOnAgencyApproval } from "../../services/agencyReferral.js";
 import { isValidInternationalPhone, toStoredPhone } from "../../utils/phone.js";
 import { duplicateAdminUser } from "../../services/duplicateAdminUser.js";
+import { hashPassword, ADMIN_PASSWORD_MIN_LENGTH, ADMIN_PASSWORD_MAX_LENGTH } from "../../services/password.js";
 import { recordAuditEvent } from "../../services/auditLog.js";
 import { resumeInquiryChat } from "../../services/chatPolicyEnforce.js";
 import { ensureDriverUserAccount } from "../../services/agencyDriverLink.js";
@@ -907,6 +908,7 @@ adminRouter.get("/users", async (req, res, next) => {
         loginFeeLkr: true,
         isActive: true,
         createdAt: true,
+        passwordHash: true,
         agency: {
           select: {
             id: true,
@@ -972,6 +974,7 @@ adminRouter.get("/users", async (req, res, next) => {
           loginFeeOverride,
           loginFee: await resolveLoginFeeForUser(u),
           isActive: u.isActive,
+          hasPassword: Boolean(u.passwordHash),
           createdAt: u.createdAt,
           agency: agencyRow
             ? {
@@ -1004,6 +1007,7 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
         email: z.string().email().nullable().optional(),
         /** null clears override (use role default). */
         loginFeeLkr: z.number().min(0).nullable().optional(),
+        password: z.string().min(ADMIN_PASSWORD_MIN_LENGTH).max(ADMIN_PASSWORD_MAX_LENGTH).optional(),
       })
       .parse(req.body);
 
@@ -1031,6 +1035,20 @@ adminRouter.patch("/users/:id", async (req, res, next) => {
         return res.status(409).json({ error: "Another account already uses that phone" });
       }
       data.phone = phone;
+    }
+
+    if (body.password) {
+      data.passwordHash = await hashPassword(body.password);
+    } else if (body.role === "ADMIN") {
+      const existing = await prisma.user.findUnique({
+        where: { id: req.params.id },
+        select: { passwordHash: true },
+      });
+      if (existing && !existing.passwordHash) {
+        return res.status(400).json({
+          error: "Admin accounts need a password to sign in.",
+        });
+      }
     }
 
     const user = await prisma.$transaction(async (tx) => {
@@ -1097,8 +1115,13 @@ adminRouter.post("/users", async (req, res, next) => {
         isActive: z.boolean().optional(),
         walletBalance: z.number().min(0).optional(),
         loginFeeLkr: z.number().min(0).nullable().optional(),
+        password: z.string().min(ADMIN_PASSWORD_MIN_LENGTH).max(ADMIN_PASSWORD_MAX_LENGTH).optional(),
       })
       .parse(req.body);
+
+    if (body.role === "ADMIN" && !body.password) {
+      return res.status(400).json({ error: "Admin accounts need a password to sign in." });
+    }
 
     const phone = toStoredPhone(body.phone);
     if (!isValidInternationalPhone(phone)) {
@@ -1127,6 +1150,7 @@ adminRouter.post("/users", async (req, res, next) => {
             : body.loginFeeLkr === null
               ? null
               : Math.round(body.loginFeeLkr),
+        passwordHash: body.password ? await hashPassword(body.password) : undefined,
       },
       select: {
         id: true,
@@ -1204,8 +1228,13 @@ adminRouter.post("/users/:id/duplicate", async (req, res, next) => {
         walletBalance: z.number().min(0).optional(),
         loginFeeLkr: z.number().min(0).nullable().optional(),
         agencyName: z.string().min(1).max(160).optional(),
+        password: z.string().min(ADMIN_PASSWORD_MIN_LENGTH).max(ADMIN_PASSWORD_MAX_LENGTH).optional(),
       })
       .parse(req.body);
+
+    if (body.role === "ADMIN" && !body.password) {
+      return res.status(400).json({ error: "Admin accounts need a password to sign in." });
+    }
 
     const duplicated = await duplicateAdminUser(req.params.id, body);
     res.status(201).json({

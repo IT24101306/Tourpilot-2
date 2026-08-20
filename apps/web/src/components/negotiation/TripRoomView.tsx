@@ -621,6 +621,11 @@ export function TripRoomView({
                       title: "Resume this chat?",
                       description: "The tourist and agency will be able to send messages again.",
                       confirmLabel: "Resume chat",
+                      summary: [
+                        { label: "Trip", value: inquiry.tour?.title ?? inquiry.type ?? "Custom trip" },
+                        { label: "Tourist", value: inquiry.tourist?.name ?? "—" },
+                        { label: "Agency", value: inquiry.agency?.name ?? "—" },
+                      ],
                       onConfirm: async () => {
                         setActing(true);
                         try {

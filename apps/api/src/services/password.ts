@@ -2,6 +2,9 @@ import bcrypt from "bcryptjs";
 
 const SALT_ROUNDS = 10;
 
+export const ADMIN_PASSWORD_MIN_LENGTH = 8;
+export const ADMIN_PASSWORD_MAX_LENGTH = 128;
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
 }

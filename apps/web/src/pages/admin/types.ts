@@ -81,6 +81,8 @@ export type AdminUser = {
   loginFeeOverride: number | null;
   isActive: boolean;
   createdAt: string;
+  /** True when an admin login password is stored. Never send the hash to the client. */
+  hasPassword?: boolean;
   agency: {
     id: string;
     name: string;
