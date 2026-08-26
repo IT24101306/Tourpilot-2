@@ -552,6 +552,11 @@ export async function seedExtendedData(ctx: DemoContext) {
     where: { inquiryId: inquiryViewed.id },
   });
   if (!itinSouth) {
+    itinSouth = await prisma.itinerary.findFirst({
+      where: { shareToken: "demo-south-coast-quote" },
+    });
+  }
+  if (!itinSouth) {
     itinSouth = await prisma.itinerary.create({
       data: {
         inquiryId: inquiryViewed.id,

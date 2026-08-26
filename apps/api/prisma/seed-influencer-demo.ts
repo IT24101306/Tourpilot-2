@@ -195,6 +195,13 @@ export async function seedInfluencerPresentationData(ctx: InfluencerDemoContext)
     data: { clickCount: 612, isActive: true, commissionPct: 10 },
   });
   await prisma.referralCode.updateMany({
+    where: {
+      influencerId: ctx.influencer1.id,
+      code: { notIn: ["ISLAND10", "ISLANDCOAST", "ISLANDELLA", "YALAVIBES", "RETIRED5"] },
+    },
+    data: { isActive: false },
+  });
+  await prisma.referralCode.updateMany({
     where: { code: "RETIRED5", influencerId: ctx.influencer1.id },
     data: { clickCount: 3, isActive: false },
   });
