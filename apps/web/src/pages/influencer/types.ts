@@ -160,5 +160,7 @@ export function formatCommissionStatus(status: string): string {
 }
 
 export function shareLinkForCode(code: ReferralCode): string {
-  return code.shareUrl || `${window.location.origin}${code.sharePath}`;
+  if (code.sharePath) return `${window.location.origin}${code.sharePath}`;
+  if (code.shareUrl && !/localhost|127\.0\.0\.1/i.test(code.shareUrl)) return code.shareUrl;
+  return code.shareUrl || "";
 }

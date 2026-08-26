@@ -55,9 +55,12 @@ export function CreateReferralCodeModal({
         }),
       });
       const tour = tours.find((t) => t.id === tourId);
+      const path = `/tours/${tour?.agency.slug}/${tour?.slug}?ref=${result.code}`;
+      const apiUrl = result.shareUrl || "";
       const link =
-        result.shareUrl ||
-        `${window.location.origin}/tours/${tour?.agency.slug}/${tour?.slug}?ref=${result.code}`;
+        apiUrl && !/localhost|127\.0\.0\.1/i.test(apiUrl)
+          ? apiUrl
+          : `${window.location.origin}${path}`;
       setCreatedLink(link);
       onCreated();
     } catch (err) {
@@ -141,7 +144,7 @@ export function CreateReferralCodeModal({
           <ModalActions
             onCancel={onClose}
             submitLabel="Generate referral code"
-            saving={saving}
+            saving={saving}
           />
         </form>
       )}

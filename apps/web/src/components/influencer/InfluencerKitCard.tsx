@@ -15,12 +15,12 @@ type Props = {
 };
 
 function absoluteShare(code: CodeLite) {
-  if (code.shareUrl) return code.shareUrl;
-  if (code.sharePath) {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    return `${origin}${code.sharePath}`;
+  if (code.sharePath && typeof window !== "undefined") {
+    return `${window.location.origin}${code.sharePath}`;
   }
-  return "";
+  if (code.shareUrl && !/localhost|127\.0\.0\.1/i.test(code.shareUrl)) return code.shareUrl;
+  if (code.sharePath) return code.sharePath;
+  return code.shareUrl || "";
 }
 
 /** Influencer growth kit — link + ready caption in one place. */

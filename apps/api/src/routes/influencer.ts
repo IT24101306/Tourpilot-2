@@ -17,7 +17,7 @@ import {
   serializeActiveOffer,
 } from "../lib/offers.js";
 import { attachTourPricing } from "../lib/tourPricing.js";
-import { buildReferralSharePath, buildReferralShareUrl } from "../lib/referralShare.js";
+import { buildReferralSharePath, buildReferralShareUrl, publicWebOrigin } from "../lib/referralShare.js";
 import { authRequired, requireRoles } from "../middleware/auth.js";
 import { config } from "../lib/config.js";
 import {
@@ -122,7 +122,7 @@ influencerRouter.get("/dashboard", authRequired, requireRoles("INFLUENCER"), asy
 
     if (!profile) return res.status(404).json({ error: "Profile not found" });
 
-    const origin = String(req.headers.origin || "http://localhost:5173");
+    const origin = publicWebOrigin(req);
 
     const [earnedAgg, pendingAgg, paidAgg, clicksAgg] = await Promise.all([
       prisma.commission.aggregate({
@@ -213,7 +213,7 @@ influencerRouter.post("/codes", authRequired, requireRoles("INFLUENCER"), async 
       body.code?.toUpperCase().replace(/[^A-Z0-9]/g, "") ||
       `TP${tour.slug.slice(0, 4).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
-    const origin = String(req.headers.origin || "http://localhost:5173");
+    const origin = publicWebOrigin(req);
 
     if (existingForTour) {
       if (body.code) {
