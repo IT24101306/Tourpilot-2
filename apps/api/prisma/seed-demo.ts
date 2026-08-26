@@ -413,14 +413,29 @@ async function main() {
 
   const influencerUser1 = await prisma.user.upsert({
     where: { phone: PHONES.influencer1 },
-    update: {},
+    update: {
+      name: "Island Vibes",
+      role: "INFLUENCER",
+      email: "hello@islandvibes.demo",
+      avatarUrl:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+      district: "Colombo",
+      walletBalance: 23400,
+    },
     create: {
       phone: PHONES.influencer1,
       name: "Island Vibes",
       role: "INFLUENCER",
-      walletBalance: 200,
+      email: "hello@islandvibes.demo",
+      avatarUrl:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
+      district: "Colombo",
+      walletBalance: 23400,
       influencerProfile: {
-        create: { bio: "Sri Lanka travel creator", socialLinks: { instagram: "@islandvibes" } },
+        create: {
+          bio: "Sri Lanka travel creator — sunrises, slow coasts, and tea-country trains.",
+          socialLinks: { instagram: "@islandvibes" },
+        },
       },
     },
   });
@@ -439,11 +454,23 @@ async function main() {
     },
   });
 
-  let influencer1 = await prisma.influencerProfile.findUniqueOrThrow({
+  let influencer1 = await prisma.influencerProfile.upsert({
     where: { userId: influencerUser1.id },
+    update: {},
+    create: {
+      userId: influencerUser1.id,
+      bio: "Sri Lanka travel creator — sunrises, slow coasts, and tea-country trains.",
+      socialLinks: { instagram: "@islandvibes" },
+    },
   });
-  let influencer2 = await prisma.influencerProfile.findUniqueOrThrow({
+  let influencer2 = await prisma.influencerProfile.upsert({
     where: { userId: influencerUser2.id },
+    update: {},
+    create: {
+      userId: influencerUser2.id,
+      bio: "Photo tours & hidden gems",
+      socialLinks: { youtube: "@lankalens" },
+    },
   });
 
   // —— Entities ——
@@ -1066,13 +1093,19 @@ async function main() {
   console.log("  Wild Coast: +94773334400 →", extended.wildAgency.slug, "(approved)");
   console.log("  Rejected:   ", "+94778889900 →", extended.rejectedAgency.slug);
   console.log("  Tourists:   ", PHONES.tourist1, PHONES.tourist2, PHONES.tourist3);
-  console.log("  Influencers:", PHONES.influencer1, "/i/island-vibes");
+  console.log("  Influencers:", PHONES.influencer1, "/i/island-vibes  ← presentation account");
   console.log("              ", PHONES.influencer2, "/i/lanka-lens");
   console.log("  Drivers:    ", PHONES.driver1, PHONES.driver2);
+  console.log("\nIsland Vibes presentation:");
+  console.log("  Login OTP:  ", PHONES.influencer1);
+  console.log("  Dashboard:  /dashboard/i");
+  console.log("  Storefront: /i/island-vibes");
+  console.log("  Domain:     islandvibes.lk (PENDING DNS)");
+  console.log("  Codes:      ISLAND10, ISLANDCOAST, ISLANDELLA, YALAVIBES");
   console.log("\nHighlights:");
   console.log("  Tours:", [tour1.slug, tour2.slug, tour3.slug].join(", "));
   console.log("  Share itineraries:", `/itinerary/${shareToken}`, ", /itinerary/demo-south-coast-quote");
-  console.log("  Referral codes: ISLAND10, LANKA20");
+  console.log("  Referral codes: ISLAND10, ISLANDCOAST, ISLANDELLA, YALAVIBES, LANKA20");
   console.log("  Offers:", agencyOffer.title, "+", platformOffer.title);
   console.log("\nRe-run anytime: npm run db:seed:demo");
 }

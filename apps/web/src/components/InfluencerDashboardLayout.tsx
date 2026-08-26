@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { CreateReferralCodeModal } from "./influencer/CreateReferralCodeModal";
 import { ClientBrand } from "./ClientBrand";
 import { DashboardSupportButton } from "./support/SupportAgentsModal";
+import { NotificationBell } from "./NotificationBell";
 import {
   InfluencerDashboardContext,
   useInfluencerDashboardProvider,
@@ -40,6 +41,7 @@ export function InfluencerDashboardLayout() {
           </div>
           <nav className="nav nav--light" aria-label="Partner utilities">
             <div className="nav-actions nav-actions--light">
+              <NotificationBell />
               <DashboardSupportButton />
               <Link to="/profile" className="nav-link-light">
                 Profile

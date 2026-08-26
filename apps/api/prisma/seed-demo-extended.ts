@@ -5,6 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { MEDIA, defaultAgencyKyc } from "@tourpilot/shared";
 import { asJson } from "../src/utils/json.js";
+import { seedInfluencerPresentationData } from "./seed-influencer-demo.js";
 
 export type DemoContext = {
   prisma: PrismaClient;
@@ -796,6 +797,24 @@ export async function seedExtendedData(ctx: DemoContext) {
     },
   });
 
+  await seedInfluencerPresentationData({
+    prisma,
+    influencer1: ctx.influencer1,
+    influencerUser1: ctx.influencerUser1,
+    agency1: ctx.agency1,
+    agencyUser1: ctx.agencyUser1,
+    wildAgency,
+    wildTour,
+    tour1: ctx.tour1,
+    tour2: ctx.tour2,
+    tour3: ctx.tour3,
+    refIsland10: ctx.refIsland10,
+    agencyOffer: ctx.agencyOffer,
+    platformOffer: ctx.platformOffer,
+    tourist1: ctx.tourist1,
+    inquirySent: ctx.inquirySent,
+  });
+
   // —— OTP challenges (dev login flow demos) ——
   const otpHash = await bcrypt.hash("000000", 8);
   const challenges = [
@@ -884,6 +903,9 @@ export async function printTableCounts(prisma: PrismaClient) {
     ["referralCode", "ReferralCode"],
     ["referralAttribution", "ReferralAttribution"],
     ["commission", "Commission"],
+    ["influencerCommissionRequest", "InfluencerCommissionRequest"],
+    ["influencerCommissionMessage", "InfluencerCommissionMessage"],
+    ["notification", "Notification"],
     ["cmsPage", "CmsPage"],
     ["displaySettings", "DisplaySettings"],
     ["savedTour", "SavedTour"],
